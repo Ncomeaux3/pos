@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { db } from './db'
+import { getCredentials } from './integrations'
 import { getSetting } from './settings'
 
 /**
@@ -23,6 +24,14 @@ export type Purpose = 'classification' | 'headline' | 'research'
 
 /** Only research is optional enough to stop. Classification keeps the system working. */
 const CAPPED_PURPOSES: Purpose[] = ['research']
+
+/** Distinct from a call that failed: the provider was never connected. */
+export class NotConnected extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'NotConnected'
+  }
+}
 
 export class SoftCapExceeded extends Error {
   constructor(spentCents: number, capCents: number) {
@@ -104,9 +113,13 @@ export async function complete({
 }
 
 /**
- * Step 7 replaces this with getCredentials('anthropic') so the key lives
- * encrypted in core.connections rather than in .env.
+ * The key lives encrypted in core.connections, entered on Settings >
+ * Connections. Nothing reads a provider key from .env.
  */
-async function apiKey(): Promise<string | undefined> {
-  return process.env.ANTHROPIC_API_KEY
+async function apiKey(): Promise<string> {
+  const key = (await getCredentials('anthropic'))?.api_key
+  if (!key) {
+    throw new NotConnected('Anthropic is not connected. Connect it on Settings > Connections.')
+  }
+  return key
 }

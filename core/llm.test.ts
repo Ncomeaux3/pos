@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto'
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 process.env.DATABASE_URL ??= 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
@@ -10,21 +11,27 @@ vi.mock('@anthropic-ai/sdk', () => ({
 }))
 
 const { db } = await import('./db')
-const { complete, estimateCostCents, monthToDateCents, SoftCapExceeded } = await import('./llm')
+const { complete, estimateCostCents, monthToDateCents, NotConnected, SoftCapExceeded } =
+  await import('./llm')
 const { setSetting } = await import('./settings')
+const { saveCredentials } = await import('./integrations')
 
 const reply = (text: string, input = 1000, output = 500) => ({
   content: [{ type: 'text', text }],
   usage: { input_tokens: input, output_tokens: output },
 })
 
-beforeEach(() => {
+beforeEach(async () => {
   create.mockReset()
   create.mockResolvedValue(reply('ok'))
+  // The key lives in core.connections now, not .env.
+  process.env.ENCRYPTION_KEY = randomBytes(32).toString('base64')
+  await saveCredentials('anthropic', { api_key: 'sk-ant-test' })
 })
 afterEach(async () => {
   await db().query('delete from core.llm_calls')
   await db().query('delete from core.settings')
+  await db().query('delete from core.connections')
 })
 afterAll(async () => {
   await db().end()
@@ -75,6 +82,18 @@ describe('complete', () => {
       output_tokens: 500,
     })
     expect(Number(rows[0].cost_cents)).toBeCloseTo(0.35)
+  })
+
+  it('refuses with NotConnected when Anthropic has never been connected', async () => {
+    await db().query('delete from core.connections')
+    await expect(
+      complete({
+        model: 'claude-haiku-4-5',
+        purpose: 'classification',
+        messages: [{ role: 'user', content: 'hi' }],
+      }),
+    ).rejects.toThrow(NotConnected)
+    expect(create).not.toHaveBeenCalled()
   })
 
   it('still records the call when the model returns no text', async () => {
