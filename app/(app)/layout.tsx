@@ -3,7 +3,10 @@ import { requireOwner } from '@/core/auth'
 
 // Placeholder nav. Step 5 replaces this list with getModules() sorted by
 // nav.order, so adding a module folder adds its link with no edit here.
-const NAV = [{ href: '/', label: 'Dashboard' }]
+const NAV = [
+  { href: '/', label: 'Dashboard' },
+  { href: '/settings', label: 'Settings' },
+]
 
 export default async function AppLayout({ children }: LayoutProps<'/'>) {
   const owner = await requireOwner()

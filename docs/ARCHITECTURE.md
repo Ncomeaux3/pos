@@ -11,7 +11,7 @@ Single user. Fork and fill template: the code holds nothing personal. Personal s
 | Language | TypeScript, Node 22 LTS, pnpm |
 | App | Next.js App Router, Tailwind, shadcn/ui, PWA manifest |
 | Database | Supabase Postgres with pgvector, one schema per module plus `core` |
-| Data access | supabase-js with generated types, hand-written SQL migrations, no ORM |
+| Data access | Direct pg over the pool in `core/db.ts` for core and module schemas, typed against generated types; supabase-js for auth only. Hand-written SQL migrations, no ORM. Schemas stay unexposed to PostgREST (2026-09-05). |
 | Storage | Supabase Storage, one private bucket per module |
 | Auth | Supabase Auth magic link, signups disabled, one owner user, RLS everywhere |
 | Hosting | Vercel Hobby with Git integration, one hosted Supabase project for prod |
