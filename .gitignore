@@ -41,3 +41,6 @@ integrations/_index.ts
 *-debug.log*
 __pycache__/
 .venv/
+
+# playwright mcp scratch
+.playwright-mcp/

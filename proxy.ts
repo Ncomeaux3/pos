@@ -6,7 +6,7 @@ import { type NextRequest, NextResponse } from 'next/server'
  * Components cannot write cookies, so without this a session would expire and
  * never renew. The actual access decision is requireOwner() in core/auth.ts.
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request: { headers: request.headers } })
 
   const supabase = createServerClient(
