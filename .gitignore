@@ -1,8 +1,43 @@
-.env
-.env.*
-node_modules/
-__pycache__/
-.venv/
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+/build
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# secrets
+.env*
+!.env.example
 *.pem
 *.key
-imports/
+
+# personal data: the owner's Notion exports and other imports
+imports/*
+!imports/.gitkeep
+
+# supabase
+supabase/.temp
+supabase/.branches
+
+# generated indexes
+modules/_index.ts
+integrations/_index.ts
+
+# vercel
+.vercel
+
+# misc
+.DS_Store
+*-debug.log*
+__pycache__/
+.venv/

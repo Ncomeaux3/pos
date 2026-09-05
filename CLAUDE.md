@@ -35,3 +35,6 @@ Owner: Nick. Solo, nights and weekends. Finish one module before starting the ne
 - `pnpm setup` bootstrap a fresh database and owner user. `pnpm setup --demo` also seeds synthetic rows.
 - `pnpm gen:index` regenerate module and integration indexes (runs in prebuild). `pnpm gen:types` regenerate database types.
 - `supabase start` local stack. `supabase db reset` replay migrations. `supabase migration new <name>`. `supabase db push` to prod.
+
+## Next.js 16
+This is Next 16 with Turbopack and Tailwind v4. Conventions differ from older Next: there is no `tailwind.config.ts` (CSS-first config in `app/globals.css`), and `pnpm typecheck` runs `next typegen` first because route types like `LayoutProps` are generated. Read `node_modules/next/dist/docs/` before writing Next code from memory.
