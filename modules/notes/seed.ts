@@ -1,4 +1,5 @@
 import { db } from '@/core/db'
+import { register } from '@/core/entities'
 
 // Synthetic rows for `pnpm setup --demo`. Upserts on external_id so running it
 // twice does not duplicate. Nothing here is personal; this ships in the template.
@@ -12,13 +13,23 @@ const NOTES = [
 
 export async function seed(): Promise<number> {
   for (const note of NOTES) {
-    await db().query(
+    const { rows } = await db().query<{ id: string }>(
       `insert into notes.note (title, body, external_id, source)
        values ($1, $2, $3, 'demo')
        on conflict (source, external_id) do update
-         set title = excluded.title, body = excluded.body`,
+         set title = excluded.title, body = excluded.body
+       returning id`,
       [note.title, note.body, note.external_id],
     )
+    // Same path as a real write, so the demo data exercises classification and
+    // the event log rather than sitting inert.
+    await register({
+      module: 'notes',
+      entityType: 'note',
+      entityId: rows[0].id,
+      title: note.title,
+      text: note.body,
+    })
   }
   return NOTES.length
 }

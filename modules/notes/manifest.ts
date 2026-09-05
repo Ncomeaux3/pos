@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { defineModule, defineTool } from '@/core/modules'
 import { db } from '@/core/db'
+import { register } from '@/core/entities'
 import NotesPage from './ui/NotesPage'
 import { nightlyDigest } from './jobs/nightly-digest'
 
@@ -25,12 +26,19 @@ export default defineModule({
         body: z.string().max(10_000).default(''),
       }),
       run: async ({ title, body }, ctx) => {
-        // Step 6 routes this through entities.register() so the note also gets
-        // an entity, skill links, and an event.
         const { rows } = await db().query<{ id: string }>(
           `insert into notes.note (title, body, source) values ($1, $2, $3) returning id`,
           [title, body, ctx.source === 'agent' ? 'agent' : 'manual'],
         )
+        // The one call that registers the entity, classifies it to skills, and
+        // emits the event. Every module does this on every row it creates.
+        await register({
+          module: 'notes',
+          entityType: 'note',
+          entityId: rows[0].id,
+          title,
+          text: body,
+        })
         return { id: rows[0].id }
       },
     }),
