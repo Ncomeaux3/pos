@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { Button } from '@/components/ui/button'
+import { requireOwner } from '@/core/auth'
 import {
   type IntegrationManifest,
   deleteCredentials,
@@ -17,6 +18,9 @@ import {
 
 async function save(formData: FormData) {
   'use server'
+  // Server actions are standalone POST endpoints addressed by id. The (app)
+  // layout does not run for them, so each one authenticates independently.
+  await requireOwner()
   const id = String(formData.get('id'))
   const manifest = getIntegration(id)
   if (!manifest || manifest.auth.type !== 'token') return
@@ -40,6 +44,9 @@ async function save(formData: FormData) {
 
 async function test(formData: FormData) {
   'use server'
+  // Server actions are standalone POST endpoints addressed by id. The (app)
+  // layout does not run for them, so each one authenticates independently.
+  await requireOwner()
   const id = String(formData.get('id'))
   const manifest = getIntegration(id)
   const creds = await getCredentials(id)
@@ -55,12 +62,18 @@ async function test(formData: FormData) {
 
 async function disconnect(formData: FormData) {
   'use server'
+  // Server actions are standalone POST endpoints addressed by id. The (app)
+  // layout does not run for them, so each one authenticates independently.
+  await requireOwner()
   await deleteCredentials(String(formData.get('id')))
   revalidatePath('/settings/connections')
 }
 
 async function generateSecret(formData: FormData) {
   'use server'
+  // Server actions are standalone POST endpoints addressed by id. The (app)
+  // layout does not run for them, so each one authenticates independently.
+  await requireOwner()
   const id = String(formData.get('id'))
   await saveCredentials(id, { secret: randomBytes(24).toString('base64url') })
   revalidatePath('/settings/connections')

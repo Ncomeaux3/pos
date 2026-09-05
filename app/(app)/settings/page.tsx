@@ -1,10 +1,14 @@
 import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
 import { Button } from '@/components/ui/button'
+import { requireOwner } from '@/core/auth'
 import { getSettings, setSetting } from '@/core/settings'
 
 async function save(formData: FormData) {
   'use server'
+  // Server actions are standalone POST endpoints addressed by id. The (app)
+  // layout does not run for them, so each one authenticates independently.
+  await requireOwner()
 
   const hour = Number(formData.get('digest_hour'))
   const capDollars = Number(formData.get('llm_soft_cap_dollars'))
