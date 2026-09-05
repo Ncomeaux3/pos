@@ -171,7 +171,7 @@ Schema `core`. RLS on every table. `authenticated` role reads and writes. `servi
 | dashboard_summary | run_at, summary jsonb, headline text, notified_at |
 | connections | integration_id, credentials_encrypted, status, last_tested_at, last_test_detail, expires_at |
 | proposals | module, tool, payload jsonb, reason, status (pending, approved, rejected), decided_at |
-| embeddings | entity_id, content_hash, embedding vector(N), tsv tsvector, embedded_at. N follows the Voyage model, verify before the migration. |
+| embeddings | entity_id, content_hash, embedding vector(1024), tsv tsvector, embedded_at. 1024 is the voyage-4-lite default dimension (verified 2026-09-05). |
 | settings | key, value jsonb, updated_at. Timezone, owner name, digest hour, llm soft cap. |
 | llm_calls | occurred_at, model, purpose, module, input_tokens, output_tokens, cost_cents |
 | request_log | occurred_at, route, method, status, duration_ms, ip_hash, error. Pruned to 90 days nightly. |
@@ -196,13 +196,13 @@ Skill XP is a SQL view over `events` joined to `skill_links` weighted by `config
 
 ## Jobs
 
-One cron entry in `vercel.json` at 09:00 UTC (4:00 AM Central in summer, 3:00 AM in winter). Vercel Hobby allows daily crons only and caps function duration (verify current limits before Phase 1). Each job is small and idempotent. Long work is chunked: process a batch, store a cursor in `core.jobs.log`, finish next run. A Run now button on the dashboard hits the same route with the secret. `claude -p "/digest"` is a fallback.
+One cron entry in `vercel.json` at 09:00 UTC (4:00 AM Central in summer, 3:00 AM in winter). Vercel Hobby allows daily crons only and fires within 59 minutes of the hour; with Fluid compute the default and maximum function duration are both 300s, so the route sets `maxDuration = 300` (verified 2026-09-05). Each job is small and idempotent. Long work is chunked: process a batch, store a cursor in `core.jobs.log`, finish next run. A Run now button on the dashboard hits the same route with the secret. `claude -p "/digest"` is a fallback.
 
 Jobs never throw past the runner. Failures land in `core.jobs` and appear as an alert in the next digest. One module's failure does not block the rest of the run.
 
 ## Tools and MCP
 
-`/api/mcp` uses the official TypeScript MCP SDK over streamable HTTP (verify the current Next.js adapter before adding it). It iterates the module registry and registers `<id>.<tool>` with the manifest's zod schemas, plus `core.search` and `<id>.query`. Bearer token from `MCP_TOKEN`. The orchestrator uses the same registry in-process. Claude Code connects with `claude mcp add --transport http pos <url>`. There is no in-app chat.
+`/api/mcp` uses `mcp-handler` over `@modelcontextprotocol/server`, mounted as a Next.js route handler and wrapped in `withMcpAuth` (verified 2026-09-05). It iterates the module registry and registers `<id>.<tool>` with the manifest's zod schemas, plus `core.search` and `<id>.query`. Bearer token from `MCP_TOKEN`. The orchestrator uses the same registry in-process. Claude Code connects with `claude mcp add --transport http pos <url>`. There is no in-app chat.
 
 ## Auth and secrets
 
@@ -253,7 +253,7 @@ Forks receive upgrades by adding this repo as a git remote and merging. Personal
 | Caching and CDN | Vercel CDN for static assets, Next.js cache with revalidate tags, digest tables as read cache, provider responses persisted so external APIs are hit once per sync. No Redis. |
 | Load balancing and scaling | Not a goal. Single user, single region. The platform scales itself; the app never needs more than one concurrent job. |
 | Observability and logs | `core.jobs`, `core.request_log`, `core.llm_calls`, all queryable in-app and by the query tool. Vercel logs for short-lived runtime detail. Failures appear in the daily email. |
-| Availability and recovery | Nightly `pg_dump` to a private repo, 30 days kept, RPO 24 hours, RTO a few hours, restore drilled in Phase 1. Nightly cron keeps the free Supabase project active (verify pause policy). Notion is the fallback until each module ships. |
+| Availability and recovery | Nightly `pg_dump` to a private repo, 30 days kept, RPO 24 hours, RTO a few hours, restore drilled in Phase 1. The free project pauses after one week of inactivity, so the nightly cron keeps it active (verified 2026-09-05). `pg_dump` connects over the session mode pooler on port 5432 because GitHub Actions runners are IPv4 only. Notion is the fallback until each module ships. |
 
 ## Build order
 

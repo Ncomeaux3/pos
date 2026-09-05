@@ -22,11 +22,13 @@ Run `/research` on each and log the result in decisions/log.md before touching c
 
 Done when: each item has a dated line in decisions/log.md and any plan step below that depends on it is adjusted.
 
+**Resolved 2026-09-05.** Ten lines appended to decisions/log.md. What changed below: Step 1 installs `mcp-handler` and `@modelcontextprotocol/server` and zod is v4; Step 2 uses `vector(1024)`; Step 11 uses `createMcpHandler` with `withMcpAuth`; Step 12 sets `maxDuration = 300` and needs no verified Resend domain; Step 14 dumps over the session mode pooler on port 5432; Step 15 treats Attack Mode as the free lever and checks bot protection in the dashboard.
+
 ## Step 1: scaffold
 
 Files: `package.json`, `next.config.ts`, `tailwind.config.ts`, `tsconfig.json`, `vitest.config.ts`, `eslint.config.mjs`, `.env.example`, `.gitignore` (add `.env*`, `!.env.example`, `imports/*`, `!imports/.gitkeep`, `supabase/.temp`), `vercel.json` (one cron: `0 9 * * *` to `/api/cron/nightly`), `app/manifest.ts` (PWA), `public/icons/`.
 
-Commands: `pnpm create next-app@latest . --ts --tailwind --app --src-dir=false --eslint`, `pnpm dlx shadcn@latest init`, `pnpm add -D vitest @vitejs/plugin-react`, `pnpm add zod yaml @supabase/supabase-js @supabase/ssr @anthropic-ai/sdk resend`, `supabase init`.
+Commands: `pnpm create next-app@latest . --ts --tailwind --app --src-dir=false --eslint`, `pnpm dlx shadcn@latest init`, `pnpm add -D vitest @vitejs/plugin-react`, `pnpm add zod yaml @supabase/supabase-js @supabase/ssr @anthropic-ai/sdk resend mcp-handler @modelcontextprotocol/server`, `supabase init`. zod resolves to v4, which `mcp-handler` 2.x requires.
 
 Security headers in `next.config.ts`: `Content-Security-Policy` (self plus Supabase and Vercel domains), `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` minimal. Enable Dependabot with `.github/dependabot.yml` for npm weekly.
 
@@ -38,7 +40,7 @@ Done when: `pnpm dev` serves a blank page and `supabase start` boots locally.
 
 File: `supabase/migrations/<ts>_core_init.sql`.
 
-Contents: `create extension if not exists vector; create extension if not exists pgcrypto; create schema core;` then every table in ARCHITECTURE.md "Core schema" with `created_at`/`updated_at` defaults and an `updated_at` trigger. RLS enabled on every table with policies for `authenticated` (all) and grants for `service_role`. Role `pos_readonly` with `nologin` is created here; each module migration later grants it `usage` and `select` on that module's schema. Function `core.level(xp int) returns int` as `least(99, floor(sqrt(xp / 100.0)))::int`. View `core.skill_xp` joining events to skill_links to a weights table `core.xp_weights` (seeded from `config/xp.yaml` by setup). HNSW index on `core.embeddings.embedding`. GIN index on `tsv`.
+Contents: `create extension if not exists vector; create extension if not exists pgcrypto; create schema core;` then every table in ARCHITECTURE.md "Core schema" with `created_at`/`updated_at` defaults and an `updated_at` trigger. RLS enabled on every table with policies for `authenticated` (all) and grants for `service_role`. Role `pos_readonly` with `nologin` is created here; each module migration later grants it `usage` and `select` on that module's schema. Function `core.level(xp int) returns int` as `least(99, floor(sqrt(xp / 100.0)))::int`. View `core.skill_xp` joining events to skill_links to a weights table `core.xp_weights` (seeded from `config/xp.yaml` by setup). `core.embeddings.embedding` is `vector(1024)`, the voyage-4-lite default. HNSW index on it. GIN index on `tsv`.
 
 Tests (`core/db.test.ts`, run against local Supabase): migration applies cleanly on a fresh `supabase db reset`; anon role cannot select from `core.settings`; `core.level(0)=0`, `core.level(100)=1`, `core.level(2500)=5`, `core.level(10000000)=99`.
 
@@ -116,7 +118,7 @@ Done when: `notes.query` returns rows through MCP and an attempted `update` retu
 
 ## Step 11: MCP endpoint
 
-File: `app/api/mcp/route.ts` using the SDK confirmed in Step 0. Registers `<id>.<tool>` for every module tool, `<id>.query`, and `core.search`. Bearer token check against `MCP_TOKEN`.
+File: `app/api/mcp/route.ts` using `createMcpHandler` from `mcp-handler`, wrapped in `withMcpAuth`, exported as both GET and POST. Registers `<id>.<tool>` for every module tool, `<id>.query`, and `core.search`. Bearer token check against `MCP_TOKEN`.
 
 Tests: request without bearer gets 401; `tools/list` includes `notes.get_digest`, `notes.query`, `core.search`; calling `notes.get_digest` returns the digest payload.
 
@@ -124,11 +126,11 @@ Done when: `claude mcp add --transport http pos http://localhost:3000/api/mcp --
 
 ## Step 12: jobs, notifications, orchestrator
 
-Files: `core/jobs.ts` (`runNightly()` in the ARCHITECTURE order, each job wrapped in try/catch, result to `core.jobs`, cursor support via `log.cursor`), `core/notify.ts` (`queue()`, `sendPending()` bundling into one plain text email via `integrations/resend/client.ts`), `core/orchestrator.ts` (reads `core.digests`, assembles summary by rules: top 3 alerts, upcoming items, failed jobs, month to date spend; asks Haiku for a two sentence headline through `core/llm.ts`), `app/api/cron/nightly/route.ts` (checks `CRON_SECRET`, calls `runNightly`), a Run now button on the dashboard, dashboard rendering `core.dashboard_summary`.
+Files: `core/jobs.ts` (`runNightly()` in the ARCHITECTURE order, each job wrapped in try/catch, result to `core.jobs`, cursor support via `log.cursor`), `core/notify.ts` (`queue()`, `sendPending()` bundling into one plain text email via `integrations/resend/client.ts`), `core/orchestrator.ts` (reads `core.digests`, assembles summary by rules: top 3 alerts, upcoming items, failed jobs, month to date spend; asks Haiku for a two sentence headline through `core/llm.ts`), `app/api/cron/nightly/route.ts` (checks `CRON_SECRET`, calls `runNightly`, `export const maxDuration = 300`), a Run now button on the dashboard, dashboard rendering `core.dashboard_summary`.
 
 Tests: a job that throws is recorded as failed and the next job still runs; `sendPending` sends exactly one email for N notifications; orchestrator with fixture digests produces the expected summary JSON with the headline mocked.
 
-Done when: hitting the cron route locally runs everything, the dashboard shows a summary with a headline, and one email arrives in your inbox.
+Done when: hitting the cron route locally runs everything, the dashboard shows a summary with a headline, and one email arrives in your inbox. No Resend domain is needed: send from `onboarding@resend.dev` to the address the Resend account was created with.
 
 ## Step 13: setup script and demo seed
 
@@ -140,7 +142,7 @@ Done when: `supabase db reset && pnpm setup --demo` on a clean checkout yields a
 
 ## Step 14: CI, backups, restore drill
 
-Files: `.github/workflows/ci.yml` (pnpm install, typecheck, lint, `supabase start`, vitest), `.github/workflows/backup.yml` (nightly `pg_dump` over the pooler URL secret, gzip, commit to the private repo `pos-backups`, delete files older than 30 days), `docs/RESTORE.md` (the psql command and the drill).
+Files: `.github/workflows/ci.yml` (pnpm install, typecheck, lint, `supabase start`, vitest), `.github/workflows/backup.yml` (nightly `pg_dump` over the session mode pooler on port 5432, stored as a secret; runners are IPv4 only and transaction mode on 6543 breaks `pg_dump`), gzip, commit to the private repo `pos-backups`, delete files older than 30 days), `docs/RESTORE.md` (the psql command and the drill).
 
 Drill: take one dump from local, `supabase db reset`, restore with `psql`, confirm row counts match. Record the date in `docs/RESTORE.md`.
 
@@ -148,7 +150,7 @@ Done when: CI is green on the branch, the backup workflow has run once manually 
 
 ## Step 15: deploy
 
-- Vercel: import the GitHub repo, set every `.env` key as an environment variable, confirm the cron is registered, enable Firewall bot protection.
+- Vercel: import the GitHub repo, set every `.env` key as an environment variable, confirm the cron is registered. Attack Mode is free on Hobby; check whether the Bot Protection managed ruleset is offered on this plan in the dashboard and enable it if so.
 - Supabase prod: `supabase link`, `supabase db push`, disable signups, run `pnpm setup` against prod.
 - Log in on the deployed URL from your phone, add to home screen.
 - Connect Anthropic, Voyage, Resend on the deployed Connections page.
