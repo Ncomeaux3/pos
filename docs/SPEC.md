@@ -1,0 +1,127 @@
+# POS Spec
+
+Full module specification. Loaded on demand via the /module skill or @docs/SPEC.md. Not loaded every session.
+
+Single-user, self-built personal operating system. Replaces a Notion setup. Modular by design: each module owns its data, its ingestion, and its tools. One orchestrator agent reads module digests and compiles a dashboard.
+
+Owner: Nick. Solo builder, nights and weekends. Ships incrementally. Do not build every module to 20%. Finish one before starting the next.
+
+## Core architecture principles
+
+1. **One database, one schema per module.** Postgres. Each module gets its own schema (`finance`, `skills`, `tasks`, etc). No cross-schema foreign keys except to the shared `core` schema.
+2. **Digest pattern.** Every module has a `digest` table written nightly by its own job: key numbers, upcoming items, alerts. The orchestrator reads digests only. It touches raw data only when the user asks a direct question.
+3. **Every module exposes tools.** Minimum: `get_digest`, `query`, `write`. Tools are the only way agents touch a module. One MCP server at `/api/mcp` with namespaced tools (`finance.get_digest`); `query` and `search` are provided by core. Guarded tools (money, policy, goals) land in `core.proposals` when an agent calls them. See docs/ARCHITECTURE.md.
+4. **Rules first, model second.** Classification (transactions, skills, tasks) runs deterministic rules first. The model only handles what rules cannot. Every model decision stores `confidence` and `classified_by`.
+5. **Manual override always wins.** Any auto-classified field has a paired `is_manual` flag. Jobs never overwrite a row where `is_manual = true`.
+6. **Secrets never in the repo.** `.env` only, gitignored. Policy numbers and account identifiers encrypted at rest.
+7. **Single user.** No signup flow. One auth method. Prefer a private network (Tailscale) over a public URL if self-hosted.
+8. **Replace Notion one module at a time.** Notion stays the working system until a module ships. Each module includes `import/notion.ts` that loads the owner's export for that module, plus a test against a sample of that export. Imported rows are marked `source = 'notion_import'`, keyed by `external_id`, and emit events dated to the original completion date.
+
+## Shared `core` schema
+
+- `core.entities` (id, module, entity_type, entity_id, title, created_at): registry so any row in any module can be linked.
+- `core.skill_links` (entity_ref, skill_id, weight, confidence, classified_by, is_manual): links anything to a skill. This is the backbone of the Skill Tree module.
+- `core.events` (id, module, entity_ref, event_type, payload, occurred_at): append-only log. Skill XP, goal progress, and digests are computed from events.
+- `core.notifications` (id, channel, title, body, due_at, sent_at).
+- `core.jobs` (id, module, name, schedule, last_run, last_status, log).
+
+## Modules
+
+### 1. Finance (includes Subscriptions)
+- Bank aggregation: provider TBD (Plaid, SimpleFIN, or Teller). Abstract behind a `BankProvider` interface so it can be swapped.
+- Tables: `accounts`, `balances_daily`, `transactions`, `categories`, `category_rules`, `budgets`, `budget_lines`, `recurring` (detected bills), `subscriptions`.
+- Recurring detection: same merchant, amount within 10 percent, regular cadence (weekly, monthly, yearly). Output feeds `subscriptions` and bill-due notifications.
+- Subscriptions: name, vendor, amount, cadence, next_charge, category, linked transaction pattern, status (active, paused, cancelled), cancel_url, notes. Subscriptions with no matching charge in 2 cycles get flagged.
+- Digest: net worth and 30 day change, upcoming charges next 14 days, budget categories over 80 percent, unusual transactions.
+- Net worth snapshot nightly per account.
+
+### 2. Ideas / Projects
+- Submit form creates an idea row and queues a research job.
+- Research job runs a fixed rubric with web search: problem, market, competitors, differentiation, feasibility for a solo builder, verdict with confidence.
+- Every number in the report needs a cited source or it is not written.
+- Depth setting: quick or deep. Stores cost per run.
+- Ideas link to skills (what skills it needs and would build).
+
+### 3. Fitness
+- Sources: Strava plus one health data source (TBD).
+- Tables: `workouts`, `workout_plans`, `body_metrics` (weight, etc), `exercises`, `sets`.
+- Coaching agent reads weekly digest and proposes plan adjustments. Proposals only, user approves.
+- Workouts emit events that feed Health skills and fitness goals.
+
+### 4. Meals
+- Recipe import from URL via schema.org JSON-LD, fallback to `recipe-scrapers`.
+- Tables: `recipes`, `ingredients`, `steps`, `meal_log`.
+- Cook mode view: large text, step at a time, ingredient scaling.
+
+### 5. Travel
+- Tables: `trips`, `itinerary_items`, `places_visited` (lat, lng, dates), `loyalty_programs` (manual balances, no public APIs exist), `bookings`.
+- Map view of `places_visited`.
+- Booking helper: cents per point calculator with user-supplied cash and points prices. Do not attempt to scrape loyalty sites.
+
+### 6. Second Brain
+- Obsidian vault in git is the source of truth. The app never edits the vault without a review step.
+- Ingestion: URL to readability text, YouTube to transcript (yt-dlp), book notes manual. Model drafts a summary note, user approves, note is committed to vault.
+- Embeddings into pgvector on note change. Semantic search tool.
+- Every note is classified to skills. Finishing a book or article emits a skill event.
+
+### 7. Skill Tree (character sheet)
+- Tree of attributes, categories, and leaf skills. Example:
+  - Engineering: Coding (TypeScript, Python, SQL), Systems (Architecture, Cloud, DevOps), AI (Agents, RAG, Evals)
+  - Business: Product, Sales, Finance literacy, Marketing
+  - Communication: Writing, Speaking, Negotiation
+  - Health: Strength, Endurance, Nutrition, Sleep
+  - Life ops: Personal finance, Travel, Cooking
+  - The starting tree is a config file (`skills.yaml`) the user edits. Nodes have id, parent, name, description, keywords.
+- XP model: every event in `core.events` that links to a skill contributes XP. Weights per event type live in config (task completed = small, project shipped = large, book finished = medium, workout = small to Health). Level is a function of XP. Keep the formula simple and visible. Do not invent precision.
+- Parent attribute score = weighted sum of children.
+- Auto-classification: when any entity is created (task, note, idea, goal, workout, recipe), a `classify_to_skills(entity)` service runs rules (keyword match from `skills.yaml`) then the model for anything unmatched, writing `core.skill_links` with confidence. Manual edits set `is_manual = true`.
+- Views: graph view (force-directed, Obsidian style, nodes sized by level, edges parent to child, click to drill), radar chart of top-level attributes, per-skill timeline of XP and the events behind it.
+- Skills digest: skills gaining fastest, skills stagnant 60+ days, skills with high goal weight but low activity.
+
+### 8. Insurance and Policies
+- One table: `policies` (type, carrier, policy_number encrypted, coverage_summary text, premium, cadence, expiration_date, status, document_url, notes).
+- Types: auto, renters or homeowners, life, health, device (AppleCare, device care), other.
+- `coverage_summary` is free text the user writes (example: "$100k/$300k liability, $500 deductible, rental included"). No structured coverage tables, no limits or deductible fields, no gap analysis, no model judgment of adequacy.
+- Views: list of policies with type, carrier, coverage summary, policy number (masked, click to reveal), expiration date. Sort by expiration.
+- Notifications 30 and 7 days before expiration.
+- Optional link to a `finance.recurring` row so the premium shows in Finance.
+- Digest: policies expiring in the next 60 days.
+
+### 9. Goals
+- Tables: `goals` (title, description, target_value, unit, metric_source, deadline, status), `goal_checkins`.
+- `metric_source` points at a module query (example: `fitness.body_metrics.weight latest`, `second_brain.books.finished count`). Progress is computed, not typed, when a source exists. Manual check-ins otherwise.
+- Goals link to skills and to tasks. Goal digest: on track, at risk, stalled.
+
+### 10. Tasks
+- Tables: `tasks` (title, notes, due, priority, status, project, goal_id, source, estimated_minutes, completed_at), `projects`.
+- `source` is `manual` or `agent`. Agent-created tasks start in a review state.
+- Completing a task emits an event. Skill links computed at creation, editable.
+- Views: today, this week, by goal, by project.
+
+### 11. Orchestrator
+- Runs on schedule (default daily 6am) and on demand.
+- Reads every module's `get_digest`. Writes `core.dashboard_summary`. Sends one notification.
+- Can propose tasks and goal adjustments. Proposals go to the task review state, never directly to active.
+- Ad hoc questions go through Claude Code or the Claude app connected to `/api/mcp`. No in-app chat.
+
+## Cross-module linking summary
+
+Everything created anywhere gets: an entry in `core.entities`, skill links via `classify_to_skills`, and an event in `core.events`. That is what lets Skill Tree, Goals, and the dashboard stay consistent without each module knowing about the others.
+
+## Build order
+
+1. `core` schema, auth, dashboard shell, job runner, notifications, orchestrator with one stub module.
+2. Skill Tree module (small, and every other module depends on `classify_to_skills`).
+3. Tasks and Goals (small, exercise the linking).
+4. Finance (highest daily value, hardest integration, test bank access early).
+5. Second Brain.
+6. Insurance.
+7. Ideas.
+8. Fitness, Meals, Travel.
+
+## Conventions
+
+- Migrations in `supabase/migrations`, one per change, prefixed with the module name, never edit a shipped migration. Migrations are the only source of schema.
+- Each module lives in `modules/<name>/` with `manifest.ts`, `jobs/`, `tools/`, `ui/`, `import/notion.ts`, `seed.ts`, `README.md`. Each external provider lives in `integrations/<name>/` with `manifest.ts` and `client.ts`. See docs/ARCHITECTURE.md for both contracts.
+- Tests for classification rules and recurring detection before anything else.
+- Every job logs to `core.jobs`.
