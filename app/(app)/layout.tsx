@@ -1,15 +1,17 @@
 import Link from 'next/link'
 import { requireOwner } from '@/core/auth'
-
-// Placeholder nav. Step 5 replaces this list with getModules() sorted by
-// nav.order, so adding a module folder adds its link with no edit here.
-const NAV = [
-  { href: '/', label: 'Dashboard' },
-  { href: '/settings', label: 'Settings' },
-]
+import { getModules } from '@/core/modules'
 
 export default async function AppLayout({ children }: LayoutProps<'/'>) {
   const owner = await requireOwner()
+
+  // Dashboard and Settings are core; everything between them comes from the
+  // module manifests, so adding a module folder adds its nav entry.
+  const NAV = [
+    { href: '/', label: 'Dashboard' },
+    ...getModules().map((m) => ({ href: `/${m.id}`, label: m.nav.label })),
+    { href: '/settings', label: 'Settings' },
+  ]
 
   return (
     <div className="flex min-h-dvh">

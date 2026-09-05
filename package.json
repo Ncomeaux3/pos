@@ -6,14 +6,19 @@
     "node": "22.x"
   },
   "scripts": {
-    "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
-    "typecheck": "next typegen && tsc --noEmit",
+    "dev": "next dev",
+    "gen:index": "node scripts/gen-index.mts",
     "gen:types": "supabase gen types typescript --local --schema public --schema core > core/database.types.ts",
+    "lint": "eslint",
+    "prebuild": "node scripts/gen-index.mts",
+    "predev": "node scripts/gen-index.mts",
+    "pretest": "node scripts/gen-index.mts",
+    "pretypecheck": "node scripts/gen-index.mts",
+    "start": "next start",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.123.0",
@@ -45,6 +50,7 @@
     "eslint-config-next": "16.3.4",
     "shadcn": "^4.21.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5",
     "vitest": "^5.0.0"
   },

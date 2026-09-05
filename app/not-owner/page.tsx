@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 export default function NotOwnerPage() {
   return (
     <main className="flex min-h-dvh items-center justify-center p-6">
@@ -6,9 +8,9 @@ export default function NotOwnerPage() {
         <p className="text-sm text-muted-foreground">
           This is a single user system and you are signed in as somebody else.
         </p>
-        <a href="/login" className="inline-block text-sm underline underline-offset-4">
+        <Link href="/login" className="inline-block text-sm underline underline-offset-4">
           Sign in as the owner
-        </a>
+        </Link>
       </div>
     </main>
   )

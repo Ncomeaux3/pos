@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
 import { Button } from '@/components/ui/button'
 import { getSettings, setSetting } from '@/core/settings'
@@ -27,7 +28,7 @@ export default async function SettingsPage() {
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="text-sm text-muted-foreground">
-          Provider keys live on <a href="/settings/connections" className="underline underline-offset-4">Connections</a>, not here.
+          Provider keys live on <Link href="/settings/connections" className="underline underline-offset-4">Connections</Link>, not here.
         </p>
       </div>
 
