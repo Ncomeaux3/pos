@@ -1,82 +1,163 @@
-import { headers } from 'next/headers'
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Button } from '@/components/ui/button'
+import { Eyebrow, fieldClass } from '@/components/pos'
 import { ownerVerdict } from '@/core/auth'
 import { serverClient } from '@/core/db'
+import { getOrigin } from '@/core/origin'
+import { Countdown } from './Countdown'
+import { SubmitButton } from './SubmitButton'
+
+// Matches supabase/config.toml auth.email.otp_expiry.
+const LINK_TTL_SECONDS = 900
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 async function sendMagicLink(formData: FormData) {
   'use server'
 
-  const email = String(formData.get('email') ?? '')
+  const email = String(formData.get('email') ?? '').trim()
+  if (!EMAIL.test(email)) {
+    // Hand the typed value back so the field is not cleared on a typo.
+    redirect(`/login?error=invalid&email=${encodeURIComponent(email)}`)
+  }
+
   const verdict = ownerVerdict(email, process.env.OWNER_EMAIL ?? '')
 
-  // Only the owner ever gets a link. The reply is the same either way so the
-  // page never confirms which address owns this install.
+  // Only the owner ever gets a link, and the reply is the same either way, so
+  // the page never confirms which address owns this install. The design's
+  // denied screen would answer exactly the question an attacker is asking.
   if (verdict.ok) {
-    const origin = (await headers()).get('origin') ?? ''
     const supabase = await serverClient()
     await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${origin}/auth/callback`,
+        emailRedirectTo: `${await getOrigin()}/auth/callback`,
         // No signup flow: one owner, created by pnpm setup.
         shouldCreateUser: false,
       },
     })
   }
 
-  redirect('/login?sent=1')
+  redirect(`/login?sent=1&email=${encodeURIComponent(email)}`)
 }
 
-export default async function LoginPage({
-  searchParams,
-}: PageProps<'/login'>) {
+export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
   const params = await searchParams
   const sent = params.sent === '1'
   const error = typeof params.error === 'string' ? params.error : null
 
+  // Reflected onto the page, so it is only shown when it really is an address.
+  const raw = typeof params.email === 'string' ? params.email : ''
+  const email = EMAIL.test(raw) && raw.length <= 254 ? raw : ''
+
   return (
-    <main className="flex min-h-dvh items-center justify-center p-6">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">POS</h1>
-          <p className="text-sm text-muted-foreground">Personal operating system</p>
-        </div>
-
+    <main className="grid min-h-dvh place-items-center p-6">
+      <div className="w-full max-w-[400px] border border-rule-2 bg-bg-elev p-7">
         {sent ? (
-          <p className="rounded-lg border border-border bg-muted/40 p-4 text-sm">
-            If that address owns this install, a sign in link is on its way. The link
-            expires in an hour.
-          </p>
-        ) : (
-          <form action={sendMagicLink} className="space-y-3">
-            <label htmlFor="email" className="block text-sm font-medium">
-              Email
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              autoFocus
-              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-            />
-            <Button type="submit" className="w-full">
-              Send sign in link
-            </Button>
-          </form>
-        )}
+          <div className="space-y-5">
+            <div className="space-y-3">
+              <Eyebrow dot="ok">Link sent</Eyebrow>
+              <h1 className="text-[26px] font-normal leading-[1.1] tracking-[-0.03em] text-ink">
+                Check your inbox
+              </h1>
+              <p className="text-[13px] leading-relaxed text-ink-3">
+                If that address owns this install, a single-use sign in link is on its way
+                {email && (
+                  <>
+                    {' '}
+                    to <span className="text-ink-2">{email}</span>
+                  </>
+                )}
+                .
+              </p>
+            </div>
 
-        {error === 'expired' && (
-          <p className="text-sm text-destructive">
-            That link has expired or was already used. Request a new one.
-          </p>
-        )}
-        {error === 'missing_code' && (
-          <p className="text-sm text-destructive">
-            That link was incomplete. Request a new one.
-          </p>
+            <div className="flex items-baseline justify-between border-y border-rule py-3">
+              <span className="mono text-[10px] uppercase tracking-[0.1em] text-ink-3">Expires</span>
+              <span className="mono text-[13px]">
+                <Countdown seconds={LINK_TTL_SECONDS} />
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Link href="/login" className="text-[13px] text-ink-3 transition-colors hover:text-ink">
+                Use a different email
+              </Link>
+              <form action={sendMagicLink}>
+                <input type="hidden" name="email" value={email} />
+                <button
+                  type="submit"
+                  className="mono text-[10px] uppercase tracking-[0.1em] text-ink-3 transition-colors hover:text-ink"
+                >
+                  Resend
+                </button>
+              </form>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <Eyebrow dot="brand">POS · single owner</Eyebrow>
+              <div className="space-y-1">
+                <h1 className="text-[26px] font-normal leading-[1.1] tracking-[-0.03em] text-ink">
+                  Sign in
+                </h1>
+                <p className="mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
+                  Personal Operating System
+                </p>
+              </div>
+              <p className="text-[13px] leading-relaxed text-ink-3">
+                One owner, one login. Enter the owner email and a single-use link comes back.
+              </p>
+            </div>
+
+            <form action={sendMagicLink} className="space-y-3">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="email"
+                  className="mono block text-[10px] uppercase tracking-[0.1em] text-ink-3"
+                >
+                  Owner email
+                </label>
+                <div className="flex items-center gap-2 border border-rule-2 bg-bg-deep px-2.5 focus-within:border-brand">
+                  <span aria-hidden className="mono text-[13px] text-ink-4">
+                    &gt;
+                  </span>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    required
+                    defaultValue={error === 'invalid' ? raw : ''}
+                    className={`${fieldClass} border-0 bg-transparent px-0`}
+                  />
+                </div>
+                {error === 'invalid' && (
+                  <p className="mono text-[10px] uppercase tracking-[0.1em] text-bad">
+                    Enter a valid email
+                  </p>
+                )}
+                {error === 'expired' && (
+                  <p className="mono text-[10px] uppercase tracking-[0.1em] text-bad">
+                    That link expired. Ask for another.
+                  </p>
+                )}
+              </div>
+
+              <SubmitButton idle="Send sign-in link" busy="Sending" />
+            </form>
+
+            <div className="flex flex-wrap justify-between gap-2 border-t border-rule pt-3">
+              <span className="mono text-[10px] uppercase tracking-[0.1em] text-ink-4">
+                Link expires in 15 min
+              </span>
+              <span className="mono text-[10px] uppercase tracking-[0.1em] text-ink-4">
+                No passwords · no signup
+              </span>
+            </div>
+          </div>
         )}
       </div>
     </main>

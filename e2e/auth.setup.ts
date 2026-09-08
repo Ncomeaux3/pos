@@ -36,8 +36,8 @@ setup('sign in as the owner', async ({ page }) => {
   const sentAfter = Date.now() - 1000
 
   await page.goto('/login')
-  await page.getByLabel(/email/i).fill(email!)
-  await page.getByRole('button', { name: /sign in link|send/i }).click()
+  await page.getByLabel(/owner email/i).fill(email!)
+  await page.getByRole('button', { name: /^send/i }).click()
   await expect(page).toHaveURL(/sent=1/)
 
   let link: string | null = null

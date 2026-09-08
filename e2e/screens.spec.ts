@@ -58,6 +58,32 @@ test('settings, connections', async ({ page }) => {
 test('login, signed out', async ({ page, context }) => {
   await context.clearCookies()
   await page.goto('/login')
-  await expect(page.getByLabel(/email/i)).toBeVisible()
+  await expect(page.getByLabel(/owner email/i)).toBeVisible()
+  await expect(page.getByText(/link expires in 15 min/i)).toBeVisible()
   await shoot(page, 'login')
+})
+
+test('login, link sent', async ({ page, context }) => {
+  await context.clearCookies()
+  // Rendered from the query string, so the sent view is reachable without
+  // burning an email against the local auth rate limit.
+  await page.goto('/login?sent=1&email=owner%40example.com')
+  await expect(page.getByRole('heading', { name: /check your inbox/i })).toBeVisible()
+  await expect(page.getByText(/expires/i)).toBeVisible()
+  await shoot(page, 'login-sent')
+})
+
+test('login rejects a malformed address without clearing it', async ({ page, context }) => {
+  await context.clearCookies()
+  await page.goto('/login')
+  await page.getByLabel(/owner email/i).fill('not-an-email')
+  // The browser's own type=email check would block submit first, so go around
+  // it the way a scripted post would and prove the server validates too.
+  await page.getByLabel(/owner email/i).evaluate((el: HTMLInputElement) => {
+    el.form?.setAttribute('novalidate', 'true')
+  })
+  await page.getByRole('button', { name: /^send/i }).click()
+
+  await expect(page.getByText(/enter a valid email/i)).toBeVisible()
+  await expect(page.getByLabel(/owner email/i)).toHaveValue('not-an-email')
 })

@@ -8,6 +8,14 @@ Format: `[ ]` waiting on you, `[x]` done, with the date and what unblocked.
 
 ## Blocking now
 
+- [ ] **The CMX Logic logo files are not in the design bundle.** `PosSidebar`
+      references `assets/lockup-horizontal.svg` and `assets/mark.svg`, and the
+      `_ds/` folder ships only `styles.css` and `tokens/colors.css`. The sidebar
+      currently uses a typographic wordmark: POS in JetBrains Mono at 0.22em
+      tracking, collapsing to a single P. Drop the two SVGs into
+      `public/icons/` and I will wire them in as `currentColor` masks, which is
+      how the prototype uses them.
+
 Step 7's code is built, tested, and committed. Its done condition is the one
 thing I cannot do: it needs your real keys.
 
@@ -54,6 +62,10 @@ thing I cannot do: it needs your real keys.
       Supabase session-mode pooler URL (port 5432) as a repo secret.
 - [ ] **Step 15**: Vercel project, Supabase prod project, every `.env` key set
       as an environment variable, signups disabled in prod, Attack Mode on.
+- [ ] **Step 15**: set the email OTP expiry to 900 seconds in the hosted
+      project's auth settings. `supabase/config.toml` sets it locally, and the
+      login screen counts down from 15 minutes, so prod has to agree or the
+      timer on screen is a lie.
 - [ ] **Step 15**: confirm in the Vercel dashboard whether the Bot Protection
       managed ruleset is offered on Hobby. The docs do not state a plan gate, so
       I did not assert one either way.
