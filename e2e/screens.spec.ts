@@ -354,3 +354,20 @@ test('agent log, undo reverts a write and offers a redo', async ({ page }) => {
 
   await shoot(page, 'agent-log-undone')
 })
+
+test('settings, notifications', async ({ page }) => {
+  await page.goto('/settings/notifications')
+  await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible()
+
+  // The coarse grid: one row per module, three rollup switches each.
+  await expect(page.getByRole('switch', { name: 'Digest for Finance' })).toBeVisible()
+  await expect(page.getByRole('switch', { name: 'In-app for System' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /breaks through/i })).toBeVisible()
+
+  await shoot(page, 'settings-notifications')
+
+  // A row switch writes every rule in the module, which is the thing the
+  // rule by rule screen makes tedious.
+  await page.getByRole('switch', { name: 'Push for Finance' }).click()
+  await expect(page.getByText(/Push (on|off) for Finance/)).toBeVisible()
+})
