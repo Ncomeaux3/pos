@@ -2,129 +2,256 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* CMX Logic design system.
+ *
+ * The design defines 14 colour custom properties and nothing else. There is no
+ * typography, spacing, radius or duration token layer, so none is invented
+ * here: type and space are literal values in the components.
+ *
+ * Dark is the default theme. The server always writes data-theme on <html> from
+ * a cookie, so both variants below always match and there is no flash.
+ */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
-}
+@custom-variant dark ([data-theme="dark"] &);
+@custom-variant light ([data-theme="light"] &);
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Dark Technical (default). Verbatim from _ds/tokens/colors.css. */
+  --bg: #07080a;
+  --bg-elev: #0c0e11;
+  --bg-deep: #050608;
+  --ink: #f4f5f7;
+  --ink-2: #b8bcc4;
+  --ink-3: #6b7079;
+  --ink-4: #3a3d44;
+  --rule: rgba(255, 255, 255, 0.07);
+  --rule-2: rgba(255, 255, 255, 0.14);
+
+  /* One accent for every theme, so it is not re-declared below. The design
+   * bakes accent-soft at 0.14 alpha rather than deriving it, and that literal
+   * is what every prototype renders. */
+  --accent: #037a68;
+  --accent-soft: rgba(3, 122, 104, 0.14);
+
+  --green: #6bd49c;
+  --amber: #f5c04a;
+  --red: #ff6b6b;
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+/* Light overrides 9 of the 14. Accent and the three state colours are shared,
+ * and rule/rule-2 are alpha on a different ink rather than one colour at two
+ * opacities, so they cannot collapse into a token plus an opacity modifier. */
+[data-theme="light"] {
+  --bg: #f4f2ec;
+  --bg-elev: #fbfaf6;
+  --bg-deep: #ece9e0;
+  --ink: #0c0e11;
+  --ink-2: #3a3d44;
+  --ink-3: #6b7079;
+  --ink-4: #b0b3b8;
+  --rule: rgba(12, 14, 17, 0.1);
+  --rule-2: rgba(12, 14, 17, 0.22);
+}
+
+@theme inline {
+  /* The design vocabulary, as utilities: bg-bg, text-ink-3, border-rule-2. */
+  --color-bg: var(--bg);
+  --color-bg-elev: var(--bg-elev);
+  --color-bg-deep: var(--bg-deep);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+  --color-rule: var(--rule);
+  --color-rule-2: var(--rule-2);
+
+  /* The brand green is `brand`, not `accent`: shadcn already owns `accent` and
+   * means a hover surface by it, which here is the soft fill. */
+  --color-brand: var(--accent);
+  --color-brand-soft: var(--accent-soft);
+
+  --color-ok: var(--green);
+  --color-warn: var(--amber);
+  --color-bad: var(--red);
+
+  /* shadcn semantics mapped onto the design, so any component added with
+   * `shadcn add` inherits the palette without being patched. */
+  --color-background: var(--bg);
+  --color-foreground: var(--ink);
+  --color-card: var(--bg-elev);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--bg-elev);
+  --color-popover-foreground: var(--ink);
+  --color-primary: var(--ink);
+  --color-primary-foreground: var(--bg);
+  --color-secondary: var(--bg-elev);
+  --color-secondary-foreground: var(--ink);
+  --color-muted: var(--bg-elev);
+  --color-muted-foreground: var(--ink-3);
+  --color-accent: var(--accent-soft);
+  --color-accent-foreground: var(--ink);
+  --color-destructive: var(--red);
+  --color-border: var(--rule-2);
+  --color-input: var(--rule-2);
+  --color-ring: var(--accent);
+  --color-sidebar: var(--bg-elev);
+  --color-sidebar-foreground: var(--ink);
+  --color-sidebar-border: var(--rule);
+  --color-sidebar-accent: var(--accent-soft);
+  --color-sidebar-accent-foreground: var(--ink);
+  --color-sidebar-primary: var(--accent);
+  --color-sidebar-primary-foreground: var(--bg);
+  --color-sidebar-ring: var(--accent);
+
+  --font-sans: var(--font-space-grotesk), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  /* Radius is 0 on everything. Pills use a literal 999px and status dots 50%,
+   * which are the only two exceptions in the whole design. */
+  --radius: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-4xl: 0px;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
+
   html {
     @apply font-sans;
+    background: var(--bg);
+    color: var(--ink);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-feature-settings: "ss01", "ss02";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+    transition:
+      background 0.4s ease,
+      color 0.4s ease;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--bg-deep);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--ink-4);
+    border-radius: 0;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--ink-3);
+  }
+}
+
+@layer components {
+  /* The four presentational classes worth keeping as CSS. Everything else in
+   * the design is a component with props, and lives in components/pos/. */
+
+  .mono {
+    font-family: var(--font-mono);
+    font-feature-settings: "ss01", "ss02", "zero";
+  }
+
+  /* The universal small label. On every screen header and every card head. */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .eyebrow .dot,
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 0 var(--accent);
+    animation: pulseDot 2.4s ease-in-out infinite;
+    flex: none;
+  }
+
+  /* 64px hairline grid, used behind empty states and the connect cards. */
+  .grid-bg {
+    background-image:
+      linear-gradient(to right, var(--rule) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--rule) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+
+  /* Corner crosshair, four per framed panel. */
+  .corner {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    pointer-events: none;
+    color: var(--ink-3);
+  }
+  .corner::before,
+  .corner::after {
+    content: "";
+    position: absolute;
+    background: currentColor;
+  }
+  .corner::before {
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: 1px;
+  }
+  .corner::after {
+    left: 50%;
+    top: 0;
+    width: 1px;
+    height: 100%;
+  }
+}
+
+@keyframes pulseDot {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--accent-soft);
+  }
+  50% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
+/* The dot pulses forever and the tap scale is decorative. Both go for readers
+ * who ask for reduced motion; the dot itself stays visible. */
+@media (prefers-reduced-motion: reduce) {
+  .eyebrow .dot,
+  .status-dot {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }
