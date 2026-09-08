@@ -83,6 +83,13 @@ export function assertSchemas(sql: string, forbidden: string[]): void {
 
 /** Throws unless this is a single read-only statement. */
 export function assertReadOnly(sql: string): void {
+  // U&"\\0066inance" is a legal way to spell finance that no text match will
+  // ever see, which defeats assertSchemas below. Refuse the syntax rather than
+  // write a decoder for it: nothing an agent legitimately queries needs it.
+  if (/\bU&\s*['"]/i.test(sql)) {
+    throw new Error('Query may not use Unicode escape syntax (U&"..."). Write the name directly.')
+  }
+
   const bare = structureOnly(sql).trim()
   if (bare === '') throw new Error('Query is empty.')
 

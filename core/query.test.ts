@@ -113,6 +113,14 @@ describe('assertSchemas', () => {
     )
   })
 
+  it('rejects a schema spelled with a Unicode escape identifier', () => {
+    // Postgres resolves U&"\\0066inance" to finance. assertReadOnly refuses the
+    // syntax outright, because a text check cannot see through it.
+    expect(() => assertReadOnly('select * from U&"\\0066inance".transactions')).toThrow(
+      /Unicode escape/i,
+    )
+  })
+
   it('rejects it inside a CTE', () => {
     expect(() =>
       assertSchemas('with t as (select * from health.vital) select * from t', others),
