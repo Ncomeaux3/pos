@@ -73,7 +73,8 @@ Owner: Nick. Solo builder, nights and weekends. Ships incrementally. Do not buil
   - Communication: Writing, Speaking, Negotiation
   - Health: Strength, Endurance, Nutrition, Sleep
   - Life ops: Personal finance, Travel, Cooking
-  - The starting tree is a config file (`skills.yaml`) the user edits. Nodes have id, parent, name, description, keywords.
+  - Amended 2026-09-08. Skill Tree is a module with its own `skills` schema, not part of core: it owns `skills.xp_weight`, `skills.override`, `skills.level()` and the `skills.xp` view. Only `core.entities`, `core.events` and `core.skill_links` stay in core. `register()` classifies through an optional `classifier` on the module manifest, so deleting `modules/skills/` leaves a working app.
+  - `modules/skills/skills.yaml` is the committed tree and stays generic: this repo holds nothing personal. The owner's own tree is rows in `skills.override`, edited in the UI, because the Vercel filesystem is read only at runtime. Reset to the default is a delete of every row. Nodes have id, parent, name, description, keywords.
 - XP model: every event in `core.events` that links to a skill contributes XP. Weights per event type live in config (task completed = small, project shipped = large, book finished = medium, workout = small to Health). Level is a function of XP. Keep the formula simple and visible. Do not invent precision.
 - Parent attribute score = weighted sum of children.
 - Auto-classification: when any entity is created (task, note, idea, goal, workout, recipe), a `classify_to_skills(entity)` service runs rules (keyword match from `skills.yaml`) then the model for anything unmatched, writing `core.skill_links` with confidence. Manual edits set `is_manual = true`.

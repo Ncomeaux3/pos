@@ -44,9 +44,7 @@ core/                     shared runtime. Modules import core. Core never import
   modules.ts              defineModule() type plus registry loader
   integrations.ts         defineIntegration() type, registry loader, getCredentials(id)
   entities.ts             register(), the write helper that also classifies and emits
-  classify.ts             rules first, model second, writes core.skill_links
   events.ts               emit(), the only writer to core.events
-  xp.ts                   XP weights and level formula
   search.ts               embed(), hybrid search (pgvector plus tsvector), nightly embed job
   proposals.ts            create, approve (applies via module write tool), reject
   query.ts                runs agent SQL as the read-only role with timeout and row cap
@@ -73,9 +71,6 @@ integrations/<name>/
   client.ts               thin API wrapper for the provider
   *.test.ts               manifest shape and test() against a recorded fixture
 integrations/_index.ts    generated alongside modules/_index.ts
-config/                   committed defaults, edited per fork
-  skills.yaml             starting skill tree
-  xp.yaml                 event type to XP weight
 supabase/migrations/      <timestamp>_<module>_<change>.sql, never edited after ship
 scripts/setup.ts          fork and fill bootstrap, --demo flag runs every module's seed.ts
 scripts/gen-index.ts      writes modules/_index.ts and integrations/_index.ts
@@ -163,7 +158,7 @@ Schema `core`. RLS on every table. `authenticated` role reads and writes. `servi
 | Table | Purpose |
 |---|---|
 | entities | registry: module, entity_type, entity_id, title. Any row anywhere can be linked. |
-| skill_links | entity_ref, skill_id, weight, confidence, classified_by, is_manual |
+| skill_links | entity_ref, skill_id, weight, confidence, classified_by, is_manual. Written by whichever module supplies the classifier, read by any of them |
 | events | append only: module, entity_ref, event_type, payload, occurred_at, title_snapshot |
 | notifications | channel, title, body, due_at, sent_at |
 | jobs | module, name, last_run, last_status, log (includes cursors for chunked work) |
@@ -176,19 +171,23 @@ Schema `core`. RLS on every table. `authenticated` role reads and writes. `servi
 | llm_calls | occurred_at, model, purpose, module, input_tokens, output_tokens, cost_cents |
 | request_log | occurred_at, route, method, status, duration_ms, ip_hash, error. Pruned to 90 days nightly. |
 
-Skill XP is a SQL view over `events` joined to `skill_links` weighted by `config/xp.yaml`. Level is `min(99, floor(sqrt(xp / 100)))`, implemented once in SQL and once in `core/xp.ts`, with a test proving they match.
+Skill XP is not core. `skills.xp` is a view the Skill Tree module owns, over `core.events` joined to `core.skill_links` and weighted by `skills.xp_weight`. Level is `min(99, floor(sqrt(xp / 100)))`, implemented once as `skills.level()` and once in `modules/skills/xp.ts`, with a test proving they match. See modules/skills/README.md.
 
 ## Data flow
 
 1. Ingestion: a provider webhook, a cron sync using `getCredentials()`, an import script, or a UI form writes a module row through `entities.register()`.
-2. `register()` writes `core.entities`, runs `classify()`, emits an event.
+2. `register()` writes `core.entities`, classifies, and emits an event. The creation event fires once, on insert: re-registering an existing row updates it silently, or the caller names an event for something that genuinely happened again.
 3. Nightly cron, in order: refresh OAuth tokens, each module's jobs, embed changed entities, each module's `get_digest` into `core.digests`, orchestrator assembles `core.dashboard_summary` by rules and asks Haiku for a two sentence headline, queues one notification, prunes `request_log`.
 4. Notification sender bundles every unsent `core.notifications` row into one plain text email: headline, top 3 items, remaining alerts, month to date model spend, dashboard link. Nothing else emails.
 5. Dashboard renders the latest summary. Module pages read their own schema.
 
 ## Classification
 
-`classify(entity)` in `core/classify.ts`. Keyword rules from `config/skills.yaml` first: a match writes `skill_links` with `classified_by='rule'`, confidence 1. No match: one Haiku call with the tree and entity text, writes `classified_by='model:<id>'` with the model's confidence. Never writes where `is_manual=true`. One retry, then `classified_by='unclassified'` for manual review.
+Classification belongs to a module, not to core. A manifest may declare a `classifier`, and `register()` calls whichever module does; today that is `modules/skills`. None installed means nothing classifies and nothing breaks, which is what makes Skill Tree deletable.
+
+`core/entities.ts` reaches the registry through a **dynamic** import. A static one closes a cycle: `core/modules.ts` imports `modules/_index.ts`, which imports every manifest, and a manifest imports `register` from `core/entities.ts`. Next's bundler hoists around that and plain Node does not, so a static import works in `pnpm dev` and breaks the cron job, `pnpm setup`, and any test outside Next.
+
+`classify(entity)` in `modules/skills/classify.ts`. Keyword rules from the tree, which is `modules/skills/skills.yaml` merged with the owner's edits in `skills.override`: a match writes `skill_links` with `classified_by='rule'`, confidence 1. No match: one Haiku call with the tree and entity text, writes `classified_by='model:<id>'` with the model's confidence. Never writes where `is_manual=true`. One retry, then `classified_by='unclassified'` for manual review.
 
 ## Retrieval
 

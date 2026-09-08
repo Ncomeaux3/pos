@@ -3,7 +3,7 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
-Last updated: 2026-09-08, end of step 16. Branch `phase-1-core`, merged to main.
+Last updated: 2026-09-08, Skill Tree shipped. Branch `skills-module`.
 
 ## Done
 
@@ -23,6 +23,13 @@ bundle landed 2026-09-07 and steps 0, 7.5 and 8 to 14 followed.
 | 13 | `pnpm setup` and `pnpm setup:demo`, both idempotent |
 | 14 | CI and backup workflows, restore drilled |
 | 16 | Docs squared up: README quickstart, connections registry, the notes module README |
+
+**Phase 2, module 1 of 13: Skill Tree.** The tree, the XP weights, the level
+function and the overrides table moved out of core into a `skills` schema, and
+the constellation screen is built. `register()` now classifies through an
+optional `classifier` on the module manifest, so deleting `modules/skills/`
+leaves a working app. See docs/plans/skills-module.md and
+modules/skills/README.md.
 
 ## Verification
 
@@ -45,23 +52,27 @@ classification splits between keyword rules and `claude-haiku-4-5`, and
 
 ## Screens built
 
-Login, Dashboard (live, with the bento tiles), Notes, Search, Review, Settings
-General, Settings Connections, Settings Agents and MCP. Command palette on Cmd K.
+Login, Dashboard (live, with the bento tiles), Notes, Skill Tree, Search,
+Review, Settings General, Settings Connections, Settings Agents and MCP.
+Command palette on Cmd K.
 
-Not yet built: Notifications, Agent Log, Onboarding, Weekly Review, and every
-module beyond the `notes` stub.
+Not yet built: Notifications, Agent Log, Onboarding, Weekly Review, the
+Settings Skills tab, and every module beyond `notes` and `skills`.
+
+Known gaps on the Skill Tree screen: goal weight shows `--` because Goals does
+not exist, and there is no Notion backfill, so XP starts at zero by decision.
 
 ## Next
 
-**Step 15, deploy, is the only Phase 1 step left, and it is entirely owner
-work**: Vercel, a hosted Supabase project, and the first real nightly run in
+**Tasks, then Goals, then Finance.** Each is one step: migration, manifest,
+tools, jobs, UI to its prototype, seed, README, Playwright screenshots.
+
+**Step 15, deploy, is still the only Phase 1 step left, and it is entirely
+owner work**: Vercel, a hosted Supabase project, and the first real nightly run in
 production. The checklist is in docs/OWNER-TODO.md. Nothing in the codebase
 blocks it, and nothing in Phase 2 waits on it.
 
-**Phase 2 starts with the Skill Tree module**, then Tasks and Goals, then
-Finance. Each is one step: migration, manifest, tools, jobs, UI to its
-prototype, seed, README, Playwright screenshots. See
-docs/plans/design-build.md.
+See docs/plans/design-build.md.
 
 The registry cycle that blocked steps 12 and 13 is fixed: both registries load
 in a plain Node process, which is what lets `pnpm setup` and the cron job work
@@ -84,4 +95,12 @@ outside Next.
   imports: `core/owner.ts`, `core/autonomy.ts`.
 - **New core tables need their own trigger, RLS, both policies and three
   grants.** `core_init` does that in a loop over `pg_tables` that does not
-  re-run for a later migration.
+  re-run for a later migration. `alter table ... set schema` carries rows,
+  constraints, policies and triggers, but **not** grants: restate those.
+- **`register()` emits the creation event on insert only.** It used to emit on
+  every upsert, so each `setup:demo` and each e2e seed awarded the XP again;
+  five demo notes had thirty-eight creation events each. Pass an explicit
+  `eventType` for something that genuinely happens again on the same row.
+- **`var(--brand)` does not exist.** The token is `--accent`, exposed to
+  Tailwind as `--color-brand`. An undefined var in an SVG `fill` is not an
+  error: the shape renders black on a black background.
