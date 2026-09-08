@@ -76,5 +76,89 @@ await db().query(
      join core.notification_rules r on r.module = v.module and r.key = v.key`,
 )
 
-console.log(`seeded ${notes} notes, indexed ${index.indexed}, embedded ${index.embedded}, 2 proposals, 7 alerts`)
+// Two nightly runs with their writes, so the Agent Log has an accordion to
+// open. The first is partial with a failed job; the second is clean. Every
+// entry that carries a revert payload gets an Undo button, and the notes ones
+// genuinely revert: they call notes.write with the previous title.
+// Every prior run goes, not just the demo ones. The Agent Log shows the last
+// seven, the dashboard's Run now button adds a real one on nearly every e2e
+// pass, and after a few passes the seeded runs fall out of the window and the
+// screen has nothing to show. These are local run logs, the same class of
+// throwaway as the notes and proposals cleared above.
+//
+// write_log.run_id and notifications.digest_run_id are both on delete set
+// null, so nothing else is lost with them.
+await db().query(`delete from core.write_log where actor = 'demo'`)
+await db().query(`delete from core.job_runs`)
+
+const { rows: runRows } = await db().query<{ id: string }>(
+  `insert into core.job_runs (trigger_source, status, started_at, finished_at, duration_ms, log)
+   values
+     ('demo', 'partial', now() - interval '10 minutes', now() - interval '10 minutes' + interval '221 seconds', 221000,
+      $1::jsonb),
+     ('demo', 'clean', now() - interval '12 minutes', now() - interval '12 minutes' + interval '178 seconds', 178000,
+      $2::jsonb)
+   returning id`,
+  [
+    JSON.stringify({
+      jobs: [
+        { module: 'notes', name: 'nightly-digest', status: 'ok', durationMs: 31000 },
+        { module: 'skills', name: 'nightly-digest', status: 'ok', durationMs: 6000 },
+        { module: 'core', name: 'embed', status: 'ok', durationMs: 22000 },
+        {
+          module: 'core',
+          name: 'brokerage-sync',
+          status: 'failed',
+          durationMs: 82000,
+          detail: 'auth_expired: refresh token rejected (401), account 8830',
+        },
+        { module: 'core', name: 'digest-notify', status: 'ok', durationMs: 3000 },
+      ],
+    }),
+    JSON.stringify({
+      jobs: [
+        { module: 'notes', name: 'nightly-digest', status: 'ok', durationMs: 28000 },
+        { module: 'skills', name: 'nightly-digest', status: 'ok', durationMs: 5000 },
+        { module: 'core', name: 'embed', status: 'ok', durationMs: 19000 },
+      ],
+    }),
+  ],
+)
+
+const [recent, older] = runRows.map((r) => r.id)
+
+await db().query(
+  `insert into core.write_log
+     (run_id, module, tool, kind, title, reason, diff, actor, revert_payload, apply_payload, created_at)
+   values
+     ($1, 'skills', 'write', 'classified',
+      'Assigned skills to 3 notes',
+      'Two matched keyword rules from skills.yaml; one went to the model at 0.71 confidence.',
+      $3::jsonb, 'demo', null, null, now() - interval '10 minutes'),
+     ($1, 'notes', 'write', 'created',
+      'Drafted the weekly summary note',
+      'Five notes landed this week and none of them linked to each other.',
+      $4::jsonb, 'demo', null,
+      $5::jsonb, now() - interval '10 minutes' + interval '40 seconds'),
+     ($2, 'notes', 'write', 'updated',
+      'Gave an empty note a body',
+      'The note had a title and nothing under it, and read like a recurring chore.',
+      $6::jsonb, 'demo',
+      $7::jsonb, $8::jsonb, now() - interval '12 minutes')`,
+  [
+    recent,
+    older,
+    JSON.stringify([
+      { field: 'Skill links', before: '11', after: '14' },
+      { field: 'Unclassified', before: '3', after: '0' },
+    ]),
+    JSON.stringify([{ field: 'title', before: null, after: 'Weekly summary of what you wrote' }]),
+    JSON.stringify({ title: 'Weekly summary of what you wrote', body: 'Drafted from the last seven days.' }),
+    JSON.stringify([{ field: 'body', before: '', after: 'Recurring: every 3 months.' }]),
+    JSON.stringify({ title: 'Sharpen the kitchen knives', body: '' }),
+    JSON.stringify({ title: 'Sharpen the kitchen knives', body: 'Recurring: every 3 months.' }),
+  ],
+)
+
+console.log(`seeded ${notes} notes, indexed ${index.indexed}, embedded ${index.embedded}, 2 proposals, 7 alerts, 2 runs`)
 process.exit(0)

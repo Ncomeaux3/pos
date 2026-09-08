@@ -3,6 +3,8 @@ import { getModule, getModules, type ToolContext } from './modules'
 import { propose } from './proposals'
 import { runQuery } from './query'
 import { getSetting } from './settings'
+import { logWrite } from './writelog'
+import type { Diff } from './writelog-shape'
 
 // The one place a tool call is decided. The UI calls tools directly; agents and
 // the orchestrator come through here, and this is what stands between them and
@@ -53,7 +55,19 @@ export async function callTool(
   moduleId: string,
   toolName: string,
   input: unknown,
-  ctx: ToolContext & { agent?: string; reason?: string },
+  ctx: ToolContext & {
+    agent?: string
+    reason?: string
+    /** The run this call belongs to, so the Agent Log can group it. */
+    runId?: string | null
+    /**
+     * The same tool call that would put this back. A caller that knows the
+     * before values passes them; one that does not passes nothing, and the
+     * entry shows no Undo rather than a button that cannot work.
+     */
+    revert?: Record<string, unknown> | null
+    diff?: Diff[]
+  },
 ): Promise<CallResult> {
   const manifest = getModule(moduleId)
   if (!manifest) throw new Error(`No module ${moduleId}`)
@@ -95,5 +109,25 @@ export async function callTool(
     return { status: 'proposed', proposalId: id }
   }
 
-  return { status: 'done', result: await tool.run(input, { source: ctx.source }) }
+  const result = await tool.run(input, { source: ctx.source })
+
+  // An agent write is logged with what it would take to reverse it, which is
+  // what makes Undo on the Agent Log real. A UI write is not: undo for one of
+  // those is the edit form the owner already has open.
+  if (ctx.source !== 'ui') {
+    await logWrite({
+      runId: ctx.runId,
+      module: moduleId,
+      tool: toolName,
+      kind: toolName,
+      title: `${manifest.nav.label}: ${toolName}`,
+      reason: ctx.reason ?? `${moduleId}.${toolName} ran unguarded at the current autonomy level.`,
+      actor: ctx.agent ?? 'agent',
+      applyPayload: input as Record<string, unknown>,
+      revertPayload: ctx.revert ?? null,
+      diff: ctx.diff,
+    })
+  }
+
+  return { status: 'done', result }
 }

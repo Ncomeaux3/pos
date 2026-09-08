@@ -43,12 +43,34 @@ export async function snooze(id: string, days: number): Promise<ActionResult> {
   }
 }
 
+/**
+ * The keys this screen owns. A server action is a public POST endpoint that
+ * accepts whatever it is sent, and the type parameter is erased at runtime, so
+ * without this the schedule card would be a general purpose write to any
+ * setting, including agent_autonomy and the model spend cap.
+ */
+const SCHEDULE_KEYS = [
+  'digest_morning_at',
+  'digest_morning_enabled',
+  'digest_evening_at',
+  'digest_evening_enabled',
+  'quiet_from',
+  'quiet_to',
+  'quiet_urgent_override',
+  'notifications_paused',
+] as const satisfies readonly SettingKey[]
+
+type ScheduleKey = (typeof SCHEDULE_KEYS)[number]
+
 /** The schedule card. One key at a time, so a failed save loses one field. */
-export async function updateSchedule<K extends SettingKey>(
+export async function updateSchedule<K extends ScheduleKey>(
   key: K,
   value: Settings[K],
 ): Promise<ActionResult> {
   await requireOwner()
+  if (!(SCHEDULE_KEYS as readonly string[]).includes(key)) {
+    return { ok: false, error: `${key} is not a notification setting` }
+  }
   try {
     await setSetting(key, value)
     return done()

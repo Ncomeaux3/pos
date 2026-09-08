@@ -127,6 +127,21 @@ export async function approve(
   const input = tool.input.parse({ ...proposal.payload, ...patch })
   const result = await tool.run(input, { source: 'agent' })
 
+  // An approved proposal is still an agent write: the owner said yes to it,
+  // not that they made it. It belongs in the Agent Log with everything else,
+  // and the diff the Review panel showed is the diff that gets logged.
+  const { logWrite } = await import('./writelog')
+  await logWrite({
+    module: proposal.module,
+    tool: proposal.tool,
+    kind: 'approved',
+    title: proposal.title ?? `${proposal.module}.${proposal.tool}`,
+    reason: proposal.reason ?? 'Approved from the Review inbox.',
+    actor: proposal.agent ?? 'agent',
+    diff: proposal.diff,
+    applyPayload: input as Record<string, unknown>,
+  })
+
   // Marked only after the write succeeded. A tool that throws leaves the
   // proposal pending, so the owner can see it failed and try again.
   await db().query(

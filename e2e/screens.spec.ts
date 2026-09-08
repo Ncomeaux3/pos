@@ -307,3 +307,50 @@ test('notifications, a rule expanded', async ({ page }) => {
 
   await shoot(page, 'notifications-rule')
 })
+
+test('agent log, the run accordion and the rail', async ({ page }) => {
+  await page.goto('/agent-log')
+  await expect(page.getByRole('heading', { name: 'What the agent did while you slept' })).toBeVisible()
+
+  // The accordion opens on the newest run that wrote something, skipping past
+  // however many empty Run now records an earlier test left behind. No click
+  // needed, and that is the point being asserted.
+  await expect(page.getByText('Assigned skills to 3 notes')).toBeVisible()
+  await expect(page.getByText('Skill links')).toBeVisible()
+
+  // A failed job shows the raw provider message, not a paraphrase.
+  await expect(page.getByText(/auth_expired: refresh token rejected/)).toBeVisible()
+
+  // The rail: run KPIs, the job list, undo history and the autonomy selector.
+  await expect(page.getByText('Undo history / 0')).toBeVisible()
+  await expect(page.getByRole('radiogroup', { name: 'Agent autonomy' })).toBeVisible()
+
+  await shoot(page, 'agent-log')
+})
+
+// Undo is the screen's headline feature, and it has to actually revert the
+// write rather than only strike the row.
+test('agent log, undo reverts a write and offers a redo', async ({ page }) => {
+  await page.goto('/agent-log')
+
+  // The newest run's writes are a classification and a create, and neither can
+  // describe its own reverse, so neither offers Undo. That is the honest
+  // outcome, not a gap: a create would need a delete tool the module has not
+  // got. The previous run holds the update that recorded how to reverse itself.
+  await expect(page.getByRole('button', { name: 'Undo' })).toHaveCount(0)
+
+  // A closed run is headed by its own summary; the entries are only rendered
+  // once it opens.
+  // Same reason: open the run that holds the reversible write by name, rather
+  // than by its position in a list the dev database keeps adding to.
+  await page.getByRole('button', { name: /1 write across Notes/ }).click()
+  await expect(page.getByText('Gave an empty note a body')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Undo' }).first().click()
+
+  // The row is struck through, Redo replaces Undo, and the rail counts it.
+  await expect(page.getByRole('button', { name: 'Redo' }).first()).toBeVisible()
+  await expect(page.getByText('Undo history / 1')).toBeVisible()
+
+  await shoot(page, 'agent-log-undone')
+})

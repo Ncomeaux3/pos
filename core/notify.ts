@@ -209,8 +209,25 @@ export async function listRules(): Promise<Rule[]> {
   return rows.map((r) => ({ ...r, lead_days: Number(r.lead_days) }))
 }
 
+/**
+ * The columns a patch is allowed to name. This is not the RulePatch type
+ * restated for tidiness: the type is erased at runtime, this function builds a
+ * SET clause by interpolating key names, and it is reached from a server
+ * action, which is a public POST endpoint that accepts whatever it is sent. A
+ * key of `muted = true, label` would otherwise write a column no caller should
+ * be able to touch.
+ */
+const PATCHABLE: (keyof RulePatch)[] = [
+  'channels',
+  'timing',
+  'lead_days',
+  'urgent',
+  'muted',
+  'snooze_until',
+]
+
 export async function patchRule(id: string, patch: RulePatch): Promise<void> {
-  const fields = Object.keys(patch) as (keyof RulePatch)[]
+  const fields = PATCHABLE.filter((f) => f in patch)
   if (fields.length === 0) return
 
   const set = fields.map((f, i) => `${f} = $${i + 2}`).join(', ')
