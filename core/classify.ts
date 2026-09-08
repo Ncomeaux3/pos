@@ -92,6 +92,22 @@ async function link(
 }
 
 /**
+ * Clears the unclassified marker once a real skill is found.
+ *
+ * It is a parking space, not a skill, so it must not survive alongside real
+ * links: it would otherwise sit in the tree forever and carry XP of its own.
+ * This is what happens to every row classified while Anthropic was
+ * disconnected, once the nightly batch reaches it.
+ */
+async function clearUnclassified(entityRef: string): Promise<void> {
+  await db().query(
+    `delete from core.skill_links
+      where entity_ref = $1 and skill_id = 'unclassified' and is_manual = false`,
+    [entityRef],
+  )
+}
+
+/**
  * Links one entity to skills. Rules first; only the leftovers cost a model
  * call. Never throws: a note that cannot be classified is still a note.
  */
@@ -99,6 +115,7 @@ export async function classify(entityRef: string, text: string, module?: string)
   const ruleHits = matchByRules(text)
   if (ruleHits.length > 0) {
     for (const skillId of ruleHits) await link(entityRef, skillId, 1, 'rule')
+    await clearUnclassified(entityRef)
     return
   }
 
@@ -110,6 +127,8 @@ export async function classify(entityRef: string, text: string, module?: string)
     await link(entityRef, 'unclassified', 0, 'unclassified')
     return
   }
+
+  await clearUnclassified(entityRef)
 
   for (const guess of guesses) {
     await link(

@@ -159,3 +159,44 @@ describe('classify', () => {
     expect(await linksFor(ref)).toHaveLength(1)
   })
 })
+
+describe('the unclassified marker', () => {
+  it('is cleared once rules find a real skill', async () => {
+    const ref = await anEntity('Later matched by a rule')
+
+    // Stand in for a row classified while the model was unreachable.
+    await db().query(
+      `insert into core.skill_links (entity_ref, skill_id, confidence, classified_by)
+       values ($1, 'unclassified', 0, 'unclassified')`,
+      [ref],
+    )
+
+    await classify(ref, 'typescript refactor')
+
+    const { rows } = await db().query<{ skill_id: string }>(
+      'select skill_id from core.skill_links where entity_ref = $1',
+      [ref],
+    )
+    // It is a parking space, not a skill: leaving it would put it in the tree
+    // forever and give it XP of its own.
+    expect(rows.map((r) => r.skill_id)).not.toContain('unclassified')
+    expect(rows.length).toBeGreaterThan(0)
+  })
+
+  it('is left alone when the owner set it by hand', async () => {
+    const ref = await anEntity('Deliberately parked')
+    await db().query(
+      `insert into core.skill_links (entity_ref, skill_id, confidence, classified_by, is_manual)
+       values ($1, 'unclassified', 0, 'unclassified', true)`,
+      [ref],
+    )
+
+    await classify(ref, 'typescript refactor')
+
+    const { rows } = await db().query<{ skill_id: string }>(
+      `select skill_id from core.skill_links where entity_ref = $1 and skill_id = 'unclassified'`,
+      [ref],
+    )
+    expect(rows).toHaveLength(1)
+  })
+})
