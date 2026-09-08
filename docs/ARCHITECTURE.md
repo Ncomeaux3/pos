@@ -241,7 +241,7 @@ Forks receive upgrades by adding this repo as a git remote and merging. Personal
 
 | Area | Where it is handled |
 |---|---|
-| Frontend | Next.js App Router, Tailwind, shadcn/ui, PWA manifest. Module pages come from manifests. Built to the design bundle: 14 colour tokens, no other token layer, shared primitives in `components/pos/`, charts hand-rolled SVG. See docs/plans/design-build.md. |
+| Frontend | Next.js App Router, Tailwind, shadcn/ui, PWA manifest. Module pages come from manifests. Screens come from the design bundle; type, shape and colour come from ComeauxVerse/brand/visual.md: Manrope one family, radius 12px and 8px, the brand type scale, 15 colour tokens. Shared primitives in `components/pos/`, charts hand-rolled SVG. See docs/plans/design-build.md. |
 | APIs and backend logic | Server actions for UI writes, route handlers for cron, MCP, OAuth callback, webhooks. Module logic in `modules/<name>/`, shared logic in `core/`. |
 | Database and storage | Supabase Postgres, one schema per module plus `core`, pgvector, Supabase Storage bucket per module, integer cents, timestamptz. |
 | Auth and permissions | Supabase Auth magic link, signups disabled, one owner. RLS on every table. `pos_readonly` role for agent SQL. MCP bearer token. CRON_SECRET on cron. Webhook shared secrets. |

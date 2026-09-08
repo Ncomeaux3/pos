@@ -30,6 +30,9 @@ Fourteen, to be appended to [decisions/log.md](decisions/log.md) as step 0 of ex
 | 12 | Autonomy (`observe` / `propose` / `act`) is one settings key read by the guard dispatcher in step 9 | |
 | 13 | Phase 1A builds the tokens, shell and all twenty primitives in one step before any new screen | |
 | 14 | Second Brain's schema id is `brain`, not `second_brain` | **amends** SPEC |
+| 15 | The ComeauxVerse brand guide governs the app: Manrope one family, no monospace, radius 12px and 8px, the brand type scale | **supersedes** decision 13's token layer |
+| 16 | Teal #2FB8A6 added for accent text under about 14px, because the green is 3.80:1 | accessibility |
+| 17 | The ComeauxVerse mark and lockup replace the CMX Logic logo | |
 
 ### Smaller calls I am making, stated so you can overrule them
 
@@ -49,7 +52,7 @@ New step, inserted before step 8. Nothing else can be built to the design until 
 
 ### Tokens and type
 
-Replace the `:root` and `.dark` blocks in [app/globals.css](app/globals.css) wholesale. The design system defines **14 colour custom properties and nothing else**, so there is no spacing, radius or type token layer to port.
+**Amended 2026-09-08 by decisions 15 to 17.** The palettes of the POS bundle and the ComeauxVerse brand guide are identical, so the colour layer was unaffected; type and shape now come from the brand guide instead of the bundle. Manrope is the one family, `.label` and `.num` replace the monospace layer, the brand type scale ships as `t-display` through `t-caption`, radius is 12px standard and 8px on small controls, and teal joins the palette for small accent text. What follows describes the colour work, which still holds.
 
 - `:root` carries all 14 (dark is the default theme). `[data-theme="light"]` overrides 9; accent, green, amber and red are identical in both themes.
 - `@theme inline` maps them to Tailwind colour utilities. Every `--radius-*` goes to `0`; `.chip` uses a literal `999px`.
