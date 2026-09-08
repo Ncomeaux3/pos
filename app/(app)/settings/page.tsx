@@ -82,7 +82,7 @@ export default async function SettingsPage() {
         }
       />
 
-      <TabLinks tabs={settingsTabs(getIntegrations().length, 0)} current="/settings" label="Settings sections" />
+      <TabLinks tabs={settingsTabs(getIntegrations().length)} current="/settings" label="Settings sections" />
 
       <form action={save} className="space-y-6">
         <Card className="space-y-4">

@@ -38,17 +38,38 @@ export default defineModule({
           .regex(/^[a-z0-9_]+$/, 'Lowercase letters, digits and underscores.'),
         name: z.string().min(1).max(80).optional(),
         parent: z.string().max(64).optional(),
-        keywords: z.array(z.string().min(1).max(40)).max(40).default([]),
+        // No default. Omitting keywords must leave the stored ones alone: the
+        // settings tab renames and edits keywords through the same row, and an
+        // empty array here would quietly erase the other edit.
+        keywords: z.array(z.string().min(1).max(40)).max(40).optional(),
       }),
       run: async ({ kind, skillId, name, parent, keywords }) => {
         await db().query(
           `insert into skills.override (kind, skill_id, name, parent, keywords)
-           values ($1, $2, $3, $4, $5)
+           values ($1, $2, $3, $4, coalesce($5::text[], '{}'))
            on conflict (kind, skill_id) do update
-             set name = excluded.name, parent = excluded.parent, keywords = excluded.keywords`,
-          [kind, skillId, name ?? null, parent ?? null, keywords],
+             set name = coalesce(excluded.name, skills.override.name),
+                 parent = coalesce(excluded.parent, skills.override.parent),
+                 keywords = case
+                   when $5::text[] is null then skills.override.keywords
+                   else excluded.keywords
+                 end`,
+          [kind, skillId, name ?? null, parent ?? null, keywords ?? null],
         )
         return { kind, skillId }
+      },
+    }),
+
+    // Undo. Restoring one skill drops its overrides; resetting drops them all,
+    // which is what returns the tree to the committed skills.yaml.
+    restore: defineTool({
+      description: 'Drop the overrides on one skill, or on every skill to reset to skills.yaml.',
+      input: z.object({ skillId: z.string().min(1).max(64).optional() }),
+      run: async ({ skillId }) => {
+        const { rowCount } = skillId
+          ? await db().query(`delete from skills.override where skill_id = $1`, [skillId])
+          : await db().query(`delete from skills.override`)
+        return { dropped: rowCount ?? 0 }
       },
     }),
 

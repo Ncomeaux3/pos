@@ -129,7 +129,7 @@ export default async function ConnectionsPage({ searchParams }: PageProps<'/sett
       />
 
       <TabLinks
-        tabs={settingsTabs(manifests.length, 0)}
+        tabs={settingsTabs(manifests.length)}
         current="/settings/connections"
         label="Settings sections"
       />

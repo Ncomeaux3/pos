@@ -39,7 +39,7 @@ export default async function AgentsPage() {
         actions={<Eyebrow dot="ok">{tools.length} tools live</Eyebrow>}
       />
 
-      <TabLinks tabs={settingsTabs(connected, 0)} current="/settings/agents" label="Settings sections" />
+      <TabLinks tabs={settingsTabs(connected)} current="/settings/agents" label="Settings sections" />
 
       <Card className="space-y-4">
         <CardHead label="MCP endpoint" meta={`${tools.length} tools`} />

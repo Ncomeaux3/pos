@@ -81,6 +81,27 @@ test('skill tree, constellation and the selected skill panel', async ({ page }) 
   await expect(page.getByText('Goal weight')).toBeVisible()
 })
 
+test('settings, skills', async ({ page }) => {
+  await page.goto('/settings/skills')
+  await expect(page.getByRole('heading', { name: 'Skills' })).toBeVisible()
+  await expect(page.getByRole('switch', { name: 'Show deleted skills' })).toBeVisible()
+  await expect(page.getByText('Hiding deleted')).toBeVisible()
+  await shoot(page, 'settings-skills')
+
+  // Renaming, then deleting, then restoring: the three writes the tab exists
+  // for, each through the module's own tool.
+  await page.getByRole('button', { name: 'Rename TypeScript' }).click()
+  await page.getByRole('textbox').first().fill('TS')
+  await page.getByRole('textbox').first().press('Enter')
+  await expect(page.getByText('was TypeScript')).toBeVisible()
+
+  // Reset drops every override, so the tab returns to the committed yaml. Two
+  // presses: nothing here is a modal, per the design.
+  await page.getByRole('button', { name: /Reset to skills.yaml/ }).click()
+  await page.getByRole('button', { name: /Drop 1 edit/ }).click()
+  await expect(page.getByText('was TypeScript')).toBeHidden()
+})
+
 test('search, empty and with results', async ({ page }) => {
   await page.goto('/search')
   await expect(page.getByRole('heading', { name: 'Search' })).toBeVisible()

@@ -27,7 +27,7 @@ export function loadYaml(): SkillNode[] {
   return yamlNodes!
 }
 
-type Override = {
+export type Override = {
   kind: 'custom' | 'rename' | 'delete'
   skill_id: string
   name: string | null
@@ -35,9 +35,26 @@ type Override = {
   keywords: string[]
 }
 
-/** Applied in kind order so a rename of a custom node works in one pass. */
-export function applyOverrides(base: SkillNode[], overrides: Override[]): SkillNode[] {
-  const byId = new Map(base.map((n) => [n.id, { ...n }]))
+/** A merged node plus where it came from. The Settings Skills tab needs both. */
+export type MergedSkill = SkillNode & {
+  origin: 'yaml' | 'custom'
+  /** The committed name, when a rename is hiding it. */
+  renamedFrom?: string
+  /** Deleted nodes are kept so the settings tab can offer Restore. */
+  deleted: boolean
+}
+
+/**
+ * The whole merge, deleted nodes included and flagged.
+ *
+ * One implementation, because classify() and the settings tab disagreeing about
+ * what the tree is would be a bug nobody could see: a skill you deleted would
+ * keep collecting links.
+ */
+export function mergeTree(base: SkillNode[], overrides: Override[]): MergedSkill[] {
+  const byId = new Map<string, MergedSkill>(
+    base.map((n) => [n.id, { ...n, origin: 'yaml' as const, deleted: false }]),
+  )
 
   for (const o of overrides.filter((o) => o.kind === 'custom')) {
     byId.set(o.skill_id, {
@@ -45,13 +62,18 @@ export function applyOverrides(base: SkillNode[], overrides: Override[]): SkillN
       name: o.name ?? o.skill_id,
       parent: o.parent ?? undefined,
       keywords: o.keywords,
+      origin: 'custom',
+      deleted: false,
     })
   }
 
   for (const o of overrides.filter((o) => o.kind === 'rename')) {
     const node = byId.get(o.skill_id)
     if (!node) continue
-    if (o.name) node.name = o.name
+    if (o.name && o.name !== node.name) {
+      node.renamedFrom ??= node.name
+      node.name = o.name
+    }
     if (o.keywords.length > 0) node.keywords = o.keywords
   }
 
@@ -69,7 +91,24 @@ export function applyOverrides(base: SkillNode[], overrides: Override[]): SkillN
     }
   }
 
-  return [...byId.values()].filter((n) => !deleted.has(n.id))
+  for (const id of deleted) {
+    const node = byId.get(id)
+    if (node) node.deleted = true
+  }
+
+  return [...byId.values()]
+}
+
+/** The live tree: what classify() matches against and what the screen draws. */
+export function applyOverrides(base: SkillNode[], overrides: Override[]): SkillNode[] {
+  return mergeTree(base, overrides)
+    .filter((n) => !n.deleted)
+    .map(({ origin, renamedFrom, deleted, ...node }) => {
+      void origin
+      void renamedFrom
+      void deleted
+      return node
+    })
 }
 
 /**
@@ -77,8 +116,18 @@ export function applyOverrides(base: SkillNode[], overrides: Override[]): SkillN
  * the Settings Skills tab, so all three agree on what a skill is.
  */
 export async function loadTree(): Promise<SkillNode[]> {
+  const rows = await loadOverrides()
+  return rows.length === 0 ? loadYaml() : applyOverrides(loadYaml(), rows)
+}
+
+export async function loadOverrides(): Promise<Override[]> {
   const { rows } = await db().query<Override>(
     `select kind, skill_id, name, parent, keywords from skills.override`,
   )
-  return rows.length === 0 ? loadYaml() : applyOverrides(loadYaml(), rows)
+  return rows
+}
+
+/** Every node including the deleted ones, for the Settings Skills tab. */
+export async function loadMergedTree(): Promise<MergedSkill[]> {
+  return mergeTree(loadYaml(), await loadOverrides())
 }
