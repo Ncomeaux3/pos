@@ -4,12 +4,13 @@ import { NextResponse } from 'next/server'
 import { requireOwner } from '@/core/auth'
 import { getIntegration } from '@/core/integrations'
 import { oauthStateCookie } from '@/core/oauth'
+import { withLog } from '@/core/log'
 
 /**
  * Where the Connect button points. Sets a one time state cookie, then hands off
  * to the provider. Generic: every oauth2 manifest uses this same route.
  */
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handle(request: Request, { params }: { params: Promise<{ id: string }> }) {
   await requireOwner()
 
   const { id } = await params
@@ -53,3 +54,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   return NextResponse.redirect(authorize.toString())
 }
+
+// Rate limited and logged like every route under app/api. The limiter is the
+// backstop behind the edge; the log is what survives Vercel's short retention.
+export const GET = withLog(handle)

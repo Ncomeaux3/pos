@@ -145,3 +145,32 @@ describe('deciding', () => {
     expect(await countPending()).toBe(1)
   })
 })
+
+describe('the core query tool', () => {
+  it('is available on a module that never defined one', async () => {
+    const result = await callTool(
+      'notes',
+      'query',
+      { sql: 'select count(*)::int as n from notes.note' },
+      { source: 'agent' },
+    )
+
+    expect(result.status).toBe('done')
+    expect(result).toMatchObject({ result: [{ n: 0 }] })
+  })
+
+  it('is never guarded, because there is nothing to approve about a select', async () => {
+    await setSetting('agent_autonomy', 'observe')
+
+    const result = await callTool('notes', 'query', { sql: 'select 1 as n' }, { source: 'agent' })
+
+    expect(result.status).toBe('done')
+    expect(await countPending()).toBe(0)
+  })
+
+  it('refuses a write dressed as a query', async () => {
+    await expect(
+      callTool('notes', 'query', { sql: 'delete from notes.note' }, { source: 'agent' }),
+    ).rejects.toThrow(/delete/i)
+  })
+})

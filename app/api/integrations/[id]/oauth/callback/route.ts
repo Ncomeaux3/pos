@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { getIntegration, saveCredentials, stateMatches } from '@/core/integrations'
 import { type TokenResponse, expiryFrom, oauthStateCookie } from '@/core/oauth'
+import { withLog } from '@/core/log'
 
 const back = (origin: string, error?: string) =>
   NextResponse.redirect(
@@ -12,7 +13,7 @@ const back = (origin: string, error?: string) =>
  * Where every oauth2 provider returns to. Generic: the token exchange uses the
  * manifest's tokenUrl, so adding a provider adds no route.
  */
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handle(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const url = new URL(request.url)
   const origin = url.origin
@@ -71,3 +72,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return back(origin, error instanceof Error ? error.message : 'Token exchange failed')
   }
 }
+
+// Rate limited and logged like every route under app/api. The limiter is the
+// backstop behind the edge; the log is what survives Vercel's short retention.
+export const GET = withLog(handle)

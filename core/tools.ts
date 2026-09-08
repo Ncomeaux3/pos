@@ -1,5 +1,6 @@
 import { getModule, type ToolContext } from './modules'
 import { propose } from './proposals'
+import { runQuery } from './query'
 import { getSetting } from './settings'
 
 // The one place a tool call is decided. The UI calls tools directly; agents and
@@ -58,6 +59,15 @@ export async function callTool(
 ): Promise<CallResult> {
   const manifest = getModule(moduleId)
   if (!manifest) throw new Error(`No module ${moduleId}`)
+
+  // `query` is implemented once in core and exposed on every module, so a
+  // module author never writes one. It reads as pos_readonly and is never
+  // guarded: there is nothing to approve about a select.
+  if (toolName === 'query') {
+    const sql = (input as { sql?: unknown })?.sql
+    if (typeof sql !== 'string') throw new Error('query takes { sql: string }')
+    return { status: 'done', result: await runQuery(sql) }
+  }
 
   const tool = manifest.tools[toolName]
   if (!tool) throw new Error(`No tool ${moduleId}.${toolName}`)

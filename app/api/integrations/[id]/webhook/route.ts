@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getCredentials, getIntegration, secretMatches } from '@/core/integrations'
+import { withLog } from '@/core/log'
 
 export const SECRET_HEADER = 'x-pos-secret'
 
@@ -8,7 +9,7 @@ export const SECRET_HEADER = 'x-pos-secret'
  * app or a provider, so the shared secret from the Connections card is the
  * whole gate. Generic across every webhook manifest.
  */
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handle(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
   const manifest = getIntegration(id)
@@ -41,3 +42,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   await manifest.webhook?.(parsed?.data ?? body)
   return NextResponse.json({ ok: true })
 }
+
+// Rate limited and logged like every route under app/api. The limiter is the
+// backstop behind the edge; the log is what survives Vercel's short retention.
+export const POST = withLog(handle)
