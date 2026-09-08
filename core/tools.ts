@@ -1,5 +1,5 @@
 import type { Autonomy } from './autonomy'
-import { getModule, type ToolContext } from './modules'
+import { getModule, getModules, type ToolContext } from './modules'
 import { propose } from './proposals'
 import { runQuery } from './query'
 import { getSetting } from './settings'
@@ -64,7 +64,12 @@ export async function callTool(
   if (toolName === 'query') {
     const sql = (input as { sql?: unknown })?.sql
     if (typeof sql !== 'string') throw new Error('query takes { sql: string }')
-    return { status: 'done', result: await runQuery(sql) }
+    // Scoped to this module plus core. pos_readonly can read every module
+    // schema, so without this `notes.query` would return the bank rows.
+    const others = getModules()
+      .map((m) => m.id)
+      .filter((id) => id !== moduleId)
+    return { status: 'done', result: await runQuery(sql, { forbiddenSchemas: others }) }
   }
 
   const tool = manifest.tools[toolName]

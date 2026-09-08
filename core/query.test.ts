@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assertReadOnly, capRows, runQuery } from './query'
+import { assertReadOnly, assertSchemas, capRows, runQuery } from './query'
 
 // The role is the real guarantee: pos_readonly holds no write grant, so a
 // mutation fails in Postgres whatever gets past this. These checks exist to
@@ -90,5 +90,48 @@ describe('runQuery', () => {
     // password hashes and is superuser only, so the role stops it even though
     // nothing above objects to the statement. This is the layer that matters.
     await expect(runQuery('select * from pg_authid')).rejects.toThrow(/permission denied/i)
+  })
+})
+
+describe('assertSchemas', () => {
+  // pos_readonly can read every module schema, which is what core.search needs.
+  // So a per-module query tool being scoped to its own module is this check and
+  // nothing else. Without it `notes.query` reads the bank rows.
+  const others = ['finance', 'health']
+
+  it('rejects another module schema', () => {
+    expect(() => assertSchemas('select * from finance.transactions', others)).toThrow(
+      /may not read the finance schema/i,
+    )
+  })
+
+  it('rejects it through quoted identifiers', () => {
+    // The literal stripper removes quoted identifiers whole, so unquoting has
+    // to happen first or this is a way straight past the check.
+    expect(() => assertSchemas('select * from "finance"."transactions"', others)).toThrow(
+      /finance/i,
+    )
+  })
+
+  it('rejects it inside a CTE', () => {
+    expect(() =>
+      assertSchemas('with t as (select * from health.vital) select * from t', others),
+    ).toThrow(/health/i)
+  })
+
+  it('allows its own schema, core, and table aliases', () => {
+    expect(() =>
+      assertSchemas('select n.title from notes.note n join core.entities e on true', others),
+    ).not.toThrow()
+  })
+
+  it('does not fire on a schema name that is only part of a word', () => {
+    expect(() => assertSchemas('select * from notes.finance_note', others)).not.toThrow()
+  })
+
+  it('does not fire on the name inside a string literal', () => {
+    expect(() =>
+      assertSchemas("select * from notes.note where body = 'finance.transactions'", others),
+    ).not.toThrow()
   })
 })

@@ -52,6 +52,35 @@ function structureOnly(sql: string): string {
     .replace(/\/\*[\s\S]*?\*\//g, ' ')
 }
 
+/**
+ * Refuse a query that names another module's schema.
+ *
+ * The role cannot enforce this and should not: pos_readonly reads every module
+ * schema by design, which is what lets core.search span them. So the scoping a
+ * per-module query tool promises has to happen here. Only prefixes matching a
+ * real other-module schema are rejected, because telling `finance.tx` from the
+ * alias in `select n.title from notes.note n` needs a parser, and the alias is
+ * the common case.
+ */
+export function assertSchemas(sql: string, forbidden: string[]): void {
+  // Unquote before stripping. `"finance"."tx"` is two quoted identifiers, and
+  // the literal stripper below would remove them whole, hiding the schema.
+  const bare = sql
+    .replace(/"([^"]*)"/g, '$1')
+    .replace(/'(?:[^']|'')*'/g, ' ')
+    .replace(/--[^\n]*/g, ' ')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+
+  for (const schema of forbidden) {
+    const escaped = schema.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    if (new RegExp(`\\b${escaped}\\s*\\.`, 'i').test(bare)) {
+      throw new Error(
+        `Query may not read the ${schema} schema. This tool reads its own module and core; use ${schema}.query for that module, or core.search to span both.`,
+      )
+    }
+  }
+}
+
 /** Throws unless this is a single read-only statement. */
 export function assertReadOnly(sql: string): void {
   const bare = structureOnly(sql).trim()
@@ -94,6 +123,8 @@ export type QueryOptions = {
   maxRows?: number
   /** Statement timeout. An agent's query must not hold a connection open. */
   timeoutMs?: number
+  /** Schemas this query may not name. The other modules, for a module's query tool. */
+  forbiddenSchemas?: string[]
 }
 
 /**
@@ -106,6 +137,7 @@ export async function runQuery<T extends Record<string, unknown> = Record<string
   opts: QueryOptions = {},
 ): Promise<T[]> {
   assertReadOnly(sql)
+  if (opts.forbiddenSchemas?.length) assertSchemas(sql, opts.forbiddenSchemas)
 
   const maxRows = Math.min(opts.maxRows ?? 500, 1000)
   const timeoutMs = Math.min(opts.timeoutMs ?? 5000, 15_000)
