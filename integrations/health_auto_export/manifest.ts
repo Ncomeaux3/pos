@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { defineIntegration } from '@/core/integrations'
+import { defineIntegration } from '@/core/integration-contract'
 
 // Health Auto Export posts Apple Health data on a schedule. Inbound only:
 // there is nothing to authenticate against, so the card shows a URL and a

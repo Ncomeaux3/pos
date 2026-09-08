@@ -1,4 +1,4 @@
-import { defineIntegration } from '@/core/integrations'
+import { defineIntegration } from '@/core/integration-contract'
 
 export default defineIntegration({
   id: 'anthropic',

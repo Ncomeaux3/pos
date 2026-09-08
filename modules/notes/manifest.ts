@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { defineModule, defineTool } from '@/core/modules'
+import { defineModule, defineTool } from '@/core/module-contract'
 import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import NotesPage from './ui/NotesPage'

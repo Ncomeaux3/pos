@@ -1,4 +1,5 @@
 import { db } from './db'
+import { getModule } from './modules'
 
 // What an agent wants to do, held until the owner decides. Nothing here touches
 // a module's tables: approving does, by calling the tool the proposal names.
@@ -118,13 +119,6 @@ export async function approve(
   const proposal = await getProposal(id)
   if (!proposal) throw new Error(`No proposal ${id}`)
   if (proposal.status !== 'pending') throw new Error(`Proposal ${id} is already ${proposal.status}`)
-
-  // Imported inside approve() rather than at module scope. The registry pulls
-  // in every manifest, and a manifest pulls in its React pages, so a top level
-  // import makes this module unloadable outside Next: the e2e seed only wants
-  // propose(). See docs/OWNER-TODO.md, step 12 needs the registry to load in a
-  // plain Node process and that is where it gets solved properly.
-  const { getModule } = await import('./modules')
 
   const manifest = getModule(proposal.module)
   const tool = manifest?.tools[proposal.tool]

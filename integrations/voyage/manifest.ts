@@ -1,4 +1,4 @@
-import { defineIntegration } from '@/core/integrations'
+import { defineIntegration } from '@/core/integration-contract'
 import { VOYAGE_DIMENSIONS, VOYAGE_MODEL, embed } from './client'
 
 export default defineIntegration({
