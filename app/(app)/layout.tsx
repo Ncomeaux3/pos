@@ -1,41 +1,49 @@
-import Link from 'next/link'
 import { requireOwner } from '@/core/auth'
-import { getModules } from '@/core/modules'
+import { db } from '@/core/db'
+import { getNav, NAV_FOOTER } from '@/core/nav'
+import { getSidebarCollapsed, getTheme } from '@/core/theme'
+import { MobileTabBar, Sidebar } from '@/components/pos/Sidebar'
+import { ToastProvider } from '@/components/pos'
+import { toggleSidebar, toggleTheme } from './shell-actions'
+
+async function pendingProposals(): Promise<number> {
+  const { rows } = await db().query<{ count: string }>(
+    `select count(*)::text as count from core.proposals where status = 'pending'`,
+  )
+  return Number(rows[0].count)
+}
 
 export default async function AppLayout({ children }: LayoutProps<'/'>) {
-  const owner = await requireOwner()
+  await requireOwner()
 
-  // Dashboard and Settings are core; everything between them comes from the
-  // module manifests, so adding a module folder adds its nav entry.
-  const NAV = [
-    { href: '/', label: 'Dashboard' },
-    ...getModules().map((m) => ({ href: `/${m.id}`, label: m.nav.label })),
-    { href: '/settings', label: 'Settings' },
-  ]
+  const [nav, collapsed, theme, reviewCount] = await Promise.all([
+    getNav(),
+    getSidebarCollapsed(),
+    getTheme(),
+    pendingProposals(),
+  ])
 
   return (
-    <div className="flex min-h-dvh">
-      <aside className="hidden w-56 shrink-0 border-r border-border p-4 sm:block">
-        <Link href="/" className="mb-6 block text-sm font-semibold tracking-tight">
-          POS
-        </Link>
-        <nav className="space-y-1">
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="block rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-        <p className="mt-6 truncate text-xs text-muted-foreground" title={owner.email}>
-          {owner.email}
-        </p>
-      </aside>
+    <ToastProvider>
+      <Sidebar
+        nav={nav}
+        footer={NAV_FOOTER}
+        collapsed={collapsed}
+        theme={theme}
+        reviewCount={reviewCount}
+        onToggleCollapse={toggleSidebar}
+        onToggleTheme={toggleTheme}
+      />
+      <MobileTabBar nav={nav} footer={NAV_FOOTER} reviewCount={reviewCount} />
 
-      <main className="min-w-0 flex-1 p-6">{children}</main>
-    </div>
+      <main
+        // The sidebar is fixed so the rail never scrolls with the page; this
+        // keeps the column clear of it and clear of the mobile tab bar.
+        style={{ ['--rail' as string]: collapsed ? '64px' : '232px' }}
+        className="min-w-0 flex-1 p-7 pb-24 md:pb-7 md:[margin-left:var(--rail)]"
+      >
+        {children}
+      </main>
+    </ToastProvider>
   )
 }

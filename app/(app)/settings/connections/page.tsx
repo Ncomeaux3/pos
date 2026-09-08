@@ -1,7 +1,17 @@
 import { randomBytes } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
-import { headers } from 'next/headers'
-import { Button } from '@/components/ui/button'
+import {
+  Card,
+  Chip,
+  ConfirmButton,
+  CopyBlock,
+  Eyebrow,
+  MonoButton,
+  PageHeader,
+  StatusChip,
+  TabLinks,
+  fieldClass,
+} from '@/components/pos'
 import { requireOwner } from '@/core/auth'
 import {
   type IntegrationManifest,
@@ -12,6 +22,9 @@ import {
   getIntegrations,
   saveCredentials,
 } from '@/core/integrations'
+import { getModules } from '@/core/modules'
+import { getOrigin } from '@/core/origin'
+import { settingsTabs } from '../tabs'
 
 // One card per manifest. Adding a provider folder adds a card; nothing here
 // knows any provider by name.
@@ -44,8 +57,6 @@ async function save(formData: FormData) {
 
 async function test(formData: FormData) {
   'use server'
-  // Server actions are standalone POST endpoints addressed by id. The (app)
-  // layout does not run for them, so each one authenticates independently.
   await requireOwner()
   const id = String(formData.get('id'))
   const manifest = getIntegration(id)
@@ -62,8 +73,6 @@ async function test(formData: FormData) {
 
 async function disconnect(formData: FormData) {
   'use server'
-  // Server actions are standalone POST endpoints addressed by id. The (app)
-  // layout does not run for them, so each one authenticates independently.
   await requireOwner()
   await deleteCredentials(String(formData.get('id')))
   revalidatePath('/settings/connections')
@@ -71,30 +80,19 @@ async function disconnect(formData: FormData) {
 
 async function generateSecret(formData: FormData) {
   'use server'
-  // Server actions are standalone POST endpoints addressed by id. The (app)
-  // layout does not run for them, so each one authenticates independently.
   await requireOwner()
   const id = String(formData.get('id'))
   await saveCredentials(id, { secret: randomBytes(24).toString('base64url') })
   revalidatePath('/settings/connections')
 }
 
-const field =
-  'w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50'
+const AUTH_LABEL = { token: 'Token', oauth2: 'OAuth2', webhook: 'Webhook' } as const
 
-function Status({ connected, detail }: { connected: boolean; detail: string | null }) {
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 text-xs ${connected ? 'text-foreground' : 'text-muted-foreground'}`}
-      title={detail ?? undefined}
-    >
-      <span
-        aria-hidden
-        className={`size-1.5 rounded-full ${connected ? 'bg-emerald-500' : 'bg-muted-foreground/40'}`}
-      />
-      {connected ? 'Connected' : 'Not connected'}
-    </span>
-  )
+/** Which modules named this provider in `requires`. Drives the "feeds" line. */
+function usedBy(id: string): string[] {
+  return getModules()
+    .filter((m) => (m.requires ?? []).includes(id))
+    .map((m) => m.nav.label)
 }
 
 export default async function ConnectionsPage({ searchParams }: PageProps<'/settings/connections'>) {
@@ -103,7 +101,8 @@ export default async function ConnectionsPage({ searchParams }: PageProps<'/sett
 
   const manifests = getIntegrations()
   const statuses = await getConnectionStatuses()
-  const origin = (await headers()).get('origin') ?? ''
+  const origin = await getOrigin()
+  const connected = manifests.filter((m) => statuses[m.id]?.connected).length
 
   // Only used to decide whether a webhook secret exists, never rendered raw
   // except for the webhook secret the owner has to paste into the sender.
@@ -116,24 +115,32 @@ export default async function ConnectionsPage({ searchParams }: PageProps<'/sett
   )
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Connections</h1>
-        <p className="text-sm text-muted-foreground">
-          Every provider the system knows about. Keys are encrypted before they are stored and are
-          never written to .env.
-        </p>
-      </div>
+    <div className="max-w-3xl space-y-7">
+      <PageHeader
+        eyebrow="Settings / Connections"
+        dot={connected > 0 ? 'brand' : 'idle'}
+        title="Connections"
+        lede="Every provider the system knows about. Keys are encrypted before they are stored and are never written to .env."
+        actions={
+          <Eyebrow dot={connected > 0 ? 'ok' : 'idle'}>
+            {connected} of {manifests.length} connected
+          </Eyebrow>
+        }
+      />
+
+      <TabLinks
+        tabs={settingsTabs(manifests.length, 0)}
+        current="/settings/connections"
+        label="Settings sections"
+      />
 
       {error && (
-        <p className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
-          {error}
-        </p>
+        <p className="border border-bad/60 px-3 py-2.5 text-[13px] text-bad">{error}</p>
       )}
 
       <div className="space-y-3">
         {manifests.map((manifest) => (
-          <Card
+          <ProviderCard
             key={manifest.id}
             manifest={manifest}
             connected={Boolean(statuses[manifest.id]?.connected)}
@@ -148,7 +155,7 @@ export default async function ConnectionsPage({ searchParams }: PageProps<'/sett
   )
 }
 
-function Card({
+function ProviderCard({
   manifest,
   connected,
   detail,
@@ -163,29 +170,42 @@ function Card({
   secret: string | null
   origin: string
 }) {
+  const feeds = usedBy(manifest.id)
+
   return (
-    <section className="space-y-3 rounded-lg border border-border p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 space-y-0.5">
-          <h2 className="text-sm font-medium">{manifest.label}</h2>
-          <p className="text-xs text-muted-foreground">{manifest.description}</p>
+    <Card className="space-y-3.5">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <div className="min-w-0 space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-[15px] leading-none text-ink">{manifest.label}</h2>
+            <Chip tone="quiet">{AUTH_LABEL[manifest.auth.type]}</Chip>
+          </div>
+          <p className="text-[12px] leading-relaxed text-ink-3">
+            {manifest.description}
+            {feeds.length > 0 && ` Used by ${feeds.join(', ')}.`}
+          </p>
         </div>
-        <Status connected={connected} detail={detail} />
+        <StatusChip tone={connected ? 'ok' : 'quiet'}>
+          {connected ? 'Connected' : 'Not connected'}
+        </StatusChip>
       </div>
 
       {detail && (
-        <p className="text-xs text-muted-foreground">
-          {detail}
-          {testedAt && ` (tested ${new Date(testedAt).toLocaleString()})`}
+        <p className="mono text-[10px] uppercase tracking-[0.1em] text-ink-3">
+          Last test: {detail}
+          {testedAt && ` · ${new Date(testedAt).toLocaleString()}`}
         </p>
       )}
 
       {manifest.auth.type === 'token' && (
-        <form action={save} className="space-y-2">
+        <form action={save} className="space-y-3">
           <input type="hidden" name="id" value={manifest.id} />
           {manifest.auth.fields.map((f) => (
-            <div key={f.key} className="space-y-1">
-              <label htmlFor={`${manifest.id}-${f.key}`} className="block text-xs font-medium">
+            <div key={f.key} className="space-y-1.5">
+              <label
+                htmlFor={`${manifest.id}-${f.key}`}
+                className="mono block text-[10px] uppercase tracking-[0.1em] text-ink-3"
+              >
                 {f.label}
               </label>
               <input
@@ -194,69 +214,61 @@ function Card({
                 type={f.secret ? 'password' : 'text'}
                 placeholder={f.secret && connected ? 'Saved. Type to replace.' : f.placeholder}
                 autoComplete="off"
-                className={field}
+                className={fieldClass}
               />
             </div>
           ))}
-          <div className="flex gap-2 pt-1">
-            <Button type="submit" size="sm">
-              {connected ? 'Update' : 'Connect'}
-            </Button>
-          </div>
+          <MonoButton variant="solid" type="submit">
+            {connected ? 'Save and test' : 'Connect'}
+          </MonoButton>
         </form>
       )}
 
       {manifest.auth.type === 'oauth2' && (
         <a
           href={`/api/integrations/${manifest.id}/oauth/start`}
-          className="inline-flex h-8 items-center rounded-lg border border-input px-3 text-sm"
+          className="mono inline-flex h-11 items-center border border-rule-2 px-3 text-[10px] uppercase tracking-[0.1em] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink sm:h-[30px]"
         >
-          {connected ? `Reconnect ${manifest.label}` : `Connect ${manifest.label}`}
+          {connected ? `Reauthorize ${manifest.label}` : `Connect with ${manifest.label}`}
         </a>
       )}
 
       {manifest.auth.type === 'webhook' && (
-        <div className="space-y-2">
-          <div className="space-y-1">
-            <p className="text-xs font-medium">Post to</p>
-            <code className="block overflow-x-auto rounded-md bg-muted px-2 py-1.5 font-mono text-xs">
-              {origin}/api/integrations/{manifest.id}/webhook
-            </code>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Eyebrow>Inbound URL</Eyebrow>
+            <CopyBlock value={`${origin}/api/integrations/${manifest.id}/webhook`} />
           </div>
           {secret ? (
-            <div className="space-y-1">
-              <p className="text-xs font-medium">Header x-pos-secret</p>
-              <code className="block overflow-x-auto rounded-md bg-muted px-2 py-1.5 font-mono text-xs">
-                {secret}
-              </code>
+            <div className="space-y-1.5">
+              <Eyebrow>Header x-pos-secret</Eyebrow>
+              <CopyBlock value={secret} />
             </div>
           ) : (
             <form action={generateSecret}>
               <input type="hidden" name="id" value={manifest.id} />
-              <Button type="submit" size="sm">
-                Generate secret
-              </Button>
+              <MonoButton variant="solid" type="submit">
+                Enable webhook
+              </MonoButton>
             </form>
           )}
         </div>
       )}
 
       {connected && (
-        <div className="flex gap-2 border-t border-border pt-3">
+        <div className="flex flex-wrap gap-2 border-t border-rule pt-3">
           <form action={test}>
             <input type="hidden" name="id" value={manifest.id} />
-            <Button type="submit" size="sm" variant="outline">
-              Test
-            </Button>
+            <MonoButton type="submit">Test</MonoButton>
           </form>
           <form action={disconnect}>
             <input type="hidden" name="id" value={manifest.id} />
-            <Button type="submit" size="sm" variant="ghost">
+            <ConfirmButton submit confirmLabel="Confirm disconnect">
               Disconnect
-            </Button>
+            </ConfirmButton>
           </form>
         </div>
       )}
-    </section>
+    </Card>
   )
 }

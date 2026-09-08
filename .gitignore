@@ -44,3 +44,10 @@ __pycache__/
 
 # playwright mcp scratch
 .playwright-mcp/
+
+# Playwright
+e2e/.auth/
+e2e/.results/
+e2e/__screens__/
+test-results/
+playwright-report/

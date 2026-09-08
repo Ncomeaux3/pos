@@ -1,8 +1,20 @@
-import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
-import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardHead,
+  Eyebrow,
+  MonoButton,
+  PageHeader,
+  Row,
+  RowList,
+  TabLinks,
+  fieldClass,
+} from '@/components/pos'
 import { requireOwner } from '@/core/auth'
+import { db } from '@/core/db'
+import { getConnectionStatuses, getIntegrations } from '@/core/integrations'
 import { getSettings, setSetting } from '@/core/settings'
+import { settingsTabs } from './tabs'
 
 async function save(formData: FormData) {
   'use server'
@@ -22,75 +34,173 @@ async function save(formData: FormData) {
   revalidatePath('/settings')
 }
 
-const field = 'w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50'
+/** Month to date model spend, which is what the soft cap is measured against. */
+async function spendThisMonthCents(): Promise<number> {
+  const { rows } = await db().query<{ cents: string }>(
+    `select coalesce(sum(cost_cents), 0)::text as cents
+       from core.llm_calls
+      where occurred_at >= date_trunc('month', now())`,
+  )
+  return Number(rows[0].cents)
+}
+
+async function nightlyJobState() {
+  const { rows } = await db().query<{ last_run: Date | null; last_status: string | null; n: string }>(
+    `select max(last_run) as last_run,
+            min(last_status) filter (where last_status = 'failed') as last_status,
+            count(*)::text as n
+       from core.jobs`,
+  )
+  return rows[0]
+}
+
+const money = (cents: number) => `$${(cents / 100).toFixed(2)}`
 
 export default async function SettingsPage() {
-  const settings = await getSettings()
+  const [settings, statuses, spendCents, job] = await Promise.all([
+    getSettings(),
+    getConnectionStatuses(),
+    spendThisMonthCents(),
+    nightlyJobState(),
+  ])
+
+  const connected = getIntegrations().filter((m) => statuses[m.id]?.connected).length
+  const capCents = settings.llm_soft_cap_cents
+  const usedPct = capCents > 0 ? Math.min(100, Math.round((spendCents / capCents) * 100)) : 0
 
   return (
-    <div className="max-w-md space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Provider keys live on <Link href="/settings/connections" className="underline underline-offset-4">Connections</Link>, not here.
-        </p>
-      </div>
+    <div className="max-w-3xl space-y-7">
+      <PageHeader
+        eyebrow="Settings / General"
+        dot={connected > 0 ? 'brand' : 'idle'}
+        title="Settings"
+        lede="Owner preferences and every external account the system can reach. Credentials are encrypted at rest and never live in the repo."
+        actions={
+          <Eyebrow dot={connected > 0 ? 'ok' : 'idle'}>
+            {connected} of {getIntegrations().length} connected
+          </Eyebrow>
+        }
+      />
 
-      <form action={save} className="space-y-4">
-        <div className="space-y-1.5">
-          <label htmlFor="owner_name" className="block text-sm font-medium">
-            Owner name
-          </label>
-          <input id="owner_name" name="owner_name" defaultValue={settings.owner_name} className={field} />
+      <TabLinks tabs={settingsTabs(getIntegrations().length, 0)} current="/settings" label="Settings sections" />
+
+      <form action={save} className="space-y-6">
+        <Card className="space-y-4">
+          <CardHead label="Owner" meta="core.settings" />
+
+          <Field label="Name" htmlFor="owner_name">
+            <input id="owner_name" name="owner_name" defaultValue={settings.owner_name} className={fieldClass} />
+          </Field>
+
+          <Field label="Owner email" hint="The only login allowed. Set in .env as OWNER_EMAIL.">
+            <p className="mono border border-rule bg-bg-deep px-2.5 py-2 text-xs text-ink-3">
+              Read only
+            </p>
+          </Field>
+
+          <Field label="Timezone" htmlFor="timezone" hint="An IANA name, for example America/Chicago.">
+            <input id="timezone" name="timezone" defaultValue={settings.timezone} className={fieldClass} />
+          </Field>
+
+          <Field
+            label="Digest hour, local"
+            htmlFor="digest_hour"
+            hint="The local hour the digest covers. The cron runs at 09:00 UTC and Vercel Hobby fires it within the hour."
+          >
+            <select
+              id="digest_hour"
+              name="digest_hour"
+              defaultValue={String(settings.digest_hour)}
+              className={fieldClass}
+            >
+              {Array.from({ length: 24 }, (_, h) => (
+                <option key={h} value={h}>
+                  {String(h).padStart(2, '0')}:00
+                </option>
+              ))}
+            </select>
+          </Field>
+        </Card>
+
+        <Card className="space-y-4">
+          <CardHead label="Model spend, soft cap" meta={`month to date ${money(spendCents)}`} />
+
+          <div className="h-1 w-full bg-rule">
+            <div
+              className={usedPct >= 100 ? 'h-full bg-bad' : usedPct >= 80 ? 'h-full bg-warn' : 'h-full bg-brand'}
+              style={{ width: `${usedPct}%` }}
+            />
+          </div>
+
+          <Field
+            label="Cap per month"
+            htmlFor="llm_soft_cap_dollars"
+            hint="Past the cap, research runs are refused and logged. Classification and headlines continue."
+          >
+            <input
+              id="llm_soft_cap_dollars"
+              name="llm_soft_cap_dollars"
+              type="number"
+              min={0}
+              step="0.01"
+              defaultValue={(capCents / 100).toFixed(2)}
+              className={fieldClass}
+            />
+          </Field>
+        </Card>
+
+        <div className="flex items-center gap-3">
+          <MonoButton variant="solid" type="submit">
+            Save
+          </MonoButton>
+          <span className="mono text-[10px] uppercase tracking-[0.1em] text-ink-3">
+            Writes core.settings
+          </span>
         </div>
-
-        <div className="space-y-1.5">
-          <label htmlFor="timezone" className="block text-sm font-medium">
-            Timezone
-          </label>
-          <input id="timezone" name="timezone" defaultValue={settings.timezone} className={field} />
-          <p className="text-xs text-muted-foreground">An IANA name, for example America/Chicago.</p>
-        </div>
-
-        <div className="space-y-1.5">
-          <label htmlFor="digest_hour" className="block text-sm font-medium">
-            Digest hour
-          </label>
-          <input
-            id="digest_hour"
-            name="digest_hour"
-            type="number"
-            min={0}
-            max={23}
-            defaultValue={settings.digest_hour}
-            className={field}
-          />
-          <p className="text-xs text-muted-foreground">
-            The local hour the digest covers. The cron itself runs at 09:00 UTC and Vercel Hobby
-            fires it within the hour.
-          </p>
-        </div>
-
-        <div className="space-y-1.5">
-          <label htmlFor="llm_soft_cap_dollars" className="block text-sm font-medium">
-            Model spend cap
-          </label>
-          <input
-            id="llm_soft_cap_dollars"
-            name="llm_soft_cap_dollars"
-            type="number"
-            min={0}
-            step="0.01"
-            defaultValue={(settings.llm_soft_cap_cents / 100).toFixed(2)}
-            className={field}
-          />
-          <p className="text-xs text-muted-foreground">
-            Dollars per month. Past this, research calls refuse. Classification keeps running.
-          </p>
-        </div>
-
-        <Button type="submit">Save</Button>
       </form>
+
+      <Card className="space-y-1">
+        <CardHead label="Nightly job" meta="read only" />
+        <RowList>
+          <Row title="Schedule" right={<span className="mono text-xs text-ink-3">0 9 * * * UTC</span>} />
+          <Row
+            title="Last run"
+            right={
+              <span className="mono text-xs text-ink-3">
+                {job.last_run ? new Date(job.last_run).toLocaleString() : 'never'}
+                {job.last_status === 'failed' && ' · failed'}
+              </span>
+            }
+          />
+          <Row
+            title="Jobs registered"
+            meta="Every module job plus the core ones."
+            right={<span className="mono text-xs text-ink-3">{job.n}</span>}
+          />
+        </RowList>
+      </Card>
+    </div>
+  )
+}
+
+function Field({
+  label,
+  htmlFor,
+  hint,
+  children,
+}: {
+  label: string
+  htmlFor?: string
+  hint?: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={htmlFor} className="mono block text-[10px] uppercase tracking-[0.1em] text-ink-3">
+        {label}
+      </label>
+      {children}
+      {hint && <p className="text-[11px] leading-relaxed text-ink-3">{hint}</p>}
     </div>
   )
 }

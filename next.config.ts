@@ -17,6 +17,10 @@ const csp = [
 ].join('; ')
 
 const nextConfig: NextConfig = {
+  // The dev overlay button sits exactly on the sidebar's theme toggle, so it
+  // covers the control in every screenshot taken against a dev server.
+  devIndicators: false,
+
   // next dev otherwise appends its own block to CLAUDE.md on every run, which
   // dirties the tree. The pointer it wants to leave is in CLAUDE.md Commands.
   agentRules: false,

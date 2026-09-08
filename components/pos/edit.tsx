@@ -90,11 +90,18 @@ export function ConfirmButton({
   children,
   confirmLabel,
   onConfirm,
+  submit,
   className,
 }: {
   children: React.ReactNode
   confirmLabel: string
-  onConfirm: () => void
+  onConfirm?: () => void
+  /**
+   * Submits the surrounding form on the second press. The armed button carries
+   * type="submit" so the form's own action runs, which keeps this usable with a
+   * server action and no client handler.
+   */
+  submit?: boolean
   className?: string
 }) {
   const [armed, setArmed] = useState(false)
@@ -107,11 +114,12 @@ export function ConfirmButton({
 
   return (
     <MonoButton
+      type={armed && submit ? 'submit' : 'button'}
       variant={armed ? 'danger' : 'outline'}
       onClick={() => {
         if (armed) {
           setArmed(false)
-          onConfirm()
+          onConfirm?.()
         } else {
           setArmed(true)
         }

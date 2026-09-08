@@ -9,6 +9,12 @@ export type Settings = {
   digest_hour: number
   /** Month to date ceiling on model spend. Past this, research calls refuse. */
   llm_soft_cap_cents: number
+  /**
+   * Which modules show in nav and in the Onboarding toggles. Visibility only:
+   * jobs, tools and direct URLs still work for a module that is off, so
+   * deleting the folder is still the real removal. null means every module.
+   */
+  modules_enabled: string[] | null
 }
 export type SettingKey = keyof Settings
 
@@ -17,6 +23,7 @@ export const DEFAULT_SETTINGS: Settings = {
   owner_name: '',
   digest_hour: 9,
   llm_soft_cap_cents: 1000,
+  modules_enabled: null,
 }
 
 export async function getSetting<K extends SettingKey>(key: K): Promise<Settings[K]> {
