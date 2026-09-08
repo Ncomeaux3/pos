@@ -2,6 +2,8 @@
 
 Full module specification. Loaded on demand via the /module skill or @docs/SPEC.md. Not loaded every session.
 
+**Since 2026-09-07 the design bundle is the screen spec.** Each module is built to its prototype in the Omelette handoff, and docs/plans/design-build.md is the build plan. Where this file and a prototype disagree about what a screen shows, the prototype wins. Four things this file describes are absent from the prototypes and stay here as a follow-on pass after each module's screen ships: the Ideas research rubric with citations and depth, Meals cook mode, the Travel cents-per-point calculator, and Fitness workout plans with coach proposals.
+
 Single-user, self-built personal operating system. Replaces a Notion setup. Modular by design: each module owns its data, its ingestion, and its tools. One orchestrator agent reads module digests and compiles a dashboard.
 
 Owner: Nick. Solo builder, nights and weekends. Ships incrementally. Do not build every module to 20%. Finish one before starting the next.
@@ -58,7 +60,7 @@ Owner: Nick. Solo builder, nights and weekends. Ships incrementally. Do not buil
 - Map view of `places_visited`.
 - Booking helper: cents per point calculator with user-supplied cash and points prices. Do not attempt to scrape loyalty sites.
 
-### 6. Second Brain
+### 6. Second Brain (schema and module id `brain`)
 - Obsidian vault in git is the source of truth. The app never edits the vault without a review step.
 - Ingestion: URL to readability text, YouTube to transcript (yt-dlp), book notes manual. Model drafts a summary note, user approves, note is committed to vault.
 - Embeddings into pgvector on note change. Semantic search tool.
@@ -81,7 +83,7 @@ Owner: Nick. Solo builder, nights and weekends. Ships incrementally. Do not buil
 ### 8. Insurance and Policies
 - One table: `policies` (type, carrier, policy_number encrypted, coverage_summary text, premium, cadence, expiration_date, status, document_url, notes).
 - Types: auto, renters or homeowners, life, health, device (AppleCare, device care), other.
-- `coverage_summary` is free text the user writes (example: "$100k/$300k liability, $500 deductible, rental included"). No structured coverage tables, no limits or deductible fields, no gap analysis, no model judgment of adequacy.
+- Amended 2026-09-07. Discrete `deductible`, `coverage_limits`, `agent_contact` and a documents collection are stored, because they are facts copied off a declarations page. `coverage_summary` stays as free text alongside them. The rule that survives is the one that mattered: nothing analyses these fields. No gap analysis, no adequacy scoring, no model judgment of whether the coverage is enough.
 - Views: list of policies with type, carrier, coverage summary, policy number (masked, click to reveal), expiration date. Sort by expiration.
 - Notifications 30 and 7 days before expiration.
 - Optional link to a `finance.recurring` row so the premium shows in Finance.

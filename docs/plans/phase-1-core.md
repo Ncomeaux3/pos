@@ -4,6 +4,8 @@ Build item 1 of the build order. When this is done, the app runs on Vercel, one 
 
 Read docs/ARCHITECTURE.md first. Every step lists the files, the test that proves it, and the done condition. Tests come before code. Commit after each step. Work on branch `phase-1-core`, merge to main at the end.
 
+**Amended 2026-09-07.** Steps 1 to 7 are done. The design bundle landed, so step 7.5 (design foundation) is inserted before step 8, and steps 8 to 16 each gain their designed screen. Read docs/plans/design-build.md alongside this file: it holds the design work, the new core tables, and the fourteen decisions that changed. Where the two disagree, design-build.md is newer.
+
 ## Prerequisites (owner does these by hand)
 
 - Accounts: Supabase project (prod), Vercel, GitHub repo `pos` (created by the architecture session), Resend, Anthropic API key, Voyage AI key.

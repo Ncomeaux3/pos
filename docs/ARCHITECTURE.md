@@ -241,7 +241,7 @@ Forks receive upgrades by adding this repo as a git remote and merging. Personal
 
 | Area | Where it is handled |
 |---|---|
-| Frontend | Next.js App Router, Tailwind, shadcn/ui, PWA manifest. Module pages come from manifests. Design pass follows Phase 1. |
+| Frontend | Next.js App Router, Tailwind, shadcn/ui, PWA manifest. Module pages come from manifests. Built to the design bundle: 14 colour tokens, no other token layer, shared primitives in `components/pos/`, charts hand-rolled SVG. See docs/plans/design-build.md. |
 | APIs and backend logic | Server actions for UI writes, route handlers for cron, MCP, OAuth callback, webhooks. Module logic in `modules/<name>/`, shared logic in `core/`. |
 | Database and storage | Supabase Postgres, one schema per module plus `core`, pgvector, Supabase Storage bucket per module, integer cents, timestamptz. |
 | Auth and permissions | Supabase Auth magic link, signups disabled, one owner. RLS on every table. `pos_readonly` role for agent SQL. MCP bearer token. CRON_SECRET on cron. Webhook shared secrets. |
@@ -262,4 +262,6 @@ Forks receive upgrades by adding this repo as a git remote and merging. Personal
 
 ## Not planned
 
-In-app chat, dedicated vector database, native mobile, push notifications, n8n, Redis, log drains, multi-region, a module enable toggle (delete the folder), a `BankProvider` interface until a second provider exists.
+In-app chat, dedicated vector database, native mobile, n8n, Redis, log drains, multi-region, a `BankProvider` interface until a second provider exists.
+
+Two items left this list on 2026-09-07 when the design bundle landed. Web push is now planned as a late step, after every module ships, because five screens have push controls. A module enable toggle now exists as `modules_enabled`, but it only controls visibility: jobs, tools and direct URLs still work, so deleting the folder is still the real removal. See decisions/log.md.
