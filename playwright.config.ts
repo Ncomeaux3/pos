@@ -22,11 +22,11 @@ export default defineConfig({
   },
 
   projects: [
-    { name: 'setup', testMatch: /auth\.setup\.ts/ },
+    { name: 'setup', testMatch: /\.setup\.ts/ },
     {
       name: 'desktop',
       dependencies: ['setup'],
-      testIgnore: /auth\.setup\.ts/,
+      testIgnore: /\.setup\.ts/,
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1440, height: 900 },
@@ -36,7 +36,7 @@ export default defineConfig({
     {
       name: 'mobile',
       dependencies: ['setup'],
-      testIgnore: /auth\.setup\.ts/,
+      testIgnore: /\.setup\.ts/,
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 402, height: 874 },

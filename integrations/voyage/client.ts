@@ -1,4 +1,13 @@
-import { getCredentials } from '@/core/integrations'
+// getCredentials is imported lazily inside the call rather than at module
+// scope. This module is imported by its own manifest, and the manifest is
+// reached through core/integrations, so a static import here is a cycle. Next's
+// bundler hoists around it; plain Node does not, which broke every entry point
+// that is not the app: the cron route, scripts/setup.ts, and CI.
+async function credentials(id: string) {
+  const { getCredentials } = await import('@/core/integrations')
+  return getCredentials(id)
+}
+
 
 /**
  * voyage-4-lite at its default 1024 dimensions, matching vector(1024) in
@@ -19,7 +28,7 @@ export async function embed(
 ): Promise<number[][]> {
   if (texts.length === 0) return []
 
-  const key = apiKey ?? (await getCredentials('voyage'))?.api_key
+  const key = apiKey ?? (await credentials('voyage'))?.api_key
   if (!key) throw new Error('Voyage is not connected. Connect it on Settings > Connections.')
 
   const res = await fetch(ENDPOINT, {

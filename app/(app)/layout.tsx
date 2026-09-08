@@ -2,6 +2,7 @@ import { requireOwner } from '@/core/auth'
 import { db } from '@/core/db'
 import { getNav, NAV_FOOTER } from '@/core/nav'
 import { getSidebarCollapsed, getTheme } from '@/core/theme'
+import { CommandPalette } from '@/components/pos/CommandPalette'
 import { MobileTabBar, Sidebar } from '@/components/pos/Sidebar'
 import { ToastProvider } from '@/components/pos'
 import { toggleSidebar, toggleTheme } from './shell-actions'
@@ -35,6 +36,7 @@ export default async function AppLayout({ children }: LayoutProps<'/'>) {
         onToggleTheme={toggleTheme}
       />
       <MobileTabBar nav={nav} footer={NAV_FOOTER} reviewCount={reviewCount} />
+      <CommandPalette nav={[...nav, ...NAV_FOOTER]} />
 
       <main
         // The sidebar is fixed so the rail never scrolls with the page; this

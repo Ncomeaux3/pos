@@ -43,6 +43,46 @@ test('notes, the stub module page', async ({ page }) => {
   await shoot(page, 'notes')
 })
 
+test('search, empty and with results', async ({ page }) => {
+  await page.goto('/search')
+  await expect(page.getByRole('heading', { name: 'Search' })).toBeVisible()
+  await expect(page.getByText(/nothing searched/i)).toBeVisible()
+  await shoot(page, 'search-empty')
+
+  await page.getByLabel(/search everything/i).fill('deadlift')
+  await page.getByLabel(/search everything/i).press('Enter')
+
+  await expect(page).toHaveURL(/q=deadlift/)
+  await expect(page.getByText('Deadlift form check')).toBeVisible()
+  // The scope chips only list modules that actually have a hit.
+  await expect(page.getByRole('link', { name: /^Everything/ })).toBeVisible()
+  await shoot(page, 'search-results')
+})
+
+test('search falls back to closest matches instead of a dead end', async ({ page }) => {
+  await page.goto('/search?q=zzzznotathing')
+  await expect(page.getByText(/nothing matched/i)).toBeVisible()
+})
+
+test('command palette opens on cmd k and finds an entity', async ({ page }) => {
+  await page.goto('/')
+
+  await page.keyboard.press('ControlOrMeta+k')
+  const palette = page.getByRole('dialog', { name: /command palette/i })
+  await expect(palette).toBeVisible()
+
+  // The Go to list is the same nav the sidebar builds, so it is there before
+  // anything is typed.
+  await expect(palette.getByRole('button', { name: /Settings/ })).toBeVisible()
+
+  await page.getByLabel(/command palette search/i).fill('deadlift')
+  await expect(palette.getByRole('button', { name: /Deadlift form check/ })).toBeVisible()
+  await shoot(page, 'command-palette')
+
+  await page.keyboard.press('Escape')
+  await expect(palette).toBeHidden()
+})
+
 test('settings', async ({ page }) => {
   await page.goto('/settings')
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()

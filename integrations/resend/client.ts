@@ -1,4 +1,13 @@
-import { getCredentials } from '@/core/integrations'
+// getCredentials is imported lazily inside the call rather than at module
+// scope. This module is imported by its own manifest, and the manifest is
+// reached through core/integrations, so a static import here is a cycle. Next's
+// bundler hoists around it; plain Node does not, which broke every entry point
+// that is not the app: the cron route, scripts/setup.ts, and CI.
+async function credentials(id: string) {
+  const { getCredentials } = await import('@/core/integrations')
+  return getCredentials(id)
+}
+
 
 /**
  * The one thing that sends email. Everything queues into core.notifications
@@ -15,7 +24,7 @@ export async function sendEmail(args: {
   subject: string
   text: string
 }): Promise<{ id: string }> {
-  const key = (await getCredentials('resend'))?.api_key
+  const key = (await credentials('resend'))?.api_key
   if (!key) throw new Error('Resend is not connected. Connect it on Settings > Connections.')
 
   const res = await fetch('https://api.resend.com/emails', {
