@@ -71,22 +71,22 @@ export function Overlay({
           'duration-[260ms] ease-[cubic-bezier(.2,.8,.2,1)] animate-in',
           side === 'right'
             ? 'right-0 top-0 h-full w-[min(440px,92vw)] border-l border-rule-2 slide-in-from-right'
-            : 'bottom-0 left-0 max-h-[74vh] w-full border-t border-rule-2 slide-in-from-bottom',
+            : 'bottom-0 left-0 max-h-[74vh] w-full rounded-t-xl border-t border-rule-2 slide-in-from-bottom',
         )}
       >
         {side === 'bottom' && (
-          <div aria-hidden className="mx-auto mt-2 h-1 w-9 bg-ink-4" />
+          <div aria-hidden className="mx-auto mt-2 h-1 w-9 rounded-full bg-ink-4" />
         )}
 
         <div className="flex items-start justify-between gap-4 border-b border-rule px-5 py-4">
           <div className="min-w-0 space-y-1.5">
             {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
-            <p className="text-lg font-normal leading-tight tracking-[-0.01em] text-ink">{title}</p>
+            <p className="t-title text-ink">{title}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="mono shrink-0 text-[10px] uppercase tracking-[0.1em] text-ink-3 hover:text-ink"
+            className="label shrink-0 text-[10px] tracking-[0.1em] text-ink-3 hover:text-ink"
           >
             Close esc
           </button>

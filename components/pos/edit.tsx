@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
-import { MonoButton } from './Button'
+import { ActionButton } from './Button'
 
 /** The one input style. Forms across every screen use it. */
 export const fieldClass =
-  'w-full border border-rule-2 bg-bg-deep px-2.5 py-2 text-sm text-ink outline-none ' +
+  'w-full rounded-md border border-rule-2 bg-bg-deep px-2.5 py-2 text-sm text-ink outline-none ' +
   'placeholder:text-ink-4 focus-visible:border-brand'
 
 /**
@@ -44,7 +44,7 @@ export function InlineEdit({
         aria-label={`Edit ${label}`}
         onClick={() => setDraft(value)}
         className={cn(
-          'w-full border border-transparent px-2.5 py-2 text-left text-sm text-ink',
+          'w-full rounded-md border border-transparent px-2.5 py-2 text-left text-sm text-ink',
           'transition-colors duration-150 hover:border-rule',
           className,
         )}
@@ -113,7 +113,7 @@ export function ConfirmButton({
   }, [armed])
 
   return (
-    <MonoButton
+    <ActionButton
       type={armed && submit ? 'submit' : 'button'}
       variant={armed ? 'danger' : 'outline'}
       onClick={() => {
@@ -127,7 +127,7 @@ export function ConfirmButton({
       className={className}
     >
       {armed ? confirmLabel : children}
-    </MonoButton>
+    </ActionButton>
   )
 }
 
@@ -152,10 +152,10 @@ export function SecretField({
 
   return (
     <div className={cn('flex flex-wrap items-center gap-2', className)}>
-      <code className="mono min-w-0 flex-1 truncate border border-rule-2 bg-bg-deep px-2.5 py-2 text-xs text-ink">
+      <code className="code min-w-0 flex-1 truncate rounded-md border border-rule-2 bg-bg-deep px-2.5 py-2 text-xs text-ink">
         {shown ?? masked}
       </code>
-      <MonoButton
+      <ActionButton
         disabled={busy}
         onClick={async () => {
           if (shown) return setShown(null)
@@ -168,7 +168,7 @@ export function SecretField({
         }}
       >
         {busy ? 'Revealing' : shown ? 'Hide' : 'Reveal'}
-      </MonoButton>
+      </ActionButton>
       <span className="sr-only">{label}</span>
     </div>
   )
@@ -185,16 +185,16 @@ export function CopyBlock({ value, className }: { value: string; className?: str
   }, [copied])
 
   return (
-    <div className={cn('flex items-start gap-2 border border-rule-2 bg-bg-deep p-3', className)}>
-      <code className="mono min-w-0 flex-1 break-all text-xs leading-relaxed text-ink-2">{value}</code>
-      <MonoButton
+    <div className={cn('flex items-start gap-2 rounded-md border border-rule-2 bg-bg-deep p-3', className)}>
+      <code className="code min-w-0 flex-1 break-all text-xs leading-relaxed text-ink-2">{value}</code>
+      <ActionButton
         variant={copied ? 'brand' : 'outline'}
         onClick={() => {
           navigator.clipboard.writeText(value).then(() => setCopied(true))
         }}
       >
         {copied ? 'Copied' : 'Copy'}
-      </MonoButton>
+      </ActionButton>
     </div>
   )
 }

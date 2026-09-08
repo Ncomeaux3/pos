@@ -8,7 +8,7 @@ export type ChipTone = 'neutral' | 'brand' | 'ok' | 'warn' | 'bad' | 'quiet'
 // be the only signal.
 const TONE: Record<ChipTone, string> = {
   neutral: 'border-rule-2 text-ink-2',
-  brand: 'border-brand text-brand',
+  brand: 'border-brand text-teal',
   ok: 'border-ok/60 text-ok',
   warn: 'border-warn/60 text-warn',
   bad: 'border-bad/60 text-bad',
@@ -16,7 +16,7 @@ const TONE: Record<ChipTone, string> = {
 }
 
 /**
- * The design system's pill: mono 11px, 0.08em tracking, uppercase, 999px.
+ * The pill: 11px, 0.08em tracking, uppercase, 999px.
  * Tags, counts, kinds. Not a control.
  */
 export function Chip({
@@ -31,7 +31,7 @@ export function Chip({
   return (
     <span
       className={cn(
-        'mono inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5',
+        'label inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5',
         'text-[11px] uppercase tracking-[0.08em] leading-none',
         TONE[tone],
         className,
@@ -58,7 +58,7 @@ export function StatusChip({
   return (
     <span
       className={cn(
-        'mono inline-flex items-center gap-1.5 border px-2 py-1',
+        'label inline-flex items-center gap-1.5 rounded-md border px-2 py-1',
         'text-[10px] uppercase tracking-[0.1em] leading-none',
         TONE[tone],
         className,

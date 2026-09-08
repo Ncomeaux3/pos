@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 // soft fill rather than a change in opacity.
 
 const PILL_BASE =
-  'mono inline-flex h-11 items-center gap-2 border px-3 text-[11px] uppercase leading-none tracking-[0.1em] ' +
+  'label inline-flex h-11 items-center gap-2 rounded-full border px-3.5 text-[11px] leading-none tracking-[0.1em] ' +
   'transition-colors duration-150 active:scale-[.985] sm:h-[30px]'
 
 const PILL_OFF = 'border-rule-2 text-ink-3 hover:border-rule-2 hover:text-ink'
@@ -102,7 +102,7 @@ export function Switch({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
-        'relative h-5 w-[34px] shrink-0 border transition-colors duration-150',
+        'relative h-5 w-[34px] shrink-0 rounded-md border transition-colors duration-150',
         checked ? 'border-brand bg-brand-soft' : 'border-rule-2 bg-bg-deep',
         disabled && 'cursor-not-allowed opacity-100',
         className,
@@ -111,7 +111,7 @@ export function Switch({
       <span
         aria-hidden
         className={cn(
-          'absolute top-[3px] block h-3 w-3 transition-[left] duration-150',
+          'absolute top-[3px] block h-3 w-3 rounded-[2px] transition-[left] duration-150',
           checked ? 'left-[17px] bg-brand' : 'left-[3px] bg-ink-4',
         )}
       />

@@ -7,9 +7,12 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Personal operating system',
     start_url: '/',
     display: 'standalone',
-    background_color: '#0a0a0a',
-    theme_color: '#0a0a0a',
+    // The brand ground, so the splash and the address bar match the page
+    // rather than the stock near-black they shipped with.
+    background_color: '#07080A',
+    theme_color: '#07080A',
     icons: [
+      { src: '/icons/icon.svg', sizes: 'any', type: 'image/svg+xml' },
       { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
       {
         src: '/icons/icon-512.png',

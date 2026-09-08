@@ -6,7 +6,7 @@ import {
   ConfirmButton,
   CopyBlock,
   Eyebrow,
-  MonoButton,
+  ActionButton,
   PageHeader,
   StatusChip,
   TabLinks,
@@ -135,7 +135,7 @@ export default async function ConnectionsPage({ searchParams }: PageProps<'/sett
       />
 
       {error && (
-        <p className="border border-bad/60 px-3 py-2.5 text-[13px] text-bad">{error}</p>
+        <p className="rounded-md border border-bad/60 px-3 py-2.5 text-[13px] text-bad">{error}</p>
       )}
 
       <div className="space-y-3">
@@ -177,10 +177,10 @@ function ProviderCard({
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div className="min-w-0 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-[15px] leading-none text-ink">{manifest.label}</h2>
+            <h2 className="t-title text-[19px] leading-none text-ink">{manifest.label}</h2>
             <Chip tone="quiet">{AUTH_LABEL[manifest.auth.type]}</Chip>
           </div>
-          <p className="text-[12px] leading-relaxed text-ink-3">
+          <p className="t-caption text-ink-3">
             {manifest.description}
             {feeds.length > 0 && ` Used by ${feeds.join(', ')}.`}
           </p>
@@ -191,7 +191,7 @@ function ProviderCard({
       </div>
 
       {detail && (
-        <p className="mono text-[10px] uppercase tracking-[0.1em] text-ink-3">
+        <p className="label text-[10px] tracking-[0.1em] text-ink-3">
           Last test: {detail}
           {testedAt && ` · ${new Date(testedAt).toLocaleString()}`}
         </p>
@@ -204,7 +204,7 @@ function ProviderCard({
             <div key={f.key} className="space-y-1.5">
               <label
                 htmlFor={`${manifest.id}-${f.key}`}
-                className="mono block text-[10px] uppercase tracking-[0.1em] text-ink-3"
+                className="label block text-[10px] tracking-[0.1em] text-ink-3"
               >
                 {f.label}
               </label>
@@ -218,16 +218,16 @@ function ProviderCard({
               />
             </div>
           ))}
-          <MonoButton variant="solid" type="submit">
+          <ActionButton variant="solid" type="submit">
             {connected ? 'Save and test' : 'Connect'}
-          </MonoButton>
+          </ActionButton>
         </form>
       )}
 
       {manifest.auth.type === 'oauth2' && (
         <a
           href={`/api/integrations/${manifest.id}/oauth/start`}
-          className="mono inline-flex h-11 items-center border border-rule-2 px-3 text-[10px] uppercase tracking-[0.1em] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink sm:h-[30px]"
+          className="label inline-flex h-11 items-center rounded-md border border-rule-2 px-3 text-[10px] tracking-[0.1em] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink sm:h-[30px]"
         >
           {connected ? `Reauthorize ${manifest.label}` : `Connect with ${manifest.label}`}
         </a>
@@ -247,9 +247,9 @@ function ProviderCard({
           ) : (
             <form action={generateSecret}>
               <input type="hidden" name="id" value={manifest.id} />
-              <MonoButton variant="solid" type="submit">
+              <ActionButton variant="solid" type="submit">
                 Enable webhook
-              </MonoButton>
+              </ActionButton>
             </form>
           )}
         </div>
@@ -259,7 +259,7 @@ function ProviderCard({
         <div className="flex flex-wrap gap-2 border-t border-rule pt-3">
           <form action={test}>
             <input type="hidden" name="id" value={manifest.id} />
-            <MonoButton type="submit">Test</MonoButton>
+            <ActionButton type="submit">Test</ActionButton>
           </form>
           <form action={disconnect}>
             <input type="hidden" name="id" value={manifest.id} />

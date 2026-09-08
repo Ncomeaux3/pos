@@ -6,6 +6,7 @@ import { useTransition } from 'react'
 import type { NavItem } from '@/core/nav'
 import type { Theme } from '@/core/theme'
 import { cn } from '@/lib/utils'
+import { ComeauxverseLockup, ComeauxverseMark } from './Logo'
 
 // 232px, collapsing to 64px. Labels fade rather than unmount, so the collapsed
 // rail keeps its accessible names and a screen reader still reads the nav.
@@ -38,7 +39,7 @@ function NavRow({
           : 'border-transparent text-ink-3 hover:bg-bg-elev hover:text-ink-2',
       )}
     >
-      <span className={cn('mono w-5 shrink-0 text-[10px] tracking-[0.1em]', active ? 'text-brand' : 'text-ink-4')}>
+      <span className={cn('label w-5 shrink-0 text-[10px] tracking-[0.1em]', active ? 'text-teal' : 'text-ink-4')}>
         {item.code}
       </span>
       <span
@@ -52,7 +53,7 @@ function NavRow({
       {badge !== undefined && badge > 0 && (
         <span
           className={cn(
-            'mono shrink-0 border border-brand px-1.5 py-0.5 text-[10px] leading-none text-brand transition-opacity duration-200',
+            'num shrink-0 rounded-md border border-brand px-1.5 py-0.5 text-[10px] leading-none text-teal transition-opacity duration-200',
             collapsed && 'opacity-0',
           )}
         >
@@ -89,8 +90,10 @@ export function Sidebar({
       className="fixed inset-y-0 left-0 z-40 hidden shrink-0 flex-col border-r border-rule bg-bg-elev md:flex"
     >
       <div className="flex h-14 items-center border-b border-rule px-3">
-        <Link href="/" className="mono truncate text-[13px] uppercase tracking-[0.22em] text-ink">
-          {collapsed ? 'P' : 'POS'}
+        {/* Clear space around the lockup equals the mark radius, so the rail
+            gives it its own band rather than crowding it against the nav. */}
+        <Link href="/" aria-label="ComeauxVerse, dashboard" className="min-w-0">
+          {collapsed ? <ComeauxverseMark size={26} /> : <ComeauxverseLockup />}
         </Link>
       </div>
 
@@ -127,7 +130,7 @@ export function Sidebar({
             />
             <span
               className={cn(
-                'mono truncate text-[10px] uppercase tracking-[0.1em] transition-opacity duration-200',
+                'label truncate text-[10px] tracking-[0.1em] transition-opacity duration-200',
                 collapsed && 'opacity-0',
               )}
             >
@@ -140,7 +143,7 @@ export function Sidebar({
             disabled={pending}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             onClick={() => start(() => void onToggleCollapse(!collapsed))}
-            className="mono shrink-0 px-1.5 py-2 text-[11px] text-ink-3 transition-colors duration-150 hover:text-ink"
+            className="label shrink-0 px-1.5 py-2 text-[11px] text-ink-3 transition-colors duration-150 hover:text-ink"
           >
             {collapsed ? '›' : '‹'}
           </button>
@@ -182,14 +185,14 @@ export function MobileTabBar({
             isActive(pathname, item.href) ? 'text-ink' : 'text-ink-3',
           )}
         >
-          <span className="mono text-[9px] tracking-[0.1em]">{item.code}</span>
+          <span className="label text-[9px] tracking-[0.1em]">{item.code}</span>
           <span className="max-w-full truncate text-[10px]">{item.label}</span>
         </Link>
       ))}
 
       <details className="group relative flex-1">
         <summary className="flex min-h-[52px] cursor-pointer list-none flex-col items-center justify-center gap-1 px-1 py-2 text-ink-3">
-          <span className="mono text-[9px] tracking-[0.1em]">
+          <span className="label text-[9px] tracking-[0.1em]">
             {reviewCount > 0 ? reviewCount : '···'}
           </span>
           <span className="text-[10px]">More</span>

@@ -56,8 +56,8 @@ export function Row({
     >
       <div className="flex flex-wrap items-baseline justify-between gap-x-3.5 gap-y-3">
         <div className="min-w-0 flex-1 basis-[180px] space-y-1">
-          <p className={cn('text-sm leading-snug', muted ? 'text-ink-3' : 'text-ink')}>{title}</p>
-          {meta && <p className="text-[11px] leading-snug text-ink-3">{meta}</p>}
+          <p className={cn('t-body', muted ? 'text-ink-3' : 'text-ink')}>{title}</p>
+          {meta && <p className="t-caption text-ink-3">{meta}</p>}
         </div>
         {right && <div className="flex flex-wrap items-center gap-2">{right}</div>}
       </div>

@@ -15,16 +15,16 @@ export function DiffRow({ diff, undone }: { diff: Diff; undone?: boolean }) {
 
   return (
     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-rule py-2 last:border-b-0">
-      <span className="mono min-w-[7rem] text-[10px] uppercase tracking-[0.1em] text-ink-3">
+      <span className="label min-w-[7rem] text-[10px] tracking-[0.1em] text-ink-3">
         {diff.field}
       </span>
-      <span className={cn('mono text-xs text-ink-3', undone && 'line-through')}>
+      <span className={cn('num text-xs text-ink-3', undone && 'line-through')}>
         {from ?? 'empty'}
       </span>
-      <span aria-hidden className="mono text-xs text-ink-4">
+      <span aria-hidden className="label text-xs text-ink-4">
         to
       </span>
-      <span className={cn('mono text-xs', undone ? 'text-ink-3 line-through' : 'text-ink')}>
+      <span className={cn('num text-xs', undone ? 'text-ink-3 line-through' : 'text-ink')}>
         {to ?? 'empty'}
       </span>
     </div>
@@ -34,7 +34,7 @@ export function DiffRow({ diff, undone }: { diff: Diff; undone?: boolean }) {
 export function DiffList({ diffs, undone }: { diffs: Diff[]; undone?: boolean }) {
   if (diffs.length === 0) return null
   return (
-    <div className="border border-rule-2 bg-bg-deep px-3 py-1">
+    <div className="rounded-md border border-rule-2 bg-bg-deep px-3 py-1">
       {diffs.map((d) => (
         <DiffRow key={d.field} diff={d} undone={undone} />
       ))}

@@ -52,15 +52,13 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
 
   return (
     <main className="grid min-h-dvh place-items-center p-6">
-      <div className="w-full max-w-[400px] border border-rule-2 bg-bg-elev p-7">
+      <div className="w-full max-w-[400px] rounded-lg border border-rule-2 bg-bg-elev p-7">
         {sent ? (
           <div className="space-y-5">
             <div className="space-y-3">
               <Eyebrow dot="ok">Link sent</Eyebrow>
-              <h1 className="text-[26px] font-normal leading-[1.1] tracking-[-0.03em] text-ink">
-                Check your inbox
-              </h1>
-              <p className="text-[13px] leading-relaxed text-ink-3">
+              <h1 className="t-headline text-ink">Check your inbox</h1>
+              <p className="t-caption text-ink-3">
                 If that address owns this install, a single-use sign in link is on its way
                 {email && (
                   <>
@@ -73,8 +71,8 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
             </div>
 
             <div className="flex items-baseline justify-between border-y border-rule py-3">
-              <span className="mono text-[10px] uppercase tracking-[0.1em] text-ink-3">Expires</span>
-              <span className="mono text-[13px]">
+              <span className="label text-[10px] tracking-[0.1em] text-ink-3">Expires</span>
+              <span className="num text-[13px]">
                 <Countdown seconds={LINK_TTL_SECONDS} />
               </span>
             </div>
@@ -87,7 +85,7 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
                 <input type="hidden" name="email" value={email} />
                 <button
                   type="submit"
-                  className="mono text-[10px] uppercase tracking-[0.1em] text-ink-3 transition-colors hover:text-ink"
+                  className="label text-[10px] tracking-[0.1em] text-ink-3 transition-colors hover:text-ink"
                 >
                   Resend
                 </button>
@@ -99,14 +97,12 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
             <div className="space-y-3">
               <Eyebrow dot="brand">POS · single owner</Eyebrow>
               <div className="space-y-1">
-                <h1 className="text-[26px] font-normal leading-[1.1] tracking-[-0.03em] text-ink">
-                  Sign in
-                </h1>
-                <p className="mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
+                <h1 className="t-headline text-ink">Sign in</h1>
+                <p className="label text-[10px] tracking-[0.12em] text-ink-3">
                   Personal Operating System
                 </p>
               </div>
-              <p className="text-[13px] leading-relaxed text-ink-3">
+              <p className="t-caption text-ink-3">
                 One owner, one login. Enter the owner email and a single-use link comes back.
               </p>
             </div>
@@ -115,12 +111,12 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
               <div className="space-y-1.5">
                 <label
                   htmlFor="email"
-                  className="mono block text-[10px] uppercase tracking-[0.1em] text-ink-3"
+                  className="label block text-[10px] tracking-[0.1em] text-ink-3"
                 >
                   Owner email
                 </label>
-                <div className="flex items-center gap-2 border border-rule-2 bg-bg-deep px-2.5 focus-within:border-brand">
-                  <span aria-hidden className="mono text-[13px] text-ink-4">
+                <div className="flex items-center gap-2 rounded-md border border-rule-2 bg-bg-deep px-2.5 focus-within:border-brand">
+                  <span aria-hidden className="code text-[13px] text-ink-4">
                     &gt;
                   </span>
                   <input
@@ -135,12 +131,12 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
                   />
                 </div>
                 {error === 'invalid' && (
-                  <p className="mono text-[10px] uppercase tracking-[0.1em] text-bad">
+                  <p className="label text-[10px] tracking-[0.1em] text-bad">
                     Enter a valid email
                   </p>
                 )}
                 {error === 'expired' && (
-                  <p className="mono text-[10px] uppercase tracking-[0.1em] text-bad">
+                  <p className="label text-[10px] tracking-[0.1em] text-bad">
                     That link expired. Ask for another.
                   </p>
                 )}
@@ -150,10 +146,10 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
             </form>
 
             <div className="flex flex-wrap justify-between gap-2 border-t border-rule pt-3">
-              <span className="mono text-[10px] uppercase tracking-[0.1em] text-ink-4">
+              <span className="label text-[10px] tracking-[0.1em] text-ink-4">
                 Link expires in 15 min
               </span>
-              <span className="mono text-[10px] uppercase tracking-[0.1em] text-ink-4">
+              <span className="label text-[10px] tracking-[0.1em] text-ink-4">
                 No passwords · no signup
               </span>
             </div>

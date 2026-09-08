@@ -3,7 +3,7 @@ import {
   Card,
   CardHead,
   Eyebrow,
-  MonoButton,
+  ActionButton,
   PageHeader,
   Row,
   RowList,
@@ -93,7 +93,7 @@ export default async function SettingsPage() {
           </Field>
 
           <Field label="Owner email" hint="The only login allowed. Set in .env as OWNER_EMAIL.">
-            <p className="mono border border-rule bg-bg-deep px-2.5 py-2 text-xs text-ink-3">
+            <p className="rounded-md border border-rule bg-bg-deep px-2.5 py-2 text-xs text-ink-3">
               Read only
             </p>
           </Field>
@@ -125,9 +125,9 @@ export default async function SettingsPage() {
         <Card className="space-y-4">
           <CardHead label="Model spend, soft cap" meta={`month to date ${money(spendCents)}`} />
 
-          <div className="h-1 w-full bg-rule">
+          <div className="h-1 w-full rounded-full bg-rule">
             <div
-              className={usedPct >= 100 ? 'h-full bg-bad' : usedPct >= 80 ? 'h-full bg-warn' : 'h-full bg-brand'}
+              className={`h-full rounded-full ${usedPct >= 100 ? 'bg-bad' : usedPct >= 80 ? 'bg-warn' : 'bg-brand'}`}
               style={{ width: `${usedPct}%` }}
             />
           </div>
@@ -150,10 +150,10 @@ export default async function SettingsPage() {
         </Card>
 
         <div className="flex items-center gap-3">
-          <MonoButton variant="solid" type="submit">
+          <ActionButton variant="solid" type="submit">
             Save
-          </MonoButton>
-          <span className="mono text-[10px] uppercase tracking-[0.1em] text-ink-3">
+          </ActionButton>
+          <span className="label text-[10px] tracking-[0.1em] text-ink-3">
             Writes core.settings
           </span>
         </div>
@@ -162,11 +162,11 @@ export default async function SettingsPage() {
       <Card className="space-y-1">
         <CardHead label="Nightly job" meta="read only" />
         <RowList>
-          <Row title="Schedule" right={<span className="mono text-xs text-ink-3">0 9 * * * UTC</span>} />
+          <Row title="Schedule" right={<span className="code text-xs text-ink-3">0 9 * * * UTC</span>} />
           <Row
             title="Last run"
             right={
-              <span className="mono text-xs text-ink-3">
+              <span className="num text-xs text-ink-3">
                 {job.last_run ? new Date(job.last_run).toLocaleString() : 'never'}
                 {job.last_status === 'failed' && ' · failed'}
               </span>
@@ -175,7 +175,7 @@ export default async function SettingsPage() {
           <Row
             title="Jobs registered"
             meta="Every module job plus the core ones."
-            right={<span className="mono text-xs text-ink-3">{job.n}</span>}
+            right={<span className="num text-xs text-ink-3">{job.n}</span>}
           />
         </RowList>
       </Card>
@@ -196,11 +196,11 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="mono block text-[10px] uppercase tracking-[0.1em] text-ink-3">
+      <label htmlFor={htmlFor} className="label block text-[10px] tracking-[0.1em] text-ink-3">
         {label}
       </label>
       {children}
-      {hint && <p className="text-[11px] leading-relaxed text-ink-3">{hint}</p>}
+      {hint && <p className="t-caption text-ink-3">{hint}</p>}
     </div>
   )
 }

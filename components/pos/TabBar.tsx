@@ -15,7 +15,7 @@ const TAB_ROW = '-mb-px flex flex-wrap gap-6 border-b border-rule'
 
 function TabCount({ count }: { count?: number }) {
   if (count === undefined) return null
-  return <span className="mono text-[10px] tracking-[0.1em] text-ink-3">{count}</span>
+  return <span className="num text-[10px] tracking-[0.1em] text-ink-3">{count}</span>
 }
 
 /**
@@ -89,7 +89,7 @@ export function TabLinks({
         t.soon ? (
           <span key={t.href} className={cn(TAB_BASE, TAB_SOON)}>
             {t.label}
-            <span className="mono text-[9px] tracking-[0.1em] text-ink-4">soon</span>
+            <span className="label text-[9px] tracking-[0.1em] text-ink-4">soon</span>
           </span>
         ) : (
           <Link

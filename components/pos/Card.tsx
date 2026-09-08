@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { Eyebrow, type DotTone } from './text'
 
-/** 1px rule-2 on bg-elev, 16px padding, square. The container for everything. */
+/** 1px rule-2 on bg-elev, 16px padding, 12px radius. The container for everything. */
 export function Card({
   children,
   className,
@@ -16,7 +16,7 @@ export function Card({
   return (
     <div
       className={cn(
-        'border bg-bg-elev p-4',
+        'rounded-lg border bg-bg-elev p-4',
         selected ? 'border-brand bg-brand-soft' : 'border-rule-2',
         className,
       )}
@@ -26,7 +26,7 @@ export function Card({
   )
 }
 
-/** Eyebrow left, mono metadata right, baseline aligned. */
+/** Eyebrow left, metadata right, baseline aligned. */
 export function CardHead({
   label,
   dot,
@@ -41,7 +41,7 @@ export function CardHead({
   return (
     <div className={cn('flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1', className)}>
       <Eyebrow dot={dot}>{label}</Eyebrow>
-      {meta && <span className="mono text-[11px] uppercase tracking-[0.1em] text-ink-3">{meta}</span>}
+      {meta && <span className="label text-[11px] tracking-[0.1em] text-ink-3">{meta}</span>}
     </div>
   )
 }
@@ -56,7 +56,7 @@ const DELTA: Record<DeltaTone, string> = {
 }
 
 /**
- * Label over a big mono number over a small coloured delta. The KPI shape on
+ * Label over a big number over a small coloured delta. The KPI shape on
  * Finance, Home, Health, Fitness, Agent Log and the Weekly Review glance.
  */
 export function MetricTile({
@@ -78,9 +78,9 @@ export function MetricTile({
   return (
     <Card className={cn('flex flex-col gap-2', className)}>
       <Eyebrow>{label}</Eyebrow>
-      <p className="mono text-[30px] font-light leading-none tracking-[-0.02em] text-ink">{value}</p>
+      <p className="num text-[30px] font-light leading-none tracking-[-0.02em] text-ink">{value}</p>
       {delta && (
-        <p className={cn('mono text-[10px] uppercase tracking-[0.1em]', DELTA[deltaTone])}>{delta}</p>
+        <p className={cn('label text-[10px] tracking-[0.1em]', DELTA[deltaTone])}>{delta}</p>
       )}
       {children}
     </Card>

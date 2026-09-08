@@ -47,7 +47,7 @@ function ToastItem({ message, onDone }: { message: string; onDone: () => void })
   }, [onDone])
 
   return (
-    <div className="pointer-events-auto border border-brand bg-bg-elev px-4 py-2.5 text-[13px] text-ink duration-200 animate-in fade-in slide-in-from-bottom-2">
+    <div className="pointer-events-auto rounded-lg border border-brand bg-bg-elev px-4 py-2.5 text-[13px] text-ink duration-200 animate-in fade-in slide-in-from-bottom-2">
       {message}
     </div>
   )

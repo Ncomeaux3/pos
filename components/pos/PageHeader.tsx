@@ -26,12 +26,14 @@ export function PageHeader({
     <header className={cn('flex flex-wrap items-end justify-between gap-x-6 gap-y-4 border-b border-rule pb-4', className)}>
       <div className="min-w-0 space-y-2">
         <Eyebrow dot={dot}>{eyebrow}</Eyebrow>
-        <h1 className="text-[clamp(22px,2.2vw,30px)] font-normal leading-[1.1] tracking-[-0.03em] text-ink">
+        <h1 className="t-title text-ink">
           {title}
         </h1>
-        {lede && <p className="max-w-[62ch] text-[13px] leading-relaxed text-ink-3">{lede}</p>}
+        {lede && <p className="t-body max-w-[62ch] text-ink-3">{lede}</p>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {/* ml-auto so the actions stay right aligned even after they wrap onto
+          their own line, which they do as soon as the lede is long. */}
+      {actions && <div className="ml-auto flex flex-wrap items-center gap-2">{actions}</div>}
     </header>
   )
 }

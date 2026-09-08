@@ -1,18 +1,13 @@
 import type { Metadata, Viewport } from 'next'
-import { JetBrains_Mono, Space_Grotesk } from 'next/font/google'
+import { Manrope } from 'next/font/google'
 import { getTheme } from '@/core/theme'
 import './globals.css'
 
-// Both are variable fonts, so the weight range comes for free and there is no
-// list of weights to keep in sync with the design.
-const spaceGrotesk = Space_Grotesk({
-  variable: '--font-space-grotesk',
-  subsets: ['latin'],
-  display: 'swap',
-})
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: '--font-jetbrains-mono',
+// One family, per ComeauxVerse/brand/visual.md: Manrope 400 to 700, no
+// monospace anywhere. It is a variable font, so the whole weight range arrives
+// in one file and there is no weight list to keep in sync with the guide.
+const manrope = Manrope({
+  variable: '--font-manrope',
   subsets: ['latin'],
   display: 'swap',
 })
@@ -36,11 +31,7 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
   const theme = await getTheme()
 
   return (
-    <html
-      lang="en"
-      data-theme={theme}
-      className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full`}
-    >
+    <html lang="en" data-theme={theme} className={`${manrope.variable} h-full`}>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   )

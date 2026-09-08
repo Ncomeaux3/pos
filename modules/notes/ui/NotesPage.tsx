@@ -20,7 +20,7 @@ export default async function NotesPage() {
 
       {rows.length === 0 ? (
         <EmptyState headline="Nothing written">
-          No notes yet. Run <span className="mono">pnpm setup --demo</span> to seed five, or call the
+          No notes yet. Run <span className="code">pnpm setup --demo</span> to seed five, or call the
           notes.write tool.
         </EmptyState>
       ) : (
@@ -31,7 +31,7 @@ export default async function NotesPage() {
               title={note.title}
               meta={note.body || undefined}
               right={
-                <span className="mono text-[10px] uppercase tracking-[0.1em] text-ink-3">
+                <span className="num text-[10px] tracking-[0.1em] text-ink-3">
                   {new Date(note.created_at).toLocaleDateString()}
                 </span>
               }

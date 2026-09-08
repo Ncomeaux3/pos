@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { MonoButton } from './Button'
+import { ActionButton } from './Button'
 import { Eyebrow } from './text'
 
 export type WizardStep = { key: string; name: string; hint?: string }
@@ -51,8 +51,8 @@ export function WizardShell({
     <div className="flex min-h-dvh flex-col gap-8 p-7 lg:flex-row lg:gap-12">
       <aside className="w-full shrink-0 space-y-6 lg:w-[264px]">
         <div className="space-y-2">
-          <h1 className="text-xl font-normal tracking-[-0.02em] text-ink">{railTitle}</h1>
-          {railLede && <p className="text-[13px] leading-relaxed text-ink-3">{railLede}</p>}
+          <h1 className="t-title text-ink">{railTitle}</h1>
+          {railLede && <p className="t-caption text-ink-3">{railLede}</p>}
         </div>
 
         <div className="space-y-1">
@@ -61,7 +61,7 @@ export function WizardShell({
           </div>
           <div className="flex justify-between">
             <Eyebrow>{steps[index]?.name}</Eyebrow>
-            <span className="mono text-[11px] tracking-[0.1em] text-ink-3">{pct}%</span>
+            <span className="num text-[11px] tracking-[0.1em] text-ink-3">{pct}%</span>
           </div>
         </div>
 
@@ -82,8 +82,8 @@ export function WizardShell({
                 >
                   <span
                     className={cn(
-                      'mono w-4 shrink-0 text-[11px] tracking-[0.1em]',
-                      done ? 'text-brand' : on ? 'text-ink' : 'text-ink-4',
+                      'label w-4 shrink-0 text-[11px] tracking-[0.1em]',
+                      done ? 'text-teal' : on ? 'text-ink' : 'text-ink-4',
                     )}
                   >
                     {done ? '✓' : String(i + 1).padStart(2, '0')}
@@ -102,10 +102,10 @@ export function WizardShell({
       <main className="flex min-w-0 flex-1 flex-col">
         <div className="max-w-[64ch] space-y-3">
           <Eyebrow>{kicker}</Eyebrow>
-          <h2 className="text-[clamp(22px,2.2vw,30px)] font-normal leading-[1.1] tracking-[-0.03em] text-ink">
+          <h2 className="t-headline text-ink">
             {title}
           </h2>
-          {helper && <p className="text-[13px] leading-relaxed text-ink-3">{helper}</p>}
+          {helper && <p className="t-body text-ink-3">{helper}</p>}
         </div>
 
         <div className="mt-7 min-h-0 flex-1">{children}</div>
@@ -113,21 +113,21 @@ export function WizardShell({
         <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-rule pt-4">
           <div className="flex items-center gap-2">
             {onBack && (
-              <MonoButton variant="quiet" onClick={onBack}>
+              <ActionButton variant="quiet" onClick={onBack}>
                 Back
-              </MonoButton>
+              </ActionButton>
             )}
             {onSkip && (
-              <MonoButton variant="quiet" onClick={onSkip}>
+              <ActionButton variant="quiet" onClick={onSkip}>
                 Skip for now
-              </MonoButton>
+              </ActionButton>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-3">
             {footnote && <span className="text-[11px] text-ink-3">{footnote}</span>}
-            <MonoButton variant="solid" onClick={onNext} className="px-4">
+            <ActionButton variant="solid" onClick={onNext} className="px-4">
               {nextLabel}
-            </MonoButton>
+            </ActionButton>
           </div>
         </div>
       </main>
