@@ -7,8 +7,8 @@ Last updated: 2026-09-08, end of step 14. Branch `phase-1-core`.
 
 ## Done
 
-**Phase 1 steps 1 to 11 of 16.** Steps 1 to 7 shipped 2026-09-05; the design
-bundle landed 2026-09-07 and steps 0, 7.5 and 8 to 11 followed.
+**Phase 1 steps 1 to 14 of 16.** Steps 1 to 7 shipped 2026-09-05; the design
+bundle landed 2026-09-07 and steps 0, 7.5 and 8 to 14 followed.
 
 | Step | What exists |
 |---|---|
@@ -47,8 +47,8 @@ classification splits between keyword rules and `claude-haiku-4-5`, and
 Login, Dashboard (live, with the bento tiles), Notes, Search, Review, Settings
 General, Settings Connections, Settings Agents and MCP. Command palette on Cmd K.
 
-Not yet built: the real Dashboard tiles, Notifications, Agent Log, Onboarding,
-Weekly Review, and every module beyond the `notes` stub.
+Not yet built: Notifications, Agent Log, Onboarding, Weekly Review, and every
+module beyond the `notes` stub.
 
 ## Next: step 15, deploy
 

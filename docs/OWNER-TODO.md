@@ -70,22 +70,46 @@ thing I cannot do: it needs your real keys.
       variable; I would then also want to re-check the free tier assumption,
       since sending to addresses other than your own changes what is allowed.
 
+## Step 15, deploy. This is what is left.
+
+Nothing in the codebase blocks it. These are the accounts and secrets only you
+can create, roughly in the order they are needed.
+
+- [ ] **Create the private GitHub repo `pos-backups`.** Empty is fine; the
+      workflow makes `dumps/` itself. Without it the backup job fails on the
+      checkout step.
+- [ ] **Create a Supabase project for production**, note the project ref, then
+      `supabase link --project-ref <ref>` and `supabase db push`. Disable email
+      signups in the dashboard: there is one owner and no signup flow.
+- [ ] **Set the hosted email OTP expiry to 900 seconds**, so the 15 minute
+      countdown on the login screen is true.
+- [ ] **Create the Vercel project** from the GitHub repo and set every `.env`
+      key as an environment variable. `ENCRYPTION_KEY` must be the same value
+      as local or the stored provider keys cannot be decrypted; generate fresh
+      values for `CRON_SECRET` and `MCP_TOKEN`. Confirm the cron shows as
+      registered after the first deploy.
+- [ ] **Add two GitHub repo secrets** for the backup workflow:
+      `BACKUP_DATABASE_URL`, the Supabase session mode pooler URL on port 5432,
+      and `BACKUP_REPO_TOKEN`, a fine-grained token with contents write on
+      `pos-backups` only.
+- [ ] **Run `pnpm setup` against production**, then paste the three provider
+      keys again on the deployed Connections page. They are encrypted per
+      environment and do not travel.
+- [ ] **Turn Attack Mode on** in the Vercel firewall, and check whether the Bot
+      Protection managed ruleset is offered on Hobby. The docs do not state a
+      plan gate, so I did not assert one either way.
+
 ## Later phases
-
-- [ ] **Step 14**: create the private `pos-backups` GitHub repo, and add the
-      Supabase session-mode pooler URL (port 5432) as a repo secret.
-- [ ] **Step 15**: Vercel project, Supabase prod project, every `.env` key set
-      as an environment variable, signups disabled in prod, Attack Mode on.
-- [ ] **Step 15**: set the email OTP expiry to 900 seconds in the hosted
-      project's auth settings. `supabase/config.toml` sets it locally, and the
-      login screen counts down from 15 minutes, so prod has to agree or the
-      timer on screen is a lie.
-- [ ] **Step 15**: confirm in the Vercel dashboard whether the Bot Protection
-      managed ruleset is offered on Hobby. The docs do not state a plan gate, so
-      I did not assert one either way.
-
 ## Done
 
+- [x] 2026-09-08 Pasted the Anthropic, Resend and Voyage keys, and widened the
+      Resend key to full access so its Test passes. All three connected.
+- [x] 2026-09-08 Registered the MCP server with Claude Code. The first attempt
+      sent an empty bearer token because $MCP_TOKEN is in .env and not in the
+      shell; re-registered sourcing the file.
+- [x] 2026-09-08 Chose nicholascomeaux00@gmail.com as the digest recipient,
+      which is what Resend will deliver to without a verified domain. Stored as
+      the `digest_email` setting, separate from OWNER_EMAIL.
 - [x] 2026-09-08 Pasted the Voyage key. Tested (voyage-4-lite, 1024 dimensions),
       stored encrypted in `core.connections`, five notes embedded. Semantic
       search verified: "barbell technique" finds "Deadlift form check" and
