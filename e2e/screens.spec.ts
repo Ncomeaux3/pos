@@ -272,3 +272,38 @@ test('dashboard renders the nightly run', async ({ page }) => {
 
   await shoot(page, 'dashboard-live')
 })
+
+test('notifications, rules table and the alert centre', async ({ page }) => {
+  await page.goto('/notifications')
+  await expect(page.getByRole('heading', { name: 'What reaches you, and when' })).toBeVisible()
+
+  // The seeded rule set, the schedule above it and the preview rail that
+  // follows the selected row. All three are the screen.
+  await expect(page.getByText('Statement due')).toBeVisible()
+  await expect(page.getByRole('switch', { name: 'Morning digest on' })).toBeVisible()
+  await expect(page.getByText('Push, lock screen')).toBeVisible()
+
+  // Both halves of the alert centre. Counts are not asserted: the dev database
+  // carries real alerts from nightly runs alongside the seeded ones, so the
+  // fixture is deterministic in content, not in total.
+  //
+  // The title appears twice on purpose, once as the alert row and once in the
+  // push preview of the rule behind it.
+  await expect(page.getByText('Chase Sapphire due in 3 days')).toHaveCount(2)
+  await expect(page.getByText(/^History \//)).toBeVisible()
+  await expect(page.getByText('Backup complete, 30 snapshots kept')).toBeVisible()
+
+  await shoot(page, 'notifications')
+})
+
+// The expander is the whole editing surface, so it gets its own shot.
+test('notifications, a rule expanded', async ({ page }) => {
+  await page.goto('/notifications')
+  await page.getByText('Policy renewal').first().click()
+
+  await expect(page.getByRole('radio', { name: 'Immediate' })).toBeVisible()
+  await expect(page.getByRole('checkbox', { name: 'Email' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Breaks quiet hours' })).toBeVisible()
+
+  await shoot(page, 'notifications-rule')
+})

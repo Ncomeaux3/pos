@@ -30,6 +30,25 @@ export type Settings = {
    * the Resend account was created with.
    */
   digest_email: string
+  /**
+   * When the two digests are composed, local, as "HH:MM". The design's time
+   * inputs carry minutes (06:30), so these are strings rather than the hour
+   * integer digest_hour uses for the cron.
+   */
+  digest_morning_at: string
+  digest_morning_enabled: boolean
+  digest_evening_at: string
+  digest_evening_enabled: boolean
+  /**
+   * Quiet hours, local, as "HH:MM". They wrap midnight: from 22:00 to 06:30 is
+   * the overnight window, not an empty one.
+   */
+  quiet_from: string
+  quiet_to: string
+  /** Whether an urgent rule is allowed through quiet hours at all. */
+  quiet_urgent_override: boolean
+  /** The master switch. Rules keep their own state underneath it. */
+  notifications_paused: boolean
 }
 export type SettingKey = keyof Settings
 
@@ -42,6 +61,14 @@ export const DEFAULT_SETTINGS: Settings = {
   // The cautious default: a fork starts by proposing, not acting.
   agent_autonomy: 'propose',
   digest_email: '',
+  digest_morning_at: '06:30',
+  digest_morning_enabled: true,
+  digest_evening_at: '20:00',
+  digest_evening_enabled: true,
+  quiet_from: '22:00',
+  quiet_to: '06:30',
+  quiet_urgent_override: true,
+  notifications_paused: false,
 }
 
 export async function getSetting<K extends SettingKey>(key: K): Promise<Settings[K]> {

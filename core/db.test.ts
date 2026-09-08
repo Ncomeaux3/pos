@@ -17,6 +17,7 @@ const CORE_TABLES = [
   'entities',
   'skill_links',
   'events',
+  'notification_rules',
   'notifications',
   'jobs',
   'digests',

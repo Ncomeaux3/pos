@@ -34,19 +34,6 @@ export function Row({
 
   return (
     <div
-      onClick={onClick}
-      role={interactive ? 'button' : undefined}
-      tabIndex={interactive ? 0 : undefined}
-      onKeyDown={
-        interactive
-          ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                onClick?.()
-              }
-            }
-          : undefined
-      }
       className={cn(
         'border-b border-rule px-1 py-3.5 transition-colors duration-150',
         interactive && 'cursor-pointer hover:bg-bg-elev',
@@ -54,7 +41,25 @@ export function Row({
         className,
       )}
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3.5 gap-y-3">
+      {/* The click target is the header, never the wrapper. An expander's
+          content sits in `children` below, and a button that contained it
+          would both nest buttons and read its whole subtree as its name. */}
+      <div
+        onClick={onClick}
+        role={interactive ? 'button' : undefined}
+        tabIndex={interactive ? 0 : undefined}
+        onKeyDown={
+          interactive
+            ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onClick?.()
+                }
+              }
+            : undefined
+        }
+        className="flex flex-wrap items-baseline justify-between gap-x-3.5 gap-y-3"
+      >
         <div className="min-w-0 flex-1 basis-[180px] space-y-1">
           <p className={cn('t-body', muted ? 'text-ink-3' : 'text-ink')}>{title}</p>
           {meta && <p className="t-caption text-ink-3">{meta}</p>}

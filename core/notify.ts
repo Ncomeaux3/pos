@@ -1,4 +1,5 @@
 import { db } from './db'
+import type { Rule, RulePatch } from './notification-rules'
 
 // Everything that wants your attention becomes a row here, and the nightly
 // sender bundles the lot into one plain text email. One email a day, never a
@@ -22,17 +23,51 @@ export async function queue(args: {
 
 export type Pending = { id: string; title: string; body: string; urgency: string }
 
-/** Due, unsent, and not snoozed past now. */
+/**
+ * Quiet hours wrap midnight, so "inside" is a union of two ranges when from is
+ * later than to. 22:00 to 06:30 is the overnight window, not an empty one.
+ */
+export function inQuietHours(now: Date, from: string, to: string): boolean {
+  const minutes = now.getHours() * 60 + now.getMinutes()
+  const at = (hhmm: string) => {
+    const [h, m] = hhmm.split(':').map(Number)
+    return h * 60 + m
+  }
+  const start = at(from)
+  const end = at(to)
+  return start <= end ? minutes >= start && minutes < end : minutes >= start || minutes < end
+}
+
+/**
+ * Due, unsent, not snoozed, and allowed out right now.
+ *
+ * Three gates, in order of bluntness: the global pause, then the rule's own
+ * mute or snooze, then quiet hours. A row held by any of them stays queued and
+ * goes out on a later run, which is what makes snooze mean "later" rather than
+ * "never".
+ */
 export async function pending(): Promise<Pending[]> {
+  const { getSettings } = await import('./settings')
+  const settings = await getSettings()
+  if (settings.notifications_paused) return []
+
   const { rows } = await db().query<Pending>(
-    `select id, title, body, urgency
-       from core.notifications
-      where sent_at is null
-        and due_at <= now()
-        and (snooze_until is null or snooze_until < now())
-      order by (urgency = 'urgent') desc, due_at`,
+    `select n.id, n.title, n.body, n.urgency
+       from core.notifications n
+       left join core.notification_rules r on r.id = n.rule_id
+      where n.sent_at is null
+        and n.due_at <= now()
+        and (n.snooze_until is null or n.snooze_until < now())
+        and coalesce(r.muted, false) = false
+        and (r.snooze_until is null or r.snooze_until < now())
+      order by (n.urgency = 'urgent') desc, n.due_at`,
   )
-  return rows
+
+  if (!inQuietHours(new Date(), settings.quiet_from, settings.quiet_to)) return rows
+
+  // Inside quiet hours only urgent gets through, and only if the override is
+  // on. Everything else waits for morning.
+  return settings.quiet_urgent_override ? rows.filter((r) => r.urgency === 'urgent') : []
 }
 
 /**
@@ -115,4 +150,85 @@ export async function sendPending(): Promise<SendResult> {
   ])
 
   return { sent: items.length, emails: 1 }
+}
+
+// The alert centre ----------------------------------------------------------
+
+export type Alert = {
+  id: string
+  title: string
+  body: string
+  channel: string
+  urgency: string
+  module: string | null
+  rule_label: string | null
+  due_at: Date
+  read_at: Date | null
+}
+
+/**
+ * Everything that has been raised, newest first, with the rule that raised it.
+ * The screen splits this into unread and history rather than asking twice.
+ */
+export async function listAlerts(limit = 60): Promise<Alert[]> {
+  const { rows } = await db().query<Alert>(
+    `select n.id, n.title, n.body, n.channel, n.urgency, n.due_at, n.read_at,
+            r.module, r.label as rule_label
+       from core.notifications n
+       left join core.notification_rules r on r.id = n.rule_id
+      where n.due_at <= now()
+      order by n.due_at desc
+      limit $1`,
+    [limit],
+  )
+  return rows
+}
+
+export async function markRead(id: string): Promise<void> {
+  await db().query(`update core.notifications set read_at = now() where id = $1`, [id])
+}
+
+export async function markAllRead(): Promise<void> {
+  await db().query(`update core.notifications set read_at = now() where read_at is null`)
+}
+
+// The rules behind the sends ------------------------------------------------
+//
+// core/notification-rules.ts holds the shape and the derived state, because the
+// Notifications screen is a client component and cannot reach `pg`. These are
+// the queries over that shape, and they stay here on the server side of the
+// line.
+
+export async function listRules(): Promise<Rule[]> {
+  const { rows } = await db().query<Rule & { lead_days: string }>(
+    `select id, module, key, label, trigger_text, channels, timing, lead_days,
+            urgent, muted, snooze_until, sample_title, sample_body, position
+       from core.notification_rules
+      order by position, module, key`,
+  )
+  return rows.map((r) => ({ ...r, lead_days: Number(r.lead_days) }))
+}
+
+export async function patchRule(id: string, patch: RulePatch): Promise<void> {
+  const fields = Object.keys(patch) as (keyof RulePatch)[]
+  if (fields.length === 0) return
+
+  const set = fields.map((f, i) => `${f} = $${i + 2}`).join(', ')
+  await db().query(`update core.notification_rules set ${set} where id = $1`, [
+    id,
+    ...fields.map((f) => patch[f]),
+  ])
+}
+
+/**
+ * Undo pauses the rule that produced a write for seven days, so the same
+ * decision is not made again tomorrow night.
+ */
+export async function snoozeRule(id: string, days: number): Promise<void> {
+  await db().query(
+    `update core.notification_rules
+        set snooze_until = now() + make_interval(days => $2), muted = false
+      where id = $1`,
+    [id, days],
+  )
 }
