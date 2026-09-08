@@ -3,8 +3,7 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
-Last updated: 2026-09-08, end of step 11. Branch `phase-1-core`, 26 commits
-ahead of `main`.
+Last updated: 2026-09-08, end of step 14. Branch `phase-1-core`.
 
 ## Done
 
@@ -20,12 +19,16 @@ bundle landed 2026-09-07 and steps 0, 7.5 and 8 to 11 followed.
 | 9 | Proposals, the guard, the Review screen, migration `core_platform` |
 | 10 | Query tool, rate limiter, request log, storage buckets |
 | 11 | MCP endpoint at `/api/mcp`, Settings Agents and MCP tab |
+| 12 | Job runner, notifications, orchestrator, the Dashboard bento. The nightly run works end to end and sends one email |
+| 13 | `pnpm setup` and `pnpm setup:demo`, both idempotent |
+| 14 | CI and backup workflows, restore drilled |
 
 ## Verification
 
 ```
-pnpm typecheck && pnpm lint && pnpm test    # 229 tests, 22 files
-pnpm test:e2e                               # 29 specs, 1440px and 402px, both themes
+pnpm typecheck && pnpm lint && pnpm test    # 253 tests, 24 files
+pnpm test:e2e                               # 31 specs, 1440px and 402px, both themes
+pnpm setup:demo                             # idempotent bootstrap
 ```
 
 Screenshots land in `e2e/__screens__/` (gitignored). Tests use their own
@@ -41,25 +44,23 @@ classification splits between keyword rules and `claude-haiku-4-5`, and
 
 ## Screens built
 
-Login, Dashboard (placeholder), Notes, Search, Review, Settings General,
-Settings Connections, Settings Agents and MCP. Command palette on Cmd K.
+Login, Dashboard (live, with the bento tiles), Notes, Search, Review, Settings
+General, Settings Connections, Settings Agents and MCP. Command palette on Cmd K.
 
 Not yet built: the real Dashboard tiles, Notifications, Agent Log, Onboarding,
 Weekly Review, and every module beyond the `notes` stub.
 
-## Next: step 12
+## Next: step 15, deploy
 
-Job runner, notifications, orchestrator, and the Dashboard with its nine bento
-tiles. This is the nightly run and the first digest email.
+Vercel, a hosted Supabase project, and the first real nightly run in
+production. Everything it needs from the owner is in docs/OWNER-TODO.md.
 
-**Known blocker for step 12 and 13.** The module registry cannot load in a
-plain Node process: a manifest imports its React pages, and the tsx transform
-fails on it (`__name is not a function`). Worked around once in
-`core/proposals.ts` by importing `getModule` lazily inside `approve()`. The
-cron route runs inside Next so it may be unaffected, but `scripts/setup.ts` in
-step 13 is not, and this needs solving properly rather than working around
-again. Likely shape: split the manifest so `pages` is loaded separately from
-`tools` and `jobs`.
+Then step 16: update the module README and connections.md, run /review, merge
+to main. After that, Phase 2: Skill Tree, then Tasks and Goals, then Finance.
+
+The registry cycle that blocked steps 12 and 13 is fixed: both registries load
+in a plain Node process, which is what lets `pnpm setup` and the cron job work
+outside Next.
 
 ## Open questions for the owner
 

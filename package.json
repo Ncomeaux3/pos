@@ -21,7 +21,9 @@
     "test:watch": "vitest",
     "typecheck": "next typegen && tsc --noEmit",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "setup": "tsx --env-file=.env scripts/setup.ts",
+    "setup:demo": "tsx --env-file=.env scripts/setup.ts --demo"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.123.0",

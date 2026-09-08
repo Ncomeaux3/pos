@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+# A second push to the same branch makes the first run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The suites talk to Postgres, so the same Docker stack the owner runs
+      # locally comes up here. supabase start is what CI and a laptop share.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase
+        run: supabase start
+
+      # Only what the tests actually need. No provider keys: a suite that
+      # needed one would be a suite reaching the network, which none do.
+      - name: Write .env
+        run: |
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$(supabase status -o env | grep '^API_URL=' | cut -d= -f2- | tr -d '\"')"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(supabase status -o env | grep '^ANON_KEY=' | cut -d= -f2- | tr -d '\"')"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$(supabase status -o env | grep '^SERVICE_ROLE_KEY=' | cut -d= -f2- | tr -d '\"')"
+            echo "DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+            echo "OWNER_EMAIL=ci@example.com"
+            echo "ENCRYPTION_KEY=$(openssl rand -base64 32)"
+            echo "CRON_SECRET=$(openssl rand -hex 16)"
+            echo "MCP_TOKEN=$(openssl rand -hex 16)"
+            echo "STRAVA_CLIENT_ID="
+            echo "STRAVA_CLIENT_SECRET="
+          } > .env
+
+      - run: pnpm typecheck
+      - run: pnpm lint
+
+      # vitest builds its own pos_test database from the migrations, so this
+      # also proves every migration replays on a clean Postgres.
+      - run: pnpm test
+
+  screens:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: check
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Start Supabase
+        run: supabase start
+
+      - name: Write .env
+        run: |
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$(supabase status -o env | grep '^API_URL=' | cut -d= -f2- | tr -d '\"')"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(supabase status -o env | grep '^ANON_KEY=' | cut -d= -f2- | tr -d '\"')"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$(supabase status -o env | grep '^SERVICE_ROLE_KEY=' | cut -d= -f2- | tr -d '\"')"
+            echo "DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+            echo "OWNER_EMAIL=ci@example.com"
+            echo "ENCRYPTION_KEY=$(openssl rand -base64 32)"
+            echo "CRON_SECRET=$(openssl rand -hex 16)"
+            echo "MCP_TOKEN=$(openssl rand -hex 16)"
+            echo "STRAVA_CLIENT_ID="
+            echo "STRAVA_CLIENT_SECRET="
+          } > .env
+
+      # The screens need an owner user and the demo fixture, same as a laptop.
+      - run: pnpm setup:demo
+
+      # playwright.config starts the dev server itself.
+      - run: pnpm test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-failures
+          path: e2e/.results/
+          retention-days: 7

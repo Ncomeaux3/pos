@@ -33,7 +33,7 @@ Owner: Nick. Solo, nights and weekends. Finish one module before starting the ne
 
 ## Commands
 - `pnpm dev` dev server. `pnpm test` vitest. `pnpm lint`. `pnpm typecheck`.
-- `pnpm setup` bootstrap a fresh database and owner user. `pnpm setup --demo` also seeds synthetic rows.
+- `pnpm setup` bootstrap a fresh database and owner user. `pnpm setup:demo` also seeds synthetic rows.
 - `pnpm gen:index` regenerate module and integration indexes (runs in prebuild). `pnpm gen:types` regenerate database types.
 - `supabase start` local stack. `supabase migration new <name>` to create one, `supabase migration up` to apply pending ones. `supabase db push` to prod.
 - **`supabase db reset` destroys local data.** It rebuilds the database from migrations, which deletes the owner user and every provider key in `core.connections`. Those keys cannot be recovered: they are encrypted and exist nowhere else. Use `supabase migration up` to apply a new migration to a live local database. Reset only when the schema genuinely needs rebuilding, and say so first.

@@ -12,7 +12,7 @@ Quickstart for a fork (available once Phase 1 ships):
 
 ```
 pnpm i && cp .env.example .env   # fill Supabase keys, OWNER_EMAIL, ENCRYPTION_KEY, CRON_SECRET, MCP_TOKEN
-pnpm setup --demo                # migrations, owner user, synthetic rows
+pnpm setup:demo                # migrations, owner user, synthetic rows
 pnpm dev                         # log in, open Settings > Connections
 ```
 

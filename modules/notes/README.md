@@ -16,7 +16,7 @@ Brain module, which owns the Obsidian vault, embeddings, and summarisation.
 | `manifest.ts` | The whole registration: id, nav entry, pages, tools, jobs |
 | `ui/NotesPage.tsx` | The index page, reached at `/notes` with no route file |
 | `jobs/nightly-digest.ts` | Counts, written to `core.digests` nightly |
-| `seed.ts` | Five synthetic notes for `pnpm setup --demo` |
+| `seed.ts` | Five synthetic notes for `pnpm setup:demo` |
 
 ## Schema
 
