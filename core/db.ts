@@ -61,7 +61,21 @@ let pool: Pool | undefined
  * tool and the migration tests. Pooled because Fluid compute reuses instances.
  */
 export function db(): Pool {
-  pool ??= new Pool({ connectionString: env('DATABASE_URL'), max: 4 })
+  const connectionString = env('DATABASE_URL')
+
+  // The suites delete from core.connections and core.settings. Run against the
+  // development database that destroys the owner's real provider keys, which is
+  // what happened on 2026-09-08. vitest.config.mts points DATABASE_URL at
+  // pos_test; this refuses to open a pool anywhere else while tests are running,
+  // so a mistake in the config cannot quietly wipe real data.
+  if (process.env.VITEST && !connectionString.includes('/pos_test')) {
+    throw new Error(
+      `Tests may only connect to the pos_test database, not ${new URL(connectionString).pathname}. ` +
+        'Check globalSetup and test.env in vitest.config.mts.',
+    )
+  }
+
+  pool ??= new Pool({ connectionString, max: 4 })
   return pool
 }
 

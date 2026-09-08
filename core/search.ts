@@ -20,6 +20,22 @@ export type Fused = { id: string; score: number }
  */
 const RRF_K = 60
 
+/**
+ * Cosine distance past which a row is not a match at all.
+ *
+ * Without this the vector arm returns its whole page for any query, because
+ * ranking by distance always produces a ranking: once Voyage was connected,
+ * "zzzznotathing" matched all five demo notes and the no-results state became
+ * unreachable.
+ *
+ * Measured 2026-09-08 against the demo corpus. "barbell technique" puts the
+ * true match at 0.504 and the nearest unrelated note at 0.750, so 0.70 keeps
+ * the match and drops the noise. That is one query against five documents, so
+ * treat it as a starting calibration, not a constant: re-measure once a real
+ * corpus exists, and expect to raise it if genuine matches start disappearing.
+ */
+const VECTOR_MAX_DISTANCE = 0.7
+
 export function fuseByRank(vector: Ranked[], text: Ranked[]): Fused[] {
   const scores = new Map<string, number>()
 
@@ -216,7 +232,9 @@ export async function search(query: string, opts: SearchOptions = {}): Promise<S
      vec as (
        select id, row_number() over (order by embedding <=> $1::vector) as rank
          from scoped
-        where $1::vector is not null and embedding is not null
+        where $1::vector is not null
+          and embedding is not null
+          and (embedding <=> $1::vector) < $6
         limit $4
      ),
      txt as (
@@ -239,7 +257,7 @@ export async function search(query: string, opts: SearchOptions = {}): Promise<S
        join core.entities e on e.id = fused.id
       order by fused.score desc
       limit $5`,
-    [vector, q, opts.module ?? null, pool, limit],
+    [vector, q, opts.module ?? null, pool, limit, VECTOR_MAX_DISTANCE],
   )
 
   return {
