@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { expect, test, type Page } from '@playwright/test'
 
 // One smoke test per screen: load it, assert the elements that carry meaning
@@ -6,6 +7,16 @@ import { expect, test, type Page } from '@playwright/test'
 // gitignored, because the prototypes are the baseline, not a committed png.
 
 const SHOTS = 'e2e/__screens__'
+
+// Rebuilt before each project rather than once for the run: the approval test
+// writes a note and consumes a proposal, so desktop would leave mobile with a
+// different fixture than it was written against.
+//
+// Seeding runs in its own tsx process because core/* uses the @/ path alias and
+// the pg pool, neither of which the Playwright runner's transform handles.
+test.beforeAll(() => {
+  execFileSync('pnpm', ['exec', 'tsx', '--env-file=.env', 'e2e/seed.mts'], { encoding: 'utf8' })
+})
 
 async function withTheme(page: Page, theme: 'dark' | 'light') {
   await page.context().addCookies([
@@ -126,4 +137,39 @@ test('login rejects a malformed address without clearing it', async ({ page, con
 
   await expect(page.getByText(/enter a valid email/i)).toBeVisible()
   await expect(page.getByLabel(/owner email/i)).toHaveValue('not-an-email')
+})
+
+test('review inbox, list and sticky detail panel', async ({ page }) => {
+  await page.goto('/review')
+  await expect(page.getByRole('heading', { name: 'Review' })).toBeVisible()
+
+  const list = page.getByRole('button', { name: /Draft a weekly summary note/ })
+  await expect(list).toBeVisible()
+  // The bulk action never offers to approve a guarded write, and one of the two
+  // seeded proposals is guarded.
+  await expect(page.getByRole('button', { name: /approve all non-guarded \(1\)/i })).toBeVisible()
+
+  // Selecting drives the panel; the newest proposal is selected by default, so
+  // the guarded one has to be asked for.
+  await list.click()
+  await expect(page.getByText(/none of them link to each other/i)).toBeVisible()
+  await expect(page.getByText(/approving writes to Notes immediately/i)).toBeVisible()
+
+  await shoot(page, 'review')
+})
+
+test('approving a proposal runs the tool and moves the row', async ({ page }) => {
+  await page.goto('/review')
+
+  await page.getByRole('button', { name: /Add a body to an empty note/ }).click()
+  await page.getByRole('button', { name: /^approve$/i }).click()
+
+  await expect(page.getByText(/^Approved:/)).toBeVisible()
+
+  await page.goto('/review?tab=approved')
+  await expect(page.getByRole('button', { name: /Add a body to an empty note/ })).toBeVisible()
+
+  // And the write actually happened: approve() calls the module's own tool.
+  await page.goto('/notes')
+  await expect(page.getByText('Recurring: every 3 months.').first()).toBeVisible()
 })

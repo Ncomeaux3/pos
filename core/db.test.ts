@@ -28,6 +28,12 @@ const CORE_TABLES = [
   'llm_calls',
   'request_log',
   'xp_weights',
+  // Added by 20260908074500_core_platform.sql for the Agent Log and the
+  // editable skill tree. This list is the guard against schema drift, so a new
+  // core table has to be added here deliberately.
+  'job_runs',
+  'write_log',
+  'skill_overrides',
 ]
 
 describe('core schema', () => {

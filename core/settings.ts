@@ -15,6 +15,12 @@ export type Settings = {
    * deleting the folder is still the real removal. null means every module.
    */
   modules_enabled: string[] | null
+  /**
+   * How much an agent may do without asking. See core/tools.ts shouldGuard.
+   * observe: everything proposes. propose: the manifest's guarded list applies.
+   * act: nothing is held back, and undo in the Agent Log is the safety net.
+   */
+  agent_autonomy: 'observe' | 'propose' | 'act'
 }
 export type SettingKey = keyof Settings
 
@@ -24,6 +30,8 @@ export const DEFAULT_SETTINGS: Settings = {
   digest_hour: 9,
   llm_soft_cap_cents: 1000,
   modules_enabled: null,
+  // The cautious default: a fork starts by proposing, not acting.
+  agent_autonomy: 'propose',
 }
 
 export async function getSetting<K extends SettingKey>(key: K): Promise<Settings[K]> {

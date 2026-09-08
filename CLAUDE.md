@@ -34,7 +34,8 @@ Owner: Nick. Solo, nights and weekends. Finish one module before starting the ne
 - `pnpm dev` dev server. `pnpm test` vitest. `pnpm lint`. `pnpm typecheck`.
 - `pnpm setup` bootstrap a fresh database and owner user. `pnpm setup --demo` also seeds synthetic rows.
 - `pnpm gen:index` regenerate module and integration indexes (runs in prebuild). `pnpm gen:types` regenerate database types.
-- `supabase start` local stack. `supabase db reset` replay migrations. `supabase migration new <name>`. `supabase db push` to prod.
+- `supabase start` local stack. `supabase migration new <name>` to create one, `supabase migration up` to apply pending ones. `supabase db push` to prod.
+- **`supabase db reset` destroys local data.** It rebuilds the database from migrations, which deletes the owner user and every provider key in `core.connections`. Those keys cannot be recovered: they are encrypted and exist nowhere else. Use `supabase migration up` to apply a new migration to a live local database. Reset only when the schema genuinely needs rebuilding, and say so first.
 
 ## Next.js 16
 This is Next 16 with Turbopack and Tailwind v4. Conventions differ from older Next: there is no `tailwind.config.ts` (CSS-first config in `app/globals.css`), and `pnpm typecheck` runs `next typegen` first because route types like `LayoutProps` are generated. Read `node_modules/next/dist/docs/` before writing Next code from memory.

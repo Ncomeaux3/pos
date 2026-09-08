@@ -13,8 +13,12 @@ import { Client } from 'pg'
 
 const MIGRATIONS = path.join(import.meta.dirname, '..', 'supabase', 'migrations')
 
-/** Swap the database name in a Postgres URL, leaving everything else alone. */
-export function testDatabaseUrl(url: string): string {
+/**
+ * Swap the database name in a Postgres URL, leaving everything else alone.
+ * vitest.config.mts derives the same name the same way; see the note there for
+ * why it is not imported from here.
+ */
+function testDatabaseUrl(url: string): string {
   const parsed = new URL(url)
   parsed.pathname = '/pos_test'
   return parsed.toString()

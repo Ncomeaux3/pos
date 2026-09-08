@@ -10,8 +10,12 @@ export type Diff = { field: string; before: string | null; after: string | null 
  * the same whichever direction the value last moved.
  */
 export function DiffRow({ diff, undone }: { diff: Diff; undone?: boolean }) {
-  const from = undone ? diff.after : diff.before
-  const to = undone ? diff.before : diff.after
+  // An empty string is a real prior value and has to read as one: nullish
+  // coalescing alone leaves the before side blank, which looks like a render
+  // bug rather than "this field was empty".
+  const show = (v: string | null) => (v === null || v === '' ? 'empty' : v)
+  const from = show(undone ? diff.after : diff.before)
+  const to = show(undone ? diff.before : diff.after)
 
   return (
     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-rule py-2 last:border-b-0">
@@ -19,13 +23,13 @@ export function DiffRow({ diff, undone }: { diff: Diff; undone?: boolean }) {
         {diff.field}
       </span>
       <span className={cn('num text-xs text-ink-3', undone && 'line-through')}>
-        {from ?? 'empty'}
+        {from}
       </span>
       <span aria-hidden className="label text-xs text-ink-4">
         to
       </span>
       <span className={cn('num text-xs', undone ? 'text-ink-3 line-through' : 'text-ink')}>
-        {to ?? 'empty'}
+        {to}
       </span>
     </div>
   )
