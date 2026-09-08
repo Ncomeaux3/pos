@@ -8,12 +8,20 @@ Format: `[ ]` waiting on you, `[x]` done, with the date and what unblocked.
 
 ## Blocking now
 
-- [ ] **Paste the Voyage key so semantic search turns on.** Search already
-      works on full text: five notes index and every probe query returns the
-      right one. What is missing is meaning, so a search for "barbell" will not
-      find "Deadlift form check" until Voyage is connected. The nightly index
-      picks up every un-embedded row on the first run after the key lands, so
-      nothing needs re-running by hand.
+- [ ] **Rotate the Voyage key when convenient.** It was pasted into a chat
+      message, so it lives in that transcript as well as in the encrypted row.
+      Nothing urgent: it is scoped to embeddings against a free allowance, and
+      the stored copy is encrypted. Generate a new one at dash.voyageai.com and
+      paste it on the Connections page whenever you want it clean.
+
+- [ ] **Add a payment method to Voyage, or accept three searches a minute.**
+      Verified 2026-09-08: without a card on file the account is limited to
+      3 RPM and 10K TPM, and every search that uses meaning costs one request.
+      Adding a card does not start charging, the 200M token free allowance
+      still applies; it lifts the rate limit. Until then the Search page tells
+      you when it fell back to word matches, repeated queries come from an
+      in-process cache, and the command palette never embeds at all. Nightly
+      indexing is one batched request, so it is unaffected either way.
 
 - [ ] **Confirm one deviation from "no monospace anywhere".** Literal secrets
       and shell commands render in the system monospace stack: the webhook
@@ -78,6 +86,14 @@ thing I cannot do: it needs your real keys.
 
 ## Done
 
+- [x] 2026-09-08 Pasted the Voyage key. Tested (voyage-4-lite, 1024 dimensions),
+      stored encrypted in `core.connections`, five notes embedded. Semantic
+      search verified: "barbell technique" finds "Deadlift form check" and
+      "somewhere warm for a holiday" finds the Lisbon note, neither sharing a
+      word with what it found.
+- [x] 2026-09-08 Confirmed the ComeauxVerse logo. `brand/` was read only; the
+      mark's path data is copied into `components/pos/Logo.tsx`, nothing in
+      that repo was modified.
 - [x] 2026-09-05 Created `.env` from the local Supabase values, which unblocked
       Steps 3 onward.
 - [x] 2026-09-05 Chose Node 22 over the installed 24, corepack + brew for

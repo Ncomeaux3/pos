@@ -138,7 +138,56 @@ export type SearchHit = {
   score: number
 }
 
-export type SearchOptions = { module?: string; limit?: number }
+export type SearchOptions = {
+  module?: string
+  limit?: number
+  /**
+   * Skip the vector arm. The command palette passes false: it fires on every
+   * keystroke and you are jumping to a thing you can already name, so it is not
+   * worth an embed call against a 3 RPM ceiling.
+   */
+  semantic?: boolean
+}
+
+export type SearchResult = {
+  hits: SearchHit[]
+  /** False when the vector arm did not run, so the caller can say so. */
+  semantic: boolean
+}
+
+/**
+ * Query embeddings, kept for the life of the process.
+ *
+ * Voyage allows 3 requests per minute until a payment method is on file
+ * (verified 2026-09-08), and every search costs one. Refining a query, paging,
+ * or reloading a shared search URL would each burn one of the three without
+ * this. Documents are not cached: those go through content_hash.
+ */
+const queryVectors = new Map<string, string>()
+const QUERY_CACHE_MAX = 200
+
+async function queryVector(q: string): Promise<string | null> {
+  const hit = queryVectors.get(q)
+  if (hit) return hit
+
+  try {
+    const [embedded] = await embed([q], 'query')
+    if (!embedded) return null
+
+    const json = JSON.stringify(embedded)
+    // Cheapest possible eviction: drop the oldest key. Map keeps insertion
+    // order, and this cache exists to survive a burst, not a day.
+    if (queryVectors.size >= QUERY_CACHE_MAX) {
+      queryVectors.delete(queryVectors.keys().next().value!)
+    }
+    queryVectors.set(q, json)
+    return json
+  } catch {
+    // Rate limited, not connected, or the call failed. Full text carries the
+    // query on its own; the caller is told the difference.
+    return null
+  }
+}
 
 /**
  * One statement, two retrievers, merged in SQL so the ranks come back already
@@ -148,22 +197,14 @@ export type SearchOptions = { module?: string; limit?: number }
  * The vector arm is skipped when the query cannot be embedded, which is the
  * case before Voyage is connected. Full text alone still answers exact terms.
  */
-export async function search(query: string, opts: SearchOptions = {}): Promise<SearchHit[]> {
+export async function search(query: string, opts: SearchOptions = {}): Promise<SearchResult> {
   const q = query.trim()
-  if (!q) return []
+  if (!q) return { hits: [], semantic: false }
 
   const limit = Math.min(opts.limit ?? 20, 100)
   const pool = Math.max(limit * 3, 60)
 
-  let vector: string | null = null
-  try {
-    const [embedded] = await embed([q], 'query')
-    if (embedded) vector = JSON.stringify(embedded)
-  } catch {
-    // Not connected, or the call failed. Full text carries the query on its own
-    // rather than the page returning an error the owner cannot act on.
-    vector = null
-  }
+  const vector = opts.semantic === false ? null : await queryVector(q)
 
   const { rows } = await db().query<SearchHit & { score: string }>(
     `with scoped as (
@@ -201,7 +242,10 @@ export async function search(query: string, opts: SearchOptions = {}): Promise<S
     [vector, q, opts.module ?? null, pool, limit],
   )
 
-  return rows.map((r) => ({ ...r, score: Number(r.score) }))
+  return {
+    hits: rows.map((r) => ({ ...r, score: Number(r.score) })),
+    semantic: vector !== null,
+  }
 }
 
 /**

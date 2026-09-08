@@ -43,7 +43,8 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
 
   // Scope counts come from an unscoped search, so the chips can show what each
   // module holds for this query rather than only the scope you are already in.
-  const all = query ? await search(query, { limit: 100 }) : []
+  const result = query ? await search(query, { limit: 100 }) : { hits: [], semantic: false }
+  const all = result.hits
   const scoped = scope ? all.filter((h) => h.module === scope) : all
   const fallback = query && all.length === 0 ? await closest(query) : []
 
@@ -65,6 +66,13 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
       />
 
       <SearchBox initial={query} />
+
+      {query && !result.semantic && (
+        <p className="t-caption rounded-md border border-warn/40 px-3 py-2 text-warn">
+          Showing word matches only. Semantic ranking needs Voyage, which allows three requests
+          a minute until a payment method is on file.
+        </p>
+      )}
 
       {query && counts.size > 0 && (
         <div className="flex flex-wrap gap-1.5">
