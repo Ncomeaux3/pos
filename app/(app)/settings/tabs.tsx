@@ -7,7 +7,7 @@ export function settingsTabs(providerCount: number, skillCount: number): TabLink
   return [
     { href: '/settings', label: 'General' },
     { href: '/settings/connections', label: 'Connections', count: providerCount },
-    { href: '/settings/agents', label: 'Agents and MCP', soon: true },
+    { href: '/settings/agents', label: 'Agents and MCP' },
     { href: '/settings/notifications', label: 'Notifications', soon: true },
     { href: '/settings/skills', label: 'Skills', count: skillCount, soon: true },
   ]

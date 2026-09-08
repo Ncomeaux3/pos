@@ -1,3 +1,4 @@
+import type { Autonomy } from './autonomy'
 import { getModule, type ToolContext } from './modules'
 import { propose } from './proposals'
 import { runQuery } from './query'
@@ -7,13 +8,10 @@ import { getSetting } from './settings'
 // the orchestrator come through here, and this is what stands between them and
 // the owner's data.
 
-export type Autonomy = 'observe' | 'propose' | 'act'
-
-export const AUTONOMY_LABELS: Record<Autonomy, string> = {
-  observe: 'Observe only',
-  propose: 'Propose, I approve',
-  act: 'Act, then tell me',
-}
+// Re-exported because this is where callers look for it. The definitions live
+// in core/autonomy.ts so a client component can import them without pulling in
+// pg and the module registry.
+export { AUTONOMY_LABELS, AUTONOMY_LEVELS, type Autonomy } from './autonomy'
 
 /**
  * Whether this call becomes a proposal instead of a write.

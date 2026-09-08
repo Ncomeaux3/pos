@@ -173,3 +173,32 @@ test('approving a proposal runs the tool and moves the row', async ({ page }) =>
   await page.goto('/notes')
   await expect(page.getByText('Recurring: every 3 months.').first()).toBeVisible()
 })
+
+test('settings, agents and mcp', async ({ page }) => {
+  await page.goto('/settings/agents')
+  await expect(page.getByRole('heading', { name: /agents and mcp/i })).toBeVisible()
+
+  // The command is the whole point of the screen: it is what you paste.
+  await expect(page.getByText(/claude mcp add --transport http pos/)).toBeVisible()
+
+  // The token is masked until asked for, so it is not sitting in the HTML of a
+  // screen left open.
+  await expect(page.getByText('••••••••••••••••')).toBeVisible()
+
+  // Every tool the endpoint actually serves is listed, read and write marked.
+  await expect(page.getByText('notes.get_digest')).toBeVisible()
+  await expect(page.getByText('core.search')).toBeVisible()
+
+  await shoot(page, 'settings-agents')
+})
+
+test('changing autonomy is what decides whether an agent write is held', async ({ page }) => {
+  await page.goto('/settings/agents')
+
+  await page.getByRole('radio', { name: /observe only/i }).click()
+  await expect(page.getByText(/autonomy: observe only/i)).toBeVisible()
+
+  // Put it back, so the fixture is the same for whatever runs next.
+  await page.getByRole('radio', { name: /propose, i approve/i }).click()
+  await expect(page.getByText(/autonomy: propose/i)).toBeVisible()
+})
