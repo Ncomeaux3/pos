@@ -165,10 +165,37 @@ export type SearchOptions = {
   semantic?: boolean
 }
 
+/**
+ * How the answer was produced.
+ *
+ * `text`     full text answered it, so no embedding was bought.
+ * `hybrid`   both arms ran and were fused.
+ * `degraded` the vector arm was wanted and could not run. This is the only one
+ *            worth telling the reader about.
+ */
+export type SearchMode = 'text' | 'hybrid' | 'degraded'
+
 export type SearchResult = {
   hits: SearchHit[]
-  /** False when the vector arm did not run, so the caller can say so. */
-  semantic: boolean
+  mode: SearchMode
+}
+
+/**
+ * A courtesy limiter matching the free tier ceiling. Without it a burst spends
+ * its requests on 429s, paying the latency and getting nothing; with it the
+ * fourth query inside a minute falls back to words immediately.
+ *
+ * Per process, so on serverless it is approximate. It is a politeness budget,
+ * not a guarantee, and the try/catch below is still the real safety net.
+ */
+const RATE_WINDOW_MS = 60_000
+const RATE_MAX = 3
+const recentCalls: number[] = []
+
+function withinRateLimit(): boolean {
+  const cutoff = Date.now() - RATE_WINDOW_MS
+  while (recentCalls.length > 0 && recentCalls[0] < cutoff) recentCalls.shift()
+  return recentCalls.length < RATE_MAX
 }
 
 /**
@@ -186,7 +213,11 @@ async function queryVector(q: string): Promise<string | null> {
   const hit = queryVectors.get(q)
   if (hit) return hit
 
+  // A cached query costs nothing, so the budget is only checked on a miss.
+  if (!withinRateLimit()) return null
+
   try {
+    recentCalls.push(Date.now())
     const [embedded] = await embed([q], 'query')
     if (!embedded) return null
 
@@ -213,14 +244,14 @@ async function queryVector(q: string): Promise<string | null> {
  * The vector arm is skipped when the query cannot be embedded, which is the
  * case before Voyage is connected. Full text alone still answers exact terms.
  */
-export async function search(query: string, opts: SearchOptions = {}): Promise<SearchResult> {
-  const q = query.trim()
-  if (!q) return { hits: [], semantic: false }
-
+/** One pass of the fused query. `vector` null means the text arm alone. */
+async function runSearch(
+  q: string,
+  vector: string | null,
+  opts: SearchOptions,
+): Promise<SearchHit[]> {
   const limit = Math.min(opts.limit ?? 20, 100)
   const pool = Math.max(limit * 3, 60)
-
-  const vector = opts.semantic === false ? null : await queryVector(q)
 
   const { rows } = await db().query<SearchHit & { score: string }>(
     `with scoped as (
@@ -260,10 +291,44 @@ export async function search(query: string, opts: SearchOptions = {}): Promise<S
     [vector, q, opts.module ?? null, pool, limit, VECTOR_MAX_DISTANCE],
   )
 
-  return {
-    hits: rows.map((r) => ({ ...r, score: Number(r.score) })),
-    semantic: vector !== null,
+  return rows.map((r) => ({ ...r, score: Number(r.score) }))
+}
+
+/**
+ * Words first, meaning only when words come up short.
+ *
+ * Both arms are merged by reciprocal rank in one statement, so the ranks come
+ * back already fused and the row cap stays honest. What decides whether the
+ * vector arm runs at all is cost: on the free tier an embedded query is one of
+ * three a minute, and a query full text already answered does not need one.
+ *
+ * The extra database round trip in the thin case is far cheaper than the HTTP
+ * call it avoids in the common one.
+ */
+export async function search(query: string, opts: SearchOptions = {}): Promise<SearchResult> {
+  const q = query.trim()
+  if (!q) return { hits: [], mode: 'text' }
+
+  const byText = await runSearch(q, null, opts)
+
+  // Meaning is bought only when words found nothing.
+  //
+  // Voyage allows 3 requests a minute on the free tier and every embedded query
+  // spends one, so the cheapest request is the one not made. A hit on the words
+  // is already an answer: searching "deadlift" and getting "Deadlift form
+  // check" needs no help. Searching "barbell technique" for the same note does,
+  // and that is exactly the case this pays for.
+  //
+  // Any count-based threshold here would be wrong, because how many hits count
+  // as enough depends on how big the corpus is. Zero does not.
+  if (opts.semantic === false || byText.length > 0) {
+    return { hits: byText, mode: 'text' }
   }
+
+  const vector = await queryVector(q)
+  if (!vector) return { hits: byText, mode: 'degraded' }
+
+  return { hits: await runSearch(q, vector, opts), mode: 'hybrid' }
 }
 
 /**
