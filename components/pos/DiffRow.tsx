@@ -1,0 +1,47 @@
+import { cn } from '@/lib/utils'
+
+export type Diff = { field: string; before: string | null; after: string | null }
+
+/**
+ * field | before to after. The Agent Log entry body and the Review panel's
+ * proposed change use the same shape, which is why it is one component.
+ *
+ * Undone entries swap before and after and strike the row, so the log reads
+ * the same whichever direction the value last moved.
+ */
+export function DiffRow({ diff, undone }: { diff: Diff; undone?: boolean }) {
+  // An empty string is a real prior value and has to read as one: nullish
+  // coalescing alone leaves the before side blank, which looks like a render
+  // bug rather than "this field was empty".
+  const show = (v: string | null) => (v === null || v === '' ? 'empty' : v)
+  const from = show(undone ? diff.after : diff.before)
+  const to = show(undone ? diff.before : diff.after)
+
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-rule py-2 last:border-b-0">
+      <span className="label min-w-[7rem] text-[10px] tracking-[0.1em] text-ink-3">
+        {diff.field}
+      </span>
+      <span className={cn('num text-xs text-ink-3', undone && 'line-through')}>
+        {from}
+      </span>
+      <span aria-hidden className="label text-xs text-ink-4">
+        to
+      </span>
+      <span className={cn('num text-xs', undone ? 'text-ink-3 line-through' : 'text-ink')}>
+        {to}
+      </span>
+    </div>
+  )
+}
+
+export function DiffList({ diffs, undone }: { diffs: Diff[]; undone?: boolean }) {
+  if (diffs.length === 0) return null
+  return (
+    <div className="rounded-md border border-rule-2 bg-bg-deep px-3 py-1">
+      {diffs.map((d) => (
+        <DiffRow key={d.field} diff={d} undone={undone} />
+      ))}
+    </div>
+  )
+}

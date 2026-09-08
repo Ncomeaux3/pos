@@ -5,6 +5,7 @@ Single-user personal operating system: a database-backed app with modules (Finan
 Owner: Nick. Solo, nights and weekends. Finish one module before starting the next.
 
 ## Read on demand, not every session
+- Where the build is right now: docs/STATUS.md (read this first in a fresh session)
 - How it is built: docs/ARCHITECTURE.md (read before touching core, a manifest, or a migration)
 - Full module spec: @docs/SPEC.md (use /module <name> to load one module's section)
 - Unresolved choices: @docs/DECISIONS.md (ask before scaffolding anything they affect)
@@ -31,7 +32,11 @@ Owner: Nick. Solo, nights and weekends. Finish one module before starting the ne
 - When compacting, preserve the list of modified files, open questions, and the test command.
 
 ## Commands
-- `pnpm dev` dev server. `pnpm test` vitest. `pnpm lint`. `pnpm typecheck`.
-- `pnpm setup` bootstrap a fresh database and owner user. `pnpm setup --demo` also seeds synthetic rows.
+- `pnpm dev` dev server. `pnpm test` vitest. `pnpm test:e2e` Playwright screens. `pnpm lint`. `pnpm typecheck`.
+- `pnpm setup` bootstrap a fresh database and owner user. `pnpm setup:demo` also seeds synthetic rows.
 - `pnpm gen:index` regenerate module and integration indexes (runs in prebuild). `pnpm gen:types` regenerate database types.
-- `supabase start` local stack. `supabase db reset` replay migrations. `supabase migration new <name>`. `supabase db push` to prod.
+- `supabase start` local stack. `supabase migration new <name>` to create one, `supabase migration up` to apply pending ones. `supabase db push` to prod.
+- **`supabase db reset` destroys local data.** It rebuilds the database from migrations, which deletes the owner user and every provider key in `core.connections`. Those keys cannot be recovered: they are encrypted and exist nowhere else. Use `supabase migration up` to apply a new migration to a live local database. Reset only when the schema genuinely needs rebuilding, and say so first.
+
+## Next.js 16
+This is Next 16 with Turbopack and Tailwind v4. Conventions differ from older Next: there is no `tailwind.config.ts` (CSS-first config in `app/globals.css`), and `pnpm typecheck` runs `next typegen` first because route types like `LayoutProps` are generated. Read `node_modules/next/dist/docs/` before writing Next code from memory.

@@ -1,0 +1,50 @@
+// The integration contract: the types and the identity function a manifest
+// calls. No imports beyond types, on purpose.
+//
+// A manifest imports defineIntegration from here, and the registry in
+// core/integrations.ts imports the manifests through integrations/_index.ts.
+// Keeping the contract in its own leaf module is what stops that being a cycle,
+// the same way core/module-contract.ts does for modules.
+
+import type { z } from 'zod'
+
+// One folder, one manifest, per external account. The Connections page, the
+// OAuth callback, and the webhook route are all generic and read the manifest.
+// See docs/ARCHITECTURE.md "Integration contract".
+
+export type Credentials = Record<string, string>
+
+export type TokenField = {
+  key: string
+  label: string
+  /** Rendered as a password field and masked once saved. */
+  secret?: boolean
+  placeholder?: string
+}
+
+export type IntegrationAuth =
+  | { type: 'token'; fields: TokenField[] }
+  | { type: 'oauth2'; authorizeUrl: string; tokenUrl: string; scopes: string[] }
+  | { type: 'webhook' }
+
+export type TestResult = { ok: boolean; detail: string }
+
+export type IntegrationManifest = {
+  id: string
+  label: string
+  /** One line on the card saying what connecting this buys. */
+  description: string
+  auth: IntegrationAuth
+  /** Runs on save and on the Test button. Must not throw. */
+  test: (creds: Credentials) => Promise<TestResult>
+  /** oauth2 only. Runs nightly before module syncs. */
+  refresh?: (creds: Credentials) => Promise<Credentials>
+  /** webhook only. */
+  webhookSchema?: z.ZodTypeAny
+  webhook?: (payload: unknown) => Promise<void>
+  docsUrl?: string
+}
+
+export function defineIntegration(manifest: IntegrationManifest): IntegrationManifest {
+  return manifest
+}
