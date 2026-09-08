@@ -8,13 +8,19 @@ Format: `[ ]` waiting on you, `[x]` done, with the date and what unblocked.
 
 ## Blocking now
 
-- [ ] **The CMX Logic logo files are not in the design bundle.** `PosSidebar`
-      references `assets/lockup-horizontal.svg` and `assets/mark.svg`, and the
-      `_ds/` folder ships only `styles.css` and `tokens/colors.css`. The sidebar
-      currently uses a typographic wordmark: POS in JetBrains Mono at 0.22em
-      tracking, collapsing to a single P. Drop the two SVGs into
-      `public/icons/` and I will wire them in as `currentColor` masks, which is
-      how the prototype uses them.
+- [ ] **Paste the Voyage key so semantic search turns on.** Search already
+      works on full text: five notes index and every probe query returns the
+      right one. What is missing is meaning, so a search for "barbell" will not
+      find "Deadlift form check" until Voyage is connected. The nightly index
+      picks up every un-embedded row on the first run after the key lands, so
+      nothing needs re-running by hand.
+
+- [ ] **Confirm one deviation from "no monospace anywhere".** Literal secrets
+      and shell commands render in the system monospace stack: the webhook
+      shared secret, the inbound URL, the cron expression. No webfont is
+      downloaded, so the one-family rule still holds for anything that is type,
+      but a base64 secret in Manrope is genuinely harder to check character by
+      character. Say the word and I will move them to Manrope.
 
 Step 7's code is built, tested, and committed. Its done condition is the one
 thing I cannot do: it needs your real keys.
