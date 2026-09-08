@@ -144,6 +144,7 @@ export default async function ConnectionsPage({ searchParams }: PageProps<'/sett
             key={manifest.id}
             manifest={manifest}
             connected={Boolean(statuses[manifest.id]?.connected)}
+            status={statuses[manifest.id]?.status ?? null}
             detail={statuses[manifest.id]?.lastTestDetail ?? null}
             testedAt={statuses[manifest.id]?.lastTestedAt ?? null}
             secret={webhookSecrets[manifest.id] ?? null}
@@ -158,6 +159,7 @@ export default async function ConnectionsPage({ searchParams }: PageProps<'/sett
 function ProviderCard({
   manifest,
   connected,
+  status,
   detail,
   testedAt,
   secret,
@@ -165,6 +167,8 @@ function ProviderCard({
 }: {
   manifest: IntegrationManifest
   connected: boolean
+  /** The stored status. null when nothing has ever been saved. */
+  status: string | null
   detail: string | null
   testedAt: Date | null
   secret: string | null
@@ -185,13 +189,15 @@ function ProviderCard({
             {feeds.length > 0 && ` Used by ${feeds.join(', ')}.`}
           </p>
         </div>
-        <StatusChip tone={connected ? 'ok' : 'quiet'}>
-          {connected ? 'Connected' : 'Not connected'}
+        <StatusChip tone={connected ? 'ok' : status ? 'bad' : 'quiet'}>
+          {connected ? 'Connected' : status === 'error' ? 'Rejected' : status ?? 'Not connected'}
         </StatusChip>
       </div>
 
       {detail && (
-        <p className="label text-[10px] tracking-[0.1em] text-ink-3">
+        <p
+          className={`label text-[10px] tracking-[0.1em] ${connected ? 'text-ink-3' : 'text-bad'}`}
+        >
           Last test: {detail}
           {testedAt && ` · ${new Date(testedAt).toLocaleString()}`}
         </p>
@@ -255,7 +261,7 @@ function ProviderCard({
         </div>
       )}
 
-      {connected && (
+      {status && (
         <div className="flex flex-wrap gap-2 border-t border-rule pt-3">
           <form action={test}>
             <input type="hidden" name="id" value={manifest.id} />

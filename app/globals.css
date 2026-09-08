@@ -107,13 +107,10 @@
   --color-sidebar-primary-foreground: var(--bg);
   --color-sidebar-ring: var(--accent);
 
-  /* Manrope, one family. The brand guide names no substitute and no monospace,
-   * so there is no second webfont. `font-code` is the system stack, downloaded
-   * by nobody, and is reserved for literal secrets and shell commands where
-   * proportional digits make a value hard to check character by character. */
+  /* Manrope, one family. No monospace anywhere, including secrets and shell
+   * commands: the guide says one family and means it. */
   --font-sans: var(--font-manrope), system-ui, sans-serif;
   --font-brand: var(--font-manrope), system-ui, sans-serif;
-  --font-code: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* 12px standard, 8px small controls. Pills use a literal 999px and status
    * dots 50%. Nothing else, per the brand guide. */
@@ -210,10 +207,13 @@
     font-feature-settings: "tnum";
   }
 
-  /* Literal secrets and commands only. See --font-code above. */
+  /* Machine values: secrets, URLs, cron expressions. Manrope like everything
+   * else, with tabular figures and a little tracking so a long token is still
+   * readable character by character. */
   .code {
-    font-family: var(--font-code);
-    font-variant-numeric: tabular-nums;
+    font-variant-numeric: tabular-nums slashed-zero;
+    letter-spacing: 0.02em;
+    word-break: break-all;
   }
 
   /* The universal small label: the eyebrow, the chip, the metadata line. The

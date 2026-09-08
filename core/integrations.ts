@@ -118,7 +118,10 @@ export async function getConnectionStatuses(): Promise<Record<string, Connection
     rows.map((r) => [
       r.integration_id,
       {
-        connected: true,
+        // A row exists for anything that has ever been saved, including a key
+        // the provider rejected. Only 'connected' means the credentials
+        // actually worked on the last test.
+        connected: r.status === 'connected',
         status: r.status,
         lastTestedAt: r.last_tested_at,
         lastTestDetail: r.last_test_detail,
