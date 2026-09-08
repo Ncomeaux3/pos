@@ -1,4 +1,3 @@
-import { classify } from './classify'
 import { db } from './db'
 import { emit } from './events'
 
@@ -10,7 +9,11 @@ export type RegisterArgs = {
   title: string
   /** Indexable text. Classification, search, and embedding all read it. */
   text?: string
-  /** Defaults to `<entityType>_created`. */
+  /**
+   * Defaults to `<entityType>_created`, which is emitted only the first time a
+   * row registers. Pass one explicitly for something that genuinely happens
+   * again on the same row: task_completed, book_finished, workout_logged.
+   */
   eventType?: string
   /** Imports backdate this so XP reflects real history. */
   occurredAt?: Date
@@ -19,8 +22,11 @@ export type RegisterArgs = {
 
 /**
  * The one call every module makes when it creates a row: register the entity,
- * classify it to skills, emit the event. That is what keeps the Skill Tree,
- * Goals, and the dashboard consistent without any module knowing about them.
+ * classify it, emit the event. That is what keeps the Skill Tree, Goals, and
+ * the dashboard consistent without any module knowing about them.
+ *
+ * Classification is whatever module declares a `classifier`, which today is
+ * modules/skills. None installed means no classification and no error.
  */
 export async function register({
   module,
@@ -32,25 +38,42 @@ export async function register({
   occurredAt,
   payload,
 }: RegisterArgs): Promise<string> {
-  const { rows } = await db().query<{ id: string }>(
+  // xmax = 0 means this upsert inserted rather than updated. Without it every
+  // re-register emits another <type>_created and awards its XP again: five demo
+  // notes had thirty-eight creation events each before this, and the Skill Tree
+  // is the screen where that stops being invisible.
+  const { rows } = await db().query<{ id: string; inserted: boolean }>(
     `insert into core.entities (module, entity_type, entity_id, title, body)
      values ($1, $2, $3, $4, $5)
      on conflict (module, entity_type, entity_id) do update
        set title = excluded.title, body = excluded.body
-     returning id`,
+     returning id, (xmax = 0) as inserted`,
     [module, entityType, entityId, title, text ?? null],
   )
   const entityRef = rows[0].id
 
-  await classify(entityRef, [title, text].filter(Boolean).join('\n'), module)
-  await emit({
-    module,
-    entityRef,
-    eventType: eventType ?? `${entityType}_created`,
-    occurredAt,
-    payload,
-    titleSnapshot: title,
-  })
+  // Dynamic, and it has to stay that way. A static import of the registry here
+  // closes a cycle: core/modules.ts imports modules/_index.ts, which imports
+  // every manifest, and a manifest imports register from this file. Next's
+  // bundler hoists around that and plain Node does not, so a static import
+  // works in dev and breaks the cron job, pnpm setup and any test outside Next.
+  // See docs/ARCHITECTURE.md "Module contract".
+  const { getClassifier } = await import('./modules')
+  const classifier = getClassifier()
+  if (classifier) await classifier(entityRef, [title, text].filter(Boolean).join('\n'), module)
+
+  // A named event is something that happened, so it always emits. The default
+  // is a creation, and a row is created once.
+  if (eventType || rows[0].inserted) {
+    await emit({
+      module,
+      entityRef,
+      eventType: eventType ?? `${entityType}_created`,
+      occurredAt,
+      payload,
+      titleSnapshot: title,
+    })
+  }
 
   return entityRef
 }

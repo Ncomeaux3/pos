@@ -17,6 +17,7 @@ import {
 import { db } from '@/core/db'
 import { getModules } from '@/core/modules'
 import { jobStates, latestSummary } from '@/core/orchestrator'
+import { getDigest } from '@/core/digests'
 import { getSettings } from '@/core/settings'
 import { RunNow } from './RunNow'
 
@@ -25,12 +26,14 @@ import { RunNow } from './RunNow'
 // of them and stops it breaking when one is deleted.
 
 async function skillAxes(): Promise<RadarAxis[]> {
-  // The view rolls events and links into XP; the top level attributes are the
-  // skill ids with no dot, by the shape of config/skills.yaml.
-  const { rows } = await db().query<{ skill_id: string; xp: string }>(
-    `select skill_id, xp::text from core.skill_xp order by xp desc limit 6`,
-  )
-  return rows.map((r) => ({ label: r.skill_id, value: Number(r.xp) }))
+  // Through the digest, not skills.xp. The skills schema belongs to a module
+  // and this page reads none of them directly; an uninstalled Skill Tree gives
+  // an empty radar rather than a missing relation.
+  const digest = (await getDigest('skills')) as {
+    attributes?: { name: string; level: number }[]
+  } | null
+
+  return (digest?.attributes ?? []).slice(0, 6).map((a) => ({ label: a.name, value: a.level }))
 }
 
 async function unreadWarnings() {

@@ -1,27 +1,13 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
-import { parse } from 'yaml'
-import { db } from './db'
-import { complete } from './llm'
+import { db } from '@/core/db'
+import { complete } from '@/core/llm'
+import { loadTree, type SkillNode } from './tree'
 
 // Rules first, model second. See docs/ARCHITECTURE.md "Classification".
-
-export type SkillNode = {
-  id: string
-  parent?: string
-  name: string
-  description?: string
-  keywords?: string[]
-}
+//
+// This is the function the manifest hands to core as its `classifier`, so it is
+// what runs on every row every module creates.
 
 const CLASSIFIER_MODEL = 'claude-haiku-4-5' as const
-
-let skills: SkillNode[] | undefined
-
-export function loadSkills(): SkillNode[] {
-  skills ??= parse(readFileSync(join(process.cwd(), 'config/skills.yaml'), 'utf8')).nodes ?? []
-  return skills!
-}
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
@@ -29,7 +15,7 @@ const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
  * Deterministic pass. Word boundary matched so "ran" does not fire on "branch".
  * Pure, because this is the half that has to be right every time.
  */
-export function matchByRules(text: string, nodes: SkillNode[] = loadSkills()): string[] {
+export function matchByRules(text: string, nodes: SkillNode[]): string[] {
   const hits = new Set<string>()
   for (const node of nodes) {
     for (const keyword of node.keywords ?? []) {
@@ -45,8 +31,12 @@ export function matchByRules(text: string, nodes: SkillNode[] = loadSkills()): s
 type ModelLink = { skill_id: string; confidence: number }
 
 /** One retry, then give up. A failed classification must not fail the write. */
-async function askModel(text: string, module?: string): Promise<ModelLink[] | null> {
-  const tree = loadSkills()
+async function askModel(
+  text: string,
+  nodes: SkillNode[],
+  module?: string,
+): Promise<ModelLink[] | null> {
+  const tree = nodes
     .filter((n) => n.parent)
     .map((n) => `${n.id}: ${n.name}`)
     .join('\n')
@@ -112,15 +102,17 @@ async function clearUnclassified(entityRef: string): Promise<void> {
  * call. Never throws: a note that cannot be classified is still a note.
  */
 export async function classify(entityRef: string, text: string, module?: string): Promise<void> {
-  const ruleHits = matchByRules(text)
+  const nodes = await loadTree()
+
+  const ruleHits = matchByRules(text, nodes)
   if (ruleHits.length > 0) {
     for (const skillId of ruleHits) await link(entityRef, skillId, 1, 'rule')
     await clearUnclassified(entityRef)
     return
   }
 
-  const known = new Set(loadSkills().map((n) => n.id))
-  const guesses = (await askModel(text, module))?.filter((g) => known.has(g.skill_id)) ?? []
+  const known = new Set(nodes.map((n) => n.id))
+  const guesses = (await askModel(text, nodes, module))?.filter((g) => known.has(g.skill_id)) ?? []
 
   if (guesses.length === 0) {
     // Parked for manual review rather than silently dropped.

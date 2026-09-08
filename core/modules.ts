@@ -25,6 +25,24 @@ export function getModule(id: string): ModuleManifest | undefined {
 }
 
 /**
+ * The one module that classifies entities to skills, if it is installed.
+ *
+ * Two would each write core.skill_links for the same entity and the result
+ * would depend on array order, so this throws rather than picking one. A
+ * template that ships without modules/skills gets undefined, and register()
+ * simply does not classify.
+ */
+export function getClassifier(): ModuleManifest['classifier'] {
+  const found = modules.filter((m) => m.classifier)
+  if (found.length > 1) {
+    throw new Error(
+      `Two modules declare a classifier (${found.map((m) => m.id).join(', ')}). Only one may.`,
+    )
+  }
+  return found[0]?.classifier
+}
+
+/**
  * Which of these integrations have no connected row yet. Drives the
  * "Connect <provider>" card that stands in for a module's pages.
  */

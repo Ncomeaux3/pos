@@ -54,6 +54,33 @@ test('notes, the stub module page', async ({ page }) => {
   await shoot(page, 'notes')
 })
 
+test('skill tree, constellation and the selected skill panel', async ({ page }) => {
+  await page.goto('/skills')
+  await expect(page.getByRole('heading', { name: 'Skill Tree' })).toBeVisible()
+  await expect(page.getByRole('img', { name: 'Skill constellation' })).toBeVisible()
+
+  // Nothing selected: the right rail explains what a click does rather than
+  // showing an empty panel.
+  await expect(page.getByText(/nothing selected/i)).toBeVisible()
+  await shoot(page, 'skills')
+
+  // The demo seed classifies notes through the keyword rules, so Engineering
+  // has real XP and real events without anything being staged for the shot.
+  await page.getByRole('button', { name: 'Engineering' }).click()
+  // Unique to the selected panel: the constellation and the character list both
+  // say "Engineering", but only the panel says how far the next level is.
+  await expect(page.getByText(/to Lv \d/)).toBeVisible()
+  // Goals does not exist, so the goal weight is a dash rather than a number.
+  await expect(page.getByText('Goal weight')).toBeVisible()
+
+  // The selection is in the URL, which is what lets it survive the reload that
+  // shoot() does to switch themes. Without this the shot would show the empty
+  // panel and the test would still pass.
+  await expect(page).toHaveURL(/skill=engineering/)
+  await shoot(page, 'skills-selected')
+  await expect(page.getByText('Goal weight')).toBeVisible()
+})
+
 test('search, empty and with results', async ({ page }) => {
   await page.goto('/search')
   await expect(page.getByRole('heading', { name: 'Search' })).toBeVisible()

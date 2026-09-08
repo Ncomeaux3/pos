@@ -27,13 +27,11 @@ const CORE_TABLES = [
   'settings',
   'llm_calls',
   'request_log',
-  'xp_weights',
   // Added by 20260908074500_core_platform.sql for the Agent Log and the
   // editable skill tree. This list is the guard against schema drift, so a new
   // core table has to be added here deliberately.
   'job_runs',
   'write_log',
-  'skill_overrides',
 ]
 
 // Columns added after core_init, listed so a dropped migration is caught here
@@ -91,7 +89,7 @@ describe('core schema', () => {
   })
 })
 
-describe('core.level', () => {
+describe('skills.level', () => {
   // level(xp) = least(99, floor(sqrt(xp / 100.0))). core/xp.ts mirrors this and
   // core/xp.test.ts proves the two agree.
   it.each([
@@ -101,13 +99,13 @@ describe('core.level', () => {
     [2500, 5],
     [10_000_000, 99],
   ])('level(%i) is %i', async (xp, expected) => {
-    const { rows } = await client.query<{ level: number }>('select core.level($1) as level', [xp])
+    const { rows } = await client.query<{ level: number }>('select skills.level($1) as level', [xp])
     expect(rows[0].level).toBe(expected)
   })
 
   it('caps at 99 rather than growing without bound', async () => {
     const { rows } = await client.query<{ level: number }>(
-      'select core.level(980100) as at_cap, core.level(999999999) as past_cap',
+      'select skills.level(980100) as at_cap, skills.level(999999999) as past_cap',
     )
     expect(rows[0]).toEqual({ at_cap: 99, past_cap: 99 })
   })

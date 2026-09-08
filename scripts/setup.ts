@@ -68,12 +68,12 @@ async function seedSettings(): Promise<void> {
 }
 
 async function seedXpWeights(): Promise<void> {
-  const file = readFileSync(path.join(ROOT, 'config', 'xp.yaml'), 'utf8')
+  const file = readFileSync(path.join(ROOT, 'modules', 'skills', 'xp.yaml'), 'utf8')
   const { weights } = parse(file) as { weights: Record<string, number> }
 
   for (const [eventType, weight] of Object.entries(weights)) {
     await db().query(
-      `insert into core.xp_weights (event_type, weight) values ($1, $2)
+      `insert into skills.xp_weight (event_type, weight) values ($1, $2)
        on conflict (event_type) do update set weight = excluded.weight`,
       [eventType, weight],
     )

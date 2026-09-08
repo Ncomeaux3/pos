@@ -3,10 +3,16 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vites
 process.env.DATABASE_URL ??= 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
 
 const complete = vi.fn()
-vi.mock('./llm', () => ({ complete: (...args: unknown[]) => complete(...args) }))
+vi.mock('@/core/llm', () => ({ complete: (...args: unknown[]) => complete(...args) }))
 
-const { db } = await import('./db')
-const { classify, loadSkills, matchByRules } = await import('./classify')
+const { db } = await import('@/core/db')
+const { classify, matchByRules } = await import('./classify')
+const { loadYaml } = await import('./tree')
+
+// matchByRules takes the tree explicitly now that overrides can change it, so
+// the rule tests pass the committed default.
+const tree = loadYaml()
+const rules = (text: string) => matchByRules(text, tree)
 
 async function anEntity(title: string): Promise<string> {
   const { rows } = await db().query<{ id: string }>(
@@ -35,15 +41,15 @@ afterAll(async () => {
   await db().end()
 })
 
-describe('loadSkills', () => {
+describe('loadYaml', () => {
   it('parses the tree and gives every node a unique id', () => {
-    const nodes = loadSkills()
+    const nodes = loadYaml()
     expect(nodes.length).toBeGreaterThan(20)
     expect(new Set(nodes.map((n) => n.id)).size).toBe(nodes.length)
   })
 
   it('points every parent at a node that exists', () => {
-    const nodes = loadSkills()
+    const nodes = loadYaml()
     const ids = new Set(nodes.map((n) => n.id))
     for (const n of nodes) {
       if (n.parent) expect(ids, `${n.id} parent`).toContain(n.parent)
@@ -53,27 +59,27 @@ describe('loadSkills', () => {
 
 describe('matchByRules', () => {
   it('matches a keyword regardless of case', () => {
-    expect(matchByRules('Deadlift form check')).toContain('strength')
-    expect(matchByRules('DEADLIFT')).toContain('strength')
+    expect(rules('Deadlift form check')).toContain('strength')
+    expect(rules('DEADLIFT')).toContain('strength')
   })
 
   it('matches on word boundaries, not substrings', () => {
     // 'ran' is an endurance keyword; 'branch' and 'grandiose' must not hit it.
-    expect(matchByRules('merged the branch')).not.toContain('endurance')
-    expect(matchByRules('ran a 5k')).toContain('endurance')
+    expect(rules('merged the branch')).not.toContain('endurance')
+    expect(rules('ran a 5k')).toContain('endurance')
   })
 
   it('can return several skills for one piece of text', () => {
-    const hits = matchByRules('Wrote a postgres migration and deployed it to vercel')
+    const hits = rules('Wrote a postgres migration and deployed it to vercel')
     expect(hits).toEqual(expect.arrayContaining(['sql', 'cloud']))
   })
 
   it('returns nothing for text with no keyword in it', () => {
-    expect(matchByRules('the quiet afternoon passed')).toEqual([])
+    expect(rules('the quiet afternoon passed')).toEqual([])
   })
 
   it('matches multi word keywords', () => {
-    expect(matchByRules('spent the day on system design')).toContain('architecture')
+    expect(rules('spent the day on system design')).toContain('architecture')
   })
 })
 

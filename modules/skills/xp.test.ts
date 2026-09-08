@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest'
-import { db } from './db'
+import { db } from '@/core/db'
 import { level, loadWeights } from './xp'
 
 process.env.DATABASE_URL ??= 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
@@ -25,7 +25,7 @@ describe('level', () => {
     expect(level(-1)).toBe(0)
   })
 
-  // The formula lives twice, once here and once as core.level() in SQL. This is
+  // The formula lives twice, once here and once as skills.level() in SQL. This is
   // the test that keeps them honest.
   it('agrees with the SQL function on 20 sample values', async () => {
     const samples = [
@@ -33,7 +33,7 @@ describe('level', () => {
       980_099, 980_100, 980_101, 10_000_000,
     ]
     const { rows } = await db().query<{ xp: number; sql_level: number }>(
-      `select x as xp, core.level(x) as sql_level from unnest($1::int[]) as x`,
+      `select x as xp, skills.level(x) as sql_level from unnest($1::int[]) as x`,
       [samples],
     )
     expect(rows).toHaveLength(samples.length)
@@ -44,7 +44,7 @@ describe('level', () => {
 })
 
 describe('loadWeights', () => {
-  it('reads config/xp.yaml and returns numbers', () => {
+  it('reads modules/skills/xp.yaml and returns numbers', () => {
     const weights = loadWeights()
     expect(weights.note_created).toBe(2)
     expect(weights.project_shipped).toBe(200)

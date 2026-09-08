@@ -220,6 +220,42 @@ export type Database = {
           },
         ]
       }
+      job_runs: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          finished_at: string | null
+          id: string
+          log: Json
+          started_at: string
+          status: string
+          trigger_source: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          finished_at?: string | null
+          id?: string
+          log?: Json
+          started_at?: string
+          status?: string
+          trigger_source?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          finished_at?: string | null
+          id?: string
+          log?: Json
+          started_at?: string
+          status?: string
+          trigger_source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       jobs: {
         Row: {
           created_at: string
@@ -300,65 +336,109 @@ export type Database = {
           body: string
           channel: string
           created_at: string
+          digest_run_id: string | null
           due_at: string
           id: string
+          read_at: string | null
           sent_at: string | null
+          snooze_until: string | null
           title: string
           updated_at: string
+          urgency: string
         }
         Insert: {
           body: string
           channel?: string
           created_at?: string
+          digest_run_id?: string | null
           due_at?: string
           id?: string
+          read_at?: string | null
           sent_at?: string | null
+          snooze_until?: string | null
           title: string
           updated_at?: string
+          urgency?: string
         }
         Update: {
           body?: string
           channel?: string
           created_at?: string
+          digest_run_id?: string | null
           due_at?: string
           id?: string
+          read_at?: string | null
           sent_at?: string | null
+          snooze_until?: string | null
           title?: string
           updated_at?: string
+          urgency?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "notifications_digest_run_id_fkey"
+            columns: ["digest_run_id"]
+            isOneToOne: false
+            referencedRelation: "job_runs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       proposals: {
         Row: {
+          affects: string | null
+          agent: string | null
+          confidence: number | null
           created_at: string
           decided_at: string | null
+          diff: Json
+          dismissed_until: string | null
+          evidence: string | null
+          guarded: boolean
           id: string
           module: string
           payload: Json
           reason: string | null
           status: string
+          title: string | null
           tool: string
           updated_at: string
         }
         Insert: {
+          affects?: string | null
+          agent?: string | null
+          confidence?: number | null
           created_at?: string
           decided_at?: string | null
+          diff?: Json
+          dismissed_until?: string | null
+          evidence?: string | null
+          guarded?: boolean
           id?: string
           module: string
           payload?: Json
           reason?: string | null
           status?: string
+          title?: string | null
           tool: string
           updated_at?: string
         }
         Update: {
+          affects?: string | null
+          agent?: string | null
+          confidence?: number | null
           created_at?: string
           decided_at?: string | null
+          diff?: Json
+          dismissed_until?: string | null
+          evidence?: string | null
+          guarded?: boolean
           id?: string
           module?: string
           payload?: Json
           reason?: string | null
           status?: string
+          title?: string | null
           tool?: string
           updated_at?: string
         }
@@ -468,42 +548,75 @@ export type Database = {
           },
         ]
       }
-      xp_weights: {
+      write_log: {
         Row: {
+          actor: string
           created_at: string
-          event_type: string
+          diff: Json
+          entity_ref: string | null
+          id: string
+          kind: string
+          module: string
+          reason: string
+          run_id: string | null
+          title: string
+          tool: string
+          undone_at: string | null
           updated_at: string
-          weight: number
         }
         Insert: {
+          actor?: string
           created_at?: string
-          event_type: string
+          diff?: Json
+          entity_ref?: string | null
+          id?: string
+          kind: string
+          module: string
+          reason: string
+          run_id?: string | null
+          title: string
+          tool: string
+          undone_at?: string | null
           updated_at?: string
-          weight: number
         }
         Update: {
+          actor?: string
           created_at?: string
-          event_type?: string
+          diff?: Json
+          entity_ref?: string | null
+          id?: string
+          kind?: string
+          module?: string
+          reason?: string
+          run_id?: string | null
+          title?: string
+          tool?: string
+          undone_at?: string | null
           updated_at?: string
-          weight?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "write_log_entity_ref_fkey"
+            columns: ["entity_ref"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "write_log_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "job_runs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
-      skill_xp: {
-        Row: {
-          event_count: number | null
-          last_event_at: string | null
-          level: number | null
-          skill_id: string | null
-          xp: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
-      level: { Args: { xp: number }; Returns: number }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never

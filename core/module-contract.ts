@@ -63,6 +63,13 @@ export type ModuleManifest = {
   jobs?: ModuleJob[]
   entityTypes?: string[]
   searchText?: (row: Record<string, unknown>) => string
+  /**
+   * Links an entity to skills. Core calls this from register() for every row
+   * every module creates, so at most one module may provide it. No module
+   * providing one means no classification, and nothing else changes: this is
+   * what lets `rm -r modules/skills` leave a working app.
+   */
+  classifier?: (entityRef: string, text: string, module: string) => Promise<void>
 }
 
 /** Identity, but it pins the manifest type at the definition site. */

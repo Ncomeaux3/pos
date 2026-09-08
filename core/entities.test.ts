@@ -123,3 +123,34 @@ describe('register', () => {
     expect(links[0].classified_by).toBe('unclassified')
   })
 })
+
+describe('re-registering the same row', () => {
+  it('does not emit a second creation event, so XP is not awarded twice', async () => {
+    const args = {
+      module: 'notes',
+      entityType: 'note',
+      entityId: 'twice-1',
+      title: 'Deadlift form check',
+    }
+
+    const first = await register(args)
+    const second = await register({ ...args, title: 'Deadlift form check, edited' })
+
+    expect(second).toBe(first)
+    const { events, entity } = await counts(first)
+    // Every setup:demo and every e2e seed run re-registers. Before this the
+    // five demo notes had thirty-eight creation events each.
+    expect(events).toHaveLength(1)
+    expect(entity.title).toBe('Deadlift form check, edited')
+  })
+
+  it('still emits a named event, because that is something that happened again', async () => {
+    const args = { module: 'tasks', entityType: 'task', entityId: 'twice-2', title: 'Ship it' }
+
+    const ref = await register(args)
+    await register({ ...args, eventType: 'task_completed' })
+
+    const { events } = await counts(ref)
+    expect(events.map((e) => e.event_type).sort()).toEqual(['task_completed', 'task_created'])
+  })
+})

@@ -33,7 +33,7 @@ describe('setup preconditions', () => {
   })
 
   it('keeps every xp weight a number, because a string silently scores zero', () => {
-    const file = readFileSync(path.join(ROOT, 'config', 'xp.yaml'), 'utf8')
+    const file = readFileSync(path.join(ROOT, 'modules', 'skills', 'xp.yaml'), 'utf8')
     const weights = [...file.matchAll(/^\s{2}([a-z_]+):\s*(\S+)\s*$/gm)]
 
     expect(weights.length).toBeGreaterThan(0)
