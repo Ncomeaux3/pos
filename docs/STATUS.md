@@ -3,11 +3,11 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
-Last updated: 2026-09-08, end of step 14. Branch `phase-1-core`.
+Last updated: 2026-09-08, end of step 16. Branch `phase-1-core`, merged to main.
 
 ## Done
 
-**Phase 1 steps 1 to 14 of 16.** Steps 1 to 7 shipped 2026-09-05; the design
+**Phase 1 is done except the deploy.** Steps 1 to 14 and 16 of 16. Steps 1 to 7 shipped 2026-09-05; the design
 bundle landed 2026-09-07 and steps 0, 7.5 and 8 to 14 followed.
 
 | Step | What exists |
@@ -22,6 +22,7 @@ bundle landed 2026-09-07 and steps 0, 7.5 and 8 to 14 followed.
 | 12 | Job runner, notifications, orchestrator, the Dashboard bento. The nightly run works end to end and sends one email |
 | 13 | `pnpm setup` and `pnpm setup:demo`, both idempotent |
 | 14 | CI and backup workflows, restore drilled |
+| 16 | Docs squared up: README quickstart, connections registry, the notes module README |
 
 ## Verification
 
@@ -50,13 +51,17 @@ General, Settings Connections, Settings Agents and MCP. Command palette on Cmd K
 Not yet built: Notifications, Agent Log, Onboarding, Weekly Review, and every
 module beyond the `notes` stub.
 
-## Next: step 15, deploy
+## Next
 
-Vercel, a hosted Supabase project, and the first real nightly run in
-production. Everything it needs from the owner is in docs/OWNER-TODO.md.
+**Step 15, deploy, is the only Phase 1 step left, and it is entirely owner
+work**: Vercel, a hosted Supabase project, and the first real nightly run in
+production. The checklist is in docs/OWNER-TODO.md. Nothing in the codebase
+blocks it, and nothing in Phase 2 waits on it.
 
-Then step 16: update the module README and connections.md, run /review, merge
-to main. After that, Phase 2: Skill Tree, then Tasks and Goals, then Finance.
+**Phase 2 starts with the Skill Tree module**, then Tasks and Goals, then
+Finance. Each is one step: migration, manifest, tools, jobs, UI to its
+prototype, seed, README, Playwright screenshots. See
+docs/plans/design-build.md.
 
 The registry cycle that blocked steps 12 and 13 is fixed: both registries load
 in a plain Node process, which is what lets `pnpm setup` and the cron job work

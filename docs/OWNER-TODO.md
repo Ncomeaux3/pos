@@ -75,9 +75,6 @@ thing I cannot do: it needs your real keys.
 Nothing in the codebase blocks it. These are the accounts and secrets only you
 can create, roughly in the order they are needed.
 
-- [ ] **Create the private GitHub repo `pos-backups`.** Empty is fine; the
-      workflow makes `dumps/` itself. Without it the backup job fails on the
-      checkout step.
 - [ ] **Create a Supabase project for production**, note the project ref, then
       `supabase link --project-ref <ref>` and `supabase db push`. Disable email
       signups in the dashboard: there is one owner and no signup flow.
@@ -100,7 +97,22 @@ can create, roughly in the order they are needed.
       plan gate, so I did not assert one either way.
 
 ## Later phases
+
+- [ ] **Push the soltreya-ops branch.** `fix/code-review-2026-07` has no
+      upstream, so commit `a3b195d`, which comments out the five leadgen cron
+      schedules, exists only on your laptop. The deploy is live either way.
+      `git push -u origin fix/code-review-2026-07`.
+- [ ] **Check the Trigger.dev Schedules page** for soltreya-ops: the five
+      `leadgen-*` entries should be gone after that deploy, the other nine
+      still there. I have no access to verify it.
+- [ ] **Decide about `refresh-industry-signals`.** It still commits to
+      soltreya-web daily, which redeploys a site whose database is paused.
+      Harmless, but it is deploying a broken app once a day.
+
 ## Done
+
+- [x] 2026-09-08 Created the private `pos-backups` repo. Verified: it exists
+      under `Ncomeaux3`.
 
 - [x] 2026-09-08 Pasted the Anthropic, Resend and Voyage keys, and widened the
       Resend key to full access so its Test passes. All three connected.

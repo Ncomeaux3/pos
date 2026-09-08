@@ -32,7 +32,7 @@ Owner: Nick. Solo, nights and weekends. Finish one module before starting the ne
 - When compacting, preserve the list of modified files, open questions, and the test command.
 
 ## Commands
-- `pnpm dev` dev server. `pnpm test` vitest. `pnpm lint`. `pnpm typecheck`.
+- `pnpm dev` dev server. `pnpm test` vitest. `pnpm test:e2e` Playwright screens. `pnpm lint`. `pnpm typecheck`.
 - `pnpm setup` bootstrap a fresh database and owner user. `pnpm setup:demo` also seeds synthetic rows.
 - `pnpm gen:index` regenerate module and integration indexes (runs in prebuild). `pnpm gen:types` regenerate database types.
 - `supabase start` local stack. `supabase migration new <name>` to create one, `supabase migration up` to apply pending ones. `supabase db push` to prod.
