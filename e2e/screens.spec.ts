@@ -202,3 +202,25 @@ test('changing autonomy is what decides whether an agent write is held', async (
   await page.getByRole('radio', { name: /propose, i approve/i }).click()
   await expect(page.getByText(/autonomy: propose/i)).toBeVisible()
 })
+
+test('dashboard renders the nightly run', async ({ page }) => {
+  await page.goto('/')
+
+  // Run now is a server action behind requireOwner, not a call to the cron
+  // route, so it needs no secret.
+  await page.getByRole('button', { name: /^run now$/i }).click()
+  await expect(page.getByText(/^Run clean$|jobs? failed/i)).toBeVisible({ timeout: 20_000 })
+
+  await page.reload()
+
+  // Tile labels are uppercased by CSS, so the DOM still says "Warnings".
+  const main = page.getByRole('main')
+  await expect(main.getByText('Warnings')).toBeVisible()
+  await expect(main.getByText('System')).toBeVisible()
+  await expect(main.getByText('Model spend')).toBeVisible()
+  // One tile per module that wrote a digest, so the page needs no knowledge of
+  // any module to show its numbers.
+  await expect(main.getByRole('link', { name: /open notes/i })).toBeVisible()
+
+  await shoot(page, 'dashboard-live')
+})

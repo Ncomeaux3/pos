@@ -21,6 +21,15 @@ export type Settings = {
    * act: nothing is held back, and undo in the Agent Log is the safety net.
    */
   agent_autonomy: 'observe' | 'propose' | 'act'
+  /**
+   * Where the daily digest goes. Empty means OWNER_EMAIL.
+   *
+   * Separate from OWNER_EMAIL on purpose: that one is the login and changing it
+   * locks you out. This is only a recipient, and it has to be able to differ,
+   * because Resend without a verified domain will only deliver to the address
+   * the Resend account was created with.
+   */
+  digest_email: string
 }
 export type SettingKey = keyof Settings
 
@@ -32,6 +41,7 @@ export const DEFAULT_SETTINGS: Settings = {
   modules_enabled: null,
   // The cautious default: a fork starts by proposing, not acting.
   agent_autonomy: 'propose',
+  digest_email: '',
 }
 
 export async function getSetting<K extends SettingKey>(key: K): Promise<Settings[K]> {

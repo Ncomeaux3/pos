@@ -36,12 +36,27 @@ const CORE_TABLES = [
   'skill_overrides',
 ]
 
+// Columns added after core_init, listed so a dropped migration is caught here
+// rather than at runtime. 20260908084500_core_notifications.sql.
+const NOTIFICATION_COLUMNS = ['urgency', 'read_at', 'snooze_until', 'digest_run_id']
+
 describe('core schema', () => {
   it('has every table the architecture names, and no others', async () => {
     const { rows } = await client.query<{ tablename: string }>(
       `select tablename from pg_tables where schemaname = 'core' order by tablename`,
     )
     expect(rows.map((r) => r.tablename)).toEqual([...CORE_TABLES].sort())
+  })
+
+  it('has the notification columns the sender and the warnings tile need', async () => {
+    const { rows } = await client.query<{ column_name: string }>(
+      `select column_name from information_schema.columns
+        where table_schema = 'core' and table_name = 'notifications'`,
+    )
+    const present = new Set(rows.map((r) => r.column_name))
+    for (const column of NOTIFICATION_COLUMNS) {
+      expect(present.has(column), column).toBe(true)
+    }
   })
 
   it('enables row level security on every table', async () => {

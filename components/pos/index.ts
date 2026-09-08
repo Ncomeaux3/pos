@@ -3,6 +3,15 @@
 
 export { Eyebrow, StatusDot, type DotTone } from './text'
 export { ComeauxverseMark, ComeauxverseLockup } from './Logo'
+export {
+  HeatStrip,
+  PaceBar,
+  Radar,
+  Sparkline,
+  TimelineAxis,
+  type RadarAxis,
+  type TimelineItem,
+} from './charts'
 export { Chip, StatusChip, type ChipTone } from './Chip'
 export { Card, CardHead, MetricTile, type DeltaTone } from './Card'
 export { PageHeader } from './PageHeader'
