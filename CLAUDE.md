@@ -5,6 +5,7 @@ Single-user personal operating system: a database-backed app with modules (Finan
 Owner: Nick. Solo, nights and weekends. Finish one module before starting the next.
 
 ## Read on demand, not every session
+- Where the build is right now: docs/STATUS.md (read this first in a fresh session)
 - How it is built: docs/ARCHITECTURE.md (read before touching core, a manifest, or a migration)
 - Full module spec: @docs/SPEC.md (use /module <name> to load one module's section)
 - Unresolved choices: @docs/DECISIONS.md (ask before scaffolding anything they affect)
