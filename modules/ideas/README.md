@@ -43,3 +43,41 @@ changes when it lands.
 
 Capturing, scoring and moving an idea are all reversible by doing the opposite,
 and none of it spends money or makes a commitment. Killing one keeps the row.
+
+## Research is the only thing here that spends money
+
+`research` is the module's one guarded tool. Capturing, scoring and killing an
+idea are free and reversible; a research run is neither. A quick run is up to
+four searches and a deep one twelve, at a cent each, and the pages those
+searches return are read as tokens, which is the larger half of the bill. A
+measured quick run came to about twenty cents.
+
+The owner pressing the button is the approval. An agent asking lands in the
+Review inbox, because an agent that decided to research forty ideas one night
+would be inside the monthly cap and still wrong.
+
+Research is a capped purpose, so the soft cap in Settings stops it first when
+the month runs out. That is deliberate: classification keeps the system working
+and research is the optional part.
+
+## A number with no source is deleted before you see it
+
+SPEC's rule, enforced rather than requested. The model is asked for JSON with a
+source URL on every claim, and `keepSourced` drops any numeric claim whose URL
+is not one the search actually returned. Two failures that catches:
+
+- a number with no URL at all
+- a URL the model produced from memory, which looks exactly like a citation
+
+Prose is held to the same rule: a number smuggled into a section summary is
+still a number nobody can check, so the summary is dropped instead.
+
+An opinion with no source is kept. Opinion is allowed; it just cannot wear
+numbers it did not earn.
+
+`unclear` is a real verdict and the default. A rubric that always reaches build,
+park or drop is guessing on the runs where the evidence was thin, and thin
+evidence is the normal case for an idea somebody wrote down on a walk.
+
+A failed run is stored too, with its reason. Without that the screen cannot tell
+"never researched" from "tried, and the account was out of credit".

@@ -26,9 +26,24 @@ import {
   quadrant,
   type Level,
 } from '../quadrant'
-import { captureIdea, moveIdea, scoreIdea, type ActionResult } from './actions'
+import { captureIdea, moveIdea, researchIdea, scoreIdea, type ActionResult } from './actions'
+
+export type Research = {
+  ideaId: string
+  depth: string
+  status: string
+  verdict: string
+  confidence: number | null
+  sections: { key: string; label: string; summary: string; claims: { text: string; source: string }[] }[]
+  sources: { url: string; title: string; citedText: string }[]
+  searches: number
+  costCents: number
+  detail: string
+  ranOn: string
+}
 
 export type IdeasData = {
+  research: Research[]
   ideas: {
     id: string
     title: string
@@ -269,9 +284,143 @@ export function Ideas({ data }: { data: IdeasData }) {
                 <StatusChip tone="brand">This is the one being built</StatusChip>
               )}
             </Card>
+
+            <ResearchPanel
+              idea={open}
+              run={data.research.find((r) => r.ideaId === open.id) ?? null}
+              onRun={(depth) =>
+                run(
+                  () => researchIdea(open.id, depth),
+                  'Researched. The panel says what it found and what it cost.',
+                )
+              }
+            />
           </aside>
         )}
       </div>
     </div>
+  )
+}
+
+
+const VERDICT_TONE: Record<string, 'brand' | 'quiet' | 'warn' | 'bad'> = {
+  build: 'brand',
+  park: 'warn',
+  drop: 'bad',
+  unclear: 'quiet',
+}
+
+/**
+ * The rubric's answer, its sources, and what it cost.
+ *
+ * The cost is on the screen because the run spends real money: a cent a search
+ * plus tokens, and an idea board is exactly the place where it is tempting to
+ * press the button forty times.
+ */
+function ResearchPanel({
+  idea,
+  run,
+  onRun,
+}: {
+  idea: IdeasData['ideas'][number]
+  run: Research | null
+  onRun: (depth: 'quick' | 'deep') => void
+}) {
+  return (
+    <Card className="space-y-3">
+      <CardHead
+        label="Research"
+        meta={run === null ? 'never run' : `${run.depth}, ${run.ranOn}`}
+      />
+
+      {run === null && (
+        <p className="t-caption text-ink-3">
+          A fixed rubric with web search: problem, market, competitors, differentiation, and what
+          one person nights and weekends would have to build. Every number comes with the page it
+          came from, and a number without one is deleted before you see it.
+        </p>
+      )}
+
+      {run?.status === 'failed' && (
+        <p className="t-caption text-bad">{run.detail}</p>
+      )}
+
+      {run?.status === 'ok' && (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusChip tone={VERDICT_TONE[run.verdict] ?? 'quiet'}>{run.verdict}</StatusChip>
+            <span className="num text-[11px] text-ink-3">
+              {run.confidence === null
+                ? 'no confidence given'
+                : `${Math.round(run.confidence * 100)}% confident`}
+            </span>
+            <span className="num text-[11px] text-ink-3">
+              {run.searches} searches, {(run.costCents / 100).toFixed(2)} dollars
+            </span>
+          </div>
+
+          {run.sections.map((section) => (
+            <div key={section.key} className="space-y-1">
+              <Eyebrow>{section.label}</Eyebrow>
+              {section.summary && <p className="t-caption text-ink-2">{section.summary}</p>}
+              {section.claims.length === 0 && !section.summary ? (
+                <p className="t-caption text-ink-4">Nothing it could source.</p>
+              ) : (
+                section.claims.map((claim) => (
+                  <p key={claim.text} className="t-caption text-ink-2">
+                    {claim.text}{' '}
+                    {claim.source && (
+                      <a
+                        className="text-brand"
+                        href={claim.source}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        source
+                      </a>
+                    )}
+                  </p>
+                ))
+              )}
+            </div>
+          ))}
+
+          {run.sources.length > 0 && (
+            <div className="space-y-1 border-t border-rule pt-2">
+              <Eyebrow>Pages it read</Eyebrow>
+              {run.sources.map((source) => (
+                <a
+                  key={source.url}
+                  href={source.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="t-caption block truncate text-ink-3 hover:text-brand"
+                >
+                  {source.title}
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-1.5">
+        <ActionButton variant="brand" onClick={() => onRun('quick')}>
+          {run === null ? 'Research it' : 'Run again'}
+        </ActionButton>
+        <ActionButton onClick={() => onRun('deep')}>Deep run</ActionButton>
+      </div>
+      <p className="t-caption text-ink-3">
+        Quick is up to four searches, deep is twelve. Searches are a cent each and the pages they
+        return are read as tokens, which is the larger half of the bill: a quick run has come to
+        about twenty cents. Counted against the monthly cap in Settings, which stops research
+        first when it runs out.
+      </p>
+      {idea.stage === 'killed' && (
+        <p className="t-caption text-ink-3">
+          Researching something you killed is allowed. Sometimes that is how it comes back.
+        </p>
+      )}
+    </Card>
   )
 }

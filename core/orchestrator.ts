@@ -96,40 +96,50 @@ export async function buildSummary(): Promise<Summary> {
   }
 }
 
-/**
- * The one sentence at the top, written by Haiku from the summary.
- *
- * Returns null rather than throwing when the model is unreachable or past the
- * cap. A dashboard without a sentence is still a dashboard; a dashboard that
- * failed to render because a model call failed is not.
- */
-export async function writeHeadline(summary: Summary): Promise<string | null> {
-  try {
-    const { complete } = await import('./llm')
-
-    const facts = {
-      alerts: summary.alerts.map((a) => a.title),
-      failedJobs: summary.failedJobs.length,
-      proposals: summary.pendingProposals,
-      modules: summary.modules.map((m) => ({ module: m.module, ...m.payload })),
-    }
-
-    const text = await complete({
-      model: 'claude-haiku-4-5',
-      purpose: 'headline',
-      module: 'core',
-      system:
-        'You write one or two plain sentences summarising a personal dashboard for its only user. ' +
-        'State only what the facts say. Invent nothing, add no numbers that are not given, no greeting, no sign off.',
-      messages: [{ role: 'user', content: JSON.stringify(facts) }],
-      maxTokens: 200,
-    })
-
-    return text.trim() || null
-  } catch {
-    return null
-  }
+/** "a", "b" and "c". An Oxford comma would be wrong in a spoken sentence. */
+function list(parts: string[]): string {
+  if (parts.length <= 1) return parts[0] ?? ''
+  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`
 }
+
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
+
+/**
+ * The one sentence at the top, built from the summary.
+ *
+ * This was a Haiku call. It is a template now, for two reasons that both beat
+ * the prose: it cannot invent a number on the most read sentence in the app,
+ * and it costs nothing, so it works with no provider connected and never
+ * counts against the spend cap.
+ *
+ * Returns null when there is nothing worth a sentence. A dashboard with no
+ * headline is a quiet night, which is the correct output.
+ */
+export function writeHeadline(summary: Summary): string | null {
+  const parts: string[] = []
+
+  const bad = summary.alerts.filter((a) => a.tone === 'bad').length
+  const other = summary.alerts.length - bad
+  if (bad > 0) parts.push(plural(bad, 'thing') + ' needing attention')
+  if (other > 0) parts.push(plural(other, 'warning'))
+  if (summary.failedJobs.length > 0) parts.push(plural(summary.failedJobs.length, 'failed job'))
+  if (summary.pendingProposals > 0) {
+    parts.push(`${plural(summary.pendingProposals, 'proposal')} waiting`)
+  }
+
+  if (parts.length === 0) return null
+
+  // The cap is the one number worth naming unprompted: it is the only thing
+  // here that stops working when it is reached.
+  const overCap = summary.capCents > 0 && summary.spendCents >= summary.capCents
+  const tail = overCap
+    ? ` Model spend has reached the ${(summary.capCents / 100).toFixed(2)} cap, so research is paused.`
+    : ''
+
+  return `${capitalise(list(parts))}.${tail}`
+}
+
+const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 /**
  * Writes one core.dashboard_summary row and queues at most one notification.
@@ -142,7 +152,7 @@ export async function writeHeadline(summary: Summary): Promise<string | null> {
  */
 export async function assembleSummary(): Promise<{ headline: string | null; queued: boolean }> {
   const summary = await buildSummary()
-  const headline = await writeHeadline(summary)
+  const headline = writeHeadline(summary)
 
   await db().query(
     `insert into core.dashboard_summary (summary, headline) values ($1::jsonb, $2)`,

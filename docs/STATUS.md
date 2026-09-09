@@ -193,3 +193,24 @@ outside Next.
 - **`var(--brand)` does not exist.** The token is `--accent`, exposed to
   Tailwind as `--color-brand`. An undefined var in an SVG `fill` is not an
   error: the shape renders black on a black background.
+
+## Late passes, done 2026-09-09
+
+**Push** (docs/PUSH.md). Service worker, VAPID, `core.push_subscription`, a
+Devices card in Settings, and the sender honouring the push channel it has been
+storing since the notifications step. Needs two keys in `.env` before it does
+anything; the screen says so.
+
+**Gestures.** Swipe between tabs, swipe a task to complete or reopen it, pull
+down on the dashboard to sync. Touch and pen only, so a mouse drag over a task
+title still selects text. The decision about what counts as a swipe is in
+`core/gestures.ts` with tests; the pointer listening is in
+`components/pos/gestures.ts`.
+
+The plan's fourth gesture, long press to arrange the dashboard, is not built:
+the dashboard has no stored tile order, so there is nothing to arrange yet.
+
+**Ideas research** (SPEC section 2). The last of the four follow-on features.
+Rubric with web search, every number carrying the page it came from, and a hard
+rule that deletes any number whose URL the search did not actually return.
+Guarded, because it is the one thing in Ideas that spends money.

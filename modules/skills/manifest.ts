@@ -4,6 +4,7 @@ import { defineModule, defineTool } from '@/core/module-contract'
 import SkillTreePage from './ui/SkillTreePage'
 import { classify } from './classify'
 import { nightlyDigest } from './jobs/nightly-digest'
+import { reclassify } from './jobs/reclassify'
 
 // The Skill Tree. It owns the tree, the XP weights and the level function, and
 // it is the module that supplies core with a classifier: core/entities.ts calls
@@ -105,7 +106,12 @@ export default defineModule({
   guarded: [],
   requires: [],
 
-  jobs: [{ name: 'nightly_digest', run: nightlyDigest }],
+  // reclassify before the digest: it is what turns a parked row into a real
+  // skill link, and the digest counts those links.
+  jobs: [
+    { name: 'reclassify', run: reclassify },
+    { name: 'nightly_digest', run: nightlyDigest },
+  ],
   // Skills are not entities: a skill is what an entity links to. Nothing here
   // registers, so there is nothing to search or embed.
   entityTypes: [],

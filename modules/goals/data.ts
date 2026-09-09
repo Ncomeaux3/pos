@@ -68,7 +68,13 @@ export async function checkIn(args: {
            note = excluded.note,
            -- A hand entered reading overrules a computed one, and the nightly
            -- job must never take it back. Manual only ever goes true.
-           is_manual = goals.checkin.is_manual or excluded.is_manual`,
+           is_manual = goals.checkin.is_manual or excluded.is_manual
+     -- The latch above kept the flag but not the number: pullMetrics writes
+     -- is_manual false onto today's row, which is the same row the owner may
+     -- already have typed by hand, and set value = excluded.value took it back.
+     -- Same guard core.skill_links uses, plus the case that flag alone missed:
+     -- the owner correcting their own reading is still a manual write.
+     where goals.checkin.is_manual = false or excluded.is_manual`,
     [args.goalId, args.value, args.note ?? '', args.occurredOn ?? null, args.isManual ?? true],
   )
 }

@@ -60,5 +60,73 @@ export async function seed(): Promise<number> {
     })
   }
 
+  // One synthetic research report, so the panel and its rules are visible
+  // without spending anything. Every claim here cites a source in the list
+  // below it, which is the rule the real job enforces before it writes a row.
+  // The numbers and the URLs are invented, like the rest of this file.
+  const { rows: target } = await db().query<{ id: string }>(
+    `select id from ideas.idea where source = 'demo' and external_id = 'i-share'`,
+  )
+  if (target[0]) {
+    await db().query(`delete from ideas.research where idea_id = $1`, [target[0].id])
+    await db().query(
+      `insert into ideas.research
+         (idea_id, depth, status, verdict, confidence, sections, sources, searches,
+          cost_cents, model)
+       values ($1, 'quick', 'ok', 'park', 0.55, $2::jsonb, $3::jsonb, 4, 5.8,
+               'claude-sonnet-5')`,
+      [
+        target[0].id,
+        JSON.stringify([
+          {
+            key: 'problem',
+            label: 'Problem',
+            summary:
+              'People who track their own money want to show one number to a partner or an accountant without handing over the whole system.',
+            claims: [],
+          },
+          {
+            key: 'market',
+            label: 'Market',
+            summary: 'Small, and mostly people who already build their own tools.',
+            claims: [
+              {
+                text: 'Personal finance tools with a sharing feature charge between 5 and 15 dollars a month',
+                source: 'https://example.com/personal-finance-pricing',
+              },
+            ],
+          },
+          {
+            key: 'competitors',
+            label: 'Competitors',
+            summary: 'Every hosted budgeting app has this. No self hosted one does it well.',
+            claims: [],
+          },
+          {
+            key: 'differentiation',
+            label: 'Differentiation',
+            summary:
+              'A link that expires and shows one page, rather than an account with a login and a permission model.',
+            claims: [],
+          },
+          {
+            key: 'feasibility',
+            label: 'Feasibility for a solo builder',
+            summary:
+              'A signed URL, a read only page, and an expiry. The hard part is not the link, it is deciding what a viewer may see.',
+            claims: [],
+          },
+        ]),
+        JSON.stringify([
+          {
+            url: 'https://example.com/personal-finance-pricing',
+            title: 'What personal finance tools charge',
+            citedText: 'Plans range from $5 to $15 per month for shared access.',
+          },
+        ]),
+      ],
+    )
+  }
+
   return IDEAS.length
 }

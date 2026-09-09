@@ -145,11 +145,41 @@ export async function sendPending(): Promise<SendResult> {
     throw new Error(`Digest email refused: ${message}`)
   }
 
+  // The same bundle, pushed once, to whatever devices are subscribed. Only
+  // when a rule that raised something actually asks for push: the channel has
+  // been storable since the notifications step and honouring it is the whole
+  // point of this.
+  if (await anyRuleWantsPush(items.map((i) => i.id))) {
+    const { renderPush } = await import('./push-shape')
+    const { sendPush } = await import('./push')
+    const push = renderPush(items.map((i) => ({ title: i.title, urgency: i.urgency })))
+    if (push) await sendPush({ ...push, url: '/' })
+  }
+
   await db().query(`update core.notifications set sent_at = now() where id = any($1)`, [
     items.map((i) => i.id),
   ])
 
   return { sent: items.length, emails: 1 }
+}
+
+/**
+ * Whether any of these came from a rule with push turned on.
+ *
+ * A notification with no rule behind it does not push. Those are raised by a
+ * job rather than by a rule the owner configured, and pushing them would mean
+ * the one channel nobody can ignore is the one channel nobody chose.
+ */
+async function anyRuleWantsPush(ids: string[]): Promise<boolean> {
+  if (ids.length === 0) return false
+  const { rows } = await db().query<{ n: string }>(
+    `select count(*)::text as n
+       from core.notifications n
+       join core.notification_rules r on r.id = n.rule_id
+      where n.id = any($1) and 'push' = any(r.channels)`,
+    [ids],
+  )
+  return Number(rows[0].n) > 0
 }
 
 // The alert centre ----------------------------------------------------------

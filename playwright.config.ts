@@ -46,6 +46,11 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         viewport: { width: 402, height: 874 },
         isMobile: false,
+        // Touch on, so the gesture specs can dispatch a real touch pointer.
+        // isMobile stays off: it changes the viewport meta and the device
+        // scale factor, and every screenshot in this project was taken
+        // without it.
+        hasTouch: true,
         storageState: 'e2e/.auth/owner.json',
       },
     },

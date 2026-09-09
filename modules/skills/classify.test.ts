@@ -95,50 +95,27 @@ describe('classify', () => {
     expect(complete).not.toHaveBeenCalled()
   })
 
-  it('falls back to the model when no keyword hits, and records which model decided', async () => {
-    complete.mockResolvedValue('[{"skill_id":"writing","confidence":0.7}]')
+  // The model no longer runs here. Anything the rules miss parks under
+  // `unclassified` and the nightly reclassify job places it, so a write never
+  // waits on a round trip and re-registering unchanged text costs nothing.
+  // The model half is covered in jobs/reclassify.test.ts.
+  it('parks what the rules miss without calling the model', async () => {
     const ref = await anEntity('The quiet afternoon passed')
     await classify(ref, 'The quiet afternoon passed')
 
-    const links = await linksFor(ref)
-    expect(links).toHaveLength(1)
-    expect(links[0].skill_id).toBe('writing')
-    expect(links[0].classified_by).toMatch(/^model:/)
-    expect(Number(links[0].confidence)).toBeCloseTo(0.7)
-    expect(complete).toHaveBeenCalledOnce()
-  })
-
-  it('ignores a skill id the model invented', async () => {
-    complete.mockResolvedValue('[{"skill_id":"underwater_basket_weaving","confidence":0.9}]')
-    const ref = await anEntity('The quiet afternoon passed')
-    await classify(ref, 'The quiet afternoon passed')
-
-    // Nothing real came back, so this is unclassified rather than a bad link.
-    const links = await linksFor(ref)
-    expect(links).toHaveLength(1)
-    expect(links[0].classified_by).toBe('unclassified')
-  })
-
-  it('retries the model once, then gives up and marks it unclassified', async () => {
-    complete.mockRejectedValue(new Error('overloaded'))
-    const ref = await anEntity('The quiet afternoon passed')
-    await classify(ref, 'The quiet afternoon passed')
-
-    expect(complete).toHaveBeenCalledTimes(2)
+    expect(complete).not.toHaveBeenCalled()
     const links = await linksFor(ref)
     expect(links).toHaveLength(1)
     expect(links[0]).toMatchObject({ skill_id: 'unclassified', classified_by: 'unclassified' })
   })
 
-  it('succeeds on the retry when the first call fails', async () => {
-    complete
-      .mockRejectedValueOnce(new Error('overloaded'))
-      .mockResolvedValueOnce('[{"skill_id":"writing","confidence":0.5}]')
+  it('costs nothing to classify the same row twice', async () => {
     const ref = await anEntity('The quiet afternoon passed')
     await classify(ref, 'The quiet afternoon passed')
+    await classify(ref, 'The quiet afternoon passed')
 
-    expect(complete).toHaveBeenCalledTimes(2)
-    expect((await linksFor(ref))[0].skill_id).toBe('writing')
+    expect(complete).not.toHaveBeenCalled()
+    expect(await linksFor(ref)).toHaveLength(1)
   })
 
   // The rule that matters most: a human decision is never overwritten by a job.

@@ -17,6 +17,7 @@ import {
 import { cn } from '@/lib/utils'
 import { parseQuickAdd } from '../quickadd'
 import { columnsFor, dueLabel, estimateLabel, VIEWS, bucket, type Task, type View } from '../shape'
+import { useSwipe } from '@/components/pos/gestures'
 import { approveTask, completeTask, writeTask, type ActionResult } from './actions'
 import { Calendar } from './Calendar'
 
@@ -247,11 +248,20 @@ function Card({
   const state = bucket(task.dueInDays)
   const done = task.status === 'done'
 
+  // Swipe right to complete, swipe left to reopen: the gesture every task app
+  // has, and the reason the checkbox does not have to be hit exactly with a
+  // thumb. Touch only, so a mouse drag over the text still selects it.
+  const swipe = useSwipe({
+    onRight: () => !done && onComplete(),
+    onLeft: () => done && onComplete(),
+  })
+
   return (
     <article
       draggable={draggable}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
+      {...swipe}
       className={cn(
         'space-y-2 rounded-md border bg-bg p-2.5 transition-colors duration-150',
         task.priority === 'P1' && !done ? 'border-bad/50' : 'border-rule-2',

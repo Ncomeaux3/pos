@@ -26,7 +26,42 @@ export default async function IdeasPage() {
       order by i.updated_at desc`,
   )
 
+  // The latest run per idea. distinct on rather than a join with a max
+  // subquery: one statement, and the screen only ever shows the newest.
+  const { rows: research } = await db().query<{
+    idea_id: string
+    depth: string
+    status: string
+    verdict: string
+    confidence: string | null
+    sections: { key: string; label: string; summary: string; claims: { text: string; source: string }[] }[]
+    sources: { url: string; title: string; citedText: string }[]
+    searches: number
+    cost_cents: string
+    detail: string
+    ran_on: string
+  }>(
+    `select distinct on (idea_id)
+            idea_id, depth, status, verdict, confidence::text, sections, sources,
+            searches, cost_cents::text, detail, created_at::date::text as ran_on
+       from ideas.research
+      order by idea_id, created_at desc`,
+  )
+
   const data: IdeasData = {
+    research: research.map((r) => ({
+      ideaId: r.idea_id,
+      depth: r.depth,
+      status: r.status,
+      verdict: r.verdict,
+      confidence: r.confidence === null ? null : Number(r.confidence),
+      sections: r.sections,
+      sources: r.sources,
+      searches: r.searches,
+      costCents: Number(r.cost_cents),
+      detail: r.detail,
+      ranOn: r.ran_on,
+    })),
     ideas: rows.map((r) => ({
       id: r.id,
       title: r.title,

@@ -37,7 +37,7 @@ nodes:
   - id: typescript
     parent: coding
     name: TypeScript
-    keywords: [typescript, javascript, node, react, next.js, tsx, npm, pnpm]
+    keywords: [typescript, javascript, node, react, next.js, tsx, npm, pnpm, eslint, vite, bun, deno, jsx]
   - id: python
     parent: coding
     name: Python
@@ -45,7 +45,7 @@ nodes:
   - id: sql
     parent: coding
     name: SQL
-    keywords: [sql, postgres, postgresql, query, database, index, migration, sqlite]
+    keywords: [sql, postgres, postgresql, query, database, index, migration, sqlite, schema, join, pgvector, rls]
 
   - id: systems
     parent: engineering
@@ -53,7 +53,7 @@ nodes:
   - id: architecture
     parent: systems
     name: Architecture
-    keywords: [architecture, design doc, system design, scalability, refactor, monolith, microservice]
+    keywords: [architecture, design doc, system design, scalability, refactor, monolith, microservice, api design, tech debt, rewrite]
   - id: cloud
     parent: systems
     name: Cloud
@@ -61,7 +61,7 @@ nodes:
   - id: devops
     parent: systems
     name: DevOps
-    keywords: [docker, kubernetes, ci, cd, terraform, deploy, pipeline, github actions]
+    keywords: [docker, kubernetes, ci, cd, terraform, deploy, deployment, pipeline, github actions, rollback, uptime, monitoring]
 
   - id: ai
     parent: engineering
@@ -69,7 +69,7 @@ nodes:
   - id: agents
     parent: ai
     name: Agents
-    keywords: [agent, mcp, tool use, orchestrator, claude, llm, prompt]
+    keywords: [agent, mcp, tool use, orchestrator, claude, llm, prompt, anthropic, openai, model context protocol, subagent]
   - id: rag
     parent: ai
     name: RAG
@@ -101,7 +101,7 @@ nodes:
   - id: writing
     parent: communication
     name: Writing
-    keywords: [essay, blog post, newsletter, documentation, wrote, draft]
+    keywords: [essay, blog post, newsletter, documentation, wrote, draft, writing, readme, article, notes, summarised, summarized]
   - id: speaking
     parent: communication
     name: Speaking
@@ -115,30 +115,41 @@ nodes:
   - id: strength
     parent: health
     name: Strength
-    keywords: [squat, deadlift, bench, press, lifting, gym, barbell, dumbbell]
+    keywords: [squat, deadlift, bench, press, lifting, lift, gym, barbell, dumbbell, reps, sets, pull up, push up, workout]
   - id: endurance
     parent: health
     name: Endurance
-    keywords: [run, running, ran, cycling, ride, swim, cardio, 5k, marathon]
+    keywords: [run, running, ran, cycling, ride, swim, swam, cardio, 5k, 10k, marathon, hike, hiking, rowing, zone 2]
   - id: nutrition
     parent: health
     name: Nutrition
-    keywords: [protein, calories, macros, diet, nutrition, meal prep]
+    keywords: [protein, calories, macros, diet, nutrition, meal prep, carbs, hydration, supplement, creatine]
   - id: sleep
     parent: health
     name: Sleep
     keywords: [sleep, slept, insomnia, bedtime, rem, nap]
+  - id: preventive_care
+    parent: health
+    name: Preventive care
+    keywords: [doctor, dentist, dental, screening, vaccine, vaccination, physical, bloodwork,
+      prescription, refill, optometrist, checkup, specialist]
 
   # Life ops ------------------------------------------------------------------
   - id: personal_finance
     parent: life_ops
     name: Personal finance
-    keywords: [budget, savings, invest, investing, 401k, ira, net worth, subscription]
+    keywords: [budget, savings, invest, investing, 401k, ira, net worth, subscription, insurance, policy, premium, deductible, mortgage, rent, tax, taxes, expense, refinance]
   - id: travel
     parent: life_ops
     name: Travel
-    keywords: [flight, hotel, trip, itinerary, passport, airbnb, lisbon, points]
+    keywords: [flight, hotel, trip, itinerary, passport, airbnb, points, miles, boarding, visa, layover, booking]
   - id: cooking
     parent: life_ops
     name: Cooking
-    keywords: [recipe, cook, cooked, bake, knife, kitchen, sourdough]
+    keywords: [recipe, cook, cooked, cooking, bake, baked, knife, kitchen, sourdough, roast, simmer, marinade, groceries]
+  - id: home
+    parent: life_ops
+    name: Home
+    keywords: [maintenance, hvac, furnace, gutter, gutters, filter, oil change, appliance,
+      plumbing, plumber, lawn, mower, roof, water heater, smoke detector, thermostat,
+      repair, serviced, tune up, warranty]

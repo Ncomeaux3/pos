@@ -34,6 +34,8 @@ const CORE_TABLES = [
   // core table has to be added here deliberately.
   'job_runs',
   'write_log',
+  // 20260909130000_core_push.sql. One row per browser that turned push on.
+  'push_subscription',
 ]
 
 // Columns added after core_init, listed so a dropped migration is caught here

@@ -3,6 +3,7 @@ import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
 import { nightlyDigest } from './jobs/nightly-digest'
+import { researchIdea } from './jobs/research'
 import IdeasPage from './ui/IdeasPage'
 
 const level = z.number().int().min(1).max(3)
@@ -93,17 +94,31 @@ export default defineModule({
         return { id: rows[0].id }
       },
     }),
+    research: defineTool({
+      description:
+        'Run the research rubric over an idea with web search. Spends money: a cent a search plus tokens.',
+      input: z.object({
+        id: z.uuid(),
+        /** Quick is the default per the 2026-09-05 decision. */
+        depth: z.enum(['quick', 'deep']).default('quick'),
+      }),
+      run: ({ id, depth }) => researchIdea(id, depth),
+    }),
   },
 
   /**
-   * Nothing is guarded.
+   * Research is guarded. Nothing else is.
    *
-   * An idea is a note about something that does not exist. Nothing here spends
-   * money, changes a commitment or touches anything outside this table, and a
-   * killed idea is kept rather than deleted, so even the destructive sounding
-   * action is reversible.
+   * An idea is a note about something that does not exist: capturing, scoring
+   * and killing one spends nothing and is reversible, and a killed idea is kept
+   * rather than deleted.
+   *
+   * Research is the exception because it spends real money on every run, a cent
+   * a search plus tokens, and an agent that decided to research forty ideas one
+   * night would be inside the monthly cap and still wrong. The owner pressing
+   * the button is the approval; an agent asking lands in the Review inbox.
    */
-  guarded: [],
+  guarded: ['research'],
   requires: [],
 
   metrics: {

@@ -62,3 +62,28 @@ export async function scoreIdea(
     return failed(error)
   }
 }
+
+/**
+ * Run the rubric. This spends money, so it is one deliberate press.
+ *
+ * The tool is guarded, which means an agent asking lands in the Review inbox.
+ * The owner pressing the button is the approval, which is what source: 'ui'
+ * says.
+ */
+export async function researchIdea(
+  id: string,
+  depth: 'quick' | 'deep',
+): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    const result = await callTool('ideas', 'research', { id, depth }, { source: 'ui' })
+    const run =
+      result.status === 'done'
+        ? (result.result as { status: string; detail: string; costCents: number })
+        : null
+    if (run?.status === 'failed') return { ok: false, error: run.detail }
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}

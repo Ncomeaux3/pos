@@ -17,10 +17,13 @@ const PRICES = {
 export type Model = keyof typeof PRICES
 
 /**
- * Haiku classifies and writes headlines, Sonnet researches. The split is what
- * keeps the whole system inside a $10 a month cap.
+ * Haiku classifies, Sonnet researches. The split is what keeps the whole
+ * system inside a $10 a month cap.
+ *
+ * There was a third purpose, 'headline', for the sentence on the dashboard.
+ * That is a template now: see writeHeadline in core/orchestrator.ts.
  */
-export type Purpose = 'classification' | 'headline' | 'research'
+export type Purpose = 'classification' | 'research'
 
 /** Only research is optional enough to stop. Classification keeps the system working. */
 const CAPPED_PURPOSES: Purpose[] = ['research']
@@ -42,11 +45,30 @@ export class SoftCapExceeded extends Error {
   }
 }
 
-export function estimateCostCents(model: Model, inputTokens: number, outputTokens: number): number {
+/**
+ * Cents per server-side web search.
+ *
+ * $10 per 1,000 searches, verified 2026-09-09 against
+ * platform.claude.com/docs/en/agents-and-tools/tool-use/web-search-tool. Billed
+ * on top of tokens. A search that errors is not billed, and the count this uses
+ * comes from the response rather than from what we asked for, so an error does
+ * not appear on the bill here either.
+ */
+const CENTS_PER_SEARCH = 1
+
+export function estimateCostCents(
+  model: Model,
+  inputTokens: number,
+  outputTokens: number,
+  webSearches = 0,
+): number {
   const price = PRICES[model]
   // Logging a zero cost for an unknown model would quietly break the cap.
   if (!price) throw new Error(`No price entry for model ${model}. Add it to PRICES in core/llm.ts.`)
-  return (inputTokens * price.input + outputTokens * price.output) / 1_000_000
+  return (
+    (inputTokens * price.input + outputTokens * price.output) / 1_000_000 +
+    webSearches * CENTS_PER_SEARCH
+  )
 }
 
 export async function monthToDateCents(): Promise<number> {
@@ -78,6 +100,41 @@ export async function complete({
   messages,
   maxTokens = 4096,
 }: CompleteArgs): Promise<string> {
+  return (await run({ model, purpose, module, system, messages, maxTokens })).text
+}
+
+/** One cited source, exactly as the search returned it. */
+export type Source = { url: string; title: string; citedText: string }
+
+export type SearchedCompletion = {
+  text: string
+  /** Every source cited in the reply, deduplicated by URL. */
+  sources: Source[]
+  /** Searches the API says it ran, which is what it billed for. */
+  searches: number
+  costCents: number
+}
+
+/**
+ * A completion that may search the web, with its sources and its bill.
+ *
+ * Separate from complete() because the caller has to see the sources: a claim
+ * whose URL is not in this list is one the module refuses to store. The basic
+ * search tool rather than the filtering one, because the filtering variant runs
+ * through code execution and this module has no use for a second execution
+ * environment.
+ */
+export async function completeWithSearch(
+  args: CompleteArgs & { maxSearches: number; allowedDomains?: string[] },
+): Promise<SearchedCompletion> {
+  return run(args)
+}
+
+async function run(
+  args: CompleteArgs & { maxSearches?: number; allowedDomains?: string[] },
+): Promise<SearchedCompletion> {
+  const { model, purpose, module, system, messages, maxTokens = 4096 } = args
+
   if (CAPPED_PURPOSES.includes(purpose)) {
     const [spent, cap] = await Promise.all([monthToDateCents(), getSetting('llm_soft_cap_cents')])
     if (spent >= cap) throw new SoftCapExceeded(spent, cap)
@@ -89,27 +146,88 @@ export async function complete({
     max_tokens: maxTokens,
     ...(system ? { system } : {}),
     messages,
+    ...(args.maxSearches
+      ? {
+          tools: [
+            {
+              // Verified 2026-09-09: the basic variant, supported on every
+              // model here. max_uses is a hard cap, and exceeding it returns an
+              // error block rather than more searches.
+              type: 'web_search_20250305',
+              name: 'web_search',
+              max_uses: args.maxSearches,
+              ...(args.allowedDomains ? { allowed_domains: args.allowedDomains } : {}),
+            },
+          ] as Anthropic.ToolUnion[],
+        }
+      : {}),
   })
 
   const inputTokens = response.usage?.input_tokens ?? 0
   const outputTokens = response.usage?.output_tokens ?? 0
+  // What the API says it ran. Asking for five and being billed for two is the
+  // normal case, and a search that errored is not counted here or billed.
+  const searches = response.usage?.server_tool_use?.web_search_requests ?? 0
+  const costCents = estimateCostCents(model, inputTokens, outputTokens, searches)
+
   await db().query(
-    `insert into core.llm_calls (model, purpose, module, input_tokens, output_tokens, cost_cents)
-     values ($1, $2, $3, $4, $5, $6)`,
-    [
-      model,
-      purpose,
-      module ?? null,
-      inputTokens,
-      outputTokens,
-      estimateCostCents(model, inputTokens, outputTokens),
-    ],
+    `insert into core.llm_calls
+       (model, purpose, module, input_tokens, output_tokens, cost_cents, web_searches)
+     values ($1, $2, $3, $4, $5, $6, $7)`,
+    [model, purpose, module ?? null, inputTokens, outputTokens, costCents, searches],
   )
 
-  return response.content
+  const text = response.content
     .filter((block): block is Anthropic.TextBlock => block.type === 'text')
     .map((block) => block.text)
     .join('')
+
+  return { text, sources: sourcesOf(response), searches, costCents }
+}
+
+/**
+ * Every page the search actually returned, plus what was quoted from it.
+ *
+ * Both halves matter and neither is enough alone. Citations only attach to
+ * prose, so a reply asked for as JSON carries none at all, and reading only
+ * citations would mean a structured report could never cite anything. Search
+ * results alone carry no quote, so the citation text is merged in where the
+ * model did quote a page.
+ *
+ * What this list is for: deciding whether a URL in a claim is one the model
+ * actually read, or one it produced from memory. A page that came back from a
+ * search is the first; nothing else is.
+ */
+function sourcesOf(response: Anthropic.Message): Source[] {
+  const byUrl = new Map<string, Source>()
+
+  for (const block of response.content) {
+    if (block.type === 'web_search_tool_result') {
+      // On an error the content is a single error object rather than a list of
+      // results, which is documented and is not an exception.
+      const results = Array.isArray(block.content) ? block.content : []
+      for (const result of results) {
+        if (result.type !== 'web_search_result') continue
+        if (!byUrl.has(result.url)) {
+          byUrl.set(result.url, { url: result.url, title: result.title, citedText: '' })
+        }
+      }
+    }
+
+    if (block.type === 'text' && block.citations) {
+      for (const citation of block.citations) {
+        if (citation.type !== 'web_search_result_location') continue
+        const existing = byUrl.get(citation.url)
+        byUrl.set(citation.url, {
+          url: citation.url,
+          title: citation.title ?? existing?.title ?? citation.url,
+          citedText: citation.cited_text ?? existing?.citedText ?? '',
+        })
+      }
+    }
+  }
+
+  return [...byUrl.values()]
 }
 
 /**

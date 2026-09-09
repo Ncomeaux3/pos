@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
 import { requireOwner } from '@/core/auth'
 import type { Channel } from '@/core/notification-rules'
 import { listRules, patchRule } from '@/core/notify'
@@ -95,4 +96,81 @@ export async function setQuiet<K extends QuietKey>(
   } catch (error) {
     return failed(error)
   }
+}
+
+/**
+ * Store a browser's push subscription.
+ *
+ * The shape is validated here rather than trusted: this is a public POST
+ * endpoint like every server action, and what it writes is used to make
+ * outbound requests. A malformed endpoint would be a request to somewhere of
+ * the caller's choosing.
+ */
+export async function subscribeDevice(
+  subscription: unknown,
+  userAgent: string,
+): Promise<ActionResult> {
+  await requireOwner()
+
+  const parsed = z
+    .object({
+      endpoint: z.url().max(2000),
+      keys: z.object({ p256dh: z.string().min(1).max(500), auth: z.string().min(1).max(500) }),
+    })
+    .safeParse(subscription)
+
+  if (!parsed.success) return { ok: false, error: 'That is not a push subscription' }
+  if (!/^https:\/\//.test(parsed.data.endpoint)) {
+    return { ok: false, error: 'A push endpoint has to be https' }
+  }
+
+  try {
+    const { saveSubscription } = await import('@/core/push')
+    await saveSubscription(parsed.data, deviceLabel(userAgent))
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+export async function forgetDevice(id: string): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    const { removeSubscription } = await import('@/core/push')
+    await removeSubscription(id)
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+/**
+ * A user agent string, shortened to the part a person recognises.
+ *
+ * Not parsed properly on purpose: this only has to let the owner tell the
+ * laptop from the phone when they press Forget, and a user agent library for
+ * that would be a dependency for one line of text.
+ */
+function deviceLabel(userAgent: string): string {
+  const os = /iPhone|iPad/.test(userAgent)
+    ? 'iPhone'
+    : /Android/.test(userAgent)
+      ? 'Android'
+      : /Macintosh/.test(userAgent)
+        ? 'Mac'
+        : /Windows/.test(userAgent)
+          ? 'Windows'
+          : 'Browser'
+
+  const browser = /Firefox/.test(userAgent)
+    ? 'Firefox'
+    : /Edg\//.test(userAgent)
+      ? 'Edge'
+      : /Chrome/.test(userAgent)
+        ? 'Chrome'
+        : /Safari/.test(userAgent)
+          ? 'Safari'
+          : ''
+
+  return browser ? `${os}, ${browser}` : os
 }

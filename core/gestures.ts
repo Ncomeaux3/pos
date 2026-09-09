@@ -1,0 +1,42 @@
+// Which way a drag went. No imports and no React: the swipe logic is decided
+// here so it can be tested, and the hook that listens for pointer events lives
+// in components/pos/gestures.ts.
+
+export type Swipe = 'left' | 'right' | 'down' | null
+
+/** Below this a swipe is a tap with a shaky thumb. */
+export const MIN_DISTANCE = 56
+
+/**
+ * Which way a drag went, if it went anywhere.
+ *
+ * The dominant axis decides, so a diagonal drag reads as whichever it mostly
+ * was. This is what keeps a horizontal swipe from firing while the page is
+ * being scrolled: a scroll is mostly vertical, and vertical is only a gesture
+ * when it starts at the top of the page.
+ */
+export function swipeOf(
+  dx: number,
+  dy: number,
+  options: { allowDown?: boolean; minDistance?: number } = {},
+): Swipe {
+  const min = options.minDistance ?? MIN_DISTANCE
+
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    if (Math.abs(dx) < min) return null
+    return dx < 0 ? 'left' : 'right'
+  }
+
+  if (!options.allowDown) return null
+  return dy >= min ? 'down' : null
+}
+
+/**
+ * Whether a pull down should count as a pull to sync.
+ *
+ * Only from the very top of the page. Anywhere else a downward drag is a scroll
+ * back up, and hijacking that would make the page feel broken.
+ */
+export function atTop(scrollY: number): boolean {
+  return scrollY <= 4
+}

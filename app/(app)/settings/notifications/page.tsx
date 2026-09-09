@@ -6,7 +6,9 @@ import { isLive, type Channel, type Rule } from '@/core/notification-rules'
 import { listRules } from '@/core/notify'
 import { getSettings } from '@/core/settings'
 import { settingsTabs } from '../tabs'
+import { listSubscriptions, publicKey } from '@/core/push'
 import { ChannelGrid, type ModuleRow } from './ChannelGrid'
+import { Devices } from './Devices'
 import { QuietHours } from './QuietHours'
 
 // The coarse view of the same rules the Notifications screen edits one at a
@@ -26,7 +28,11 @@ function label(id: string): string {
 }
 
 export default async function NotificationSettingsPage() {
-  const [rules, settings] = await Promise.all([listRules(), getSettings()])
+  const [rules, settings, devices] = await Promise.all([
+    listRules(),
+    getSettings(),
+    listSubscriptions(),
+  ])
   const paused = settings.notifications_paused
 
   const modules = [...new Set(rules.map((r) => r.module))]
@@ -102,11 +108,22 @@ export default async function NotificationSettingsPage() {
           ))}
         </div>
         <p className="t-caption text-ink-3">
-          Push renders and stores everywhere, and the sender delivers email and in-app until the
-          push step lands. A rule set to push alone is recorded in the alert centre meanwhile, so
-          nothing is lost.
+          The sender delivers email, in-app, and now push: one notification per send to every
+          subscribed device, and only when a rule that raised something asks for push. A rule set
+          to push alone is still recorded in the alert centre, so nothing is lost when no device
+          is subscribed.
         </p>
       </Card>
+
+      <Devices
+        vapidPublicKey={publicKey()}
+        devices={devices.map((d) => ({
+          id: d.id,
+          label: d.label,
+          lastSentAt: d.last_sent_at ? d.last_sent_at.toISOString().slice(0, 10) : null,
+          failures: d.failure_count,
+        }))}
+      />
 
       <Card className="space-y-4">
         <CardHead label="Per module" meta="Writes every rule in the row" />

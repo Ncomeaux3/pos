@@ -1038,3 +1038,82 @@ test('fitness, the coach proposes and cannot change the plan itself', async ({ p
   await page.getByRole('link', { name: 'Open the Review inbox' }).click()
   await expect(page.getByRole('button', { name: /Add a little weight/ })).toBeVisible()
 })
+
+test('ideas, research shows its sources and what it cost', async ({ page }) => {
+  await page.goto('/ideas')
+  await page.getByRole('button', { name: /Share a read only dashboard link/ }).click()
+
+  // The verdict, how sure it says it is, and the bill, because a run spends
+  // real money and an idea board is where it is tempting to press it forty
+  // times.
+  await expect(page.getByText('park', { exact: true })).toBeVisible()
+  await expect(page.getByText('55% confident')).toBeVisible()
+  await expect(page.getByText(/4 searches, 0.06 dollars/)).toBeVisible()
+
+  // Every number carries the page it came from.
+  await expect(page.getByText(/charge between 5 and 15 dollars a month/)).toBeVisible()
+  await expect(page.getByRole('link', { name: 'source' }).first()).toBeVisible()
+  await expect(page.getByText('Pages it read')).toBeVisible()
+
+  await shoot(page, 'ideas-research')
+})
+
+test('settings notifications, push says what it needs before it works', async ({ page }) => {
+  await page.goto('/settings/notifications')
+
+  // The device card is honest about the difference between not configured and
+  // no device subscribed. Without VAPID keys there is no button to press.
+  await expect(page.getByText('Devices')).toBeVisible()
+  await expect(page.getByText(/Push is not configured/)).toBeVisible()
+  await expect(page.getByText(/rules store the channel and the sender honours it/)).toBeVisible()
+})
+
+test('gestures, a swipe moves one tab and a mouse drag does not', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Touch gestures are a phone thing')
+
+  await page.goto('/meals')
+  const tabs = page.getByRole('tablist', { name: 'Meals views' })
+  await expect(page.getByRole('tab', { name: /Week/ })).toHaveAttribute('aria-selected', 'true')
+
+  const box = (await tabs.boundingBox())!
+  const y = box.y + box.height / 2
+  const swipe = async (fromX: number, toX: number, pointerType: 'touch' | 'mouse') => {
+    await tabs.dispatchEvent('pointerdown', { pointerType, clientX: fromX, clientY: y })
+    await tabs.dispatchEvent('pointerup', { pointerType, clientX: toX, clientY: y })
+  }
+
+  // Left moves forward one tab, and only one: a swipe that jumped to the last
+  // tab would read as a mis-tap rather than as navigation.
+  await swipe(box.x + box.width - 20, box.x + 20, 'touch')
+  await expect(page.getByRole('tab', { name: /Recipes/ })).toHaveAttribute('aria-selected', 'true')
+
+  // Right comes back.
+  await swipe(box.x + 20, box.x + box.width - 20, 'touch')
+  await expect(page.getByRole('tab', { name: /Week/ })).toHaveAttribute('aria-selected', 'true')
+
+  // A mouse drag is a text selection, not a gesture.
+  await swipe(box.x + box.width - 20, box.x + 20, 'mouse')
+  await expect(page.getByRole('tab', { name: /Week/ })).toHaveAttribute('aria-selected', 'true')
+})
+
+test('gestures, swiping a task completes it', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Touch gestures are a phone thing')
+
+  await page.goto('/tasks')
+  const card = page
+    .locator('article')
+    .filter({ hasText: 'Read DDIA ch. 5, Replication' })
+    .first()
+  await expect(card).toBeVisible()
+
+  const box = (await card.boundingBox())!
+  const y = box.y + 8
+  await card.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: box.x + 20, clientY: y })
+  await card.dispatchEvent('pointerup', {
+    pointerType: 'touch',
+    clientX: box.x + box.width - 10,
+    clientY: y,
+  })
+
+  await expect(page.getByText(/^Done\. Read DDIA ch. 5, Replication/)).toBeVisible()
+})

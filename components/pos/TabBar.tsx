@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { useSwipe } from './gestures'
 
 export type Tab<T extends string> = { value: T; label: ReactNode; count?: number }
 
@@ -36,8 +37,18 @@ export function TabBar<T extends string>({
   label: string
   className?: string
 }) {
+  // Swiping the tab row moves one tab, which is the gesture every phone app
+  // has and the reason the row is reachable with a thumb at all. Bounded at
+  // both ends rather than wrapping: a swipe that jumps from the last tab to
+  // the first reads as a mis-tap, not as navigation.
+  const index = tabs.findIndex((t) => t.value === value)
+  const swipe = useSwipe({
+    onLeft: () => index < tabs.length - 1 && onChange(tabs[index + 1].value),
+    onRight: () => index > 0 && onChange(tabs[index - 1].value),
+  })
+
   return (
-    <div role="tablist" aria-label={label} className={cn(TAB_ROW, className)}>
+    <div role="tablist" aria-label={label} className={cn(TAB_ROW, className)} {...swipe}>
       {tabs.map((t) => {
         const on = t.value === value
         return (

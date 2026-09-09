@@ -6,7 +6,7 @@ Full module specification. Loaded on demand via the /module skill or @docs/SPEC.
 
 **The prototype governs layout, copy, spacing and colour. It does not govern type or shape.** Those come from the ComeauxVerse brand layer per the 2026-09-08 decision: Manrope alone, no monospace webfont, 12px and 8px radii. The bundle's Space Grotesk, JetBrains Mono and radius 0 are not the app's type and shape system and nothing built should be moved back to them.
 
-Four things this file describes were absent from the prototypes and were held as a follow-on pass until each module's screen shipped. Three are now built: the Travel cents-per-point calculator (`modules/travel/globe.ts`), Meals cook mode (`modules/meals/scale.ts`), and Fitness workout plans with coach proposals (`modules/fitness/coach.ts`). One is not: the Ideas research rubric with citations and depth, which needs a decision about web search first, since search costs money against a $10 a month cap.
+Four things this file describes were absent from the prototypes and were held as a follow-on pass until each module's screen shipped. All four are now built: the Travel cents-per-point calculator (`modules/travel/globe.ts`), Meals cook mode (`modules/meals/scale.ts`), Fitness workout plans with coach proposals (`modules/fitness/coach.ts`), and the Ideas research rubric with citations and depth (`modules/ideas/rubric.ts`).
 
 Single-user, self-built personal operating system. Replaces a Notion setup. Modular by design: each module owns its data, its ingestion, and its tools. One orchestrator agent reads module digests and compiles a dashboard.
 
@@ -21,7 +21,7 @@ Owner: Nick. Solo builder, nights and weekends. Ships incrementally. Do not buil
 5. **Manual override always wins.** Any auto-classified field has a paired `is_manual` flag. Jobs never overwrite a row where `is_manual = true`.
 6. **Secrets never in the repo.** `.env` only, gitignored. Policy numbers and account identifiers encrypted at rest.
 7. **Single user.** No signup flow. One auth method. Prefer a private network (Tailscale) over a public URL if self-hosted.
-8. **Replace Notion one module at a time.** Notion stays the working system until a module ships. Each module includes `import/notion.ts` that loads the owner's export for that module, plus a test against a sample of that export. Imported rows are marked `source = 'notion_import'`, keyed by `external_id`, and emit events dated to the original completion date.
+8. **Replace Notion one module at a time.** Amended 2026-09-09: no importers are built, by the owner's decision. Notion stays the archive and POS starts empty except for what is entered. Every table still carries `source` and `external_id` with a `unique (source, external_id)`, so `source = 'notion_import'` stays a legal value and an importer can be added per module later without a migration.
 
 ## Shared `core` schema
 
