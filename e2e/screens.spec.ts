@@ -881,3 +881,65 @@ test('ideas, a killed idea keeps its reason', async ({ page }) => {
 
   await shoot(page, 'ideas-killed')
 })
+
+test('home, the calendar is worked out from the history', async ({ page }) => {
+  await page.goto('/home')
+  await expect(page.getByRole('heading', { name: 'Home and assets' })).toBeVisible()
+
+  // Every asset kind, biggest first.
+  await expect(page.getByRole('button', { name: /^2412 Example Street/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^2021 pickup/ })).toBeVisible()
+
+  // The oil change was last done seven months ago on a six month interval, so
+  // it is overdue. Nothing stored that: it falls out of the interval and the
+  // date it was last done.
+  await expect(page.getByText('Oil change and rotation').first()).toBeVisible()
+  await expect(page.getByText('Overdue').first()).toBeVisible()
+
+  // Twelve months, including the empty ones, because an empty month is
+  // information.
+  await expect(page.getByRole('button', { name: /^[A-Z]{3} \d\d /  })).toHaveCount(12)
+
+  await shoot(page, 'home')
+})
+
+test('home, a snooze comes back rather than dismissing', async ({ page }) => {
+  await page.goto('/home')
+
+  const snooze = page.getByRole('button', { name: 'Snooze 30d' })
+  expect(await snooze.count()).toBeGreaterThan(0)
+
+  await snooze.first().click()
+  await expect(page.getByText(/It comes back, it does not go away/)).toBeVisible()
+})
+
+test('home, a warranty with no expiry is not a missing date', async ({ page }) => {
+  await page.goto('/home')
+
+  const deed = page.getByRole('button', { name: /^Deed, survey and permits/ })
+  await expect(deed).toBeVisible()
+  await expect(page.getByText('no expiry', { exact: true })).toBeVisible()
+
+  // And the drawer carries the paperwork rather than a judgement about it.
+  await deed.click()
+  await expect(page.getByText('Recorded Jun 2019')).toBeVisible()
+})
+
+test('home, logging service moves the schedule it belongs to', async ({ page }) => {
+  await page.goto('/home?log=1')
+
+  await page.getByLabel('Asset', { exact: true }).selectOption({ label: '2412 Example Street' })
+  await page.getByLabel('What was done').fill('Gutter clean before the autumn')
+  // Three months from today, so the next one lands inside the calendar window
+  // where it can be counted.
+  await page.getByRole('radio', { name: '3 months' }).click()
+  await page.getByRole('button', { name: 'Save service' }).click()
+
+  await expect(page.getByText(/next one is on the calendar/)).toBeVisible()
+
+  // One schedule, not a second one beside it: logging a job that is already on
+  // the calendar moves the row it belongs to.
+  const month = page.getByRole('button', { name: /^[A-Z]{3} \d\d / }).nth(3)
+  await month.click()
+  await expect(page.getByText('Gutter clean before the autumn')).toHaveCount(1)
+})
