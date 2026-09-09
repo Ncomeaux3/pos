@@ -634,3 +634,47 @@ test('onboarding, requesting a provider records it without pretending', async ({
   await page.goto('/settings/connections')
   await expect(page.getByText('Ally')).toBeVisible()
 })
+
+test('second brain, the inbox holds a draft beside its source', async ({ page }) => {
+  await page.goto('/brain')
+  await expect(page.getByRole('heading', { name: 'Second Brain' })).toBeVisible()
+
+  // A draft is a proposal about a note, not a note. It waits here.
+  await expect(page.getByText('Why solo builders ship one module at a time')).toBeVisible()
+  await page.getByText('Why solo builders ship one module at a time').click()
+
+  // The source sits beside the summary, not behind it: a draft is judged
+  // against what it was drawn from rather than taken on trust.
+  await expect(page.getByText(/The itch to start module two/)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Accept' })).toBeVisible()
+
+  await shoot(page, 'second-brain')
+})
+
+test('second brain, links resolve both ways and a dangling one is kept', async ({ page }) => {
+  await page.goto('/brain?folder=note')
+
+  // Two notes point at each other, so each is a backlink of the other.
+  await page.getByText('Reciprocal rank fusion').first().click()
+  await expect(page.getByText('Pointing here')).toBeVisible()
+  await expect(page.getByText('Hybrid search').first()).toBeVisible()
+
+  // And one link points at a note nobody has written. It is kept and offered,
+  // because that is usually the best idea of what to write next.
+  await expect(page.getByText('Links with nothing behind them')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'build order' })).toBeVisible()
+
+  await shoot(page, 'second-brain-links')
+})
+
+test('second brain, accepting a draft moves it into the vault', async ({ page }) => {
+  await page.goto('/brain')
+
+  await page.getByText('Postgres full text search, briefly').click()
+  await page.getByRole('button', { name: 'Accept' }).click()
+  await expect(page.getByText('Accepted')).toBeVisible()
+
+  // Out of the inbox and into its kind.
+  await page.goto('/brain?folder=article')
+  await expect(page.getByText('Postgres full text search, briefly')).toBeVisible()
+})

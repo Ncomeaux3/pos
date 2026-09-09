@@ -5,6 +5,7 @@ import { seed } from '@/modules/notes/seed'
 import { seed as seedTasks } from '@/modules/tasks/seed'
 import { seed as seedGoals } from '@/modules/goals/seed'
 import { seed as seedFinance } from '@/modules/finance/seed'
+import { seed as seedBrain } from '@/modules/brain/seed'
 
 // Run by the Playwright setup project before any screen test. The vitest suites
 // use their own pos_test database now, but this still has to be deterministic:
@@ -37,6 +38,7 @@ const notes = await seed()
 const taskCount = await seedTasks()
 const goalCount = await seedGoals()
 const txCount = await seedFinance()
+const brainCount = await seedBrain()
 
 // The detector runs against the seeded history rather than the fixture listing
 // its own answers: the screen has to show what detectRecurring actually found.
@@ -189,5 +191,5 @@ await db().query(
   ],
 )
 
-console.log(`seeded ${notes} notes, indexed ${index.indexed}, embedded ${index.embedded}, 2 proposals, 7 alerts, 2 runs, ${taskCount} tasks, ${goalCount} goals, ${txCount} transactions, ${detected.found} subscriptions detected`)
+console.log(`seeded ${notes} notes, indexed ${index.indexed}, embedded ${index.embedded}, 2 proposals, 7 alerts, 2 runs, ${taskCount} tasks, ${goalCount} goals, ${txCount} transactions, ${detected.found} subscriptions detected, ${brainCount} notes`)
 process.exit(0)
