@@ -118,5 +118,50 @@ export async function seed(): Promise<number> {
      on conflict (kind, measured_on) do update set value = excluded.value`,
   )
 
-  return SESSIONS.length
+  // One plan, so the Plan tab and the coach have something to work against.
+  // Three days a week is what the seeded weeks actually contain, so the demo
+  // does not open with the coach complaining about a missed session.
+  const { rows: plans } = await db().query<{ id: string }>(
+    `insert into fitness.plan (name, goal, days_per_week, notes, started_on, source, external_id)
+     values ('Upper, lower, run', 'Strength through the winter without losing the aerobic base.',
+             3, '', core.today() - 60, 'demo', 'plan-winter')
+     on conflict (source, external_id) do update
+       set days_per_week = excluded.days_per_week, goal = excluded.goal
+     returning id`,
+  )
+  const planId = plans[0].id
+
+  await register({
+    module: 'fitness',
+    entityType: 'plan',
+    entityId: planId,
+    title: 'Upper, lower, run',
+    text: 'strength winter aerobic base',
+    eventType: 'plan_written',
+  })
+
+  // Items are an ordered list owned by the plan, cleared and rewritten rather
+  // than diffed. Nothing registers a plan item, so there is nothing to orphan.
+  await db().query(`delete from fitness.plan_item where plan_id = $1`, [planId])
+  for (const [position, item] of PLAN_ITEMS.entries()) {
+    await db().query(
+      `insert into fitness.plan_item
+         (plan_id, day_label, exercise, sets, reps, target_weight_g, notes, position)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [planId, item[0], item[1], item[2], item[3], item[4], item[5] ?? '', position],
+    )
+  }
+
+  return SESSIONS.length + PLAN_ITEMS.length
 }
+
+/** day, exercise, sets, reps, target grams or null, notes. */
+const PLAN_ITEMS: [string, string, number, string, number | null, string?][] = [
+  ['Upper', 'Bench press', 4, '5', 84_000, ''],
+  ['Upper', 'Barbell row', 4, '8', 70_000, ''],
+  ['Upper', 'Overhead press', 3, '8-12', 43_000, 'Stop a rep short of failure.'],
+  ['Lower', 'Back squat', 5, '5', 102_000, ''],
+  ['Lower', 'Romanian deadlift', 3, '8', 84_000, ''],
+  ['Lower', 'Calf raise', 3, 'AMRAP', null, 'Bodyweight is fine.'],
+  ['Run', 'Easy run', 1, '40 min', null, 'Conversational pace. If you cannot talk, slow down.'],
+]

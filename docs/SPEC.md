@@ -2,7 +2,11 @@
 
 Full module specification. Loaded on demand via the /module skill or @docs/SPEC.md. Not loaded every session.
 
-**Since 2026-09-07 the design bundle is the screen spec.** Each module is built to its prototype in the Omelette handoff, and docs/plans/design-build.md is the build plan. Where this file and a prototype disagree about what a screen shows, the prototype wins. Four things this file describes are absent from the prototypes and stay here as a follow-on pass after each module's screen ships: the Ideas research rubric with citations and depth, Meals cook mode, the Travel cents-per-point calculator, and Fitness workout plans with coach proposals.
+**Since 2026-09-07 the design bundle is the screen spec.** Each module is built to its prototype in the Omelette handoff, and docs/plans/design-build.md is the build plan. Where this file and a prototype disagree about what a screen shows, the prototype wins.
+
+**The prototype governs layout, copy, spacing and colour. It does not govern type or shape.** Those come from the ComeauxVerse brand layer per the 2026-09-08 decision: Manrope alone, no monospace webfont, 12px and 8px radii. The bundle's Space Grotesk, JetBrains Mono and radius 0 are not the app's type and shape system and nothing built should be moved back to them.
+
+Four things this file describes were absent from the prototypes and were held as a follow-on pass until each module's screen shipped. Three are now built: the Travel cents-per-point calculator (`modules/travel/globe.ts`), Meals cook mode (`modules/meals/scale.ts`), and Fitness workout plans with coach proposals (`modules/fitness/coach.ts`). One is not: the Ideas research rubric with citations and depth, which needs a decision about web search first, since search costs money against a $10 a month cap.
 
 Single-user, self-built personal operating system. Replaces a Notion setup. Modular by design: each module owns its data, its ingestion, and its tools. One orchestrator agent reads module digests and compiles a dashboard.
 

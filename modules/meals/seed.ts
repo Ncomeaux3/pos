@@ -59,7 +59,7 @@ const RECIPES: Recipe[] = [
     kcal: 540, protein: 44, carbs: 46, fat: 14,
     tags: ['dinner', 'batch', 'high-protein'],
     favourite: true,
-    ingredients: [['Ground turkey', '900 g'], ['Kidney beans', '2 cans'], ['Crushed tomatoes', '800 g'], ['Onion', '1'], ['Bell pepper', '2'], ['Chili powder', '2 tbsp']],
+    ingredients: [['Ground turkey', '900 g'], ['Kidney beans', '2 cans'], ['Crushed tomatoes', '800 g'], ['Onion', '1'], ['Bell pepper', '2'], ['Chili powder', '2 tbsp'], ['Olive oil', 'a splash']],
     steps: ['Brown the turkey with the onion.', 'Add pepper, spices, tomatoes and beans.', 'Simmer thirty minutes.'],
   },
   {

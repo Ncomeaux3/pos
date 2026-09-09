@@ -989,3 +989,52 @@ test('insurance, renewing keeps the same row', async ({ page }) => {
   await expect(page.getByText(/Same row, so the history stays together/)).toBeVisible()
   await expect(page.getByRole('button', { name: /Apartment, renters/ })).toHaveCount(before)
 })
+
+test('meals, cook mode scales what can be scaled and says what cannot', async ({ page }) => {
+  await page.goto('/meals?tab=recipes')
+  await page.getByRole('button', { name: /Turkey chili/ }).click()
+  await page.getByRole('button', { name: 'Cook this' }).click()
+
+  // One step at a time, in type you can read from across a kitchen.
+  await expect(page.getByText('Cooking / step 1 of 3')).toBeVisible()
+  await expect(page.getByText('900 g')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Next step' }).click()
+  await expect(page.getByText('Cooking / step 2 of 3')).toBeVisible()
+
+  // Twelve servings of a recipe that makes six is everything doubled, except
+  // the splash of oil, which is not a measurement.
+  await page.getByRole('radio', { name: '12', exact: true }).click()
+  await expect(page.getByText('1800 g')).toBeVisible()
+  await expect(page.getByText('a splash', { exact: true })).toBeVisible()
+  await expect(page.getByText(/Half a splash is not a measurement/)).toBeVisible()
+
+  await shoot(page, 'meals-cook')
+})
+
+test('fitness, the plan is what the coach measures a week against', async ({ page }) => {
+  await page.goto('/fitness?tab=plan')
+
+  await expect(page.getByText('Upper, lower, run')).toBeVisible()
+  await expect(page.getByText('3 days a week')).toBeVisible()
+
+  // Grouped by the plan's own day labels, not by weekday: a plan is not a
+  // calendar, and pinning one to Tuesdays makes every missed Tuesday a failure.
+  await expect(page.getByText('Bench press')).toBeVisible()
+  await expect(page.getByText('4 x 5 at 185 lb')).toBeVisible()
+  await expect(page.getByText('AMRAP')).toBeVisible()
+
+  await shoot(page, 'fitness-plan')
+})
+
+test('fitness, the coach proposes and cannot change the plan itself', async ({ page }) => {
+  await page.goto('/fitness?tab=plan')
+
+  // It says what it is and what it will not do.
+  await expect(page.getByText(/It cannot change this plan/)).toBeVisible()
+  await expect(page.getByText('Waiting in Review')).toBeVisible()
+
+  // And the suggestion is a proposal in the inbox, not a change to the plan.
+  await page.getByRole('link', { name: 'Open the Review inbox' }).click()
+  await expect(page.getByRole('button', { name: /Add a little weight/ })).toBeVisible()
+})

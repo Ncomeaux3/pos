@@ -1,15 +1,20 @@
 import { MetricTile, PageHeader } from '@/components/pos'
-import { latestMetrics, listExercises, listWorkouts, thisWeek } from '../data'
+import { listProposals } from '@/core/proposals'
+import { activePlan, latestMetrics, listExercises, listPlanItems, listWorkouts, thisWeek } from '../data'
 import { load, mass } from '../units'
 import { Fitness, type FitnessData } from './Fitness'
 
 export default async function FitnessPage() {
-  const [workouts, week, metrics, exercises] = await Promise.all([
+  const [workouts, week, metrics, exercises, plan, pending] = await Promise.all([
     listWorkouts(),
     thisWeek(),
     latestMetrics(),
     listExercises(),
+    activePlan(),
+    listProposals('pending'),
   ])
+
+  const items = plan ? await listPlanItems(plan.id) : []
 
   const data: FitnessData = {
     workouts: workouts.map((w) => ({
@@ -40,6 +45,31 @@ export default async function FitnessPage() {
       measuredOn: m.measured_on,
     })),
     exercises: exercises.map((e) => ({ id: e.id, name: e.name, sets: Number(e.sets) })),
+    plan:
+      plan === null
+        ? null
+        : {
+            id: plan.id,
+            name: plan.name,
+            goal: plan.goal,
+            daysPerWeek: plan.days_per_week,
+            notes: plan.notes,
+            startedOn: plan.started_on,
+            items: items.map((i) => ({
+              id: i.id,
+              dayLabel: i.day_label,
+              exercise: i.exercise,
+              sets: i.sets,
+              reps: i.reps,
+              targetWeightG: i.target_weight_g === null ? null : Number(i.target_weight_g),
+              notes: i.notes,
+            })),
+          },
+    // Read through core rather than this module's own tables: a proposal
+    // belongs to the Review inbox, and this screen only says one is waiting.
+    waiting: pending
+      .filter((p) => p.module === 'fitness')
+      .map((p) => p.title ?? 'A suggestion is waiting'),
   }
 
   // The heaviest thing lifted, whatever it was. A KPI worth having only when

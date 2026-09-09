@@ -67,6 +67,18 @@ export async function callTool(
      */
     revert?: Record<string, unknown> | null
     diff?: Diff[]
+    /**
+     * What the Review inbox calls this, in the words the owner would use.
+     *
+     * Without it a proposal is titled `module.tool`, which tells a reader which
+     * function wanted to run and nothing about what it would do. The row is the
+     * whole decision surface, so the title is not decoration.
+     */
+    title?: string
+    /** 0 to 1, when the caller has a real one. Never invented here. */
+    confidence?: number
+    evidence?: string
+    affects?: string
   },
 ): Promise<CallResult> {
   const manifest = getModule(moduleId)
@@ -105,6 +117,21 @@ export async function callTool(
       agent: ctx.agent ?? 'agent',
       reason: ctx.reason ?? `${moduleId}.${toolName} proposed a write.`,
       guarded: guarded.includes(toolName),
+      // Everything the caller knows about why, carried through. A proposal the
+      // owner cannot read is one they cannot decide, and the same diff that
+      // makes the Agent Log's Undo legible makes this row legible.
+      title: ctx.title,
+      confidence: ctx.confidence,
+      evidence: ctx.evidence,
+      affects: ctx.affects,
+      // The write log carries a diff of unknowns and the proposal renders
+      // strings, which is the same conversion the Agent Log does before it
+      // hands a row to DiffRow. Done here so a caller passes one shape.
+      diff: ctx.diff?.map((d) => ({
+        field: d.field,
+        before: d.before === null || d.before === undefined ? null : String(d.before),
+        after: d.after === null || d.after === undefined ? null : String(d.after),
+      })),
     })
     return { status: 'proposed', proposalId: id }
   }

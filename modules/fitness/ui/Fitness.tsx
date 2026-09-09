@@ -1,9 +1,13 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
+  Card,
+  CardHead,
   Chip,
   EmptyState,
+  Eyebrow,
   Row,
   RowList,
   TabBar,
@@ -31,6 +35,25 @@ export type FitnessData = {
   weekLoad: number
   metrics: { kind: string; value: number; measuredOn: string }[]
   exercises: { id: string; name: string; sets: number }[]
+  plan: {
+    id: string
+    name: string
+    goal: string
+    daysPerWeek: number
+    notes: string
+    startedOn: string | null
+    items: {
+      id: string
+      dayLabel: string
+      exercise: string
+      sets: number
+      reps: string
+      targetWeightG: number | null
+      notes: string
+    }[]
+  } | null
+  /** Coach suggestions waiting in the Review inbox, by headline. */
+  waiting: string[]
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -79,6 +102,7 @@ export function Fitness({ data }: { data: FitnessData }) {
           { value: 'workouts', label: 'Workouts', count: data.workouts.length },
           { value: 'exercises', label: 'Exercises', count: data.exercises.length },
           { value: 'body', label: 'Body', count: data.metrics.length },
+          { value: 'plan', label: 'Plan', count: data.plan?.items.length ?? 0 },
         ]}
       />
 
@@ -154,6 +178,92 @@ export function Fitness({ data }: { data: FitnessData }) {
             ))}
           </RowList>
         ))}
+
+      {tab === 'plan' &&
+        (data.plan === null ? (
+          <EmptyState headline="No plan">
+            A plan is what the coach measures a week against. Without one it says nothing about
+            missed sessions, because there is no target to have missed.
+          </EmptyState>
+        ) : (
+          <div className="space-y-4">
+            <Card className="space-y-2.5">
+              <CardHead
+                label={data.plan.name}
+                meta={`${data.plan.daysPerWeek} days a week`}
+              />
+              {data.plan.goal && <p className="t-caption text-ink-2">{data.plan.goal}</p>}
+              {data.plan.startedOn && (
+                <p className="t-caption text-ink-3">Started {data.plan.startedOn}</p>
+              )}
+              {data.plan.notes && (
+                <p className="t-caption whitespace-pre-line border-t border-rule pt-2 text-ink-2">
+                  {data.plan.notes}
+                </p>
+              )}
+            </Card>
+
+            {DAYS_OF(data.plan.items).map(([day, items]) => (
+              <Card key={day} className="space-y-2.5">
+                <CardHead label={day || 'Any day'} meta={`${items.length}`} />
+                <RowList>
+                  {items.map((i) => (
+                    <Row
+                      key={i.id}
+                      title={i.exercise}
+                      meta={i.notes}
+                      right={
+                        <span className="num text-[12px] text-ink-2">
+                          {i.sets} x {i.reps || 'as written'}
+                          {i.targetWeightG === null ? '' : ` at ${mass(i.targetWeightG)}`}
+                        </span>
+                      }
+                    />
+                  ))}
+                </RowList>
+              </Card>
+            ))}
+
+            <Card className="space-y-2">
+              <CardHead label="The coach" meta="weekly" />
+              <p className="t-caption text-ink-2">
+                Deterministic rules over the training log, not a model: a layoff, a volume spike, a
+                lift with no personal best in three sessions, a week that fell short of the plan.
+                Most weeks it has nothing to say, which is the point.
+              </p>
+              <p className="t-caption text-ink-3">
+                It cannot change this plan. Every suggestion lands in the Review inbox as a
+                proposal and stays there until you approve it.
+              </p>
+              {data.waiting.length > 0 && (
+                <div className="space-y-1.5 border-t border-rule pt-2">
+                  <Eyebrow>Waiting in Review</Eyebrow>
+                  {data.waiting.map((w) => (
+                    <p key={w} className="t-caption text-ink-2">
+                      {w}
+                    </p>
+                  ))}
+                  <Link className="t-caption text-brand" href="/review">
+                    Open the Review inbox
+                  </Link>
+                </div>
+              )}
+            </Card>
+          </div>
+        ))}
     </div>
   )
+}
+
+/** Plan items grouped by their day label, in the order the plan lists them. */
+function DAYS_OF(
+  items: NonNullable<FitnessData['plan']>['items'],
+): [string, NonNullable<FitnessData['plan']>['items']][] {
+  const days: [string, NonNullable<FitnessData['plan']>['items']][] = []
+  for (const item of items) {
+    const found = days.find(([label]) => label === item.dayLabel)
+    if (found) found[1].push(item)
+    else days.push([item.dayLabel, [item]])
+  }
+  return days
 }

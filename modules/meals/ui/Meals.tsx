@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useTransition } from 'react'
+import { useEffect, useTransition } from 'react'
 import {
   ActionButton,
   Card,
@@ -10,6 +10,7 @@ import {
   EmptyState,
   Eyebrow,
   MetricTile,
+  PillGroup,
   Row,
   RowList,
   StatusChip,
@@ -19,6 +20,7 @@ import {
 } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { groceryList, standing, total, type Macros } from '../macros'
+import { scaleQuantity, servingFactor } from '../scale'
 import { decideRecipe, markEaten, planMeal, type ActionResult } from './actions'
 
 export type MealsData = {
@@ -63,6 +65,7 @@ export function Meals({ data }: { data: MealsData }) {
   const params = useSearchParams()
   const tab = params.get('tab') ?? 'week'
   const openRecipe = data.recipes.find((r) => r.id === params.get('recipe')) ?? null
+  const cooking = data.recipes.find((r) => r.id === params.get('cook')) ?? null
 
   const setParams = (next: Record<string, string | null>) => {
     const search = new URLSearchParams(params.toString())
@@ -95,6 +98,19 @@ export function Meals({ data }: { data: MealsData }) {
   const plannedRecipes = data.plan
     .map((p) => data.recipes.find((r) => r.id === p.recipeId))
     .filter((r): r is MealsData['recipes'][number] => r !== undefined)
+
+  // Cooking takes the whole screen. Standing at a hob with wet hands is not the
+  // moment for a tab bar, four metric tiles and a week grid.
+  if (cooking) {
+    return (
+      <CookMode
+        recipe={cooking}
+        step={Math.max(0, Number(params.get('step') ?? 0))}
+        servings={Number(params.get('servings') ?? cooking.servings) || cooking.servings}
+        onChange={setParams}
+      />
+    )
+  }
 
   return (
     <div className="space-y-5">
@@ -293,6 +309,15 @@ export function Meals({ data }: { data: MealsData }) {
                   </div>
                 )}
 
+                {openRecipe.steps.length > 0 && (
+                  <ActionButton
+                    variant="brand"
+                    onClick={() => setParams({ cook: openRecipe.id, step: '0' })}
+                  >
+                    Cook this
+                  </ActionButton>
+                )}
+
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {SLOTS.map((s) => (
                     <ActionButton
@@ -375,6 +400,142 @@ export function Meals({ data }: { data: MealsData }) {
             ))}
           </RowList>
         ))}
+    </div>
+  )
+}
+
+/**
+ * One step at a time, in type you can read from arm's length.
+ *
+ * The step and the servings live in the URL like every other piece of view
+ * state in this app, so a reload in a kitchen does not lose your place and a
+ * screenshot is honest about which step it was on.
+ */
+function CookMode({
+  recipe,
+  step,
+  servings,
+  onChange,
+}: {
+  recipe: MealsData['recipes'][number]
+  step: number
+  servings: number
+  onChange: (next: Record<string, string | null>) => void
+}) {
+  // Keep the screen awake while cooking. A phone that sleeps between step four
+  // and step five is the whole reason a paper recipe still beats a screen.
+  // Best effort: it is refused in some browsers and absent in others, and
+  // neither is a failure worth telling anyone about.
+  useEffect(() => {
+    let held: { release: () => Promise<void> } | null = null
+    let cancelled = false
+
+    const wakeLock = (navigator as Navigator & {
+      wakeLock?: { request: (type: 'screen') => Promise<{ release: () => Promise<void> }> }
+    }).wakeLock
+
+    wakeLock
+      ?.request('screen')
+      .then((lock) => {
+        if (cancelled) void lock.release()
+        else held = lock
+      })
+      .catch(() => {})
+
+    return () => {
+      cancelled = true
+      void held?.release().catch(() => {})
+    }
+  }, [])
+
+  const last = recipe.steps.length - 1
+  const current = Math.min(step, last)
+  const factor = servingFactor(recipe.servings, servings)
+  const scaled = recipe.ingredients.map((i) => ({ ...i, ...scaleQuantity(i.quantity, factor) }))
+  const unscalable = scaled.filter((i) => i.quantity !== '' && !i.scaled)
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <Eyebrow>
+            Cooking / step {current + 1} of {recipe.steps.length}
+          </Eyebrow>
+          <h2 className="t-title text-ink">{recipe.name}</h2>
+        </div>
+        <ActionButton onClick={() => onChange({ cook: null, step: null, servings: null })}>
+          Close
+        </ActionButton>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Eyebrow>Servings</Eyebrow>
+        <PillGroup
+          label="Servings to cook"
+          value={String(servings)}
+          options={[1, 2, 4, 6, 8, 12].map((n) => ({ value: String(n), label: String(n) }))}
+          onChange={(next) => onChange({ servings: next })}
+        />
+        <span className="t-caption text-ink-3">recipe makes {recipe.servings}</span>
+      </div>
+
+      <div className="flex flex-wrap items-start gap-x-6 gap-y-5">
+        <div className="min-w-0 flex-[2_1_420px] space-y-4">
+          <p className="text-[26px] leading-[1.35] text-ink sm:text-[30px]">
+            {recipe.steps[current]}
+          </p>
+
+          <div className="flex flex-wrap gap-2">
+            <ActionButton
+              disabled={current === 0}
+              onClick={() => onChange({ step: String(current - 1) })}
+            >
+              Back
+            </ActionButton>
+            <ActionButton
+              variant="brand"
+              disabled={current === last}
+              onClick={() => onChange({ step: String(current + 1) })}
+            >
+              Next step
+            </ActionButton>
+            {current === last && (
+              <ActionButton onClick={() => onChange({ cook: null, step: null, servings: null })}>
+                Done
+              </ActionButton>
+            )}
+          </div>
+
+          <div className="flex gap-1" aria-hidden>
+            {recipe.steps.map((s, i) => (
+              <span
+                key={s}
+                className={cn('h-0.5 flex-1', i <= current ? 'bg-brand' : 'bg-rule-2')}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="min-w-0 flex-[1_1_240px] space-y-2.5">
+          <Eyebrow>Ingredients</Eyebrow>
+          {scaled.map((i) => (
+            <p key={i.item} className="text-[15px] leading-snug text-ink-2">
+              <span className={cn('num', i.scaled && factor !== 1 && 'text-brand')}>{i.text}</span>
+              {i.text ? ' ' : ''}
+              {i.item}
+            </p>
+          ))}
+
+          {factor !== 1 && unscalable.length > 0 && (
+            <p className="t-caption border-t border-rule pt-2 text-ink-3">
+              {unscalable.map((i) => i.item).join(', ')}{' '}
+              {unscalable.length === 1 ? 'is' : 'are'} written as words rather than a number, so{' '}
+              {unscalable.length === 1 ? 'it is' : 'they are'} unchanged. Half a splash is not a
+              measurement.
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

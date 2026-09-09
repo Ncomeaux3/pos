@@ -58,3 +58,21 @@ looking broken.
 An imported recipe already lands as a `draft` and waits in the inbox, which is
 this module's version of the gate. Planning a meal is reversible by planning a
 different one, and nothing here spends money or changes a commitment.
+
+## Cook mode scales what can be scaled
+
+One step at a time in 30px type, the ingredients beside it, and the screen
+kept awake, because a phone that sleeps between step four and step five is why
+a paper recipe still beats a screen.
+
+Quantities scale by the servings you pick, and only the leading number moves.
+"2 x 180 g" doubled is "4 x 180 g": the 180 is the size of the fillet, not a
+count, and scaling both would turn two fillets into four twice as large.
+
+A quantity with no number comes back exactly as written and the screen names
+it. Half a splash is not a measurement, and inventing one would be worse than
+leaving the cook to judge it. That is the same stance the grocery list takes
+about adding grams to cloves.
+
+The step and the servings are in the URL, so a reload in a kitchen does not
+lose your place.

@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
+import { coachReview } from './jobs/coach'
 import { nightlyDigest } from './jobs/nightly-digest'
 import { thisWeek } from './data'
 import { load } from './units'
@@ -118,17 +119,124 @@ export default defineModule({
         return { kind: input.kind, value: input.value }
       },
     }),
+    write_plan: defineTool({
+      description:
+        'Create or change the training plan. The coach reaches a plan only through this, and only as a proposal.',
+      input: z.object({
+        id: z.uuid().optional(),
+        name: z.string().min(1).max(200).optional(),
+        goal: z.string().max(500).optional(),
+        days_per_week: z.number().int().min(1).max(7).optional(),
+        notes: z.string().max(4000).optional(),
+        status: z.enum(['active', 'archived']).optional(),
+        started_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+        items: z
+          .array(
+            z.object({
+              day_label: z.string().max(60).default(''),
+              exercise: z.string().min(1).max(200),
+              sets: z.number().int().min(1).max(20).default(3),
+              /** '5', '8-12', 'AMRAP'. A number column would reject two of three. */
+              reps: z.string().max(40).default(''),
+              target_weight_g: z.number().int().min(0).nullable().optional(),
+              notes: z.string().max(500).default(''),
+            }),
+          )
+          .max(60)
+          .optional(),
+      }),
+      run: async (input) => {
+        const { id, items, ...rest } = input
+
+        // Every key is a literal from the zod schema above, a closed set.
+        const fields = Object.entries(rest).filter(([, value]) => value !== undefined)
+
+        let planId = id
+        if (planId) {
+          if (fields.length > 0) {
+            const set = fields.map(([key], i) => `${key} = $${i + 2}`).join(', ')
+            await db().query(`update fitness.plan set ${set} where id = $1`, [
+              planId,
+              ...fields.map(([, value]) => value),
+            ])
+          }
+        } else {
+          if (!input.name) throw new Error('A new plan needs a name')
+
+          // One plan is in force at a time. Archiving the old one is part of
+          // writing the new one, or two plans both claim to be the plan.
+          await db().query(`update fitness.plan set status = 'archived' where status = 'active'`)
+
+          const columns = fields.map(([key]) => key).join(', ')
+          const params = fields.map((unused, i) => `$${i + 1}`).join(', ')
+          const { rows } = await db().query<{ id: string }>(
+            `insert into fitness.plan (${columns}) values (${params}) returning id`,
+            fields.map(([, value]) => value),
+          )
+          planId = rows[0].id
+        }
+
+        // Items are an ordered list owned by the plan, so they are cleared and
+        // rewritten rather than diffed. Passing none leaves them alone.
+        if (items) {
+          await db().query(`delete from fitness.plan_item where plan_id = $1`, [planId])
+          for (const [position, item] of items.entries()) {
+            await db().query(
+              `insert into fitness.plan_item
+                 (plan_id, day_label, exercise, sets, reps, target_weight_g, notes, position)
+               values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+              [
+                planId,
+                item.day_label,
+                item.exercise,
+                item.sets,
+                item.reps,
+                item.target_weight_g ?? null,
+                item.notes,
+                position,
+              ],
+            )
+          }
+        }
+
+        const { rows: named } = await db().query<{ name: string }>(
+          `select name from fitness.plan where id = $1`,
+          [planId],
+        )
+        await register({
+          module: 'fitness',
+          entityType: 'plan',
+          entityId: planId!,
+          title: named[0].name,
+          text: input.goal ?? '',
+          eventType: 'plan_written',
+        })
+
+        return { id: planId }
+      },
+    }),
+
+    coach_review: defineTool({
+      description:
+        'Run the weekly coach over the training log. It returns what it would suggest; proposing is the only thing that writes.',
+      input: z.object({}),
+      run: () => coachReview(),
+    }),
   },
 
   /**
-   * Nothing is guarded.
+   * Only the plan is guarded.
    *
-   * A workout is a record of something that already happened, and a body
-   * measurement is a reading. Neither is a decision an agent could get wrong in
-   * a way an approval would catch, and a nightly Strava import behind the
-   * Review inbox would fill it with two hundred rows nobody would read.
+   * A workout is a record of something that already happened and a body
+   * measurement is a reading: neither is a decision an approval would catch,
+   * and a nightly Strava import behind the Review inbox would fill it with two
+   * hundred rows nobody would read.
+   *
+   * A plan is the opposite. It is the thing the owner agreed to do, and SPEC is
+   * explicit that the coach proposes rather than decides, so the coach has no
+   * unguarded path to one.
    */
-  guarded: [],
+  guarded: ['write_plan'],
   requires: ['strava'],
 
   metrics: {
@@ -160,6 +268,11 @@ export default defineModule({
     },
   },
 
-  jobs: [{ name: 'nightly_digest', run: nightlyDigest }],
-  entityTypes: ['workout'],
+  jobs: [
+    { name: 'nightly_digest', run: nightlyDigest },
+    // Runs with the others and proposes at most once a fortnight per
+    // suggestion, so a nightly cron does not become a nightly nag.
+    { name: 'coach_review', run: coachReview },
+  ],
+  entityTypes: ['workout', 'plan'],
 })

@@ -55,3 +55,32 @@ banner rather than a wall, everything here works on hand-logged sessions.
 metrics return dollars: a goal target is typed in the unit a person uses, and a
 metric returning grams would read as a four hundred thousandfold overshoot on
 the Goals screen.
+
+## The plan, and a coach that cannot touch it
+
+SPEC section 3 says the coaching agent proposes plan adjustments and the owner
+approves. That is held literally: `write_plan` is the module's only guarded
+tool, and the coach has no other path to a plan. Every suggestion becomes a row
+in `core.proposals` and the plan does not move until you say so.
+
+The rules are deterministic and live in `coach.ts` with tests. A layoff of ten
+days or more, a week over week load jump of half again, a lift with no personal
+best in three sessions, a week that fell short of the plan while load fell with
+it. Most weeks it says nothing, and that is the point: a coach that proposes
+something every week is noise, and noise in the Review inbox is how an inbox
+stops being read.
+
+No model call. "You jumped fifty percent in a week, back off" is not a
+judgement worth paying for, and not one that should come out differently on two
+Sundays with the same numbers.
+
+A suggestion already waiting is not repeated for a fortnight, so a nightly cron
+does not become a nightly nag.
+
+With no plan there is no target to fall short of, so the rules about missed
+sessions say nothing at all rather than inventing a target you never agreed to.
+
+`plan_item.reps` is text: '5', '8-12' and 'AMRAP' are all real, and a number
+column would reject two of the three. `day_label` is free text for the same
+reason a plan is not a calendar: pinning one to weekdays makes every missed
+Tuesday look like a failure.

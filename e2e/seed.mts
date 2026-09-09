@@ -54,6 +54,15 @@ const ideaCount = await seedIdeas()
 const homeCount = await seedHome()
 const policyCount = await seedInsurance()
 
+// The coach runs against the seeded history for the same reason the subscription
+// detector does: the Plan tab has to show what the rules actually produced. It
+// proposes rather than writes, so what this leaves behind is one pending row in
+// the Review inbox. Cleared first, because its own repeat guard would otherwise
+// make the fixture depend on whether a previous run left one.
+await db().query(`delete from core.proposals where module = 'fitness'`)
+const { coachReview } = await import('@/modules/fitness/jobs/coach')
+const coached = await coachReview()
+
 // The detector runs against the seeded history rather than the fixture listing
 // its own answers: the screen has to show what detectRecurring actually found.
 const { detectSubscriptions, snapshotBalances } = await import('@/modules/finance/jobs/nightly-digest')
@@ -205,5 +214,5 @@ await db().query(
   ],
 )
 
-console.log(`seeded ${notes} notes, indexed ${index.indexed}, embedded ${index.embedded}, 2 proposals, 7 alerts, 2 runs, ${taskCount} tasks, ${goalCount} goals, ${txCount} transactions, ${detected.found} subscriptions detected, ${brainCount} notes, ${travelCount} travel rows, ${fitCount} workouts, ${healthCount} health rows, ${mealCount} meal rows, ${ideaCount} ideas, ${homeCount} home rows, ${policyCount} policies`)
+console.log(`seeded ${notes} notes, indexed ${index.indexed}, embedded ${index.embedded}, 2 proposals, 7 alerts, 2 runs, ${taskCount} tasks, ${goalCount} goals, ${txCount} transactions, ${detected.found} subscriptions detected, ${brainCount} notes, ${travelCount} travel rows, ${fitCount} workouts, ${healthCount} health rows, ${mealCount} meal rows, ${ideaCount} ideas, ${homeCount} home rows, ${policyCount} policies, ${coached.proposed} coach proposal`)
 process.exit(0)

@@ -96,3 +96,83 @@ export async function thisWeek(): Promise<{ kind: string; duration_s: number }[]
   )
   return rows
 }
+
+export type PlanRow = {
+  id: string
+  name: string
+  goal: string
+  days_per_week: number
+  notes: string
+  status: string
+  started_on: string | null
+}
+
+export type PlanItemRow = {
+  id: string
+  plan_id: string
+  day_label: string
+  exercise: string
+  sets: number
+  reps: string
+  target_weight_g: string | null
+  notes: string
+  position: number
+}
+
+/** The plan in force, or null when there is none. Only one is ever active. */
+export async function activePlan(): Promise<PlanRow | null> {
+  const { rows } = await db().query<PlanRow>(
+    `select id, name, goal, days_per_week, notes, status, started_on::text
+       from fitness.plan where status = 'active'
+      order by started_on desc nulls last limit 1`,
+  )
+  return rows[0] ?? null
+}
+
+export async function listPlanItems(planId: string): Promise<PlanItemRow[]> {
+  const { rows } = await db().query<PlanItemRow>(
+    `select id, plan_id, day_label, exercise, sets, reps, target_weight_g::text,
+            notes, position
+       from fitness.plan_item where plan_id = $1 order by position`,
+    [planId],
+  )
+  return rows
+}
+
+/**
+ * Lifts with no personal best since some number of sessions ago.
+ *
+ * The personal best is the heaviest set ever recorded for that lift, and the
+ * count is how many workouts have touched the lift since the one that set it.
+ * Crude on purpose: reps are not in it, so eight at 100 does not beat five at
+ * 100 here. The coach only uses it to decide whether to say anything, and a
+ * subtler measure would be a stronger claim than the data supports.
+ */
+export async function stalledLifts(): Promise<{ exercise: string; sessions: number }[]> {
+  const { rows } = await db().query<{ exercise: string; sessions: number }>(
+    `with best as (
+       select e.name, max(s.weight_g) as best_g
+         from fitness.set_entry s
+         join fitness.exercise e on e.id = s.exercise_id
+        where s.weight_g > 0
+        group by e.name
+     ),
+     pr as (
+       select b.name, max(w.started_at) as pr_at
+         from best b
+         join fitness.exercise e on e.name = b.name
+         join fitness.set_entry s on s.exercise_id = e.id and s.weight_g = b.best_g
+         join fitness.workout w on w.id = s.workout_id
+        group by b.name
+     )
+     select pr.name as exercise,
+            (select count(distinct w2.id)
+               from fitness.set_entry s2
+               join fitness.exercise e2 on e2.id = s2.exercise_id
+               join fitness.workout w2 on w2.id = s2.workout_id
+              where e2.name = pr.name and w2.started_at > pr.pr_at)::int as sessions
+       from pr
+      order by 2 desc`,
+  )
+  return rows.filter((r) => r.sessions > 0)
+}
