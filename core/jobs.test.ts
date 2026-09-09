@@ -12,6 +12,14 @@ beforeEach(async () => {
   await db().query('delete from core.digests')
   await db().query('delete from core.request_log')
   await db().query('delete from core.settings')
+
+  // Quiet hours default to 22:00, and these tests are about what is queued, not
+  // about the delivery window. Without this they pass or fail on the clock.
+  // From and to being equal is an empty window, so nothing is held back.
+  await db().query(
+    `insert into core.settings (key, value)
+     values ('quiet_from', '"00:00"'), ('quiet_to', '"00:00"')`,
+  )
 })
 
 describe('runJob', () => {

@@ -813,3 +813,71 @@ test('health, marking a medication does not break the streak on an unmarked toda
   await page.getByRole('switch', { name: 'Taken today, Vitamin D' }).click()
   await expect(page.getByText(/7 day run/).first()).toBeVisible()
 })
+
+test('meals, a plan is not a log', async ({ page }) => {
+  await page.goto('/meals')
+  await expect(page.getByRole('heading', { name: 'Meals' })).toBeVisible()
+
+  // Planned and eaten are separate totals of the same rows, side by side.
+  // Conflating them makes both useless.
+  await expect(page.getByText('Planned', { exact: true })).toBeVisible()
+  await expect(page.getByText('ticked only')).toBeVisible()
+
+  // The calorie target comes from Fitness through the registry, and is
+  // labelled an estimate rather than presented as a prescription.
+  await expect(page.getByText(/fifteen calories a pound/)).toBeVisible()
+
+  await shoot(page, 'meals')
+})
+
+test('meals, the grocery list lists quantities rather than adding them', async ({ page }) => {
+  await page.goto('/meals?tab=grocery')
+
+  // Chicken thigh appears in one planned recipe; garlic in the same. The point
+  // is the explanation under the list, which is the honest half.
+  await expect(page.getByText('Chicken thigh')).toBeVisible()
+  await expect(page.getByText(/Grams and cloves and splashes do not sum/)).toBeVisible()
+
+  await shoot(page, 'meals-grocery')
+})
+
+test('meals, an imported recipe waits in the inbox', async ({ page }) => {
+  await page.goto('/meals?tab=inbox')
+
+  await expect(page.getByText('Sheet pan salmon')).toBeVisible()
+  await expect(page.getByText('Draft')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Accept' }).first().click()
+  await expect(page.getByText('Added to the library')).toBeVisible()
+
+  await page.goto('/meals?tab=recipes')
+  await expect(page.getByText('Sheet pan salmon')).toBeVisible()
+})
+
+test('ideas, the board sorts by quadrant and keeps what was killed', async ({ page }) => {
+  await page.goto('/ideas')
+  await expect(page.getByRole('heading', { name: 'Ideas' })).toBeVisible()
+
+  // Quick wins first. Voice capture is cheap and high impact; per module themes
+  // are expensive and low.
+  await expect(page.getByText('Voice capture for tasks')).toBeVisible()
+  await expect(page.getByText('Quick win').first()).toBeVisible()
+
+  // Untouched for two months is named, not decided: the card offers the choice
+  // rather than making it.
+  await expect(page.getByText('Not moving')).toBeVisible()
+  await expect(page.getByText(/Naming that is not the same as killing it/)).toBeVisible()
+
+  await shoot(page, 'ideas')
+})
+
+test('ideas, a killed idea keeps its reason', async ({ page }) => {
+  await page.goto('/ideas?stage=killed')
+
+  // Kept rather than deleted, because the reason is what stops the same idea
+  // arriving again in six months.
+  await expect(page.getByText('Automatic crypto tax lots')).toBeVisible()
+  await expect(page.getByText(/none of it reconciles/)).toBeVisible()
+
+  await shoot(page, 'ideas-killed')
+})
