@@ -651,6 +651,25 @@ test('second brain, the inbox holds a draft beside its source', async ({ page })
   await shoot(page, 'second-brain')
 })
 
+// SPEC section 6's ingestion. The fetch itself needs the network, so what is
+// checked here is the control being where a draft would arrive, and the
+// refusal that happens before any request goes out.
+test('second brain, a URL can be read into a draft', async ({ page }) => {
+  await page.goto('/brain')
+
+  const url = page.getByLabel('URL to read')
+  await expect(url).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Read it' })).toBeDisabled()
+
+  // A private address is refused before anything is fetched: this runs in a
+  // server action, so the request would go out from inside the deployment.
+  await url.fill('http://169.254.169.254/latest/meta-data/')
+  await page.getByRole('button', { name: 'Read it' }).click()
+  await expect(page.getByText(/private network/)).toBeVisible()
+
+  await shoot(page, 'second-brain-ingest')
+})
+
 test('second brain, links resolve both ways and a dangling one is kept', async ({ page }) => {
   await page.goto('/brain?folder=note')
 

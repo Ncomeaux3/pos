@@ -18,7 +18,7 @@ import {
 } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { renderPreview } from '../wikilinks'
-import { publishNote, saveNote, startFromLink, type ActionResult } from './actions'
+import { ingestFromUrl, publishNote, saveNote, startFromLink, type ActionResult } from './actions'
 
 // Folder rail, list, and a reading pane. The folder and the open note live in
 // the URL, so a note can be linked to and both survive a refresh.
@@ -61,6 +61,10 @@ export function Brain({ data }: { data: BrainData }) {
   }
 
   const [draft, setDraft] = useState('')
+  const [url, setUrl] = useState('')
+  // Separate from the transition: fetching a page and summarising it takes
+  // seconds, and a button that looks idle for that long gets pressed twice.
+  const [ingesting, setIngesting] = useState(false)
   const [, start] = useTransition()
   const toast = useToast()
 
@@ -70,6 +74,31 @@ export function Brain({ data }: { data: BrainData }) {
       if (!result.ok) toast(result.error)
       else if (ok) toast(ok)
     })
+
+  /**
+   * Paste a URL, get a draft.
+   *
+   * Awaited rather than run through the transition so the input can be
+   * disabled while it works. The ingest's own note, an automatic transcript or
+   * a summary the cap stopped, is surfaced instead of the bare success message
+   * when there is one: it is the difference between a draft to read and a
+   * draft to be careful about.
+   */
+  const ingest = async () => {
+    const value = url.trim()
+    if (!value || ingesting) return
+    setIngesting(true)
+    try {
+      const result = await ingestFromUrl(value)
+      if (!result.ok) toast(result.error)
+      else {
+        setUrl('')
+        toast(result.note ? result.note : 'Drafted. It is waiting in the inbox.')
+      }
+    } finally {
+      setIngesting(false)
+    }
+  }
 
   const inbox = data.notes.filter((n) => n.status === 'draft')
   const published = data.notes.filter((n) => n.status === 'published')
@@ -104,6 +133,32 @@ export function Brain({ data }: { data: BrainData }) {
 
       <div className="flex flex-wrap items-start gap-x-6 gap-y-5">
         <div className="min-w-0 flex-[1_1_420px] space-y-4">
+          {folder === 'inbox' && (
+            <div className="flex flex-wrap gap-2">
+              <input
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    void ingest()
+                  }
+                }}
+                disabled={ingesting}
+                aria-label="URL to read"
+                placeholder="Paste a link or a YouTube URL"
+                className={cn(fieldClass, 'min-w-0 flex-1 basis-[240px]')}
+              />
+              <ActionButton
+                variant="brand"
+                disabled={!url.trim() || ingesting}
+                onClick={() => void ingest()}
+              >
+                {ingesting ? 'Reading...' : 'Read it'}
+              </ActionButton>
+            </div>
+          )}
+
           {folder === 'note' && (
             <div className="flex flex-wrap gap-2">
               <input

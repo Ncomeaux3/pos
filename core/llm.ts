@@ -23,10 +23,17 @@ export type Model = keyof typeof PRICES
  * There was a third purpose, 'headline', for the sentence on the dashboard.
  * That is a template now: see writeHeadline in core/orchestrator.ts.
  */
-export type Purpose = 'classification' | 'research'
+export type Purpose = 'classification' | 'summary' | 'research'
 
-/** Only research is optional enough to stop. Classification keeps the system working. */
-const CAPPED_PURPOSES: Purpose[] = ['research']
+/**
+ * Purposes the soft cap can stop.
+ *
+ * Classification is not one: it keeps the system working and costs a fraction
+ * of a cent. Research and summarising are both owner-initiated and both
+ * degrade rather than break, a draft still arrives with the source text on it,
+ * so they are the two that stop when the month's budget is gone.
+ */
+const CAPPED_PURPOSES: Purpose[] = ['research', 'summary']
 
 /** Distinct from a call that failed: the provider was never connected. */
 export class NotConnected extends Error {

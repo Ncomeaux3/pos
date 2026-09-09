@@ -94,12 +94,70 @@ either way.
 to its file. Slugs come from the file **name** rather than the path, because
 that is how Obsidian resolves `[[DDIA]]` to `Books/Distributed/DDIA.md`.
 
-## What is still missing
+## Ingestion
 
-SPEC section 6 also asks for ingestion: a URL to readability text, a YouTube
-transcript, and a model that drafts a summary for the owner to approve. None of
-that is built. The draft state, the inbox and the review step all are, so the
-half that is missing is the fetching, not the reviewing.
+`ingest.ts`. Paste a URL on the inbox and a draft arrives: readable text out of
+the page, a transcript out of a YouTube link, and a summary the model drafts
+from whichever it got. The source is stored beside the summary, as every draft's
+is, so it is judged against what it was drawn from.
+
+**It is the one guarded tool in this module.** Everything else here is
+unguarded because the draft state already is the review step. Ingest is
+different for the reason Ideas guards research: it spends money on every call,
+and the draft state does not guard against that. An agent that decided to read
+forty links one night would be inside the monthly cap and still wrong. The owner
+pasting a URL is the approval; an agent asking lands in Review.
+
+**It always drafts, even for the owner.** Every other write tool publishes for
+the owner and drafts for an agent. This one drafts for everyone, because the
+body is something a model wrote and that is exactly what the inbox is for.
+
+**A page with almost no text in it is refused rather than summarised.** A
+paywall stub, a cookie wall and a page that renders in the browser all look the
+same from here, and a confident summary of an article nobody read is the worst
+thing this feature could do.
+
+**The summary is capped.** It is Haiku, about half a cent, and it counts against
+the same monthly cap research does. Reaching the cap does not break ingestion:
+the draft still arrives with the full source text and a line saying why there is
+no summary. Writing the note yourself is what a second brain is for.
+
+### Extraction has no dependency, by decision
+
+`extract.ts` is not Readability's algorithm and does not pretend to be. It drops
+what is definitionally not prose, prefers the tag that says "this is the
+article", turns block tags into line breaks and decodes entities. The bar is
+lower than a library's because the extracted text is shown beside the draft: a
+bad extraction is visible and correctable rather than silent.
+
+Three things its tests pin, all of which the obvious version gets wrong:
+
+- **`<[^>]+>` is not a tag.** `<a title="a > b">` ends that match early and
+  leaves `b">` in the note as text.
+- **Whitespace collapses before block tags become line breaks.** Otherwise a
+  newline inside a paragraph splits it, and an article arrives one line per
+  source line.
+- **A hyphen is not a title separator.** "Postgres - what the planner actually
+  does" is one headline, and treating the hyphen as a separator truncates it to
+  one word. Pipes and en dashes are separators; hyphens are not.
+
+### YouTube, and the deviation from SPEC
+
+SPEC says yt-dlp. It is a Python binary and Vercel's Node runtime cannot run
+one, so the choice was never between this and yt-dlp: it was between this and
+nothing. `youtube.ts` reads the caption track list off the watch page and
+fetches a track, which is what yt-dlp does for captions anyway.
+
+The endpoint is undocumented and can change. Every parser in that file returns
+nothing rather than throwing or guessing, and a video with no captions says so
+instead of producing a note about a video nobody watched. A written track beats
+an automatic one, and an automatic transcript is labelled as such on the draft.
+
+### What is still missing
+
+Book notes are still manual, which SPEC always said they would be. The other
+direction, proposing a commit back to the vault, is not built: the client is
+read only by construction and there is no write path to propose through yet.
 
 ## Backlinks are a table, not a query
 

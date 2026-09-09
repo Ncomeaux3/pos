@@ -5,6 +5,7 @@ import { defineModule, defineTool } from '@/core/module-contract'
 import { resolveDanglingLinks, syncLinks, uniqueSlug } from './data'
 import { nightlyDigest, resolveLinks } from './jobs/nightly-digest'
 import { pullVault } from './jobs/pull-vault'
+import { ingestUrl } from './ingest'
 import BrainPage from './ui/BrainPage'
 
 const kind = z.enum(['article', 'book', 'video', 'note', 'project', 'person', 'daily'])
@@ -19,6 +20,51 @@ export default defineModule({
       description: 'Inbox depth, what was written this week, and how many links point at nothing.',
       input: z.object({}),
       run: () => nightlyDigest(),
+    }),
+
+    ingest: defineTool({
+      description:
+        'Read a URL or a YouTube video and draft a note from it. Spends money: one Haiku call per ingest.',
+      input: z.object({ url: z.string().min(4).max(2000) }),
+      run: async ({ url }) => {
+        const found = await ingestUrl(url)
+        const slug = await uniqueSlug(found.title)
+
+        // Always a draft, whoever asked. The other tools let the owner write
+        // directly because the owner is the source of truth; this one produces
+        // something a model wrote, and that is exactly what the inbox is for.
+        const { rows } = await db().query<{ id: string }>(
+          `insert into brain.note
+             (title, body, slug, kind, status, source_url, source_text, source_meta, source)
+           values ($1, $2, $3, $4, 'draft', $5, $6, $7, 'agent')
+           returning id`,
+          [
+            found.title,
+            found.summary,
+            slug,
+            found.kind,
+            found.sourceUrl,
+            found.sourceText,
+            found.note.slice(0, 300),
+          ],
+        )
+
+        await syncLinks(rows[0].id, found.summary)
+        await resolveDanglingLinks(slug, rows[0].id)
+
+        await register({
+          module: 'brain',
+          entityType: 'note',
+          entityId: rows[0].id,
+          title: found.title,
+          text: found.summary,
+          // A draft is a proposal about a note. It earns nothing until the
+          // owner accepts it, which is what publish is for.
+          eventType: 'note_ingested',
+        })
+
+        return { id: rows[0].id, slug, title: found.title, note: found.note }
+      },
     }),
 
     write: defineTool({
@@ -124,13 +170,22 @@ export default defineModule({
   },
 
   /**
-   * Nothing is guarded, because the draft state already is the guard.
+   * Ingest is guarded. Nothing else in this module is.
    *
-   * An agent cannot publish: `write` from an agent produces a draft whatever it
-   * asks for, and `publish` is reached from the inbox. Guarding on top of that
-   * would put the same decision behind two approvals.
+   * The original reasoning still holds for every other tool: the draft state
+   * already is the review step, so an agent cannot publish anything. `write`
+   * from an agent produces a draft whatever it asks for, and `publish` is
+   * reached from the inbox. Guarding those would put one decision behind two
+   * approvals.
+   *
+   * Ingest is different for the reason Ideas guards research and nothing else.
+   * It spends real money on every call, and the draft state does not guard
+   * against that: an agent that decided to ingest forty links one night would
+   * be inside the monthly cap and still wrong. The owner pasting a URL is the
+   * approval; an agent asking lands in the Review inbox.
    */
-  guarded: [],
+  guarded: ['ingest'],
+
   requires: ['github_vault'],
 
   metrics: {

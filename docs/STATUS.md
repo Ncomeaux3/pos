@@ -83,8 +83,8 @@ refuses to do and why.
 ## Verification
 
 ```
-pnpm typecheck && pnpm lint && pnpm test    # 584 tests, 60 files
-pnpm test:e2e                               # 137 specs, 1440px and 402px, both themes
+pnpm typecheck && pnpm lint && pnpm test    # 637 tests, 63 files
+pnpm test:e2e                               # 139 specs, 1440px and 402px, both themes
 pnpm setup:demo                             # idempotent bootstrap
 ```
 
@@ -291,3 +291,36 @@ every sync skips and says so rather than failing the run.
   `listAlerts()`'s limit of 60, so the e2e seed owns `core.notifications`
   outright now, the same way it already owned `core.job_runs`. And two tests
   were completing the same task: the swipe gesture has its own row now.
+
+## Second Brain ingestion, 2026-09-09
+
+SPEC section 6's last unbuilt half. Paste a URL on the inbox and a draft
+arrives: readable text out of the page, a transcript out of a YouTube link, a
+Haiku summary of whichever it got, and the source stored beside it.
+
+**Two deviations from SPEC, both forced or argued:**
+
+- **yt-dlp is not used.** It is a Python binary and the Vercel Node runtime
+  cannot run one, so the choice was between the caption endpoint and no
+  transcripts at all. SPEC is amended.
+- **Extraction is hand rolled, no parser dependency.** The extracted text is
+  shown beside the draft, so a bad extraction is visible and correctable rather
+  than silent, which is a far lower bar than a library has to clear.
+
+**`brain.ingest` is guarded**, alone in a module whose README said nothing
+needed guarding. That reasoning still holds for every other tool, but it covers
+the wrong thing here: the draft state does not guard against spending money.
+
+**`summary` joined `research` as a capped purpose.** Reaching the cap leaves the
+draft and the full source text and drops only the summary.
+
+Three bugs the tests caught while being written, all in code that looked right:
+
+- `<[^>]+>` is not a tag. `<a title="a > b">` ends that match early and leaves
+  `b">` in the note as prose.
+- A hyphen is not a title separator. "Postgres - what the planner actually
+  does" was being truncated to "Postgres".
+- `normaliseUrl` did not refuse `file:///etc/passwd`: it does not match
+  `https?://`, so it was rewritten to `https://file:///etc/passwd`, which parses
+  and has protocol `https:`. Any scheme at all is now checked, and private and
+  link local addresses are refused before a request leaves the deployment.

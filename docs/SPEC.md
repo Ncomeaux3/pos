@@ -66,7 +66,11 @@ Owner: Nick. Solo builder, nights and weekends. Ships incrementally. Do not buil
 
 ### 6. Second Brain (schema and module id `brain`)
 - Obsidian vault in git is the source of truth. The app never edits the vault without a review step.
-- Ingestion: URL to readability text, YouTube to transcript (yt-dlp), book notes manual. Model drafts a summary note, user approves, note is committed to vault.
+- Ingestion: URL to readability text, YouTube to transcript, book notes manual. Model drafts a summary note, user approves, note is committed to vault.
+- Amended 2026-09-09. **yt-dlp is not used and cannot be**: it is a Python binary and the Vercel Node runtime cannot run one. Transcripts come from the caption track list on the watch page, which is what yt-dlp reads for captions anyway. A video with no captions says so rather than producing a note about a video nobody watched.
+- Amended 2026-09-09. Readability extraction is hand rolled with no parser dependency, because the extracted text is shown beside the draft and a bad extraction is therefore visible and correctable rather than silent.
+- Amended 2026-09-09. `ingest` is guarded, alone in this module, because it is the only tool here that spends money. The summary is a capped purpose alongside research: reaching the cap leaves the draft and the source text intact and drops only the summary.
+- Not built: committing an accepted note back to the vault. The vault client is read only by construction and there is no write path to propose through yet.
 - Embeddings into pgvector on note change. Semantic search tool.
 - Every note is classified to skills. Finishing a book or article emits a skill event.
 
