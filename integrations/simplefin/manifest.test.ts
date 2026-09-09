@@ -11,14 +11,18 @@ afterEach(() => vi.unstubAllGlobals())
 const token = Buffer.from('https://bridge.simplefin.org/claim/abc123').toString('base64')
 
 it('claims a setup token and stores the access URL instead', async () => {
-  const fetchMock = vi.fn(async () => new Response('https://u:p@bridge.simplefin.org/simplefin'))
+  const fetchMock = vi.fn(
+    async (_url: unknown, init?: RequestInit) =>
+      new Response(`https://u:p@bridge.simplefin.org/simplefin${init?.method === 'POST' ? '' : '-not-a-post'}`),
+  )
   vi.stubGlobal('fetch', fetchMock)
 
   const prepared = await manifest.prepare!({ access_url: token })
 
+  // The claim is a POST. A GET to a claim URL returns the claim page, not a
+  // credential, so the method is part of what makes this correct.
   expect(prepared.access_url).toBe('https://u:p@bridge.simplefin.org/simplefin')
   expect(fetchMock).toHaveBeenCalledOnce()
-  expect(fetchMock.mock.calls[0][1]?.method).toBe('POST')
 })
 
 // The important one. If prepare() ran again on an access URL it would POST to

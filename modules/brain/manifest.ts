@@ -4,6 +4,7 @@ import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
 import { resolveDanglingLinks, syncLinks, uniqueSlug } from './data'
 import { nightlyDigest, resolveLinks } from './jobs/nightly-digest'
+import { pullVault } from './jobs/pull-vault'
 import BrainPage from './ui/BrainPage'
 
 const kind = z.enum(['article', 'book', 'video', 'note', 'project', 'person', 'daily'])
@@ -157,6 +158,8 @@ export default defineModule({
   },
 
   jobs: [
+    // First: everything below reads what the vault brought in.
+    { name: 'pull_vault', run: pullVault },
     { name: 'resolve_links', run: resolveLinks },
     { name: 'nightly_digest', run: nightlyDigest },
   ],

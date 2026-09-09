@@ -17,6 +17,16 @@ export type RegisterArgs = {
   eventType?: string
   /** Imports backdate this so XP reflects real history. */
   occurredAt?: Date
+  /**
+   * False registers and classifies the row without emitting anything.
+   *
+   * For a backfill of things that already existed. Pulling four hundred vault
+   * notes written over five years is not four hundred notes of work tonight,
+   * and emitting for each would award every one of them today's XP and spike
+   * the Skill Tree, which is the same failure the `xmax = 0` guard below was
+   * added to stop. The row still registers, so search and skills can see it.
+   */
+  emit?: boolean
   payload?: Record<string, unknown>
 }
 
@@ -37,6 +47,7 @@ export async function register({
   eventType,
   occurredAt,
   payload,
+  emit: shouldEmit = true,
 }: RegisterArgs): Promise<string> {
   // xmax = 0 means this upsert inserted rather than updated. Without it every
   // re-register emits another <type>_created and awards its XP again: five demo
@@ -63,8 +74,8 @@ export async function register({
   if (classifier) await classifier(entityRef, [title, text].filter(Boolean).join('\n'), module)
 
   // A named event is something that happened, so it always emits. The default
-  // is a creation, and a row is created once.
-  if (eventType || rows[0].inserted) {
+  // is a creation, and a row is created once. A backfill opts out of both.
+  if (shouldEmit && (eventType || rows[0].inserted)) {
     await emit({
       module,
       entityRef,

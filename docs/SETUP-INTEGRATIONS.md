@@ -150,11 +150,30 @@ then that the token's repository access includes it.
 
 ### What happens next
 
-Nothing automatic yet, and this is the honest gap. The client can list every
-markdown file in one call and read any of them by blob sha. What is not built is
-the Second Brain job that walks that list, drafts summaries, and proposes
-commits back. That is the next real piece of work on this module, and connecting
-the vault now is what unblocks it.
+`brain.pull_vault` runs nightly, first in the module's order. It lists every
+markdown file in one request and reads only the ones whose git blob sha has
+moved, so a settled vault costs one request a night and writes nothing.
+
+A pulled note is **published**, not a draft: it is already in the vault, so it
+is already yours. The draft state is for the other direction. Wikilinks are
+parsed and resolved on the way in, so `[[DDIA]]` in one note finds the note it
+points at, and a link to a note you have not written yet is kept as the useful
+backlog it is.
+
+Two things it deliberately refuses to do:
+
+- **It never deletes.** A note whose file has gone is counted and reported, not
+  removed. A rename or an accidental delete should not take your note with it.
+- **It awards no XP for the backfill.** Notes register for search but emit no
+  event, because four hundred notes written over five years are not four hundred
+  notes of work tonight.
+
+The first pull reads at most 300 files, so a large vault fills over a few
+nights against GitHub's hourly limit. Every later run has almost nothing to do.
+
+**Still missing, honestly:** SPEC also asks for URL and YouTube ingestion with a
+model-drafted summary. The inbox, the draft state and the review step are all
+built; the fetching is not.
 
 ---
 

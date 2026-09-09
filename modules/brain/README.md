@@ -62,6 +62,45 @@ someone linked to last week connects the two without either being edited. The
 nightly `resolve_links` job does the same sweep, because a note created through
 MCP or an import never touches the UI path.
 
+## The vault is pulled, never pushed
+
+`jobs/pull-vault.ts` mirrors the Obsidian vault in one direction. A file that
+changed rewrites its note; nothing here can write to the vault, because
+`integrations/github_vault/client.ts` has no function that could.
+
+A pulled note is **published**, not a draft. It is already in the vault, so it
+is already the owner's. The draft state exists for the other direction: things
+the app proposes to add.
+
+Three decisions worth knowing:
+
+**A blob sha is the change detector.** Git already hashes every file, so an
+unchanged sha means an unchanged file and there is no read and no write. A
+nightly pull over a settled vault costs one request. Nothing needed a content
+hash column because git had already computed one.
+
+**The backfill emits nothing.** `register()` is called with `emit: false`, so
+notes register for search and skills without emitting a creation event. Four
+hundred notes written over five years are not four hundred notes of work
+tonight, and awarding them today's XP would spike the Skill Tree for one
+evening and leave it wrong forever.
+
+**A file that has gone is not a note that has gone.** Orphans are counted and
+reported, never deleted. A rename, a move, or a mistake should not silently
+remove a note, and the vault is a git repo so the app is not the last copy
+either way.
+
+`external_id` is the vault path, so `unique (source, external_id)` keys a note
+to its file. Slugs come from the file **name** rather than the path, because
+that is how Obsidian resolves `[[DDIA]]` to `Books/Distributed/DDIA.md`.
+
+## What is still missing
+
+SPEC section 6 also asks for ingestion: a URL to readability text, a YouTube
+transcript, and a model that drafts a summary for the owner to approve. None of
+that is built. The draft state, the inbox and the review step all are, so the
+half that is missing is the fetching, not the reviewing.
+
 ## Backlinks are a table, not a query
 
 The panel asks the reverse question, and scanning every body for a title is the
