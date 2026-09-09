@@ -195,7 +195,13 @@ password_requirements = ""
 
 [auth.rate_limit]
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
-email_sent = 2
+# 100 rather than the default 2, because this is the local stack and every
+# Playwright run signs in for real: the magic link flow is PKCE, so the setup
+# project drives the actual form. At 2 an hour the third run of an evening fails
+# in setup with no email, and the login screen says "link sent" either way by
+# design, so it looks like a broken screen rather than a rate limit.
+# Local only. The hosted project has its own limits and this file does not set them.
+email_sent = 100
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
 sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.

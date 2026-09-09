@@ -40,12 +40,15 @@ setup('sign in as the owner', async ({ page }) => {
   await page.getByRole('button', { name: /^send/i }).click()
   await expect(page).toHaveURL(/sent=1/)
 
+  // Sixty seconds, not ten. The mail usually lands in under a second, but on a
+  // cold start the dev server is compiling routes while GoTrue is sending, and
+  // a run once failed here with the message already in Mailpit a moment later.
   let link: string | null = null
-  for (let i = 0; i < 20 && !link; i++) {
+  for (let i = 0; i < 120 && !link; i++) {
     link = await newestLinkFor(email!, sentAfter)
     if (!link) await page.waitForTimeout(500)
   }
-  expect(link, 'no magic link arrived in Mailpit within 10s').toBeTruthy()
+  expect(link, 'no magic link arrived in Mailpit within 60s').toBeTruthy()
 
   await page.goto(link!)
   await expect(page).toHaveURL(/localhost:3000\/$/)
