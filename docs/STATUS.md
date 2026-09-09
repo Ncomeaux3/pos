@@ -3,8 +3,8 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
-Last updated: 2026-09-09, the cost pass and the first two real integration
-clients. Branch `skills-module`.
+Last updated: 2026-09-09, the cost pass and three real integration clients.
+Branch `skills-module`.
 
 ## Done
 
@@ -83,7 +83,7 @@ refuses to do and why.
 ## Verification
 
 ```
-pnpm typecheck && pnpm lint && pnpm test    # 555 tests, 57 files
+pnpm typecheck && pnpm lint && pnpm test    # 584 tests, 60 files
 pnpm test:e2e                               # 137 specs, 1440px and 402px, both themes
 pnpm setup:demo                             # idempotent bootstrap
 ```
@@ -248,16 +248,36 @@ set, the rule hit rate went from 31% to 58% and Home's misses from 28 to 7.
 read sentence in the app, costs nothing, works with no provider connected, and
 is now testable rather than sampled. `Purpose` in `core/llm.ts` lost `headline`.
 
-## Integrations, first two real clients
+## Integrations: three of four stubs are now real
 
-Strava and the Obsidian vault were manifest-only stubs whose `test()` returned
-"not verified", so neither could be connected even once a credential existed.
-Both have clients and real Test buttons now, and Strava has a nightly
-`fitness.sync_strava` job that upserts on `(source, external_id)` and backdates
-`workout_logged` to the activity rather than the job run.
+Strava, the Obsidian vault and SimpleFIN were manifest-only stubs whose
+`test()` returned "not verified", so none could be connected even once a
+credential existed. All three have clients, real Test buttons and nightly sync
+jobs. Health Auto Export is the one left, and it needs a paid iOS app.
 
-Neither is connected. Both need accounts only Nick has. See
+- **`fitness.sync_strava`** upserts on `(source, external_id)` and backdates
+  `workout_logged` to the activity rather than the job run.
+- **`finance.sync_simplefin`** runs first in the finance order. It skips
+  non-USD accounts rather than summing them into net worth, never touches an
+  `is_manual` row, and does not register transactions, because this module had
+  already decided the event worth recording is the categorising.
+- **`brain.pull_vault`** compares git blob shas, so a settled vault costs one
+  request a night and no writes. Pulled notes are published rather than draft,
+  register for search without emitting events, and are never deleted when a
+  file disappears.
+
+The integration contract gained one thing: an optional `prepare()`, run on save
+and never on the Test button. SimpleFIN forced it. A setup token can be claimed
+exactly once, so claiming inside `test()` would store the spent token and the
+next Test press would destroy a working connection.
+
+`register()` gained `emit`, so a backfill can register without awarding XP.
+
+None of the three is connected. Each needs an account only Nick has. See
 docs/SETUP-INTEGRATIONS.md, and docs/SETUP-SUPABASE.md for step 15.
+
+The whole nightly pipeline is 30 jobs and runs clean with nothing connected:
+every sync skips and says so rather than failing the run.
 
 ## Bugs found by the 2026-09-09 audit
 
