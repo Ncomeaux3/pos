@@ -83,7 +83,7 @@ refuses to do and why.
 ## Verification
 
 ```
-pnpm typecheck && pnpm lint && pnpm test    # 637 tests, 63 files
+pnpm typecheck && pnpm lint && pnpm test    # 653 tests, 64 files
 pnpm test:e2e                               # 139 specs, 1440px and 402px, both themes
 pnpm setup:demo                             # idempotent bootstrap
 ```
@@ -324,3 +324,33 @@ Three bugs the tests caught while being written, all in code that looked right:
   `https?://`, so it was rewritten to `https://file:///etc/passwd`, which parses
   and has protocol `https:`. Any scheme at all is now checked, and private and
   link local addresses are refused before a request leaves the deployment.
+
+## The outbound trust boundary, 2026-09-09
+
+An automated review found an SSRF in the ingestion shipped an hour earlier, and
+was right. Fixing it properly moved every outbound request in Second Brain into
+`modules/brain/fetching.ts`, which is now the only place that decides whether a
+request may leave the deployment.
+
+**`fetch` is not used there.** Node's fetch cannot pin a connection to an
+address, and without pinning the hostname is resolved once for the check and
+again for the connection: a record with a short TTL fits through the gap.
+`node:https` accepts a `lookup`, so the address that was checked is the address
+that is dialled. There is a test with a real server proving node honours it,
+because otherwise the design rests on an assumption.
+
+Three layers, each with the test that fails if it goes:
+
+1. **Literal rules** on the pasted URL: scheme, and the private ranges.
+2. **Resolve and check every record**, not the first. One private answer among
+   several is still a way in.
+3. **Pin the connection** to those addresses, which is what makes layer 2 hold
+   rather than being a suggestion.
+
+Redirects are followed by hand with every hop back through all three. The loop
+takes its fetcher as a parameter so it can be tested without a test-only bypass
+of the checks, which would be a security switch one careless call from being
+wrong in production.
+
+DNS rebinding is closed. What is left is the ordinary residual: a host that is
+public at check time and stays public is fetched, which is the feature.

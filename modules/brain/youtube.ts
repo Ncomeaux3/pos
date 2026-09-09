@@ -1,4 +1,5 @@
 import { decodeEntities } from './extract'
+import { get } from './fetching'
 
 // YouTube transcripts without yt-dlp.
 //
@@ -153,22 +154,25 @@ const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
 
 export async function fetchTranscript(id: string): Promise<Transcript | null> {
-  const page = await fetch(`https://www.youtube.com/watch?v=${id}`, {
+  // Through the pinned fetcher like everything else. The caption URL below is
+  // taken out of a page's own JSON rather than typed by the owner, which is a
+  // shorter leash than a pasted link but not a reason to skip the checks.
+  const page = await get(`https://www.youtube.com/watch?v=${id}`, {
     headers: { 'User-Agent': UA, 'Accept-Language': 'en' },
-    signal: AbortSignal.timeout(20_000),
+    timeoutMs: 20_000,
   })
-  if (!page.ok) return null
+  if (page.status !== 200) return null
 
-  const track = pickTrack(captionTracks(await page.text()))
+  const track = pickTrack(captionTracks(page.body))
   if (!track?.baseUrl) return null
 
-  const captions = await fetch(track.baseUrl, {
+  const captions = await get(track.baseUrl, {
     headers: { 'User-Agent': UA },
-    signal: AbortSignal.timeout(20_000),
+    timeoutMs: 20_000,
   })
-  if (!captions.ok) return null
+  if (captions.status !== 200) return null
 
-  const text = transcriptFromXml(await captions.text())
+  const text = transcriptFromXml(captions.body)
   if (text.length === 0) return null
 
   return {

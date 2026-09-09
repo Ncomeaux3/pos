@@ -1,6 +1,12 @@
 import { complete, NotConnected, SoftCapExceeded } from '@/core/llm'
 import { extract, looksEmpty } from './extract'
+import { get, normaliseUrl } from './fetching'
 import { fetchTranscript, isYouTube, videoId, videoTitle } from './youtube'
+
+// The outbound checks and the pinned connection live in ./fetching. Re-exported
+// because they are part of this module's surface and several callers reach for
+// them by name.
+export { isPrivateHost, normaliseUrl, Refused } from './fetching'
 
 // SPEC section 6's ingestion: a URL becomes readable text, a YouTube link
 // becomes a transcript, and the model drafts a summary the owner approves.
@@ -48,177 +54,24 @@ Rules:
  * comes back in `note` alongside a usable result.
  */
 export async function ingestUrl(rawUrl: string): Promise<Ingested> {
-  const url = await checkedUrl(rawUrl)
+  const url = normaliseUrl(rawUrl)
   return isYouTube(url) ? ingestVideo(url) : ingestArticle(url)
 }
 
-/**
- * A pasted URL, tidied, with the checks that need no network.
- *
- * A bare `example.com/x` is what people paste, and `new URL` rejects it, so
- * https is assumed rather than the paste being refused. Only http and https
- * are allowed through: `file:` and `data:` would otherwise be fetchable.
- *
- * Callers about to make a request want `checkedUrl`, which adds the lookup.
- */
-export function normaliseUrl(input: string): string {
-  const trimmed = input.trim()
-
-  // Any scheme at all has to be one of the two allowed. Testing for `https?://`
-  // and prepending otherwise is the obvious version and it is wrong: it turns
-  // `file:///etc/passwd` into `https://file:///etc/passwd`, which parses, has
-  // protocol `https:`, and sails straight through the check below.
-  const hasScheme = /^[a-z][a-z0-9+.-]*:/i.test(trimmed)
-  if (hasScheme && !/^https?:\/\//i.test(trimmed)) {
-    throw new Error('Only http and https URLs can be read.')
-  }
-
-  let parsed: URL
-  try {
-    parsed = new URL(hasScheme ? trimmed : `https://${trimmed}`)
-  } catch {
-    throw new Error(`That does not look like a URL: ${input}`)
-  }
-  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-    throw new Error('Only http and https URLs can be read.')
-  }
-  if (isPrivateHost(parsed.hostname)) {
-    throw new Error('That address is on a private network, so it will not be fetched.')
-  }
-  return parsed.toString()
-}
-
-/**
- * `normaliseUrl`, plus what the hostname actually resolves to.
- *
- * `normaliseUrl` only sees the literal in the URL, so `http://localtest.me/`
- * passes it and then resolves to 127.0.0.1. Resolving here closes that, which
- * matters because such hostnames are free and public and need no attacker
- * infrastructure at all.
- *
- * What this still does not close is DNS rebinding: the name is resolved here
- * and again by fetch, and a record with a one second TTL can differ between
- * the two. Closing that means pinning the address through the connection,
- * which node's fetch has no way to express. The gap is stated rather than
- * papered over, and it is a much higher bar than a redirect or a public
- * hostname pointed somewhere private.
- *
- * A lookup that fails is not treated as private: an unresolvable host fails at
- * the fetch anyway, with a better message than this could give.
- */
-export async function checkedUrl(input: string): Promise<string> {
-  const url = normaliseUrl(input)
-
-  try {
-    const { lookup } = await import('node:dns/promises')
-    const addresses = await lookup(new URL(url).hostname, { all: true })
-    if (addresses.some((a) => isPrivateHost(a.address))) {
-      throw new PrivateAddress()
-    }
-  } catch (error) {
-    if (error instanceof PrivateAddress) {
-      throw new Error('That address is on a private network, so it will not be fetched.')
-    }
-    // Anything else is a resolution failure, which the fetch reports better.
-  }
-
-  return url
-}
-
-/** Internal, so the catch above can tell a refusal from a lookup failure. */
-class PrivateAddress extends Error {}
-
-/**
- * Addresses a server must not be talked into fetching.
- *
- * This runs inside a server action, so the URL is attacker-controllable in the
- * general case and the request goes out from inside the deployment. Cloud
- * metadata at 169.254.169.254 is the classic target; loopback and the private
- * ranges are the rest of it.
- *
- * Literal addresses only. A hostname that resolves to a private address is
- * caught by `checkedUrl`, and a redirect into one by `fetchFollowing`. Keeping
- * this half pure is what lets it run on a resolved IP as well as on a URL's
- * hostname, which is how those two reuse it.
- */
-export function isPrivateHost(hostname: string): boolean {
-  const host = hostname.toLowerCase().replace(/^\[|\]$/g, '')
-
-  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.internal')) return true
-  // IPv6 loopback and the unique-local and link-local ranges.
-  if (host === '::1' || /^f[cd][0-9a-f]{2}:/.test(host) || /^fe80:/.test(host)) return true
-  // IPv4-mapped IPv6, so ::ffff:127.0.0.1 is not a way around the rules below.
-  const mapped = host.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/)?.[1]
-
-  const octets = (mapped ?? host).split('.')
-  if (octets.length !== 4 || !octets.every((o) => /^\d{1,3}$/.test(o))) return false
-  const [a, b] = octets.map(Number)
-  if (octets.some((o) => Number(o) > 255)) return false
-
-  return (
-    a === 0 || // this network
-    a === 10 || // private
-    a === 127 || // loopback
-    (a === 169 && b === 254) || // link local, and cloud metadata
-    (a === 172 && b >= 16 && b <= 31) || // private
-    (a === 192 && b === 168) || // private
-    (a === 100 && b >= 64 && b <= 127) // carrier grade NAT
-  )
-}
-
-/** Hops before giving up. Five is more than any real article needs. */
-const MAX_REDIRECTS = 5
-
-/**
- * Fetch, following redirects by hand so every hop is checked.
- *
- * `redirect: 'follow'` validates the URL the owner pasted and nothing after it.
- * A page under someone else's control answering `302 Location:
- * http://169.254.169.254/latest/meta-data/` would then be fetched from inside
- * the deployment with the guard already satisfied. No DNS control needed, just
- * a redirect, which makes it the easiest way past `normaliseUrl` by some
- * distance.
- *
- * Each hop goes back through `normaliseUrl`, so the scheme and address rules
- * apply to the whole chain rather than only its first link.
- */
-export async function fetchFollowing(startUrl: string): Promise<Response> {
-  let current = startUrl
-
-  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    const res = await fetch(current, {
-      headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' },
-      redirect: 'manual',
-      signal: AbortSignal.timeout(30_000),
-    })
-
-    if (res.status < 300 || res.status >= 400) return res
-
-    const location = res.headers.get('location')
-    if (!location) throw new Error(`That page redirected to nowhere (${res.status}).`)
-
-    // Resolved against the current URL, because a Location header is allowed to
-    // be relative, and then re-checked from scratch.
-    current = await checkedUrl(new URL(location, current).toString())
-  }
-
-  throw new Error('That link redirected too many times.')
-}
-
 async function fetchText(url: string): Promise<string> {
-  const res = await fetchFollowing(url)
+  const res = await get(url, {
+    headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' },
+    maxBytes: MAX_BYTES,
+  })
 
-  if (!res.ok) throw new Error(`That page answered ${res.status}.`)
-
-  const type = res.headers.get('content-type') ?? ''
-  if (type && !/text\/html|text\/plain|application\/xhtml/i.test(type)) {
-    throw new Error(`That is a ${type.split(';')[0]}, not a page. Nothing to read.`)
+  if (res.status < 200 || res.status >= 300) {
+    throw new Error(`That page answered ${res.status}.`)
+  }
+  if (res.contentType && !/text\/html|text\/plain|application\/xhtml/i.test(res.contentType)) {
+    throw new Error(`That is a ${res.contentType.split(';')[0]}, not a page. Nothing to read.`)
   }
 
-  const size = Number(res.headers.get('content-length') ?? 0)
-  if (size > MAX_BYTES) throw new Error('That page is too large to read.')
-
-  return (await res.text()).slice(0, MAX_BYTES)
+  return res.body
 }
 
 async function ingestArticle(url: string): Promise<Ingested> {

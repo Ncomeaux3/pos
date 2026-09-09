@@ -117,19 +117,39 @@ paywall stub, a cookie wall and a page that renders in the browser all look the
 same from here, and a confident summary of an article nobody read is the worst
 thing this feature could do.
 
-**Every hop of a redirect is checked, not just the URL you pasted.** An
-automated review caught this after the first version shipped, and it was right:
-`redirect: 'follow'` validated the pasted link and then chased a `302` anywhere,
-so a page under someone else's control could answer
-`Location: http://169.254.169.254/latest/meta-data/` and be fetched from inside
-the deployment with the guard already satisfied. No DNS control needed. Redirects
-are followed by hand now, each hop back through the same check, capped at five.
+### The outbound trust boundary is its own file
 
-The hostname is also resolved and every record checked, because
-`http://localtest.me/` is public, free, and points at 127.0.0.1. What remains
-open is DNS rebinding, where the record changes between our lookup and fetch's:
-closing that means pinning the address through the connection, which node's
-fetch cannot express. It is stated in the code rather than papered over.
+`fetching.ts`. Ingest takes a URL from a server action, and a server action is
+a public POST endpoint, so everything deciding whether a request may leave the
+deployment lives in one place that knows nothing about notes.
+
+**`fetch` is not used, and that is the point.** Node's `fetch` cannot pin a
+connection to an address. Without pinning the hostname is resolved once for the
+check and again for the connection, and a record with a one second TTL fits
+through the gap between them. `node:https` accepts a `lookup`, so the address
+that was checked is the address that is dialled. `pinnedLookup` ignores the
+hostname it is handed and answers with the already-checked addresses; there is
+a test that runs a real server and proves node honours it, because without that
+the whole design rests on an assumption.
+
+The Host header and the TLS server name still come from the hostname, so
+virtual hosting and certificate validation are unaffected.
+
+**Every hop of a redirect is checked.** An automated review caught this after
+the first version shipped, and it was right: `redirect: 'follow'` validated the
+pasted link and then chased a `302` anywhere, so a page under someone else's
+control could answer `Location: http://169.254.169.254/latest/meta-data/` and be
+fetched from inside the deployment with the guard already satisfied. No DNS
+control needed, which made it easier than the attack the guard was written for.
+`follow` takes its fetcher as a parameter so the loop is testable without
+loosening any check to let a test through.
+
+**Every resolved record is checked, not the first.** One private answer among
+several is still a way in, and which address a connection picks is not ours to
+predict.
+
+Three layers, and each has the test that fails if it goes: the literal address
+rules, the resolve-and-check, and the pin that makes the second one hold.
 
 **The summary is capped.** It is Haiku, about half a cent, and it counts against
 the same monthly cap research does. Reaching the cap does not break ingestion:
