@@ -678,3 +678,59 @@ test('second brain, accepting a draft moves it into the vault', async ({ page })
   await page.goto('/brain?folder=article')
   await expect(page.getByText('Postgres full text search, briefly')).toBeVisible()
 })
+
+test('travel, trips with confirmed spend only', async ({ page }) => {
+  await page.goto('/travel')
+  await expect(page.getByRole('heading', { name: 'Travel' })).toBeVisible()
+
+  await expect(page.getByText('Tokyo, November')).toBeVisible()
+  // A pending booking is a guess about an email, so it does not move a budget.
+  await expect(page.getByText('confirmed only').first()).toBeVisible()
+  await expect(page.getByText('2 waiting')).toBeVisible()
+
+  await shoot(page, 'travel')
+})
+
+test('travel, the globe is drawn from real coordinates', async ({ page }) => {
+  await page.goto('/travel?tab=map')
+
+  // Hand rolled orthographic projection, no d3 and no world-atlas download.
+  const globe = page.getByRole('img', { name: /Globe showing \d+ places/ })
+  await expect(globe).toBeVisible()
+
+  // Only the near side is drawn, so the count on screen is fewer than the six
+  // seeded places spread across four continents.
+  const dots = globe.locator('circle').filter({ hasNotText: '' })
+  expect(await dots.count()).toBeGreaterThan(1)
+
+  // Twice on purpose: the list row and the dot's own tooltip, which is what
+  // makes a dot on a wireframe globe identifiable at all.
+  await expect(page.getByText('Cape Town', { exact: true })).toBeVisible()
+  await expect(page.getByText('Cape Town, South Africa')).toBeAttached()
+  await shoot(page, 'travel-map')
+})
+
+test('travel, a parsed booking waits to be accepted', async ({ page }) => {
+  await page.goto('/travel?tab=inbox')
+
+  await expect(page.getByText('Check in, Kyoto')).toBeVisible()
+  await expect(page.getByText('94%')).toBeVisible()
+  await shoot(page, 'travel-inbox')
+
+  await page.getByRole('button', { name: 'Accept' }).first().click()
+  await expect(page.getByText('Added to the trip')).toBeVisible()
+})
+
+test('travel, cents per point uses only numbers you supply', async ({ page }) => {
+  await page.goto('/travel?tab=loyalty')
+
+  await page.getByLabel('Cash fare in dollars').fill('640')
+  await page.getByLabel('Points required').fill('35000')
+
+  // 64000 cents over 35000 points is 1.83 cents each, which is worth using.
+  await expect(page.getByText('1.83c')).toBeVisible()
+  await expect(page.getByText('worth using points')).toBeVisible()
+
+  await page.getByLabel('Points required').fill('60000')
+  await expect(page.getByText('pay cash', { exact: true })).toBeVisible()
+})
