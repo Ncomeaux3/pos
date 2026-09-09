@@ -1,0 +1,93 @@
+// Units and the few derived numbers the Fitness screen shows. No imports: the
+// screen is a client component and anything reaching core/db.ts drags pg into
+// the browser bundle.
+//
+// Everything is stored unit free and integer: grams for mass, metres for
+// distance, seconds for time. Pounds and kilograms are a rendering decision,
+// and storing either one makes the other lossy.
+
+const GRAMS_PER_POUND = 453.59237
+
+export type MassUnit = 'lb' | 'kg'
+
+/** "315 lb", "142.5 kg". Rounded to the increment the unit is actually loaded in. */
+export function mass(grams: number, unit: MassUnit = 'lb'): string {
+  if (unit === 'kg') {
+    // Plates come in 2.5kg and 1.25kg, so half a kilo is the finest that ever
+    // means anything.
+    return `${(Math.round(grams / 500) / 2).toLocaleString('en-US')} kg`
+  }
+  return `${Math.round(grams / GRAMS_PER_POUND).toLocaleString('en-US')} lb`
+}
+
+export const toGrams = (value: number, unit: MassUnit): number =>
+  Math.round(unit === 'kg' ? value * 1000 : value * GRAMS_PER_POUND)
+
+/** "5.1 km", "820 m". Metres until a kilometre is the more readable number. */
+export function distance(metres: number): string {
+  if (metres === 0) return ''
+  if (metres < 1000) return `${metres} m`
+  return `${(metres / 1000).toFixed(1)} km`
+}
+
+/** "58m", "1h 02m". What a workout duration reads as in a list. */
+export function duration(seconds: number): string {
+  const minutes = Math.round(seconds / 60)
+  if (minutes < 60) return `${minutes}m`
+  return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`
+}
+
+/**
+ * Pace, as minutes and seconds per kilometre.
+ *
+ * The one number a runner actually reads, and it is a ratio of two stored
+ * values rather than a stored value, so it can never disagree with them.
+ */
+export function pace(metres: number, seconds: number): string {
+  if (metres < 100 || seconds <= 0) return ''
+  const secondsPerKm = seconds / (metres / 1000)
+  const m = Math.floor(secondsPerKm / 60)
+  const s = Math.round(secondsPerKm % 60)
+  // 9:60 is what naive rounding produces, and it is not a time.
+  return s === 60 ? `${m + 1}:00/km` : `${m}:${String(s).padStart(2, '0')}/km`
+}
+
+export type SetLike = { reps: number; weightG: number }
+
+/**
+ * The heaviest set, and the heaviest at that weight.
+ *
+ * "Best" is by weight first, then by reps, because 315 for five beats 315 for
+ * three and both beat 275 for ten. A one rep max estimate would be a guess
+ * dressed as a number, and the screen shows what actually happened instead.
+ */
+export function bestSet(sets: SetLike[]): SetLike | null {
+  if (sets.length === 0) return null
+  return sets.reduce((best, set) => {
+    if (set.weightG !== best.weightG) return set.weightG > best.weightG ? set : best
+    return set.reps > best.reps ? set : best
+  })
+}
+
+/**
+ * Training load for a week: minutes, weighted by how hard the work was.
+ *
+ * Deliberately crude and deliberately visible. There is a literature of
+ * training load models and every one of them needs data this app does not have,
+ * so this multiplies duration by a per-kind factor and says so. A number
+ * presented as science that is really a guess is worse than an honest guess.
+ */
+const INTENSITY: Record<string, number> = {
+  strength: 1.2,
+  run: 1.4,
+  ride: 1,
+  swim: 1.3,
+  walk: 0.5,
+  other: 1,
+}
+
+export function load(workouts: { kind: string; durationS: number }[]): number {
+  return Math.round(
+    workouts.reduce((sum, w) => sum + (w.durationS / 60) * (INTENSITY[w.kind] ?? 1), 0),
+  )
+}

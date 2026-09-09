@@ -1,0 +1,137 @@
+import { db } from '@/core/db'
+import { register } from '@/core/entities'
+
+// Synthetic rows for `pnpm setup --demo`. Upserts on external_id so running it
+// twice does not duplicate. Nothing here is personal or medically meaningful;
+// this ships in the template, so the values are plausible placeholders and the
+// screen never offers an opinion about any of them.
+
+const PROVIDERS = [
+  { external_id: 'gp', name: 'Dr Alvarez', role: 'Primary care', phone: '555 0142', notes: 'Referrals go through the portal.' },
+  { external_id: 'dentist', name: 'Riverside Dental', role: 'Dentist', phone: '555 0177', notes: '' },
+  { external_id: 'optom', name: 'Clearview Optical', role: 'Optometrist', phone: '555 0198', notes: '' },
+]
+
+const APPOINTMENTS = [
+  { external_id: 'appt-physical', what: 'Annual physical', provider: 'gp', inDays: 12, at: '09:30', location: 'Main clinic', prep: 'Fast twelve hours. Bring the current medication list.', cost: 4500 },
+  { external_id: 'appt-cleaning', what: 'Dental cleaning', provider: 'dentist', inDays: 31, at: '14:00', location: 'Riverside', prep: '', cost: 12_000 },
+  { external_id: 'appt-eyes', what: 'Eye exam', provider: 'optom', inDays: -48, at: '11:15', location: 'Clearview', prep: '', cost: 9000, status: 'done' as const },
+]
+
+const MEDICATIONS = [
+  { external_id: 'med-d', name: 'Vitamin D', dose: '2000 IU', schedule: 'Daily, with breakfast', refillInDays: 9 },
+  { external_id: 'med-mag', name: 'Magnesium', dose: '200 mg', schedule: 'Daily, evening', refillInDays: 40 },
+]
+
+/** Clinical readings only. Weight and resting heart rate belong to Fitness. */
+const VITALS = [
+  { metric: 'blood_pressure', value: 118, text: '118/74', daysAgo: 48, provenance: 'lab' },
+  { metric: 'ldl', value: 96, text: '96 mg/dL', daysAgo: 48, provenance: 'lab' },
+  { metric: 'hdl', value: 58, text: '58 mg/dL', daysAgo: 48, provenance: 'lab' },
+  { metric: 'a1c', value: 5.2, text: '5.2%', daysAgo: 48, provenance: 'lab' },
+]
+
+const SCREENINGS = [
+  // One of each state, so the screen shows what it is for rather than a column
+  // of green.
+  { name: 'Annual physical', months: 12, lastDoneDaysAgo: 400 },
+  { name: 'Dental cleaning', months: 6, lastDoneDaysAgo: 150 },
+  { name: 'Eye exam', months: 24, lastDoneDaysAgo: 48 },
+  { name: 'Skin check', months: 12, lastDoneDaysAgo: null },
+]
+
+export async function seed(): Promise<number> {
+  const providers = new Map<string, string>()
+  for (const p of PROVIDERS) {
+    const { rows } = await db().query<{ id: string }>(
+      `insert into health.provider (name, role, phone, notes, source, external_id)
+       values ($1, $2, $3, $4, 'demo', $5)
+       on conflict (source, external_id) do update set name = excluded.name
+       returning id`,
+      [p.name, p.role, p.phone, p.notes, p.external_id],
+    )
+    providers.set(p.external_id, rows[0].id)
+  }
+
+  for (const a of APPOINTMENTS) {
+    const { rows } = await db().query<{ id: string }>(
+      `insert into health.appointment
+         (provider_id, what, starts_at, location, status, prep, cost_estimate_cents,
+          source, external_id)
+       values ($1, $2, (core.today() + $3::int)::timestamptz + $4::time, $5, $6, $7, $8,
+               'demo', $9)
+       on conflict (source, external_id) do update
+         set starts_at = excluded.starts_at, status = excluded.status
+       returning id`,
+      [
+        providers.get(a.provider) ?? null,
+        a.what,
+        a.inDays,
+        a.at,
+        a.location,
+        a.status ?? 'confirmed',
+        a.prep,
+        a.cost,
+        a.external_id,
+      ],
+    )
+
+    await register({
+      module: 'health',
+      entityType: 'appointment',
+      entityId: rows[0].id,
+      title: a.what,
+      text: a.prep,
+    })
+  }
+
+  for (const m of MEDICATIONS) {
+    const { rows } = await db().query<{ id: string }>(
+      `insert into health.medication
+         (name, dose, schedule, started_on, refill_on, source, external_id)
+       values ($1, $2, $3, core.today() - 200, core.today() + $4::int, 'demo', $5)
+       on conflict (source, external_id) do update set refill_on = excluded.refill_on
+       returning id`,
+      [m.name, m.dose, m.schedule, m.refillInDays, m.external_id],
+    )
+
+    // A run of marks ending yesterday, so the streak is non-zero and today is
+    // still yours to tick. Nothing here marks today for you.
+    await db().query(`delete from health.medication_log where medication_id = $1`, [rows[0].id])
+    await db().query(
+      `insert into health.medication_log (medication_id, taken_on)
+       select $1, core.today() - g from generate_series(1, 6) as g
+       on conflict (medication_id, taken_on) do nothing`,
+      [rows[0].id],
+    )
+  }
+
+  for (const v of VITALS) {
+    await db().query(
+      `insert into health.vital
+         (metric, value, value_text, measured_at, provenance, source, external_id)
+       values ($1, $2, $3, (core.today() - $4::int)::timestamptz, $5, 'demo', $6)
+       on conflict (metric, measured_at, provenance) do update set value = excluded.value`,
+      [v.metric, v.value, v.text, v.daysAgo, v.provenance, `vital-${v.metric}`],
+    )
+  }
+
+  await db().query(
+    `insert into health.record (title, kind, taken_on, summary, source, external_id)
+     values ('Annual lab panel', 'lab', core.today() - 48,
+             'Lipids, metabolic panel, thyroid. Filed as received.', 'demo', 'record-labs')
+     on conflict (source, external_id) do update set taken_on = excluded.taken_on`,
+  )
+
+  for (const s of SCREENINGS) {
+    await db().query(
+      `insert into health.screening (name, interval_months, last_done_on)
+       values ($1, $2,
+               case when $3::int is null then null else core.today() - $3::int end)
+       on conflict (name) do update set last_done_on = excluded.last_done_on`,
+      [s.name, s.months, s.lastDoneDaysAgo],
+    )
+  }
+
+  return APPOINTMENTS.length + MEDICATIONS.length + SCREENINGS.length
+}

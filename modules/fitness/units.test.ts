@@ -1,0 +1,96 @@
+import { describe, expect, it } from 'vitest'
+import { bestSet, distance, duration, load, mass, pace, toGrams } from './units'
+
+describe('mass', () => {
+  it('renders the number that was actually loaded on the bar', () => {
+    expect(mass(toGrams(315, 'lb'))).toBe('315 lb')
+    expect(mass(toGrams(45, 'lb'))).toBe('45 lb')
+  })
+
+  it('round trips through either unit', () => {
+    expect(mass(toGrams(100, 'kg'), 'kg')).toBe('100 kg')
+    expect(mass(toGrams(225, 'lb'), 'lb')).toBe('225 lb')
+  })
+
+  it('rounds kilograms to the half, because plates come in 1.25s', () => {
+    expect(mass(102_300, 'kg')).toBe('102.5 kg')
+  })
+})
+
+describe('distance', () => {
+  it('switches to kilometres when that is the readable number', () => {
+    expect(distance(820)).toBe('820 m')
+    expect(distance(5100)).toBe('5.1 km')
+  })
+
+  it('says nothing for a workout that covered no ground', () => {
+    expect(distance(0)).toBe('')
+  })
+})
+
+describe('duration', () => {
+  it('reads minutes under an hour and hours over one', () => {
+    expect(duration(3480)).toBe('58m')
+    expect(duration(3720)).toBe('1h 02m')
+  })
+})
+
+describe('pace', () => {
+  it('is minutes and seconds per kilometre', () => {
+    // 5.1 km in 51 minutes is 10:00/km.
+    expect(pace(5100, 3060)).toBe('10:00/km')
+    // 6.4 km in 50 minutes is 7:49/km.
+    expect(pace(6400, 3000)).toBe('7:49/km')
+  })
+
+  it('never produces a time ending in sixty seconds', () => {
+    // Naive rounding of 479.6 seconds per km gives 7:60, which is not a time.
+    expect(pace(1000, 479.6)).toBe('8:00/km')
+  })
+
+  it('says nothing when there is no distance to divide by', () => {
+    expect(pace(0, 3000)).toBe('')
+    expect(pace(50, 3000)).toBe('')
+  })
+})
+
+describe('bestSet', () => {
+  const set = (weightLb: number, reps: number) => ({ weightG: toGrams(weightLb, 'lb'), reps })
+
+  it('takes the heaviest', () => {
+    expect(bestSet([set(275, 10), set(315, 3)])).toEqual(set(315, 3))
+  })
+
+  it('breaks a tie on reps, because five beats three at the same weight', () => {
+    expect(bestSet([set(315, 3), set(315, 5), set(315, 1)])).toEqual(set(315, 5))
+  })
+
+  it('has nothing to say about an empty workout', () => {
+    expect(bestSet([])).toBeNull()
+  })
+})
+
+describe('load', () => {
+  it('weights a run above a ride of the same length', () => {
+    const run = load([{ kind: 'run', durationS: 3600 }])
+    const ride = load([{ kind: 'ride', durationS: 3600 }])
+    expect(run).toBeGreaterThan(ride)
+  })
+
+  it('counts a walk as barely training', () => {
+    expect(load([{ kind: 'walk', durationS: 3600 }])).toBe(30)
+  })
+
+  it('sums a week', () => {
+    expect(
+      load([
+        { kind: 'strength', durationS: 3600 },
+        { kind: 'run', durationS: 1800 },
+      ]),
+    ).toBe(72 + 42)
+  })
+
+  it('treats a kind it has never heard of as ordinary rather than free', () => {
+    expect(load([{ kind: 'kitesurfing', durationS: 3600 }])).toBe(60)
+  })
+})

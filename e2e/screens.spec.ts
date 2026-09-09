@@ -734,3 +734,82 @@ test('travel, cents per point uses only numbers you supply', async ({ page }) =>
   await page.getByLabel('Points required').fill('60000')
   await expect(page.getByText('pay cash', { exact: true })).toBeVisible()
 })
+
+test('fitness, workouts with pace derived rather than stored', async ({ page }) => {
+  await page.goto('/fitness')
+  await expect(page.getByRole('heading', { name: 'Fitness' })).toBeVisible()
+
+  // Pace is a ratio of the stored distance and duration, so it can never
+  // disagree with them. 5.1 km in 51 minutes is 10:00/km.
+  await expect(page.getByText(/5\.1 km at 10:00\/km/)).toBeVisible()
+
+  // The heaviest set is shown as what happened, not as a one rep max estimate.
+  await expect(page.getByText(/Deadlift 355 lb × 1/)).toBeVisible()
+
+  // Load is duration weighted by kind, and the tile says as much rather than
+  // implying a sports science model.
+  await expect(page.getByText('duration by kind')).toBeVisible()
+
+  await shoot(page, 'fitness')
+})
+
+test('fitness, the exercise index and body metrics read in their own units', async ({ page }) => {
+  await page.goto('/fitness?tab=exercises')
+  await expect(page.getByText('Bench press')).toBeVisible()
+  await expect(page.getByText('4 sets logged')).toBeVisible()
+
+  await page.goto('/fitness?tab=body')
+  // Weight is stored in grams and read in pounds; sleep is stored in minutes
+  // and read as hours. One numeric column, a documented unit per kind.
+  await expect(page.getByText('Weight', { exact: true })).toBeVisible()
+  await expect(page.getByText('Sleep', { exact: true })).toBeVisible()
+  await expect(page.getByText('7h 08m')).toBeVisible()
+
+  await shoot(page, 'fitness-body')
+})
+
+test('health, screenings show every state including never', async ({ page }) => {
+  await page.goto('/health?tab=screenings')
+  await expect(page.getByRole('heading', { name: 'Health' })).toBeVisible()
+
+  // 'never' is its own state, not folded into overdue: a screening you have
+  // never had is a different conversation from one you are late for, and
+  // showing it as decades overdue would invent a history.
+  await expect(page.getByText('never had one')).toBeVisible()
+  // Days under two months, months past it. The seeded physical is 35 days
+  // late, which is the form that reads usefully at that distance.
+  await expect(page.getByText(/\d+ days overdue/)).toBeVisible()
+
+  await shoot(page, 'health-screenings')
+})
+
+test('health, an appointment carries what to do beforehand', async ({ page }) => {
+  await page.goto('/health')
+
+  // The part that is useless the day after and vital the day before, and it is
+  // only shown while the appointment is still ahead.
+  await expect(page.getByText(/Fast twelve hours/)).toBeVisible()
+  await shoot(page, 'health')
+})
+
+test('health, body weight is read from Fitness rather than kept twice', async ({ page }) => {
+  await page.goto('/health?tab=vitals')
+
+  // Clinical readings are stored here; body weight belongs to Fitness and is
+  // resolved through the metric registry, which the tile says out loud.
+  await expect(page.getByText('Blood pressure')).toBeVisible()
+  await expect(page.getByText('118/74')).toBeVisible()
+  await expect(page.getByText('from Fitness')).toBeVisible()
+
+  await shoot(page, 'health-vitals')
+})
+
+test('health, marking a medication does not break the streak on an unmarked today', async ({ page }) => {
+  await page.goto('/health?tab=medications')
+
+  // Six days marked ending yesterday. Today unmarked must not zero it: it is
+  // not the end of the day.
+  await expect(page.getByText(/6 day run/).first()).toBeVisible()
+  await page.getByRole('switch', { name: 'Taken today, Vitamin D' }).click()
+  await expect(page.getByText(/7 day run/).first()).toBeVisible()
+})
