@@ -1,4 +1,5 @@
 import { defineIntegration } from '@/core/integration-contract'
+import { athlete, StravaError } from './client'
 
 export default defineIntegration({
   id: 'strava',
@@ -13,12 +14,21 @@ export default defineIntegration({
     scopes: ['activity:read_all', 'profile:read_all'],
   },
 
-  // Honest stub: the Fitness module has not shipped. The OAuth flow itself is
-  // generic and lives in app/api/integrations/[id]/oauth/callback.
-  test: async () => ({
-    ok: false,
-    detail: 'Not verified. The Fitness module ships in a later phase and will add a real check.',
-  }),
+  // Reads the athlete the token belongs to. Cheapest authenticated call Strava
+  // has, and it answers the only question the Test button asks: does this
+  // token work right now.
+  test: async (creds) => {
+    try {
+      const me = await athlete(creds.access_token)
+      const name = [me.firstname, me.lastname].filter(Boolean).join(' ')
+      return { ok: true, detail: `Connected as ${name || me.username || me.id}.` }
+    } catch (error) {
+      if (error instanceof StravaError && error.status === 401) {
+        return { ok: false, detail: 'Strava rejected the token. Reconnect to authorise again.' }
+      }
+      return { ok: false, detail: error instanceof Error ? error.message : 'Strava did not answer.' }
+    }
+  },
 
   // Strava access tokens last six hours, so the nightly job refreshes before
   // any module sync. Written now because the generic refresh pass calls it.

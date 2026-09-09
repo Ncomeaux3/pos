@@ -3,6 +3,7 @@ import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
 import { coachReview } from './jobs/coach'
+import { syncStrava } from './jobs/sync-strava'
 import { nightlyDigest } from './jobs/nightly-digest'
 import { thisWeek } from './data'
 import { load } from './units'
@@ -269,6 +270,8 @@ export default defineModule({
   },
 
   jobs: [
+    // Sync first: the digest and the coach both read what it wrote.
+    { name: 'sync_strava', run: syncStrava },
     { name: 'nightly_digest', run: nightlyDigest },
     // Runs with the others and proposes at most once a fortnight per
     // suggestion, so a nightly cron does not become a nightly nag.
