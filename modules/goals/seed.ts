@@ -169,11 +169,17 @@ export async function seed(): Promise<number> {
     )
     const id = rows[0].id
 
+    // Cleared and rewritten, not upserted on the date. The history is relative
+    // to today, so yesterday's rows sit one day further back than the ones
+    // written now and the extra point moves what the screen computes: a goal
+    // flat for forty days reads as forty one the next morning. A check-in is
+    // not registered in core.entities, so there is nothing to orphan.
+    await db().query(`delete from goals.checkin where goal_id = $1 and source = 'demo'`, [id])
+
     for (const [daysAgo, value] of goal.history) {
       await db().query(
         `insert into goals.checkin (goal_id, value, occurred_on, is_manual, source)
-         values ($1, $2, core.today() - $3::int, true, 'demo')
-         on conflict (goal_id, occurred_on) do update set value = excluded.value`,
+         values ($1, $2, core.today() - $3::int, true, 'demo')`,
         [id, value, daysAgo],
       )
     }

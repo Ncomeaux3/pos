@@ -161,12 +161,17 @@ export async function seed(): Promise<number> {
     })
   }
 
+  // Cleared and rewritten rather than upserted on external_id. The week is
+  // relative to today, so plan-0-breakfast wants the date plan-1-breakfast
+  // already holds the moment the date rolls over, and one thing per slot per
+  // day is a constraint. Nothing registers a plan entry in core.entities, so
+  // there is nothing to orphan by deleting these.
+  await db().query(`delete from meals.plan_entry where source = 'demo'`)
+
   for (const [offset, slot, recipeKey, eaten] of PLAN) {
     await db().query(
       `insert into meals.plan_entry (recipe_id, on_date, slot, servings, eaten, source, external_id)
-       values ($1, core.today() + $2::int, $3, 1, $4, 'demo', $5)
-       on conflict (source, external_id) do update
-         set on_date = excluded.on_date, eaten = excluded.eaten`,
+       values ($1, core.today() + $2::int, $3, 1, $4, 'demo', $5)`,
       [ids.get(recipeKey), offset, slot, eaten, `plan-${offset}-${slot}`],
     )
   }

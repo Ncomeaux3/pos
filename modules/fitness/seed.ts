@@ -97,6 +97,11 @@ export async function seed(): Promise<number> {
     })
   }
 
+  // Same reason as the goals check-ins: these are dated relative to today, so
+  // yesterday's rows would sit between today's and change the trend the screen
+  // draws. A body metric is not registered in core.entities.
+  await db().query(`delete from fitness.body_metric where source = 'demo'`)
+
   for (const [i, lb] of WEIGHT_LB.entries()) {
     await db().query(
       `insert into fitness.body_metric (kind, value, measured_on, source)
