@@ -3,8 +3,8 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
-Last updated: 2026-09-08, platform screens, Tasks, Goals and the Weekly
-Review. Branch `skills-module`.
+Last updated: 2026-09-09, the cost pass and the first two real integration
+clients. Branch `skills-module`.
 
 ## Done
 
@@ -83,15 +83,19 @@ refuses to do and why.
 ## Verification
 
 ```
-pnpm typecheck && pnpm lint && pnpm test    # 497 tests, 47 files
-pnpm test:e2e                               # 125 specs, 1440px and 402px, both themes
+pnpm typecheck && pnpm lint && pnpm test    # 555 tests, 57 files
+pnpm test:e2e                               # 137 specs, 1440px and 402px, both themes
 pnpm setup:demo                             # idempotent bootstrap
 ```
 
+The e2e suite runs in about 4 minutes, down from about 9. That is the
+classification change: seeding used to make one blocking Haiku call per entity
+the keyword rules missed, and now makes none.
+
 Screenshots land in `e2e/__screens__/` (gitignored). The e2e seed owns
-`core.job_runs` outright: the dashboard's Run now button adds a real run on
-nearly every pass, and after a few the seeded ones fell out of the Agent
-Log's seven-run window. Tests use their own
+`core.job_runs` and `core.notifications` outright, for the same reason in both
+cases: Run now and the nightly job add real rows on nearly every pass, and the
+seeded ones fell out of the bounded window the screen reads. Tests use their own
 `pos_test` database, rebuilt from migrations by a vitest globalSetup;
 `core/db.ts` refuses any other database while `VITEST` is set.
 
@@ -214,3 +218,56 @@ the dashboard has no stored tile order, so there is nothing to arrange yet.
 Rubric with web search, every number carrying the page it came from, and a hard
 rule that deletes any number whose URL the search did not actually return.
 Guarded, because it is the one thing in Ideas that spends money.
+
+## Cost pass, done 2026-09-09
+
+Measured before changing anything: 3,919 of the 3,977 model calls this system
+has ever made were skill classification, and nearly all of them came from
+`setup:demo` and e2e re-classifying the same rows. Total spend across the whole
+build is $2.32. Production cost was never the problem; the dev loop was.
+
+**Classification is rules in the write path and a model in a nightly job.**
+`classify()` runs keyword rules only. What they miss parks under `unclassified`,
+which was always the queue and never had a consumer: the marker's own comment
+promised a nightly batch that did not exist, so 27 rows were parked with nothing
+to pick them up. `modules/skills/jobs/reclassify.ts` is that job, 20 entities
+per call. The tree was being resent per entity, about 90% of each call's input.
+
+A write no longer waits on a model round trip, and a re-seed costs nothing.
+
+**Prompt caching does not apply here and is not used.** The prefix is about 190
+tokens against a 512 floor, so it would silently never cache. The Batch API's
+extra 50% was declined: up to 24h on top of the nightly run puts a skill link
+two days behind the write.
+
+**skills.yaml gained `home` and `preventive_care`.** Home is the largest module
+in the app and had no skill to land on at all. Measured against the real entity
+set, the rule hit rate went from 31% to 58% and Home's misses from 28 to 7.
+
+**The dashboard headline is a template.** It cannot invent a number on the most
+read sentence in the app, costs nothing, works with no provider connected, and
+is now testable rather than sampled. `Purpose` in `core/llm.ts` lost `headline`.
+
+## Integrations, first two real clients
+
+Strava and the Obsidian vault were manifest-only stubs whose `test()` returned
+"not verified", so neither could be connected even once a credential existed.
+Both have clients and real Test buttons now, and Strava has a nightly
+`fitness.sync_strava` job that upserts on `(source, external_id)` and backdates
+`workout_logged` to the activity rather than the job run.
+
+Neither is connected. Both need accounts only Nick has. See
+docs/SETUP-INTEGRATIONS.md, and docs/SETUP-SUPABASE.md for step 15.
+
+## Bugs found by the 2026-09-09 audit
+
+- **`goals.checkin` overwrote hand entered values.** It latched `is_manual` to
+  true correctly and then set `value = excluded.value` anyway, so the nightly
+  `pullMetrics` replaced a number the owner typed while the flag still said
+  manual. Proven with a failing test, then fixed with the guard
+  `core.skill_links` already used.
+- **Two e2e failures were shared fixture state, not app defects.** The seeded
+  "Backup complete" notification had fallen to rank 64 of 64 against
+  `listAlerts()`'s limit of 60, so the e2e seed owns `core.notifications`
+  outright now, the same way it already owned `core.job_runs`. And two tests
+  were completing the same task: the swipe gesture has its own row now.

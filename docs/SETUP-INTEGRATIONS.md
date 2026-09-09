@@ -1,0 +1,194 @@
+# Setting up the integrations
+
+What each external account needs from you, and what it buys once connected.
+
+Credentials go in on **Settings > Connections**, never in `.env`. They are
+encrypted with `ENCRYPTION_KEY` and stored in `core.connections`. The one
+exception is OAuth *client* credentials like `STRAVA_CLIENT_ID`, which identify
+the app rather than the account and live in `.env` with the other
+infrastructure secrets.
+
+Every card runs its own Test on save and tells you what it saw.
+
+## Where each one stands
+
+| Provider | Auth | Cost | State |
+|---|---|---|---|
+| Anthropic | token | pay as you go, cents | Connected |
+| Voyage | token | free tier | Connected, 3 req/min without a card |
+| Resend | token | free | Connected |
+| **Strava** | oauth2 | free | **Client and sync job built. Needs your app registration.** |
+| **Obsidian vault** | token | free | **Client built. Needs a repo and a token.** |
+| SimpleFIN | token | ~$1.50/mo | Manifest only, Test is still a stub |
+| Health Auto Export | webhook | paid iOS app | Manifest only |
+
+The two in bold are the ones I built clients for today, and the two you picked.
+Both are free. Neither is connected, because both need your accounts.
+
+---
+
+## Strava
+
+**Buys you:** every workout, synced nightly into Fitness. Workouts emit
+`workout_logged`, which earns Health XP on the Skill Tree and moves any fitness
+goal with a metric source. Until this is connected, Fitness only holds what you
+type in.
+
+Strava's API is free. The rate limits are generous for one person: 200 requests
+every 15 minutes, 2,000 a day. The nightly sync uses one.
+
+### Register the app
+
+1. Go to [strava.com/settings/api](https://www.strava.com/settings/api) while
+   logged into your Strava account.
+2. Create an application:
+   - **Application Name**: `POS` (only you ever see it)
+   - **Category**: Other
+   - **Website**: your Vercel URL, or `http://localhost:3000` for now
+   - **Authorization Callback Domain**: this one matters. Enter the bare
+     domain with **no scheme and no path**: `your-app.vercel.app`, or
+     `localhost` while developing. Strava rejects the OAuth redirect if this
+     does not match the host it is sent to.
+3. Copy the **Client ID** and **Client Secret**.
+
+### Wire it in
+
+Add both to `.env` locally and to Vercel's environment:
+
+```
+STRAVA_CLIENT_ID=12345
+STRAVA_CLIENT_SECRET=...
+```
+
+These are not account credentials, so they do not go on the Connections page.
+They identify the application to Strava; the token that identifies *you* is what
+the OAuth flow fetches and stores encrypted.
+
+Restart the dev server so it picks up the new variables.
+
+### Connect
+
+Settings > Connections > Strava > **Connect**. You go to Strava, approve
+`activity:read_all` and `profile:read_all`, and come back. The Test button then
+calls `/athlete` and should say `Connected as <your name>`.
+
+If it says the token was rejected, the callback domain in step 2 does not match
+the host you are on.
+
+### What happens next
+
+The nightly run calls `fitness.sync_strava` before the digest. On the first run
+it asks for a year of activities; after that it asks from the newest workout it
+already has, minus a 48 hour overlap so an activity you upload late is not
+missed between two runs.
+
+Workouts upsert on `(source, external_id)`, so re-running corrects a renamed
+activity rather than duplicating it. Anything you typed in by hand carries
+`source = 'manual'` and is never touched.
+
+Strava has around forty sport types and the `kind` column allows six, so
+anything unrecognised lands on `other`. A windsurf is still a workout.
+
+Access tokens last six hours. The nightly pass refreshes before any module sync,
+using the refresh token, so you do not have to think about it.
+
+---
+
+## Obsidian vault
+
+**Buys you:** the biggest single unlock in the app. Second Brain currently has
+the draft-and-approve review step built and nothing to review, because the vault
+is the source of truth and nothing reads it yet.
+
+**Read only, by construction.** `integrations/github_vault/client.ts` has no
+write path. That is how SPEC's "the app never edits the vault without a review
+step" is enforced: not by a convention, but by there being no function to call.
+When Second Brain proposes a commit, that goes through `core.proposals` and a
+separate call that does not exist yet.
+
+### Put the vault in a private repo
+
+If it is not already:
+
+```bash
+cd /path/to/your/vault
+git init
+gh repo create obsidian-vault --private --source=. --push
+```
+
+Private matters. The Test button tells you if the repo is public, because a
+vault should not be.
+
+### Make a token
+
+1. [github.com/settings/personal-access-tokens](https://github.com/settings/personal-access-tokens)
+   > **Generate new token** > Fine-grained.
+2. **Repository access**: Only select repositories, and pick the vault. Not "all
+   repositories". This token should reach one repo and nothing else.
+3. **Permissions**: Repository permissions > **Contents: Read-only**. That is
+   the only one needed. Do not grant write; the client cannot use it and a token
+   that can write to your notes is a worse thing to lose.
+4. **Expiration**: your call. A token that expires is one you have to
+   remember to replace; the Test button will tell you clearly when it has.
+
+### Connect
+
+Settings > Connections > Obsidian vault:
+
+- **Repository**: `yourname/obsidian-vault`. A pasted browser URL or a clone URL
+  works too, the client normalises all three.
+- **Personal access token**: the `github_pat_...` string.
+
+Test reads the repo and counts the markdown in it. A good result looks like
+`yourname/obsidian-vault (private), 412 markdown files on main.`
+
+If it says not found, that is GitHub's answer for both "wrong name" and "token
+cannot see it". The API returns 404 for a private repo it cannot reach rather
+than 403, so the message does not guess between them. Check the repo name first,
+then that the token's repository access includes it.
+
+### What happens next
+
+Nothing automatic yet, and this is the honest gap. The client can list every
+markdown file in one call and read any of them by blob sha. What is not built is
+the Second Brain job that walks that list, drafts summaries, and proposes
+commits back. That is the next real piece of work on this module, and connecting
+the vault now is what unblocks it.
+
+---
+
+## The two you did not pick
+
+### SimpleFIN Bridge
+
+Bank and card transactions into Finance, which SPEC calls the highest daily
+value module. It costs about $1.50 a month for the bridge.
+
+The flow is: create an account at
+[bridge.simplefin.org](https://bridge.simplefin.org), connect your banks there,
+and it gives you a one-time setup token that exchanges for a permanent access
+URL. That access URL is the credential.
+
+`integrations/simplefin/manifest.ts` exists but its Test is still a stub, and
+there is no client and no sync job. Finance works today on rows you enter by
+hand. Say the word and this is a similar amount of work to the Strava one.
+
+### Health Auto Export
+
+Apple Health metrics by webhook. Needs the paid iOS app, which pushes JSON to a
+URL the Connections page generates for you, protected by a shared secret.
+
+Manifest only. Worth doing after Strava, since the two overlap on workouts and
+Health Auto Export is the better source for sleep and resting heart rate.
+
+---
+
+## If a credential leaks
+
+Delete the connection on Settings > Connections, revoke the token at the
+provider, and make a new one. Deleting the row is enough on this end: nothing
+caches a credential, `getCredentials()` reads and decrypts on every call.
+
+Rotating `ENCRYPTION_KEY` is different and heavier. It makes every stored
+credential unreadable at once, so it means re-entering all of them. Only do it
+if the key itself is what leaked.

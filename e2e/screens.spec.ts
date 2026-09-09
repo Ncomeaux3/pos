@@ -1102,7 +1102,7 @@ test('gestures, swiping a task completes it', async ({ page }, testInfo) => {
   await page.goto('/tasks')
   const card = page
     .locator('article')
-    .filter({ hasText: 'Read DDIA ch. 5, Replication' })
+    .filter({ hasText: 'Sketch the week ahead' })
     .first()
   await expect(card).toBeVisible()
 
@@ -1115,5 +1115,5 @@ test('gestures, swiping a task completes it', async ({ page }, testInfo) => {
     clientY: y,
   })
 
-  await expect(page.getByText(/^Done\. Read DDIA ch. 5, Replication/)).toBeVisible()
+  await expect(page.getByText(/^Done\. Sketch the week ahead/)).toBeVisible()
 })

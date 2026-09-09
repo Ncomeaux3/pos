@@ -26,6 +26,11 @@ const TASKS: {
 }[] = [
   { external_id: 'demo-1', title: 'Recurring detection tests', notes: 'Same merchant, amount within 10 percent, weekly or monthly or yearly cadence.', dueInDays: -1, priority: 'P1', project: 'POS', estimate: 90 },
   { external_id: 'demo-2', title: 'Read DDIA ch. 5, Replication', dueInDays: 0, priority: 'P2', project: 'Learning', estimate: 40 },
+  // demo-2b exists so the swipe to complete gesture has a task of its own. It
+  // shared demo-2 with the click to complete test, which runs in the desktop
+  // project against the same database, so whichever landed first left the
+  // other looking at a task that was already done.
+  { external_id: 'demo-2b', title: 'Sketch the week ahead', dueInDays: 0, priority: 'P3', project: 'Learning', estimate: 15 },
   { external_id: 'demo-3', title: 'Lower, deadlift day', dueInDays: 0, at: '17:30', priority: 'P2', project: 'Health', estimate: 60 },
   { external_id: 'demo-4', title: 'Pay the Amex statement', dueInDays: 1, at: '09:00', priority: 'P1', project: 'Finance', estimate: 5 },
   { external_id: 'demo-5', title: 'Renew the renters policy', notes: 'Quote saved. Compare against one more carrier.', dueInDays: 3, priority: 'P2', project: 'Home', estimate: 30 },

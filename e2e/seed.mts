@@ -105,9 +105,12 @@ await propose({
 // Alerts for the Notifications screen, tied back to the seeded rules so the
 // alert centre shows a module and a channel rather than bare rows. Five
 // unread and two read, which is what makes both halves of the screen render.
-// Every seeded alert carries a rule_id; nothing else in the fixture does, so
-// this is the whole demo set and the reseed stays idempotent.
-await db().query(`delete from core.notifications where rule_id is not null`)
+// The seed owns this table outright, the same way it owns core.job_runs and
+// for the same reason. Deleting only `rule_id is not null` left every digest a
+// real nightly run had queued, and listAlerts() takes the newest 60: after
+// enough Run now presses the seeded rows fell off the end of the window and
+// the alert centre test failed on a row that was still in the table.
+await db().query(`delete from core.notifications`)
 await db().query(
   `insert into core.notifications (rule_id, channel, title, body, due_at, urgency, read_at)
    select r.id, v.channel, v.title, v.body, now() - v.age, v.urgency, v.read

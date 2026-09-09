@@ -52,18 +52,27 @@ thing I cannot do: it needs your real keys.
 
 ## Decisions I would like from you
 
-- [ ] **SimpleFIN, Strava, Health Auto Export, and the Obsidian vault have stub
-      Test buttons.** The plan specified this: their modules have not shipped, so
-      their Test returns "Not verified" rather than pretending. The consequence
-      is that a wrong SimpleFIN access URL or GitHub token would not be caught
-      until that module gets built, possibly months later. SimpleFIN's real check
-      is a single GET and I could write it now. Want me to, or leave it as the
-      plan specified?
-- [ ] **Strava OAuth needs an app registration before its Connect button can
-      work.** `STRAVA_CLIENT_ID` and `STRAVA_CLIENT_SECRET` are blank in `.env`,
-      so the button currently redirects back with a message saying so. Nothing
-      needs it until the Fitness module, so this is only worth doing if you want
-      the flow proven end to end now.
+- [x] **2026-09-09. Strava and the Obsidian vault have real Test buttons now**,
+      and clients behind them. Strava also has a nightly `fitness.sync_strava`
+      job. SimpleFIN and Health Auto Export are still stubs, by your choice:
+      SimpleFIN costs about $1.50 a month and Health Auto Export needs the paid
+      iOS app. Say the word on either and they are a similar amount of work.
+- [ ] **Strava needs an app registration.** `STRAVA_CLIENT_ID` and
+      `STRAVA_CLIENT_SECRET` are still blank in `.env`, so Connect redirects
+      back with a message saying so. Free, about five minutes, and the sync job
+      is built and waiting. Step by step in docs/SETUP-INTEGRATIONS.md.
+
+- [ ] **The Obsidian vault needs a private repo and a fine grained token.**
+      Contents: Read-only on one repository is the whole permission set. This is
+      the biggest single unlock left: Second Brain has the review step built and
+      nothing to review. docs/SETUP-INTEGRATIONS.md.
+
+- [ ] **Create the hosted Supabase project.** Full walkthrough in
+      docs/SETUP-SUPABASE.md. Two settings in it are the ones the security
+      review flagged and neither can be enforced from the repo: signup must be
+      disabled, and exposed schemas must stay `public, graphql_public`. Every
+      RLS policy in the app trusts `authenticated`, so those two settings are
+      what make that trust reasonable.
 - [ ] **`RESEND_FROM` is unset, so the digest will send from
       `onboarding@resend.dev`.** That works and needs no domain. If you would
       rather it come from your own domain, verify one in Resend and set the
