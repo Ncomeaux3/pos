@@ -117,6 +117,20 @@ paywall stub, a cookie wall and a page that renders in the browser all look the
 same from here, and a confident summary of an article nobody read is the worst
 thing this feature could do.
 
+**Every hop of a redirect is checked, not just the URL you pasted.** An
+automated review caught this after the first version shipped, and it was right:
+`redirect: 'follow'` validated the pasted link and then chased a `302` anywhere,
+so a page under someone else's control could answer
+`Location: http://169.254.169.254/latest/meta-data/` and be fetched from inside
+the deployment with the guard already satisfied. No DNS control needed. Redirects
+are followed by hand now, each hop back through the same check, capped at five.
+
+The hostname is also resolved and every record checked, because
+`http://localtest.me/` is public, free, and points at 127.0.0.1. What remains
+open is DNS rebinding, where the record changes between our lookup and fetch's:
+closing that means pinning the address through the connection, which node's
+fetch cannot express. It is stated in the code rather than papered over.
+
 **The summary is capped.** It is Haiku, about half a cent, and it counts against
 the same monthly cap research does. Reaching the cap does not break ingestion:
 the draft still arrives with the full source text and a line saying why there is

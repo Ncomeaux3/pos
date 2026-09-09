@@ -48,16 +48,18 @@ Rules:
  * comes back in `note` alongside a usable result.
  */
 export async function ingestUrl(rawUrl: string): Promise<Ingested> {
-  const url = normaliseUrl(rawUrl)
+  const url = await checkedUrl(rawUrl)
   return isYouTube(url) ? ingestVideo(url) : ingestArticle(url)
 }
 
 /**
- * A pasted URL, tidied.
+ * A pasted URL, tidied, with the checks that need no network.
  *
  * A bare `example.com/x` is what people paste, and `new URL` rejects it, so
  * https is assumed rather than the paste being refused. Only http and https
  * are allowed through: `file:` and `data:` would otherwise be fetchable.
+ *
+ * Callers about to make a request want `checkedUrl`, which adds the lookup.
  */
 export function normaliseUrl(input: string): string {
   const trimmed = input.trim()
@@ -87,6 +89,46 @@ export function normaliseUrl(input: string): string {
 }
 
 /**
+ * `normaliseUrl`, plus what the hostname actually resolves to.
+ *
+ * `normaliseUrl` only sees the literal in the URL, so `http://localtest.me/`
+ * passes it and then resolves to 127.0.0.1. Resolving here closes that, which
+ * matters because such hostnames are free and public and need no attacker
+ * infrastructure at all.
+ *
+ * What this still does not close is DNS rebinding: the name is resolved here
+ * and again by fetch, and a record with a one second TTL can differ between
+ * the two. Closing that means pinning the address through the connection,
+ * which node's fetch has no way to express. The gap is stated rather than
+ * papered over, and it is a much higher bar than a redirect or a public
+ * hostname pointed somewhere private.
+ *
+ * A lookup that fails is not treated as private: an unresolvable host fails at
+ * the fetch anyway, with a better message than this could give.
+ */
+export async function checkedUrl(input: string): Promise<string> {
+  const url = normaliseUrl(input)
+
+  try {
+    const { lookup } = await import('node:dns/promises')
+    const addresses = await lookup(new URL(url).hostname, { all: true })
+    if (addresses.some((a) => isPrivateHost(a.address))) {
+      throw new PrivateAddress()
+    }
+  } catch (error) {
+    if (error instanceof PrivateAddress) {
+      throw new Error('That address is on a private network, so it will not be fetched.')
+    }
+    // Anything else is a resolution failure, which the fetch reports better.
+  }
+
+  return url
+}
+
+/** Internal, so the catch above can tell a refusal from a lookup failure. */
+class PrivateAddress extends Error {}
+
+/**
  * Addresses a server must not be talked into fetching.
  *
  * This runs inside a server action, so the URL is attacker-controllable in the
@@ -94,11 +136,10 @@ export function normaliseUrl(input: string): string {
  * metadata at 169.254.169.254 is the classic target; loopback and the private
  * ranges are the rest of it.
  *
- * A hostname that resolves to a private address is not caught here, and cannot
- * be without resolving it first and pinning the result through the fetch. This
- * blocks the literal forms, which is the difference between an accident and a
- * deliberate attack, and the deliberate case is bounded by there being one user
- * who has to be signed in to reach this at all.
+ * Literal addresses only. A hostname that resolves to a private address is
+ * caught by `checkedUrl`, and a redirect into one by `fetchFollowing`. Keeping
+ * this half pure is what lets it run on a resolved IP as well as on a URL's
+ * hostname, which is how those two reuse it.
  */
 export function isPrivateHost(hostname: string): boolean {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, '')
@@ -125,12 +166,47 @@ export function isPrivateHost(hostname: string): boolean {
   )
 }
 
+/** Hops before giving up. Five is more than any real article needs. */
+const MAX_REDIRECTS = 5
+
+/**
+ * Fetch, following redirects by hand so every hop is checked.
+ *
+ * `redirect: 'follow'` validates the URL the owner pasted and nothing after it.
+ * A page under someone else's control answering `302 Location:
+ * http://169.254.169.254/latest/meta-data/` would then be fetched from inside
+ * the deployment with the guard already satisfied. No DNS control needed, just
+ * a redirect, which makes it the easiest way past `normaliseUrl` by some
+ * distance.
+ *
+ * Each hop goes back through `normaliseUrl`, so the scheme and address rules
+ * apply to the whole chain rather than only its first link.
+ */
+export async function fetchFollowing(startUrl: string): Promise<Response> {
+  let current = startUrl
+
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    const res = await fetch(current, {
+      headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(30_000),
+    })
+
+    if (res.status < 300 || res.status >= 400) return res
+
+    const location = res.headers.get('location')
+    if (!location) throw new Error(`That page redirected to nowhere (${res.status}).`)
+
+    // Resolved against the current URL, because a Location header is allowed to
+    // be relative, and then re-checked from scratch.
+    current = await checkedUrl(new URL(location, current).toString())
+  }
+
+  throw new Error('That link redirected too many times.')
+}
+
 async function fetchText(url: string): Promise<string> {
-  const res = await fetch(url, {
-    headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' },
-    redirect: 'follow',
-    signal: AbortSignal.timeout(30_000),
-  })
+  const res = await fetchFollowing(url)
 
   if (!res.ok) throw new Error(`That page answered ${res.status}.`)
 

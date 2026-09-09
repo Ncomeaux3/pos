@@ -2,6 +2,12 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vites
 
 process.env.DATABASE_URL ??= 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
 
+const lookup = vi.fn()
+// Mocked so the suite does not depend on a real name resolving. localtest.me
+// pointing at 127.0.0.1 is exactly the case being guarded, but a test that
+// needs DNS fails on a CI runner that has none.
+vi.mock('node:dns/promises', () => ({ lookup: (...args: unknown[]) => lookup(...args) }))
+
 const complete = vi.fn()
 vi.mock('@/core/llm', async () => {
   const actual = await vi.importActual<typeof import('@/core/llm')>('@/core/llm')
@@ -9,7 +15,9 @@ vi.mock('@/core/llm', async () => {
 })
 
 const { db } = await import('@/core/db')
-const { ingestUrl, isPrivateHost, normaliseUrl } = await import('./ingest')
+const { checkedUrl, fetchFollowing, ingestUrl, isPrivateHost, normaliseUrl } = await import(
+  './ingest'
+)
 // Through the registry rather than by importing ./manifest directly. The tool
 // calls register(), which resolves the classifier through modules/_index, and
 // importing this manifest first leaves that half initialised: the same cycle
@@ -25,6 +33,9 @@ const ARTICLE = `<html><head><title>Replication | The Paper</title></head><body>
 beforeEach(() => {
   complete.mockReset()
   complete.mockResolvedValue('A summary of the piece.')
+  lookup.mockReset()
+  // Public by default. A test that cares says otherwise.
+  lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }])
 })
 afterEach(async () => {
   vi.unstubAllGlobals()
@@ -90,6 +101,109 @@ describe('isPrivateHost', () => {
     expect(isPrivateHost('172.32.0.1')).toBe(false)
     expect(isPrivateHost('11.0.0.1')).toBe(false)
     expect(isPrivateHost('192.169.1.1')).toBe(false)
+  })
+})
+
+// The guard on the pasted URL is only half of it. `redirect: 'follow'` would
+// check the first link and then chase a 302 anywhere, which needs no DNS
+// control at all and was the easiest way past normaliseUrl by some distance.
+describe('following redirects', () => {
+  const redirect = (to: string) =>
+    new Response(null, { status: 302, headers: { location: to } })
+
+  it('follows an ordinary redirect', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(redirect('https://example.com/moved'))
+      .mockResolvedValueOnce(htmlResponse(ARTICLE))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const res = await fetchFollowing('https://example.com/a')
+
+    expect(res.status).toBe(200)
+    expect(fetchMock.mock.calls[1][0]).toBe('https://example.com/moved')
+  })
+
+  it('refuses a redirect into a private address', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => redirect('http://169.254.169.254/latest/meta-data/')),
+    )
+
+    await expect(fetchFollowing('https://example.com/a')).rejects.toThrow(/private/)
+  })
+
+  // A Location header is allowed to be relative, and resolving it against the
+  // wrong base is another way to end up somewhere unchecked.
+  it('resolves a relative redirect against the current URL', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(redirect('/elsewhere'))
+      .mockResolvedValueOnce(htmlResponse(ARTICLE))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await fetchFollowing('https://example.com/deep/a')
+
+    expect(fetchMock.mock.calls[1][0]).toBe('https://example.com/elsewhere')
+  })
+
+  it('refuses a redirect to a scheme that is not http', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => redirect('file:///etc/passwd')))
+
+    await expect(fetchFollowing('https://example.com/a')).rejects.toThrow(/http/)
+  })
+
+  it('gives up rather than looping forever', async () => {
+    const fetchMock = vi.fn(async () => redirect('https://example.com/next'))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(fetchFollowing('https://example.com/a')).rejects.toThrow(/too many/)
+    expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(7)
+  })
+
+  it('says so when a redirect names nowhere to go', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 302 })))
+
+    await expect(fetchFollowing('https://example.com/a')).rejects.toThrow(/nowhere/)
+  })
+
+  // An ingest goes through the same path, so the whole chain is covered.
+  it('stops an ingest that is redirected at cloud metadata', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => redirect('http://169.254.169.254/latest/meta-data/')),
+    )
+
+    await expect(ingestUrl('https://example.com/a')).rejects.toThrow(/private/)
+  })
+})
+
+// A public hostname pointing at a private address is free and needs no attacker
+// infrastructure, so the literal check alone is not enough.
+describe('checkedUrl', () => {
+  it('refuses a hostname that resolves to loopback', async () => {
+    lookup.mockResolvedValue([{ address: '127.0.0.1', family: 4 }])
+    await expect(checkedUrl('http://localtest.me/')).rejects.toThrow(/private/)
+  })
+
+  // One private record among several is still a way in.
+  it('refuses when any record is private', async () => {
+    lookup.mockResolvedValue([
+      { address: '93.184.216.34', family: 4 },
+      { address: '169.254.169.254', family: 4 },
+    ])
+    await expect(checkedUrl('https://mixed.example/')).rejects.toThrow(/private/)
+  })
+
+  it('lets a hostname that resolves publicly through', async () => {
+    await expect(checkedUrl('https://example.com/a')).resolves.toBe('https://example.com/a')
+  })
+
+  // An unresolvable host fails at the fetch with a better message than this
+  // could give, so it is not treated as an attack.
+  it('does not treat a lookup failure as private', async () => {
+    lookup.mockRejectedValue(Object.assign(new Error('ENOTFOUND'), { code: 'ENOTFOUND' }))
+    await expect(checkedUrl('https://nowhere.invalid/a')).resolves.toContain('invalid')
   })
 })
 
