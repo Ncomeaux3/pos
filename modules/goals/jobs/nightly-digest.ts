@@ -80,6 +80,8 @@ export async function nightlyDigest(): Promise<GoalsDigest> {
     stalled: counts.stalled,
     done: counts.done,
     // Stalled before at risk: a goal that has stopped moving is the worse news.
-    attention: attention.sort((a, b) => (a.status === 'stalled' ? -1 : 1)).slice(0, 5),
+    attention: attention
+      .sort((a, b) => Number(b.status === 'stalled') - Number(a.status === 'stalled'))
+      .slice(0, 5),
   }
 }

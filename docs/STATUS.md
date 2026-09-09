@@ -3,7 +3,7 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
-Last updated: 2026-09-08, the three platform screens shipped. Branch `skills-module`.
+Last updated: 2026-09-08, platform screens plus Tasks and Goals. Branch `skills-module`.
 
 ## Done
 
@@ -40,6 +40,22 @@ The sender reads the rules now: `pending()` gates on the global pause, then
 the rule's mute or snooze, then quiet hours, where only an urgent rule gets
 through and only while the override is on.
 
+**Phase 2, modules 2 and 3: Tasks and Goals.** Both are complete modules:
+migration, manifest, tools, jobs, UI to the prototype, seed, README and
+Playwright shots.
+
+Tasks has six views over one list plus a month grid, and a quick add parser
+that leaves a token it does not recognise in the title rather than guessing.
+Goals holds the status rules and the two projections in
+`modules/goals/progress.ts` with their test, and every status on screen
+carries the sentence that produced it.
+
+`ModuleManifest` gained `metrics`, which is the whole cross-module read
+mechanism for a live value. A module says what it will compute; Goals
+enumerates the registry and stores the key. No query strings are parsed and
+no schema is reached into, so deleting a module makes its key stop resolving
+and the goal falls back to manual check-ins.
+
 **Phase 2, module 1 of 13: Skill Tree.** The tree, the XP weights, the level
 function and the overrides table moved out of core into a `skills` schema, and
 the constellation screen is built. `register()` now classifies through an
@@ -50,8 +66,8 @@ modules/skills/README.md.
 ## Verification
 
 ```
-pnpm typecheck && pnpm lint && pnpm test    # 311 tests, 30 files
-pnpm test:e2e                               # 45 specs, 1440px and 402px, both themes
+pnpm typecheck && pnpm lint && pnpm test    # 354 tests, 33 files
+pnpm test:e2e                               # 57 specs, 1440px and 402px, both themes
 pnpm setup:demo                             # idempotent bootstrap
 ```
 
@@ -71,13 +87,13 @@ classification splits between keyword rules and `claude-haiku-4-5`, and
 
 ## Screens built
 
-Login, Dashboard (live, with the bento tiles), Notes, Skill Tree, Search,
-Review, Notifications, Agent Log, and all five Settings tabs: General,
-Connections, Agents and MCP, Notifications, Skills. Command palette on Cmd K.
+Login, Dashboard (live, with the bento tiles), Notes, Skill Tree, Tasks,
+Goals, Search, Review, Notifications, Agent Log, and all five Settings tabs:
+General, Connections, Agents and MCP, Notifications, Skills. Command palette
+on Cmd K.
 
-Nine of the design bundle's twenty-two screens are built. Not yet built:
-Onboarding, Weekly Review, and every module beyond `notes` and `skills`,
-which is Finance, Tasks, Goals, Second Brain, Fitness, Health, Home,
+Eleven of the design bundle's twenty-two screens are built. Not yet built:
+Onboarding, Weekly Review, and Finance, Second Brain, Fitness, Health, Home,
 Insurance, Travel, Meals and Ideas.
 
 Known gaps on the Skill Tree screen: goal weight shows `--` because Goals does
@@ -85,10 +101,9 @@ not exist, and there is no Notion backfill, so XP starts at zero by decision.
 
 ## Next
 
-**Tasks, then Goals, then Onboarding and Weekly Review, then Finance.** Each
-module is one step: migration, manifest, tools, jobs, UI to its prototype,
-seed, README, Playwright screenshots. Onboarding and Weekly Review need Tasks
-and Goals to exist, and share the `WizardShell` that already ships.
+**Onboarding and Weekly Review, then Finance.** Both wizards needed Tasks and
+Goals to exist, and both are now unblocked; they share the `WizardShell` that
+already ships. After that, Finance, then the rest in ARCHITECTURE's order.
 
 **Step 15, deploy, is still the only Phase 1 step left, and it is entirely
 owner work**: Vercel, a hosted Supabase project, and the first real nightly run in
@@ -124,6 +139,23 @@ outside Next.
   every upsert, so each `setup:demo` and each e2e seed awarded the XP again;
   five demo notes had thirty-eight creation events each. Pass an explicit
   `eventType` for something that genuinely happens again on the same row.
+- **`current_date` is the database's day, not the owner's.** The database runs
+  in UTC and the app server runs wherever it runs. Every date question goes
+  through `core.today()`, which reads `core.settings.timezone`, and
+  `core/today.ts` reads that same function rather than the Node clock. At 19:14
+  in Chicago the two answers are different dates.
+- **A portal guarded by `typeof document === 'undefined'` is a hydration
+  mismatch waiting for a reason.** It only appeared once a drawer's open state
+  came from the URL: the server rendered nothing and the client rendered the
+  panel. `Overlay` gates on mount state instead, so the first client render
+  matches the server.
+- **Client state does not survive the reload that switches themes.** A view, a
+  tab or an open drawer that lives in `useState` screenshots as its default and
+  the test still passes. Put it in the URL, which is better behaviour anyway.
+- **Deleting a module row orphans its `core.entities` registration.** Nothing
+  cascades, and search answers with rows whose table entry is gone. A module
+  seed upserts on `(source, external_id)` for exactly this reason; deleting and
+  reinserting gave every task a new uuid and left 454 orphans behind.
 - **A server action is a public POST endpoint, and its TypeScript signature is
   erased at runtime.** `patchRule` built a SET clause by interpolating object
   keys, so a key of `muted = true, label` would have written a column no caller

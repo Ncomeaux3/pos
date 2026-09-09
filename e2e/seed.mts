@@ -3,6 +3,7 @@ import { embedChanged } from '@/core/search'
 import { propose } from '@/core/proposals'
 import { seed } from '@/modules/notes/seed'
 import { seed as seedTasks } from '@/modules/tasks/seed'
+import { seed as seedGoals } from '@/modules/goals/seed'
 
 // Run by the Playwright setup project before any screen test. The vitest suites
 // use their own pos_test database now, but this still has to be deterministic:
@@ -21,6 +22,7 @@ const notes = await seed()
 // and after a few passes search was answering with hundreds of rows whose
 // tasks no longer existed.
 const taskCount = await seedTasks()
+const goalCount = await seedGoals()
 const index = await embedChanged()
 
 // Two proposals so the Review screen has both shapes: one a module marked
@@ -167,5 +169,5 @@ await db().query(
   ],
 )
 
-console.log(`seeded ${notes} notes, indexed ${index.indexed}, embedded ${index.embedded}, 2 proposals, 7 alerts, 2 runs, ${taskCount} tasks`)
+console.log(`seeded ${notes} notes, indexed ${index.indexed}, embedded ${index.embedded}, 2 proposals, 7 alerts, 2 runs, ${taskCount} tasks, ${goalCount} goals`)
 process.exit(0)

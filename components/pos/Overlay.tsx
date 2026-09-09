@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 import { Eyebrow } from './text'
@@ -30,6 +30,14 @@ export function Overlay({
 }) {
   const panel = useRef<HTMLDivElement>(null)
 
+  // A portal cannot render on the server, and `typeof document === 'undefined'`
+  // is a server/client branch: with the open state in the URL the server
+  // renders nothing and the client renders the panel, which is a hydration
+  // mismatch. Mounting is state, so the first client render matches the server
+  // and the panel appears on the pass after it.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
   useEffect(() => {
     if (!open) return
 
@@ -50,7 +58,7 @@ export function Overlay({
     }
   }, [open, onClose])
 
-  if (!open || typeof document === 'undefined') return null
+  if (!open || !mounted) return null
 
   return createPortal(
     <div className="fixed inset-0 z-50">
