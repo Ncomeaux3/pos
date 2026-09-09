@@ -169,11 +169,14 @@ export type SearchOptions = {
  * How the answer was produced.
  *
  * `text`     full text answered it, so no embedding was bought.
- * `hybrid`   both arms ran and were fused.
- * `degraded` the vector arm was wanted and could not run. This is the only one
- *            worth telling the reader about.
+ * `guessed`  the words found nothing and these are the vector arm's nearest
+ *            neighbours. They are guesses, not matches, and the page has to say
+ *            so: a distance threshold is itself a guess, it was calibrated
+ *            against five documents, and it drifts as the corpus grows. Framing
+ *            beats tuning, because framing cannot go stale.
+ * `degraded` the vector arm was wanted and could not run.
  */
-export type SearchMode = 'text' | 'hybrid' | 'degraded'
+export type SearchMode = 'text' | 'guessed' | 'degraded'
 
 export type SearchResult = {
   hits: SearchHit[]
@@ -328,7 +331,11 @@ export async function search(query: string, opts: SearchOptions = {}): Promise<S
   const vector = await queryVector(q)
   if (!vector) return { hits: byText, mode: 'degraded' }
 
-  return { hits: await runSearch(q, vector, opts), mode: 'hybrid' }
+  // The words found nothing, so every hit here came from the vector arm and is
+  // a nearest neighbour, not a match. 'guessed' is what lets the page say so:
+  // rendering a semantic neighbour as a result claims a match that was never
+  // made, and for a query with no real answer that reads as a wrong answer.
+  return { hits: await runSearch(q, vector, opts), mode: 'guessed' }
 }
 
 /**

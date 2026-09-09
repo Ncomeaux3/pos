@@ -48,6 +48,11 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
   const scoped = scope ? all.filter((h) => h.module === scope) : all
   const fallback = query && all.length === 0 ? await closest(query) : []
 
+  // A guessed answer is presented as a guess, whatever it found. The words
+  // matched nothing, so these are nearest neighbours, and rendering them as
+  // results claims a match that was never made.
+  const guessing = result.mode === 'guessed' || (scoped.length === 0 && fallback.length > 0)
+
   const shown = scoped.length > 0 ? scoped : fallback
   const skills = await skillsFor(shown.map((h) => h.id))
   const hits = decorate(shown, skills)
@@ -98,7 +103,7 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
           Type anything. Search reads core.entities, so it covers every module at once and
           finds a note by what it means as well as by what it says.
         </EmptyState>
-      ) : scoped.length === 0 && fallback.length > 0 ? (
+      ) : guessing && hits.length > 0 ? (
         <div className="space-y-3">
           <p className="t-caption text-ink-3">
             Nothing matched {`"${query}"`}

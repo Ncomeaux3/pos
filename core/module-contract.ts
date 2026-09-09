@@ -70,6 +70,17 @@ export type ModuleManifest = {
    * what lets `rm -r modules/skills` leave a working app.
    */
   classifier?: (entityRef: string, text: string, module: string) => Promise<void>
+  /**
+   * Numbers this module will compute on request, for a goal to track.
+   *
+   * This is the whole cross-module read mechanism for a live value, and it
+   * exists so Goals never parses a string like `finance.net_worth latest` and
+   * never issues SQL against another module's schema. Goals enumerates what is
+   * registered and stores the key it was given; deleting the module makes the
+   * key stop resolving, and the goal falls back to manual check-ins rather than
+   * erroring.
+   */
+  metrics?: Record<string, { label: string; unit: string; get: () => Promise<number> }>
 }
 
 /** Identity, but it pins the manifest type at the definition site. */

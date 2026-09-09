@@ -2,6 +2,7 @@ import { db } from '@/core/db'
 import { embedChanged } from '@/core/search'
 import { propose } from '@/core/proposals'
 import { seed } from '@/modules/notes/seed'
+import { seed as seedTasks } from '@/modules/tasks/seed'
 
 // Run by the Playwright setup project before any screen test. The vitest suites
 // use their own pos_test database now, but this still has to be deterministic:
@@ -14,6 +15,12 @@ await db().query(`delete from core.entities where module = 'notes' and entity_id
 await db().query(`delete from notes.note where source <> 'demo'`)
 
 const notes = await seed()
+// No delete first. The module seed upserts on (source, external_id), so the
+// ids are stable and the fixture is already the same every run. Deleting and
+// reinserting gave every task a new uuid and orphaned its core.entities row,
+// and after a few passes search was answering with hundreds of rows whose
+// tasks no longer existed.
+const taskCount = await seedTasks()
 const index = await embedChanged()
 
 // Two proposals so the Review screen has both shapes: one a module marked
@@ -160,5 +167,5 @@ await db().query(
   ],
 )
 
-console.log(`seeded ${notes} notes, indexed ${index.indexed}, embedded ${index.embedded}, 2 proposals, 7 alerts, 2 runs`)
+console.log(`seeded ${notes} notes, indexed ${index.indexed}, embedded ${index.embedded}, 2 proposals, 7 alerts, 2 runs, ${taskCount} tasks`)
 process.exit(0)

@@ -43,8 +43,21 @@ test('dashboard shell', async ({ page }) => {
   const nav = page.getByRole('navigation', { name: /modules|sections/i }).first()
   await expect(nav.getByRole('link', { name: 'Dashboard' })).toBeVisible()
   await expect(nav.getByRole('link', { name: 'Notes' })).toBeVisible()
-  await expect(nav.getByRole('link', { name: 'Review' })).toBeVisible()
 
+  // The mobile bar holds four modules and a More sheet, so what is on it
+  // depends on how many modules are installed. Review is always reachable,
+  // which is the thing worth asserting; whether it is a tab or a sheet entry
+  // is a layout decision the design already made.
+  const mobile = (page.viewportSize()?.width ?? 0) < 720
+  if (mobile) {
+    await page.getByRole('group').getByText('More').click()
+  }
+  // By href: the sidebar prefixes each label with its two character index and
+  // appends the pending count, so the accessible name is "RV Review 2", and
+  // "Weekly review" would match a loose name filter anyway.
+  await expect(nav.locator('a[href="/review"]')).toBeVisible()
+
+  if (mobile) await page.keyboard.press('Escape')
   await shoot(page, 'dashboard')
 })
 
@@ -370,4 +383,62 @@ test('settings, notifications', async ({ page }) => {
   // rule by rule screen makes tedious.
   await page.getByRole('switch', { name: 'Push for Finance' }).click()
   await expect(page.getByText(/Push (on|off) for Finance/)).toBeVisible()
+})
+
+test('tasks, the board and the quick add parser', async ({ page }) => {
+  await page.goto('/tasks')
+  await expect(page.getByRole('heading', { name: 'Tasks' })).toBeVisible()
+
+  // Today holds what is due today and what slipped, because a slip is today.
+  await expect(page.getByText('Recurring detection tests')).toBeVisible()
+  await expect(page.getByText('Read DDIA ch. 5, Replication')).toBeVisible()
+
+  // The parser says what it understood before anything is saved.
+  const line = page.getByLabel('Add a task')
+  await line.fill('Call the carrier !p1 #Home @tomorrow 15m')
+  await expect(page.getByText('Call the carrier')).toBeVisible()
+  await expect(page.getByText('Due Tomorrow')).toBeVisible()
+  await expect(page.getByText('Priority P1')).toBeVisible()
+  await expect(page.getByText('Project Home')).toBeVisible()
+  await expect(page.getByText('Estimate 15m')).toBeVisible()
+
+  await shoot(page, 'tasks')
+})
+
+test('tasks, the six views and the month grid', async ({ page }) => {
+  await page.goto('/tasks')
+
+  // Review holds agent-proposed work, which is a real row that does not count
+  // until it is accepted.
+  await page.getByRole('tab', { name: /Review/ }).click()
+  await expect(page.getByText('Test the bank sync against three months of history')).toBeVisible()
+  // The view is in the URL, which is what lets it survive the reload shoot()
+  // does to switch themes. Without it the shot would show Today and the test
+  // would still pass.
+  await expect(page).toHaveURL(/view=review/)
+  await shoot(page, 'tasks-review')
+
+  await page.getByRole('tab', { name: /This week/ }).click()
+  await expect(page.getByText('Clear week')).toBeHidden()
+
+  // By goal always offers a No goal column, so nothing is invisible, and it
+  // says why there are no goals yet rather than showing an empty rail.
+  await page.getByRole('tab', { name: /By goal/ }).click()
+  await expect(page.getByText('No goal')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Month view' }).click()
+  await expect(page.getByRole('button', { name: 'Previous month' })).toBeVisible()
+  await expect(page).toHaveURL(/month=1/)
+  await shoot(page, 'tasks-calendar')
+  await expect(page.getByRole('button', { name: 'Previous month' })).toBeVisible()
+})
+
+test('tasks, completing one emits the event that earns XP', async ({ page }) => {
+  await page.goto('/tasks')
+
+  await page.getByRole('button', { name: 'Complete Read DDIA ch. 5, Replication' }).click()
+  await expect(page.getByText('Done. Read DDIA ch. 5, Replication')).toBeVisible()
+
+  await page.getByRole('tab', { name: /Done/ }).click()
+  await expect(page.getByText('Read DDIA ch. 5, Replication')).toBeVisible()
 })
