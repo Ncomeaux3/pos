@@ -81,19 +81,27 @@ thing I cannot do: it needs your real keys.
 
 ## Step 15, deploy. This is what is left.
 
-Nothing in the codebase blocks it. These are the accounts and secrets only you
-can create, roughly in the order they are needed.
+Nothing in the codebase blocks it. Full walkthrough with the exact commands is
+in **docs/SETUP-SUPABASE.md**; this is the checklist.
 
-- [ ] **Create a Supabase project for production**, note the project ref, then
-      `supabase link --project-ref <ref>` and `supabase db push`. Disable email
-      signups in the dashboard: there is one owner and no signup flow.
+- [ ] **Create the Supabase project**, then `supabase link --project-ref <ref>`
+      and `supabase db push`. 24 migrations. Never `db reset` against it.
+- [ ] **Disable email signups**, and confirm **exposed schemas** stays
+      `public, graphql_public`. These two are the whole of the security review's
+      top finding: every RLS policy trusts `authenticated`, and neither setting
+      can be enforced from the repo. Do not skip them.
 - [ ] **Set the hosted email OTP expiry to 900 seconds**, so the 15 minute
       countdown on the login screen is true.
-- [ ] **Create the Vercel project** from the GitHub repo and set every `.env`
-      key as an environment variable. `ENCRYPTION_KEY` must be the same value
-      as local or the stored provider keys cannot be decrypted; generate fresh
-      values for `CRON_SECRET` and `MCP_TOKEN`. Confirm the cron shows as
-      registered after the first deploy.
+- [ ] **Create the Vercel project** and set every `.env` key.
+      **Generate a fresh `ENCRYPTION_KEY` for production.** An earlier version
+      of this file said to reuse the local one; that was wrong. The two
+      databases hold different rows, the production one starts with none, and
+      reusing the key spreads one secret across two places for no benefit. Put
+      it in your password manager: losing it makes every stored credential
+      unreadable with no recovery. Generate fresh `CRON_SECRET` and `MCP_TOKEN`
+      too. Confirm the cron registers after the first deploy.
+- [ ] **Set Supabase's Site URL** to the Vercel domain once you have it, or the
+      magic link comes back to the wrong place.
 - [ ] **Add two GitHub repo secrets** for the backup workflow:
       `BACKUP_DATABASE_URL`, the Supabase session mode pooler URL on port 5432,
       and `BACKUP_REPO_TOKEN`, a fine-grained token with contents write on
@@ -101,9 +109,48 @@ can create, roughly in the order they are needed.
 - [ ] **Run `pnpm setup` against production**, then paste the three provider
       keys again on the deployed Connections page. They are encrypted per
       environment and do not travel.
+- [ ] **Set your timezone** on Settings > General. Every date question goes
+      through `core.today()`, and the database runs in UTC.
 - [ ] **Turn Attack Mode on** in the Vercel firewall, and check whether the Bot
       Protection managed ruleset is offered on Hobby. The docs do not state a
       plan gate, so I did not assert one either way.
+
+## Integrations. All three are built and waiting on your accounts.
+
+Step by step for each in **docs/SETUP-INTEGRATIONS.md**. Every one has a real
+Test button now, so you get a clear yes or no rather than "not verified".
+
+- [ ] **Strava**, free, about 5 minutes. Register an app at
+      strava.com/settings/api, put the client id and secret in `.env` and in
+      Vercel. The callback domain is the bare host with no scheme and no path;
+      a mismatch there is the usual reason Connect fails. Unlocks a nightly
+      workout sync into Fitness.
+- [ ] **Obsidian vault**, free, about 5 minutes. A private repo plus a
+      fine-grained token with **Contents: Read-only** on that one repo. The
+      client has no write path, so a write scope would be pure downside.
+      Unlocks the nightly vault pull, which is what makes Second Brain hold
+      your actual notes.
+- [ ] **SimpleFIN**, about $1.50 a month. Subscribe at bridge.simplefin.org,
+      connect your banks there, paste the setup token. **The token is claimed
+      once and cannot be reclaimed**, which is why the claim happens on save;
+      pressing Test afterwards only reads and is safe to repeat. Unlocks
+      balances and transactions in Finance, which SPEC calls the highest daily
+      value module.
+- [ ] **Health Auto Export** is the one integration still a stub. It needs the
+      paid iOS app. Worth doing after Strava, since it is the better source for
+      sleep and resting heart rate.
+
+## Decisions I would like from you
+
+- [ ] **Three tables were renamed or collapsed without a spec amendment.**
+      `finance.budget_lines` folded into `finance.budget`, `travel.bookings`
+      into `itinerary_item`, `meals.meal_log` into `plan_entry`. All three read
+      as reasonable simplifications. Amend SPEC to match the code, or change the
+      code to match SPEC?
+- [ ] **The Skill Tree's third digest bullet cannot be computed.** SPEC asks for
+      "skills with high goal weight but low activity", and nothing anywhere
+      stores a goal weight. Either goals grow a per-skill weight, or that bullet
+      comes out of SPEC. It is currently hardcoded empty with a stale comment.
 
 ## Later phases
 
