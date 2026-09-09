@@ -540,3 +540,52 @@ test('weekly review, the close shows the note before it writes it', async ({ pag
 
   await shoot(page, 'weekly-review-close')
 })
+
+test('finance, net worth and the budget pace marks', async ({ page }) => {
+  await page.goto('/finance')
+  await expect(page.getByRole('heading', { name: 'Finance' })).toBeVisible()
+
+  // Net worth is a sum over accounts where a credit balance is negative, so
+  // the KPI is a plain total with no case analysis.
+  // Three on the page: the lede, the KPI tile and the chart card. The chart's
+  // accessible name is the unambiguous one, and it is also the assertion worth
+  // making, because it names the range the line actually covers.
+  await expect(page.getByRole('img', { name: /Net worth over \d+ days/ })).toBeVisible()
+
+  await shoot(page, 'finance')
+
+  // Budgets: the tick is the month pace, and a fixed cost at its limit is not
+  // flagged, because rent at 100 percent every month is not news.
+  await page.getByRole('tab', { name: /Budgets/ }).click()
+  await expect(page).toHaveURL(/tab=budgets/)
+  await expect(page.getByText('Fixed', { exact: true })).toBeVisible()
+  await expect(page.getByText(/105% used/)).toBeVisible()
+  await shoot(page, 'finance-budgets')
+})
+
+test('finance, the detector found the subscriptions and left the rest alone', async ({ page }) => {
+  await page.goto('/finance?tab=subscriptions')
+
+  // Five seeded recurring merchants, found by detectRecurring rather than
+  // listed by the fixture.
+  await expect(page.getByText('Anthropic Claude Pro')).toBeVisible()
+  await expect(page.getByText('Neighbourhood Gym')).toBeVisible()
+
+  // And nothing that merely repeats: the shops appear in the ledger many times
+  // without a rhythm, and payroll is the most regular thing in the data.
+  await expect(page.getByText('Kroger')).toBeHidden()
+  await expect(page.getByText('Payroll')).toBeHidden()
+
+  await shoot(page, 'finance-subscriptions')
+})
+
+test('finance, filing a transaction teaches the rule', async ({ page }) => {
+  await page.goto('/finance?tab=transactions')
+
+  const row = page.getByText('Coffee bar').first()
+  await expect(row).toBeVisible()
+
+  await page.getByRole('button', { name: 'File' }).first().click()
+  await page.getByRole('button', { name: 'Dining', exact: true }).first().click()
+  await expect(page.getByText(/the rule learned it/)).toBeVisible()
+})

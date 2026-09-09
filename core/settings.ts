@@ -49,6 +49,15 @@ export type Settings = {
   quiet_urgent_override: boolean
   /** The master switch. Rules keep their own state underneath it. */
   notifications_paused: boolean
+  /**
+   * When first run was finished, as an ISO timestamp. Empty means it has not
+   * been, which is what sends a fresh install to the wizard.
+   *
+   * A timestamp rather than a boolean so a fork can tell a database set up last
+   * year from one set up this morning, which matters when deciding whether an
+   * empty module is new or abandoned.
+   */
+  onboarding_completed_at: string
 }
 export type SettingKey = keyof Settings
 
@@ -69,6 +78,7 @@ export const DEFAULT_SETTINGS: Settings = {
   quiet_to: '06:30',
   quiet_urgent_override: true,
   notifications_paused: false,
+  onboarding_completed_at: '',
 }
 
 export async function getSetting<K extends SettingKey>(key: K): Promise<Settings[K]> {

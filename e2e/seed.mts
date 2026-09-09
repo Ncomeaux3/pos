@@ -4,6 +4,7 @@ import { propose } from '@/core/proposals'
 import { seed } from '@/modules/notes/seed'
 import { seed as seedTasks } from '@/modules/tasks/seed'
 import { seed as seedGoals } from '@/modules/goals/seed'
+import { seed as seedFinance } from '@/modules/finance/seed'
 
 // Run by the Playwright setup project before any screen test. The vitest suites
 // use their own pos_test database now, but this still has to be deterministic:
@@ -29,6 +30,13 @@ const notes = await seed()
 // tasks no longer existed.
 const taskCount = await seedTasks()
 const goalCount = await seedGoals()
+const txCount = await seedFinance()
+
+// The detector runs against the seeded history rather than the fixture listing
+// its own answers: the screen has to show what detectRecurring actually found.
+const { detectSubscriptions, snapshotBalances } = await import('@/modules/finance/jobs/nightly-digest')
+await snapshotBalances()
+const detected = await detectSubscriptions()
 const index = await embedChanged()
 
 // Two proposals so the Review screen has both shapes: one a module marked
@@ -175,5 +183,5 @@ await db().query(
   ],
 )
 
-console.log(`seeded ${notes} notes, indexed ${index.indexed}, embedded ${index.embedded}, 2 proposals, 7 alerts, 2 runs, ${taskCount} tasks, ${goalCount} goals`)
+console.log(`seeded ${notes} notes, indexed ${index.indexed}, embedded ${index.embedded}, 2 proposals, 7 alerts, 2 runs, ${taskCount} tasks, ${goalCount} goals, ${txCount} transactions, ${detected.found} subscriptions detected`)
 process.exit(0)

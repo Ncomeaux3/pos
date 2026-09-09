@@ -150,18 +150,21 @@ describe('updated_at trigger', () => {
   it('advances updated_at on update but leaves created_at alone', async () => {
     await client.query('begin')
     try {
-      const inserted = await client.query<{ created_at: Date; updated_at: Date }>(
-        `insert into core.settings (key, value) values ('__trigger_test', '1'::jsonb)
-         returning created_at, updated_at`,
+      await client.query(
+        `insert into core.settings (key, value) values ('__trigger_test', '1'::jsonb)`,
       )
-      const updated = await client.query<{ created_at: Date; updated_at: Date }>(
+      // Compared in Postgres, not in JavaScript. The trigger uses
+      // clock_timestamp(), which has microsecond precision, and a Date's
+      // getTime() is milliseconds: two fast statements share a millisecond
+      // often enough that the JS comparison was flaky rather than wrong.
+      const result = await client.query<{ advanced: boolean; created_held: boolean }>(
         `update core.settings set value = '2'::jsonb where key = '__trigger_test'
-         returning created_at, updated_at`,
+         returning updated_at > created_at as advanced,
+                   created_at = (select created_at from core.settings
+                                  where key = '__trigger_test') as created_held`,
       )
-      expect(updated.rows[0].created_at).toEqual(inserted.rows[0].created_at)
-      expect(updated.rows[0].updated_at.getTime()).toBeGreaterThan(
-        inserted.rows[0].updated_at.getTime(),
-      )
+      expect(result.rows[0].advanced).toBe(true)
+      expect(result.rows[0].created_held).toBe(true)
     } finally {
       await client.query('rollback')
     }
