@@ -20,6 +20,12 @@ await db().query(`delete from notes.note where source <> 'demo'`)
 // by an earlier pass would be loaded back and added to. The wizard resuming is
 // the feature; the fixture has to start from nothing.
 await db().query(`delete from core.reviews`)
+
+// Requested providers are first run's output, and the onboarding test toggles
+// one. A request left behind by an earlier pass turns the next click into a
+// removal, so the fixture starts with none. Real connections, which hold
+// credentials, are never touched here.
+await db().query(`delete from core.connections where status = 'requested'`)
 await db().query(`delete from core.entities where module = 'core' and entity_type = 'review'`)
 
 const notes = await seed()

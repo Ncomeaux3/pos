@@ -8,11 +8,14 @@ import {
   Eyebrow,
   ActionButton,
   PageHeader,
+  Row,
+  RowList,
   StatusChip,
   TabLinks,
   fieldClass,
 } from '@/components/pos'
 import { requireOwner } from '@/core/auth'
+import { db } from '@/core/db'
 import {
   type IntegrationManifest,
   deleteCredentials,
@@ -101,6 +104,17 @@ export default async function ConnectionsPage({ searchParams }: PageProps<'/sett
 
   const manifests = getIntegrations()
   const statuses = await getConnectionStatuses()
+
+  // Providers the owner asked for during first run that no integration backs.
+  // They have to appear somewhere or the wizard's promise, that a request is
+  // recorded rather than pretended, is not kept. Excluded from the connected
+  // count on purpose: a wish is not a connection.
+  const { rows: requested } = await db().query<{ integration_id: string; detail: string | null }>(
+    `select integration_id, last_test_detail as detail
+       from core.connections where status = 'requested'
+      order by integration_id`,
+  )
+  const unbacked = requested.filter((r) => !manifests.some((m) => m.id === r.integration_id))
   const origin = await getOrigin()
   const connected = manifests.filter((m) => statuses[m.id]?.connected).length
 
@@ -152,6 +166,27 @@ export default async function ConnectionsPage({ searchParams }: PageProps<'/sett
           />
         ))}
       </div>
+
+      {unbacked.length > 0 && (
+        <section className="space-y-3">
+          <Eyebrow dot="idle">Requested / {unbacked.length}</Eyebrow>
+          <p className="t-caption text-ink-3">
+            Asked for during first run. Nothing here syncs, because no integration in this build
+            speaks to it yet. The request is kept so the intent is written down rather than
+            forgotten, and so a fork knows what to build next.
+          </p>
+          <RowList>
+            {unbacked.map((r) => (
+              <Row
+                key={r.integration_id}
+                title={r.integration_id}
+                meta={r.detail ?? 'Requested'}
+                right={<StatusChip tone="quiet">No integration</StatusChip>}
+              />
+            ))}
+          </RowList>
+        </section>
+      )}
     </div>
   )
 }

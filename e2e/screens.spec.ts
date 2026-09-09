@@ -589,3 +589,48 @@ test('finance, filing a transaction teaches the rule', async ({ page }) => {
   await page.getByRole('button', { name: 'Dining', exact: true }).first().click()
   await expect(page.getByText(/the rule learned it/)).toBeVisible()
 })
+
+test('onboarding, six steps that write as they go', async ({ page }) => {
+  await page.goto('/onboarding')
+  await expect(page.getByRole('heading', { name: 'First run' })).toBeVisible()
+
+  await page.getByLabel('Your name').fill('Owner')
+  await page.getByLabel('Timezone').click()
+  await shoot(page, 'onboarding')
+
+  // Modules is a visibility switch, not a delete: the copy has to say so,
+  // because turning one off looks destructive.
+  await page.getByRole('button', { name: '02 Modules' }).click()
+  await expect(page.getByRole('switch', { name: 'Show Finance' })).toBeVisible()
+  await expect(page.getByText(/keeps its data and its tools/)).toBeVisible()
+
+  // Connections records intent. A provider with a real integration is starred;
+  // everything else is honestly a request.
+  await page.getByRole('button', { name: '03 Connections' }).click()
+  await expect(page.getByText(/nothing pretends to be connected/)).toBeVisible()
+  await shoot(page, 'onboarding-connections')
+})
+
+test('onboarding, a starter goal only points at a metric that exists', async ({ page }) => {
+  await page.goto('/onboarding?step=goals')
+
+  // Finance and Tasks are installed, so those two compute. The reading goal
+  // names no metric and is checked in by hand.
+  await expect(page.getByText('Six months of runway')).toBeVisible()
+  await expect(page.getByText('computed').first()).toBeVisible()
+  await expect(page.getByText('Read twelve books this year')).toBeVisible()
+
+  await shoot(page, 'onboarding-goals')
+})
+
+test('onboarding, requesting a provider records it without pretending', async ({ page }) => {
+  await page.goto('/onboarding?step=connect')
+
+  await page.getByRole('button', { name: /Banks and credit unions/ }).click()
+  await page.getByRole('button', { name: 'Ally', exact: true }).click()
+  await expect(page.getByText('Ally noted')).toBeVisible()
+
+  // It lands in Settings as requested, which is the honest half of the claim.
+  await page.goto('/settings/connections')
+  await expect(page.getByText('Ally')).toBeVisible()
+})
