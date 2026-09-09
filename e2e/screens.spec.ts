@@ -943,3 +943,49 @@ test('home, logging service moves the schedule it belongs to', async ({ page }) 
   await month.click()
   await expect(page.getByText('Gutter clean before the autumn')).toHaveCount(1)
 })
+
+test('insurance, sorted by what expires first with numbers masked', async ({ page }) => {
+  await page.goto('/insurance')
+  await expect(page.getByRole('heading', { name: 'Insurance and policies' })).toBeVisible()
+
+  // Masked in the query, so the plaintext is not in this page at all.
+  await expect(page.getByText('**** 7730')).toBeVisible()
+  await expect(page.getByText('LMD-48211-7730')).toHaveCount(0)
+
+  // The soonest first: renters at 36 days, then the phone at 58.
+  const rows = page.getByRole('button', { name: /Lemonade|Apple|Progressive/ })
+  await expect(rows.first()).toContainText('Lemonade')
+
+  await shoot(page, 'insurance')
+})
+
+test('insurance, a policy number is revealed only when asked for', async ({ page }) => {
+  await page.goto('/insurance')
+  await page.getByRole('button', { name: /Apartment, renters/ }).click()
+
+  await expect(page.getByText('**** 7730')).toBeVisible()
+  await page.getByRole('button', { name: 'Reveal' }).click()
+  await expect(page.getByText('LMD-48211-7730')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Hide' }).click()
+  await expect(page.getByText('LMD-48211-7730')).toHaveCount(0)
+})
+
+test('insurance, no deductible is not a deductible of zero', async ({ page }) => {
+  await page.goto('/insurance')
+  await page.getByRole('button', { name: /Term life/ }).click()
+
+  await expect(page.getByText('none on this policy')).toBeVisible()
+  // And the screen says what it will not do with any of it.
+  await expect(page.getByText(/nothing here scores it/i)).toBeVisible()
+})
+
+test('insurance, renewing keeps the same row', async ({ page }) => {
+  await page.goto('/insurance')
+  await page.getByRole('button', { name: /Apartment, renters/ }).click()
+
+  const before = await page.getByRole('button', { name: /Apartment, renters/ }).count()
+  await page.getByRole('button', { name: /Mark renewed to/ }).click()
+  await expect(page.getByText(/Same row, so the history stays together/)).toBeVisible()
+  await expect(page.getByRole('button', { name: /Apartment, renters/ })).toHaveCount(before)
+})

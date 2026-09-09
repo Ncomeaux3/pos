@@ -14,7 +14,12 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   reporter: [['list']],
-  timeout: 30_000,
+  // 90 rather than 30 seconds. The tests themselves take two to four seconds;
+  // what takes the rest is Turbopack compiling a route the first time it is
+  // visited, and with thirteen modules that outran a 30 second budget on two
+  // specs in a full run while both passed in isolation. A dev server compiling
+  // is not a failing screen.
+  timeout: 90_000,
 
   use: {
     baseURL: BASE_URL,

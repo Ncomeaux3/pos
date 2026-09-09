@@ -1,0 +1,52 @@
+import { queue } from '@/core/notify'
+import { listPolicies, ownerToday } from '../data'
+import { annualCents, expiryLabel, policyStatus, remindersDueToday, type Cadence } from '../premium'
+
+export type InsuranceDigest = {
+  /** Expiring inside sixty days, or already expired. */
+  expiring: { name: string; carrier: string; expiresOn: string | null; when: string }[]
+  /** What a year of every active policy comes to, in cents. */
+  annualCents: number
+  active: number
+  /** Reminders queued by this run. */
+  remindersSent: number
+}
+
+export async function nightlyDigest(): Promise<InsuranceDigest> {
+  const [policies, today] = await Promise.all([listPolicies(), ownerToday()])
+  const active = policies.filter((p) => p.status === 'active')
+
+  const expiring = active.filter((p) => {
+    const status = policyStatus(p.expires_on, today)
+    return status === 'expired' || status === 'renew-now' || status === 'expiring'
+  })
+
+  // One notification per lead that lands today. Queued, not sent: the sender
+  // bundles the day's rows into one email.
+  let remindersSent = 0
+  for (const policy of active) {
+    for (const lead of remindersDueToday(policy.expires_on, policy.reminder_leads, today)) {
+      await queue({
+        title: `${policy.name} expires in ${lead} days`,
+        body: `${policy.carrier} / ${policy.expires_on}. Renewing keeps the same row, so the history stays in one place.`,
+        urgency: lead <= 7 ? 'urgent' : 'normal',
+      })
+      remindersSent++
+    }
+  }
+
+  return {
+    expiring: expiring.map((p) => ({
+      name: p.name,
+      carrier: p.carrier,
+      expiresOn: p.expires_on,
+      when: expiryLabel(p.expires_on, today),
+    })),
+    annualCents: active.reduce(
+      (sum, p) => sum + annualCents(p.premium_cents, p.cadence as Cadence),
+      0,
+    ),
+    active: active.length,
+    remindersSent,
+  }
+}

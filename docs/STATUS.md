@@ -71,11 +71,20 @@ optional `classifier` on the module manifest, so deleting `modules/skills/`
 leaves a working app. See docs/plans/skills-module.md and
 modules/skills/README.md.
 
+**Phase 2, the remaining ten modules.** Finance (accounts, recurring detection,
+rules-first categorisation), Onboarding, Second Brain (wikilinks, a draft that
+waits), Travel (a hand-rolled orthographic globe, no d3), Fitness (integer units
+at rest), Health (screening states including never), Meals (a plan is not a
+log), Ideas (effort against impact on three points), Home (maintenance derived
+from an interval and the last date), Insurance (encrypted numbers, revealed only
+on request, and no opinion about cover). Each has a README saying what it
+refuses to do and why.
+
 ## Verification
 
 ```
-pnpm typecheck && pnpm lint && pnpm test    # 361 tests, 34 files
-pnpm test:e2e                               # 61 specs, 1440px and 402px, both themes
+pnpm typecheck && pnpm lint && pnpm test    # 497 tests, 47 files
+pnpm test:e2e                               # 125 specs, 1440px and 402px, both themes
 pnpm setup:demo                             # idempotent bootstrap
 ```
 
@@ -101,19 +110,22 @@ Settings tabs:
 General, Connections, Agents and MCP, Notifications, Skills. Command palette
 on Cmd K.
 
-Twelve of the design bundle's twenty-two screens are built. Not yet built:
-Onboarding, and Finance, Second Brain, Fitness, Health, Home, Insurance,
-Travel, Meals and Ideas.
+Every screen in the design bundle is built. The ten modules added after the
+foundation, in the order the owner asked for them, are Finance, Onboarding,
+Second Brain, Travel, Fitness, Health, Meals, Ideas, Home and Insurance.
+
+They are built to the handoff's layout, copy, spacing and colour, rendered in
+the ComeauxVerse type and shape system that decisions 15 to 17 established.
+Nothing already built was restyled to the bundle's Space Grotesk and radius 0.
 
 Known gaps on the Skill Tree screen: goal weight shows `--` because Goals does
 not exist, and there is no Notion backfill, so XP starts at zero by decision.
 
 ## Next
 
-**Onboarding, then Finance.** Onboarding shares the `WizardShell` the Weekly
-Review now exercises, and needs a committed connector catalogue: a provider
-without a manifest saves as `status = 'requested'`. After that, Finance, then
-the rest in ARCHITECTURE's order.
+**The owner's own data.** Every module ships with a demo seed and none with an
+import. The Notion export, the SimpleFIN connection and the Obsidian vault are
+what turn this from a working template into the owner's system.
 
 **Step 15, deploy, is still the only Phase 1 step left, and it is entirely
 owner work**: Vercel, a hosted Supabase project, and the first real nightly run in
