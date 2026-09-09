@@ -37,6 +37,16 @@ export type IntegrationManifest = {
   auth: IntegrationAuth
   /** Runs on save and on the Test button. Must not throw. */
   test: (creds: Credentials) => Promise<TestResult>
+  /**
+   * Turns what the owner pasted into what should be stored, before test().
+   *
+   * For a credential that is exchanged once and cannot be exchanged again:
+   * SimpleFIN's setup token is claimed for an access URL and a second claim of
+   * the same token is refused, so storing what was typed would mean the next
+   * Test press destroys a working connection. Runs on save only, never on the
+   * Test button, and may throw: a failure there is a failed save.
+   */
+  prepare?: (creds: Credentials) => Promise<Credentials>
   /** oauth2 only. Runs nightly before module syncs. */
   refresh?: (creds: Credentials) => Promise<Credentials>
   /** webhook only. */

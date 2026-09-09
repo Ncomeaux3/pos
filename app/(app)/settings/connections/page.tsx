@@ -50,8 +50,25 @@ async function save(formData: FormData) {
     if (value || !field.secret) creds[field.key] = value
   }
 
-  const result = await manifest.test(creds)
-  await saveCredentials(id, creds, {
+  // Before test, and only on save: a one-shot credential has to be exchanged
+  // and the exchanged value is what gets stored. Test never runs this, because
+  // pressing Test twice must not consume anything.
+  let prepared = creds
+  if (manifest.prepare) {
+    try {
+      prepared = await manifest.prepare(creds)
+    } catch (error) {
+      await saveCredentials(id, creds, {
+        status: 'error',
+        testDetail: error instanceof Error ? error.message : 'Could not prepare the credential.',
+      })
+      revalidatePath('/settings/connections')
+      return
+    }
+  }
+
+  const result = await manifest.test(prepared)
+  await saveCredentials(id, prepared, {
     status: result.ok ? 'connected' : 'error',
     testDetail: result.detail,
   })

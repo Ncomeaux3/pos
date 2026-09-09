@@ -12,7 +12,7 @@ Status as of 2026-09-09. See docs/SETUP-INTEGRATIONS.md for what each one needs 
 | Anthropic API | classification, headlines, research | integrations/anthropic (token) | connected 2026-09-08 |
 | Voyage AI | embeddings | integrations/voyage (token) | connected 2026-09-08, 3 requests a minute until a card is on file |
 | Resend | daily digest email | integrations/resend (token) | connected 2026-09-08, sends from `onboarding@resend.dev` to the `digest_email` setting |
-| SimpleFIN Bridge | bank and card transactions | integrations/simplefin (token) | manifest defined, Test is a stub, connected with Finance |
+| SimpleFIN Bridge | bank and card transactions | integrations/simplefin (token) | client, real Test and nightly `finance.sync_simplefin` built. Paste a setup token and it is claimed on save. Needs a bridge subscription. Not connected |
 | Strava | workouts | integrations/strava (oauth2) | client and nightly `fitness.sync_strava` job built, Test is real. Needs an app registration for the client id and secret. Not connected |
 | Health Auto Export | Apple Health metrics | integrations/health_auto_export (webhook) | manifest defined, connected with Fitness |
 | Obsidian vault repo | second brain source of truth | integrations/github_vault (token) | read only client and a real Test built. Needs a private repo and a fine grained token. Not connected |

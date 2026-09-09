@@ -19,11 +19,12 @@ Every card runs its own Test on save and tells you what it saw.
 | Resend | token | free | Connected |
 | **Strava** | oauth2 | free | **Client and sync job built. Needs your app registration.** |
 | **Obsidian vault** | token | free | **Client built. Needs a repo and a token.** |
-| SimpleFIN | token | ~$1.50/mo | Manifest only, Test is still a stub |
+| **SimpleFIN** | token | ~$1.50/mo | **Client, real Test and nightly sync built. Needs a bridge subscription.** |
 | Health Auto Export | webhook | paid iOS app | Manifest only |
 
-The two in bold are the ones I built clients for today, and the two you picked.
-Both are free. Neither is connected, because both need your accounts.
+Everything in bold has a client and a real Test button. None of them is
+connected, because each needs an account only you have. Health Auto Export is
+the last stub.
 
 ---
 
@@ -157,21 +158,60 @@ the vault now is what unblocks it.
 
 ---
 
-## The two you did not pick
+## SimpleFIN Bridge
 
-### SimpleFIN Bridge
+**Buys you:** balances and transactions for every account, synced nightly. SPEC
+calls Finance the highest daily value module and it currently runs on rows you
+type in. This is the only paid integration, about $1.50 a month or $15 a year.
 
-Bank and card transactions into Finance, which SPEC calls the highest daily
-value module. It costs about $1.50 a month for the bridge.
+### Set up the bridge
 
-The flow is: create an account at
-[bridge.simplefin.org](https://bridge.simplefin.org), connect your banks there,
-and it gives you a one-time setup token that exchanges for a permanent access
-URL. That access URL is the credential.
+1. Create an account at [bridge.simplefin.org](https://bridge.simplefin.org)
+   and pay for it.
+2. Connect your banks **on the bridge**, not in this app. The bridge is what
+   holds your bank logins; POS never sees them and there is no write path in
+   the protocol at all.
+3. The bridge gives you a **setup token**, a long base64 string.
 
-`integrations/simplefin/manifest.ts` exists but its Test is still a stub, and
-there is no client and no sync job. Finance works today on rows you enter by
-hand. Say the word and this is a similar amount of work to the Strava one.
+### Connect
+
+Settings > Connections > SimpleFIN Bridge, paste the setup token, Connect.
+
+**The token is claimed once and cannot be claimed again.** That is a property
+of the protocol, not of this app, and it shapes how the field works: the claim
+happens on save and the resulting access URL is what gets stored. Pressing Test
+afterwards only reads, so it is safe to press as often as you like. If you
+already have an access URL rather than a token, paste that instead and it is
+kept as is.
+
+Test asks for one day of data and lists what it found, so a good result names
+your accounts. A `402` means the bridge subscription has lapsed, which is a
+different problem from a wrong credential and says so.
+
+### What happens next
+
+`finance.sync_simplefin` runs first in the nightly order, before categorising,
+subscription detection and the digest, because all three read what it wrote. The
+first run asks for 90 days, enough history for recurring detection to have
+something to work with. Later runs re-ask for 30, because a pending transaction
+changes when it posts and the upsert corrects it in place.
+
+Two things it deliberately refuses to do:
+
+- **It skips any account that is not in USD**, and says which. `finance.account`
+  has no currency column and net worth is a plain sum over cents, so a euro
+  account would be added to a dollar one as though they were the same unit.
+- **It never touches a transaction you categorised by hand.** The upsert carries
+  `where is_manual = false`, and the category is not in the update list at all.
+
+The account kind (checking, savings, credit) is guessed from the account name,
+because the protocol has no type field. It is set on insert only, so if you
+correct one it stays corrected. A wrong guess only affects grouping on the
+screen; net worth is a plain sum either way.
+
+---
+
+## The one left
 
 ### Health Auto Export
 

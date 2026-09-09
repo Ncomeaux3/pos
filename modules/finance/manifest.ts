@@ -10,6 +10,7 @@ import {
   nightlyDigest,
   snapshotBalances,
 } from './jobs/nightly-digest'
+import { syncSimpleFin } from './jobs/sync-simplefin'
 import FinancePage from './ui/FinancePage'
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD')
@@ -179,6 +180,9 @@ export default defineModule({
   },
 
   jobs: [
+    // First: categorise, detect_subscriptions and the digest all read what it
+    // wrote, and a snapshot taken before the sync is a day stale.
+    { name: 'sync_simplefin', run: syncSimpleFin },
     { name: 'snapshot_balances', run: snapshotBalances },
     { name: 'categorise', run: categoriseNew },
     { name: 'detect_subscriptions', run: detectSubscriptions },
