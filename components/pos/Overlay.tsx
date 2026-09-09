@@ -1,9 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useSyncExternalStore, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 import { Eyebrow } from './text'
+
+/** Nothing to subscribe to: the value only ever differs between server and client. */
+const subscribeToNothing = () => () => {}
 
 /**
  * The right drawer and the mobile bottom sheet are the same object with a
@@ -33,10 +36,14 @@ export function Overlay({
   // A portal cannot render on the server, and `typeof document === 'undefined'`
   // is a server/client branch: with the open state in the URL the server
   // renders nothing and the client renders the panel, which is a hydration
-  // mismatch. Mounting is state, so the first client render matches the server
-  // and the panel appears on the pass after it.
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+  // mismatch.
+  //
+  // useSyncExternalStore is React's own answer to "have we hydrated yet": the
+  // server snapshot is false and the client snapshot is true, so the first
+  // client render matches the server and the panel appears on the pass after
+  // it. An effect that calls setState would do the same thing and cost a
+  // cascading render.
+  const mounted = useSyncExternalStore(subscribeToNothing, () => true, () => false)
 
   useEffect(() => {
     if (!open) return

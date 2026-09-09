@@ -130,6 +130,29 @@ export default defineModule({
   guarded: ['write'],
   requires: [],
 
+  // What Goals contributes to the Weekly Review. A goal that computes itself
+  // needs no input, which is what the step says out loud.
+  review: {
+    pending: async () => {
+      const { rows } = await db().query<{
+        id: string
+        title: string
+        unit: string
+        computed: boolean
+      }>(
+        `select id, title, unit, (metric_source is not null) as computed
+           from goals.goal where archived = false order by title`,
+      )
+      return rows
+    },
+
+    apply: async ({ values }) => {
+      for (const [goalId, value] of Object.entries(values)) {
+        await checkIn({ goalId, value, note: 'From the weekly review.' })
+      }
+    },
+  },
+
   jobs: [
     { name: 'pull_metrics', run: pullMetrics },
     { name: 'nightly_digest', run: nightlyDigest },

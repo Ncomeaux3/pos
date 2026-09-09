@@ -35,6 +35,11 @@ const TASKS: {
   { external_id: 'demo-9', title: 'Fix the garage door sensor', dueInDays: 12, priority: 'P3', project: 'Home', estimate: 30 },
   { external_id: 'demo-10', title: 'Rebalance the index funds', dueInDays: 30, priority: 'P2', project: 'Finance', estimate: 30 },
   { external_id: 'demo-11', title: 'Write the post: one module at a time', dueInDays: null, priority: 'P3', project: 'Career', estimate: 90 },
+  // Overdue and pinned to a time, which roll_forward deliberately leaves
+  // alone: a task set for 09:00 on Friday meant that Friday, and moving it
+  // would erase the fact that it was missed. It is also what guarantees the
+  // weekly review always has something to decide about.
+  { external_id: 'demo-16', title: 'Call the carrier about the umbrella policy', notes: 'Quote reference is on the Insurance page.', dueInDays: -2, at: '09:00', priority: 'P2', project: 'Home', estimate: 15 },
 
   // Agent proposed, so the Review view has something in it.
   { external_id: 'demo-12', title: 'Test the bank sync against three months of history', notes: 'Cadence detection needs at least three monthly cycles.', dueInDays: 2, priority: 'P1', project: 'POS', estimate: 60, source: 'agent', status: 'review' },

@@ -15,6 +15,12 @@ await db().query(`delete from core.entities where module = 'notes' and entity_id
                     (select id::text from notes.note where source <> 'demo')`)
 await db().query(`delete from notes.note where source <> 'demo'`)
 
+// The weekly review saves answers as you go, so a review left half finished
+// by an earlier pass would be loaded back and added to. The wizard resuming is
+// the feature; the fixture has to start from nothing.
+await db().query(`delete from core.reviews`)
+await db().query(`delete from core.entities where module = 'core' and entity_type = 'review'`)
+
 const notes = await seed()
 // No delete first. The module seed upserts on (source, external_id), so the
 // ids are stable and the fixture is already the same every run. Deleting and

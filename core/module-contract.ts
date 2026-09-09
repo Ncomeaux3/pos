@@ -81,6 +81,54 @@ export type ModuleManifest = {
    * erroring.
    */
   metrics?: Record<string, { label: string; unit: string; get: () => Promise<number> }>
+  /**
+   * What this module contributes to the Weekly Review.
+   *
+   * The review is a core screen and core does not read module schemas, so a
+   * module hands over its own rows rather than being queried for them. Every
+   * part is optional and a module that supplies none simply does not appear:
+   * a fork with no Tasks gets a review with a glance and a note, which still
+   * closes.
+   */
+  review?: {
+    /** Slipped this week and needs a decision: carry, shrink or drop. */
+    slipped?: () => Promise<ReviewItem[]>
+    /** Could be next week. Feeds the three priorities. */
+    upcoming?: () => Promise<ReviewItem[]>
+    /** Needs a number from the owner before the week closes. */
+    pending?: () => Promise<ReviewCheck[]>
+    /** Called on close, with what the owner decided about this module's items. */
+    apply?: (decisions: ReviewDecisions) => Promise<void>
+  }
+}
+
+/** One thing on the review's misses or backlog list. */
+export type ReviewItem = {
+  id: string
+  title: string
+  /** One grey line under it: where it came from, how late it is. */
+  meta: string
+  estimateMinutes?: number | null
+}
+
+/** Something the owner has to put a number on before the week closes. */
+export type ReviewCheck = {
+  id: string
+  title: string
+  unit: string
+  /** True when the module computes it and no input is needed. */
+  computed: boolean
+}
+
+/** What the owner decided, handed back to the module that owns the rows. */
+export type ReviewDecisions = {
+  /** Item ids to carry, with the date they move to. */
+  carry: string[]
+  carryTo: string
+  /** Item ids to drop. */
+  drop: string[]
+  /** Check id to the value entered. */
+  values: Record<string, number>
 }
 
 /** Identity, but it pins the manifest type at the definition site. */

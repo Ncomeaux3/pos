@@ -395,8 +395,10 @@ test('tasks, the board and the quick add parser', async ({ page }) => {
 
   // The parser says what it understood before anything is saved.
   const line = page.getByLabel('Add a task')
-  await line.fill('Call the carrier !p1 #Home @tomorrow 15m')
-  await expect(page.getByText('Call the carrier')).toBeVisible()
+  // Deliberately not a phrase any seeded task starts with, or the parsed title
+  // matches a card on the board behind it as well as the preview.
+  await line.fill('Ring the plumber !p1 #Home @tomorrow 15m')
+  await expect(page.getByText('Ring the plumber')).toBeVisible()
   await expect(page.getByText('Due Tomorrow')).toBeVisible()
   await expect(page.getByText('Priority P1')).toBeVisible()
   await expect(page.getByText('Project Home')).toBeVisible()
@@ -496,4 +498,45 @@ test('goals, a check-in moves the goal', async ({ page }) => {
   // Stalled was the whole point of that goal's history; a fresh reading clears
   // it, which is the rule doing its job rather than a label being flipped.
   await expect(page.getByText('No change in 40 days.')).toBeHidden()
+})
+
+test('weekly review, six steps and a note built from the answers', async ({ page }) => {
+  await page.goto('/weekly-review')
+  await expect(page.getByRole('heading', { name: 'Weekly review' })).toBeVisible()
+
+  // Step one reads digests only, which is the cross-module rule on screen.
+  await expect(page.getByText(/comes from a module digest/)).toBeVisible()
+  await shoot(page, 'weekly-review')
+
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.getByLabel('Add a win').fill('Shipped the notifications screen')
+  await page.getByRole('button', { name: 'Add' }).click()
+  await expect(page.getByText('Shipped the notifications screen')).toBeVisible()
+
+  // Step three: every slipped item needs a decision, and the wizard says how
+  // many are still owed rather than letting you walk past silently.
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await expect(page.getByText(/still undecided/)).toBeVisible()
+
+  await page.getByRole('radio', { name: /^Carry$/ }).first().click()
+  await shoot(page, 'weekly-review-misses')
+})
+
+test('weekly review, the close shows the note before it writes it', async ({ page }) => {
+  await page.goto('/weekly-review')
+
+  // Jump to the last step through the rail. Each rail button is prefixed with
+  // its step number, which is what makes "Close" and "Close the week" distinct.
+  await page.getByRole('button', { name: '06 Close' }).click()
+  await expect(page.getByRole('button', { name: 'Close the week' })).toBeVisible()
+
+  // The step is in the URL, which is what lets it survive the reload shoot()
+  // does to switch themes, and what lets a resumed review keep its place.
+  await expect(page).toHaveURL(/step=close/)
+
+  // Nothing is generated on the server that is not shown here first.
+  await expect(page.getByText('## Wins')).toBeVisible()
+  await expect(page.getByText('## Next week')).toBeVisible()
+
+  await shoot(page, 'weekly-review-close')
 })

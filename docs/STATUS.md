@@ -3,7 +3,8 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
-Last updated: 2026-09-08, platform screens plus Tasks and Goals. Branch `skills-module`.
+Last updated: 2026-09-08, platform screens, Tasks, Goals and the Weekly
+Review. Branch `skills-module`.
 
 ## Done
 
@@ -56,6 +57,13 @@ enumerates the registry and stores the key. No query strings are parsed and
 no schema is reached into, so deleting a module makes its key stop resolving
 and the goal falls back to manual check-ins.
 
+**Weekly Review.** Six steps, resumable, with the note shown before it is
+written. It also forced the last piece of the cross-module contract:
+`ModuleManifest.review`. The first version of the page queried `tasks.task`
+and `goals.goal` from a core route, which the architecture forbids, so a
+module now hands over its own rows and gets its own decisions back on close.
+Core names no module on that screen. See docs/WEEKLY-REVIEW.md.
+
 **Phase 2, module 1 of 13: Skill Tree.** The tree, the XP weights, the level
 function and the overrides table moved out of core into a `skills` schema, and
 the constellation screen is built. `register()` now classifies through an
@@ -66,8 +74,8 @@ modules/skills/README.md.
 ## Verification
 
 ```
-pnpm typecheck && pnpm lint && pnpm test    # 354 tests, 33 files
-pnpm test:e2e                               # 57 specs, 1440px and 402px, both themes
+pnpm typecheck && pnpm lint && pnpm test    # 361 tests, 34 files
+pnpm test:e2e                               # 61 specs, 1440px and 402px, both themes
 pnpm setup:demo                             # idempotent bootstrap
 ```
 
@@ -88,22 +96,24 @@ classification splits between keyword rules and `claude-haiku-4-5`, and
 ## Screens built
 
 Login, Dashboard (live, with the bento tiles), Notes, Skill Tree, Tasks,
-Goals, Search, Review, Notifications, Agent Log, and all five Settings tabs:
+Goals, Weekly Review, Search, Review, Notifications, Agent Log, and all five
+Settings tabs:
 General, Connections, Agents and MCP, Notifications, Skills. Command palette
 on Cmd K.
 
-Eleven of the design bundle's twenty-two screens are built. Not yet built:
-Onboarding, Weekly Review, and Finance, Second Brain, Fitness, Health, Home,
-Insurance, Travel, Meals and Ideas.
+Twelve of the design bundle's twenty-two screens are built. Not yet built:
+Onboarding, and Finance, Second Brain, Fitness, Health, Home, Insurance,
+Travel, Meals and Ideas.
 
 Known gaps on the Skill Tree screen: goal weight shows `--` because Goals does
 not exist, and there is no Notion backfill, so XP starts at zero by decision.
 
 ## Next
 
-**Onboarding and Weekly Review, then Finance.** Both wizards needed Tasks and
-Goals to exist, and both are now unblocked; they share the `WizardShell` that
-already ships. After that, Finance, then the rest in ARCHITECTURE's order.
+**Onboarding, then Finance.** Onboarding shares the `WizardShell` the Weekly
+Review now exercises, and needs a committed connector catalogue: a provider
+without a manifest saves as `status = 'requested'`. After that, Finance, then
+the rest in ARCHITECTURE's order.
 
 **Step 15, deploy, is still the only Phase 1 step left, and it is entirely
 owner work**: Vercel, a hosted Supabase project, and the first real nightly run in
@@ -156,6 +166,12 @@ outside Next.
   cascades, and search answers with rows whose table entry is gone. A module
   seed upserts on `(source, external_id)` for exactly this reason; deleting and
   reinserting gave every task a new uuid and left 454 orphans behind.
+- **Core does not read module schemas, and that includes core screens.** The
+  Weekly Review asks "what slipped", which is a Tasks question. Querying
+  `tasks.task` from a core route is the violation even though it works. The
+  manifest grew a `review` contribution instead: a module hands over its rows
+  and gets its decisions back. Two modules implement it, so it is a contract,
+  not a hook for one caller.
 - **A server action is a public POST endpoint, and its TypeScript signature is
   erased at runtime.** `patchRule` built a SET clause by interpolating object
   keys, so a key of `muted = true, label` would have written a column no caller

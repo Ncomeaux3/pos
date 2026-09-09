@@ -182,6 +182,75 @@ export default defineModule({
     },
   },
 
+  // What Tasks contributes to the Weekly Review. Core composes this without
+  // reading the tasks schema, and a fork that deletes this folder gets a
+  // review with no misses step rather than a broken one.
+  review: {
+    slipped: async () => {
+      const { rows } = await db().query<{
+        id: string
+        title: string
+        due_on: string
+        project: string | null
+        est: number | null
+      }>(
+        `select t.id, t.title, t.due_on::text, p.name as project, t.estimated_minutes as est
+           from tasks.task t
+           left join tasks.project p on p.id = t.project_id
+          where t.status = 'open' and t.due_on < core.today()
+          order by t.due_on
+          limit 12`,
+      )
+      return rows.map((r) => ({
+        id: r.id,
+        title: r.title,
+        meta: `Due ${r.due_on}${r.project ? `, ${r.project}` : ''}`,
+        estimateMinutes: r.est,
+      }))
+    },
+
+    upcoming: async () => {
+      const { rows } = await db().query<{
+        id: string
+        title: string
+        project: string | null
+        est: number | null
+      }>(
+        `select t.id, t.title, p.name as project, t.estimated_minutes as est
+           from tasks.task t
+           left join tasks.project p on p.id = t.project_id
+          where t.status = 'open' and (t.due_on is null or t.due_on >= core.today())
+          order by t.priority, t.due_on nulls last
+          limit 12`,
+      )
+      return rows.map((r) => ({
+        id: r.id,
+        title: r.title,
+        meta: r.project ?? 'No project',
+        estimateMinutes: r.est,
+      }))
+    },
+
+    apply: async ({ carry, carryTo, drop }) => {
+      // Carrying moves the date. Dropping closes it: the owner decided it is
+      // not happening, and leaving it open would put it back in next week's
+      // misses forever.
+      if (carry.length > 0) {
+        await db().query(
+          `update tasks.task set due_on = $2::date where id = any($1) and status = 'open'`,
+          [carry, carryTo],
+        )
+      }
+      if (drop.length > 0) {
+        await db().query(
+          `update tasks.task set status = 'done', completed_at = now()
+            where id = any($1) and status = 'open'`,
+          [drop],
+        )
+      }
+    },
+  },
+
   jobs: [
     { name: 'roll_forward', run: rollForward },
     { name: 'nightly_digest', run: nightlyDigest },
