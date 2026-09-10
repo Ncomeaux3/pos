@@ -156,9 +156,13 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
-      <div className="space-y-5">
-        <Card>
+    // Two panes, as the design has them: the left one holds the whole tree
+    // read, canvas and columns together, and the right one scrolls on its own.
+    // Stacked in page flow, the four columns under the canvas ended up below
+    // the fold behind a rail that is twice the height of the canvas.
+    <div className="grid gap-5 lg:h-[calc(100dvh-var(--app-header,120px))] lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="flex min-h-0 flex-col gap-5 lg:overflow-hidden">
+        <Card className="flex min-h-0 flex-1 flex-col">
           {/* Character sits on the canvas, top left, the way the design has
             * it: the constellation is the page and this is a legend for it,
             * not a separate card underneath. */}
@@ -223,7 +227,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
         </Card>
 
         {/* The four column read of the whole tree, under the canvas. */}
-        <div className="grid gap-px bg-rule-2 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid shrink-0 gap-px bg-rule-2 sm:grid-cols-2 lg:grid-cols-4">
           <Column label="Gaining fastest">
             {gainingFastest.length === 0 ? (
               <Quiet>Nothing gained XP in 30 days.</Quiet>
@@ -248,7 +252,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
             )}
           </Column>
 
-          <Column label="Aimed at, not moving">
+          <Column label="Goal weight high, low activity">
             {/* Weight from the goals that link here, against what actually
               * happened in thirty days. A skill you are aiming at and have not
               * touched is the one thing this screen can tell you that the
@@ -278,7 +282,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
         </div>
       </div>
 
-      <div className="space-y-5">
+      <div className="min-h-0 space-y-5 lg:overflow-y-auto lg:pr-1">
         <Card>
           <CardHead label="Attributes" />
           <div className="mt-3 flex justify-center">

@@ -105,14 +105,18 @@ test('skill tree, constellation and the selected skill panel', async ({ page }) 
   // say "Engineering", but only the panel says how far the next level is.
   await expect(page.getByText(/to Lv \d/)).toBeVisible()
   // Goals does not exist, so the goal weight is a dash rather than a number.
-  await expect(page.getByText('Goal weight')).toBeVisible()
+  // Exact: the digest column beside it is "Goal weight high, low activity",
+  // which is the artboard's own wording for a different thing.
+  await expect(page.getByText('Goal weight', { exact: true })).toBeVisible()
 
   // The selection is in the URL, which is what lets it survive the reload that
   // shoot() does to switch themes. Without this the shot would show the empty
   // panel and the test would still pass.
   await expect(page).toHaveURL(/skill=engineering/)
   await shoot(page, 'skills-selected')
-  await expect(page.getByText('Goal weight')).toBeVisible()
+  // Exact: the digest column beside it is "Goal weight high, low activity",
+  // which is the artboard's own wording for a different thing.
+  await expect(page.getByText('Goal weight', { exact: true })).toBeVisible()
 })
 
 test('skill tree, the constellation hovers, selects, pans and zooms', async ({ page }) => {

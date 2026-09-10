@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { cn } from '@/lib/utils'
 import type { SkillStat } from '../data'
 import type { SkillNode } from '../tree'
 import { layout, nodeRadius, ROOT_ID, type Placed } from './layout'
@@ -169,6 +170,27 @@ export function Constellation({
   const hovered = hover ? statById.get(hover.node.id) : undefined
   const branches = hover ? stats.filter((s) => s.parent === hover.node.id) : []
 
+  /**
+   * What lights up while a star is hovered: the path back to the root, its own
+   * branches, and theirs. Everything else dims. This is the artboard's rule,
+   * and it is what makes hovering an attribute show you its whole limb.
+   */
+  const related = useMemo(() => {
+    const out = new Set<string>()
+    if (!hover) return out
+
+    for (let id: string | undefined = hover.node.id; id; id = statById.get(id)?.parent) {
+      out.add(id)
+    }
+    for (const child of stats.filter((s) => s.parent === hover.node.id)) {
+      out.add(child.id)
+      for (const leaf of stats.filter((s) => s.parent === child.id)) out.add(leaf.id)
+    }
+    return out
+  }, [hover, stats, statById])
+
+  const dimmed = (id: string) => hover !== null && !related.has(id)
+
   // Seeded once. A field regenerated per render would flicker on every hover.
   const stars = useMemo(() => starfield(150, 20260909, VIEW), [])
   const nebulae = useMemo(
@@ -177,7 +199,7 @@ export function Constellation({
   )
 
   return (
-    <div className="relative">
+    <div className="relative flex min-h-0 flex-1 flex-col">
       <div className="absolute right-3 top-3 z-10 flex gap-2">
         <button type="button" onClick={reset} className="eyebrow rounded-[8px] border border-rule px-2 py-1 text-ink-2 hover:text-ink">
           Reset view
@@ -189,7 +211,7 @@ export function Constellation({
         role="img"
         aria-label="Skill constellation"
         viewBox={`${-VIEW / 2} ${-VIEW / 2} ${VIEW} ${VIEW}`}
-        className="h-[min(70vh,620px)] w-full cursor-grab touch-none select-none active:cursor-grabbing"
+        className="h-full min-h-[320px] w-full cursor-grab touch-none select-none active:cursor-grabbing"
         onPointerDown={(e) => {
           drag.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y, panning: false }
           panned.current = false
@@ -278,6 +300,7 @@ export function Constellation({
           {edges.map((node) => {
             const from = positionOf(node.parent ?? ROOT_ID)
             if (!from) return null
+            const hot = hover !== null && related.has(node.id) && related.has(node.parent ?? ROOT_ID)
             return (
               <line
                 key={`edge-${node.id}`}
@@ -285,8 +308,21 @@ export function Constellation({
                 y1={from.y}
                 x2={node.x}
                 y2={node.y}
-                stroke="var(--rule)"
-                strokeWidth={node.ring === 'leaf' ? 0.6 : 1.1}
+                // The artboard's three states: hot along the hovered limb,
+                // dim everywhere else while something is hovered, and a
+                // resting weight that depends on the depth.
+                stroke={hot ? '#ffffff' : '#9fd1ff'}
+                strokeWidth={hot ? 1.2 : 0.7}
+                strokeOpacity={
+                  hover === null
+                    ? node.ring === 'leaf'
+                      ? 0.32
+                      : 0.55
+                    : hot
+                      ? 0.9
+                      : 0.08
+                }
+                className="[transition:stroke-opacity_.2s,stroke-width_.2s]"
               />
             )
           })}
@@ -299,6 +335,8 @@ export function Constellation({
             const tone = isRoot ? 'gaining' : toneFor(stat, now)
             const isSelected = selected === node.id
             const isDrop = dropTarget === node.id
+            const isHovered = hover?.node.id === node.id
+            const dim = dimmed(node.id)
 
             return (
               <g
@@ -360,11 +398,16 @@ export function Constellation({
                   fill={isRoot ? 'var(--accent)' : HALO_COLOR[tone]}
                   filter="url(#skill-glow-big)"
                   opacity={
-                    isRoot || node.ring === 'attribute' || tone === 'gaining' || isSelected
-                      ? 0.7
-                      : 0.22
+                    dim
+                      ? 0.05
+                      : isRoot || node.ring === 'attribute' || tone === 'gaining' || isSelected
+                        ? 0.7
+                        : 0.22
                   }
-                  className={tone === 'gaining' || isSelected ? 'skill-breathe' : undefined}
+                  className={cn(
+                    'transition-opacity duration-200',
+                    (tone === 'gaining' || isSelected) && 'skill-breathe',
+                  )}
                 />
                 <circle
                   r={r + 5}
@@ -383,17 +426,28 @@ export function Constellation({
                   // keep full opacity and change colour instead.
                   strokeDasharray={tone === 'stagnant' && !isSelected ? '2 3' : undefined}
                 />
+                {/* The hovered star grows by a third, which is the artboard's
+                  * ratio and the thing that makes the pointer feel attached
+                  * to it. */}
                 <circle
-                  r={r}
+                  r={r * (isHovered ? 1.3 : 1)}
                   fill={isRoot ? 'var(--accent)' : TONE_FILL[tone]}
                   filter="url(#skill-glow)"
+                  opacity={dim ? 0.35 : 1}
+                  className="transition-[r,opacity] duration-200"
                 />
-                <circle r={r * 0.45} fill="#ffffff" />
+                <circle
+                  r={r * 0.45 * (isHovered ? 1.3 : 1)}
+                  fill="#ffffff"
+                  opacity={dim ? 0.35 : 1}
+                  className="transition-[r,opacity] duration-200"
+                />
                 {node.ring !== 'leaf' || zoom > 0.85 ? (
                   <text
                     y={r + 13}
                     textAnchor="middle"
-                    className="pointer-events-none fill-ink-2"
+                    className="pointer-events-none transition-colors duration-200"
+                    fill={dim ? '#3d4b5c' : isRoot || node.ring === 'attribute' ? '#ffffff' : '#cfe6ff'}
                     style={{ fontSize: node.ring === 'leaf' ? 11 : 13, fontWeight: 500 }}
                   >
                     {isRoot ? `Lv ${characterLevel}` : (stat?.name ?? node.id)}
@@ -414,7 +468,7 @@ export function Constellation({
         * overlays, and it sits in a corner the tree does not reach. */}
       {hovered && hover && (
         <div
-          className="pointer-events-none absolute z-20 w-[228px] border border-rule-2 bg-surface"
+          className="pointer-events-none absolute z-20 w-[236px] border border-rule-2 bg-bg-elev shadow-[0_12px_32px_rgba(0,0,0,.55)]"
           style={{
             // Beside the star, and flipped to the other side near an edge so
             // the card never hangs off the canvas.
