@@ -3,6 +3,8 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import {
+  DataTable,
+  DataRow,
   ActionButton,
   Card,
   CardHead,
@@ -157,86 +159,188 @@ export function Finance({ data }: { data: FinanceData }) {
       />
 
       {tab === 'overview' && (
-        <div className="space-y-5">
+        <div className="space-y-2.5">
+          {/* The prototype's Overview is the whole picture on one page:
+            * accounts and what is due beside each other, then the curve beside
+            * the budgets. The other tabs stay as the drill in. */}
           <MetricStrip>
             <MetricTile
               label="Net worth"
               value={balance(data.netWorthCents)}
-              delta={`${signedMoney(data.changeCents)} in 30 days`}
-              deltaTone={data.changeCents >= 0 ? 'ok' : 'bad'}
+              delta={`assets ${money(data.assetsCents)} / debt ${money(data.debtCents)}`}
             />
-            <MetricTile label="Assets" value={money(data.assetsCents)} />
             <MetricTile
-              label="Debt"
-              value={money(data.debtCents)}
-              delta={data.debtCents > 0 ? 'owed' : 'none'}
-              deltaTone={data.debtCents > 0 ? 'warn' : 'quiet'}
+              label="30 day change"
+              value={signedMoney(data.changeCents)}
+              delta={
+                data.series.length > 1
+                  ? `${((data.changeCents / Math.max(1, Math.abs(data.series[0]))) * 100).toFixed(1)}% / from ${money(data.series[0])}`
+                  : 'no history yet'
+              }
+              deltaTone={data.changeCents >= 0 ? 'ok' : 'bad'}
             />
             <MetricTile
               label="Due in 14 days"
               value={money(upcomingTotal, true)}
-              delta={`${data.upcoming.length} charges`}
+              delta={
+                data.upcoming.length > 0
+                  ? `${data.upcoming.length} charges / next ${shortDate(data.upcoming[0].nextChargeOn)}`
+                  : 'nothing booked'
+              }
+            />
+            <MetricTile
+              label={`Budgets over ${ALERT} percent`}
+              value={hot.length}
+              delta={hot.length > 0 ? hot.map((b) => b.name).join(' / ') : 'all within limits'}
+              deltaTone={hot.length > 0 ? 'warn' : 'quiet'}
             />
           </MetricStrip>
 
-          <Card className="space-y-3">
-            <CardHead
-              label="Net worth"
-              meta={`${data.series.length} daily snapshots`}
-            />
-            {data.series.length < 2 ? (
-              <EmptyState headline="No history yet" className="border-0">
-                The chart is built from one balance snapshot per account per night. It fills in as
-                the nightly job runs; a balance not recorded on the day is gone.
-              </EmptyState>
-            ) : (
-              <NetWorthChart values={data.series} dates={data.seriesDates} />
-            )}
-          </Card>
-
-          <div className="grid gap-2.5 lg:grid-cols-2">
+          <div className="grid items-start gap-2.5 lg:grid-cols-2">
             <Card className="space-y-3">
-              <CardHead label="Upcoming" meta="Next 14 days" />
+              <CardHead label="Accounts" meta="share of assets" />
+              <DataTable
+                head={['Account', 'Institution', 'Balance', '30d', 'Share']}
+                cols="minmax(0,1.4fr) minmax(0,1fr) minmax(0,0.9fr) minmax(0,0.8fr) 96px"
+              >
+                {data.accounts.map((a) => (
+                  <DataRow key={a.id} onClick={() => setParams({ account: a.id })}>
+                    <span className="min-w-0">
+                      <span className="block truncate text-[13px] text-ink">{a.name}</span>
+                      <span className="label text-[9px] text-ink-4">{a.txCount} tx</span>
+                    </span>
+                    <span className="truncate text-[12px] text-ink-3">{a.institution}</span>
+                    <span className="num text-[13px] text-ink">{balance(a.balanceCents)}</span>
+                    <span
+                      className={cn(
+                        'num text-[12px]',
+                        a.changeCents === null
+                          ? 'text-ink-3'
+                          : a.changeCents > 0
+                            ? 'text-ok'
+                            : a.changeCents < 0
+                              ? 'text-bad'
+                              : 'text-ink-3',
+                      )}
+                    >
+                      {/* Not tracked is not the same as no change, and must not
+                          render as one. */}
+                      {a.changeCents === null ? 'new' : signedMoney(a.changeCents)}
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <PaceBar value={a.sharePercent} max={100} className="flex-1" />
+                      <span className="label w-8 shrink-0 text-right text-[10px] text-ink-3">
+                        {a.balanceCents > 0 ? `${Math.round(a.sharePercent)}%` : '\u2014'}
+                      </span>
+                    </span>
+                  </DataRow>
+                ))}
+              </DataTable>
+            </Card>
+
+            <Card className="space-y-3">
+              <CardHead label="Upcoming / 14 days" meta={`${data.upcoming.length} charges`} />
               {data.upcoming.length === 0 ? (
                 <EmptyState headline="Nothing booked" className="border-0">
                   No active subscription is due in the next fortnight.
                 </EmptyState>
               ) : (
-                <RowList>
+                <DataTable
+                  head={['Date', 'Charge', 'Amount']}
+                  cols="minmax(0,0.7fr) minmax(0,2fr) minmax(0,0.8fr)"
+                >
                   {data.upcoming.map((u) => (
-                    <Row
-                      key={u.id}
-                      title={u.name}
-                      meta={`${u.vendor || u.cadence} / ${shortDate(u.nextChargeOn)}`}
-                      right={<span className="num text-[13px] text-ink">{money(u.amountCents, true)}</span>}
-                    />
+                    <DataRow key={u.id}>
+                      <span className="num text-[12px] text-ink">{shortDate(u.nextChargeOn)}</span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-[13px] text-ink">{u.name}</span>
+                        <span className="block truncate text-[11px] text-ink-3">
+                          {u.cadence}
+                          {u.vendor ? ` / ${u.vendor}` : ''}
+                        </span>
+                      </span>
+                      <span className="num text-right text-[13px] text-ink">
+                        {money(u.amountCents, true)}
+                      </span>
+                    </DataRow>
                   ))}
-                </RowList>
+                  <DataRow className="border-b-0">
+                    <span className="label text-[10px] tracking-[0.12em] text-ink-3">Total</span>
+                    <span className="text-[11px] text-ink-3">
+                      {data.upcoming.length} charges in the next fortnight
+                    </span>
+                    <span className="num text-right text-[13px] text-ink">
+                      {money(upcomingTotal, true)}
+                    </span>
+                  </DataRow>
+                </DataTable>
+              )}
+            </Card>
+          </div>
+
+          <div className="grid items-start gap-2.5 lg:grid-cols-2">
+            <Card className="space-y-3">
+              <CardHead label="Net worth / 30 days" meta={`${data.series.length} daily snapshots`} />
+              {data.series.length < 2 ? (
+                <EmptyState headline="No history yet" className="border-0">
+                  The chart is built from one balance snapshot per account per night. It fills in as
+                  the nightly job runs; a balance not recorded on the day is gone.
+                </EmptyState>
+              ) : (
+                <NetWorthChart values={data.series} dates={data.seriesDates} />
               )}
             </Card>
 
             <Card className="space-y-3">
-              <CardHead label="Budgets over 80 percent" meta={`${hot.length} of ${data.budgets.length}`} />
-              {hot.length === 0 ? (
-                <EmptyState headline="All within limits" className="border-0">
-                  Nothing has passed {ALERT} percent of its limit this month.
+              <CardHead
+                label="Budgets"
+                meta={`${hot.length} over ${ALERT} percent`}
+              />
+              {data.budgets.length === 0 ? (
+                <EmptyState headline="No budgets" className="border-0">
+                  A budget is a limit on a category for this month. Set one in the Budgets tab.
                 </EmptyState>
               ) : (
-                <div className="space-y-3.5">
-                  {hot.map((b) => (
-                    <div key={b.id} className="space-y-1.5">
-                      {/* A bar with no name is a decoration. The whole point of
-                          this card is which category is running hot. */}
-                      <div className="flex flex-wrap items-baseline justify-between gap-2">
-                        <span className="t-caption text-ink">{b.name}</span>
-                        <span className="num text-[11px] text-ink-3">
-                          {money(b.spentCents)} of {money(b.limitCents!)}
+                <DataTable
+                  head={['Category', 'Spent / limit', 'Used']}
+                  cols="minmax(0,1.4fr) minmax(0,1fr) 56px"
+                >
+                  {data.budgets.map((b) => {
+                    const used = b.limitCents ? (b.spentCents / b.limitCents) * 100 : null
+                    return (
+                      <DataRow key={b.id} onClick={() => setParams({ budget: b.id })}>
+                        <span className="flex min-w-0 flex-wrap items-center gap-2">
+                          <span className="truncate text-[13px] text-ink">{b.name}</span>
+                          {b.isFixed && <Chip tone="quiet">fixed</Chip>}
+                          {used !== null && used >= ALERT && (
+                            <Chip tone="warn">over {ALERT}%</Chip>
+                          )}
                         </span>
-                      </div>
-                      <BudgetBar budget={b} pace={data.monthPace} />
-                    </div>
-                  ))}
-                </div>
+                        <span className="min-w-0 space-y-1.5">
+                          <span className="num block text-[12px] text-ink-3">
+                            {money(b.spentCents)}
+                            {b.limitCents ? ` / ${money(b.limitCents)}` : ' / no limit'}
+                          </span>
+                          <BudgetBar budget={b} pace={data.monthPace} />
+                        </span>
+                        <span
+                          className={cn(
+                            'num text-right text-[12px]',
+                            used === null
+                              ? 'text-ink-3'
+                              : used >= 100
+                                ? 'text-bad'
+                                : used >= ALERT
+                                  ? 'text-warn'
+                                  : 'text-ink-3',
+                          )}
+                        >
+                          {used === null ? '\u2014' : `${Math.round(used)}%`}
+                        </span>
+                      </DataRow>
+                    )
+                  })}
+                </DataTable>
               )}
             </Card>
           </div>
