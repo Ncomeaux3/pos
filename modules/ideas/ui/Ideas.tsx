@@ -90,6 +90,7 @@ export function Ideas({ data }: { data: IdeasData }) {
       else if (ok) toast(ok)
     })
 
+  const view = params.get('view') === 'matrix' ? 'matrix' : 'board'
   const shown = boardOrder(data.ideas.filter((i) => i.stage === stage))
   const stale = data.ideas.filter(
     (i) => i.stage === 'exploring' && i.daysSinceTouched >= STALE_DAYS,
@@ -97,16 +98,37 @@ export function Ideas({ data }: { data: IdeasData }) {
 
   return (
     <div className="space-y-5">
-      <TabBar
-        label="Idea stages"
-        value={stage}
-        onChange={(next) => setParams({ stage: next === 'exploring' ? null : next, idea: null })}
-        tabs={STAGES.map((s) => ({
-          value: s,
-          label: s[0].toUpperCase() + s.slice(1),
-          count: data.ideas.filter((i) => i.stage === s).length,
-        }))}
-      />
+      {/* Stages on the left, the two views on the right. The artboard puts
+        * the view switch beside the title; it sits with the stages here so a
+        * screen with one band above it does not grow a second. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+        <TabBar
+          label="Idea stages"
+          value={stage}
+          onChange={(next) => setParams({ stage: next === 'exploring' ? null : next, idea: null })}
+          tabs={STAGES.map((s) => ({
+            value: s,
+            label: s[0].toUpperCase() + s.slice(1),
+            count: data.ideas.filter((i) => i.stage === s).length,
+          }))}
+        />
+        <div className="flex shrink-0 border border-rule-2">
+          {(['board', 'matrix'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={view === v}
+              onClick={() => setParams({ view: v === 'board' ? null : v })}
+              className={cn(
+                'h-11 px-3 text-[12px] transition-colors duration-150 sm:h-[30px]',
+                view === v ? 'bg-brand-soft text-ink' : 'text-ink-3 hover:text-ink',
+              )}
+            >
+              {v === 'board' ? 'Board' : 'Effort × impact'}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="flex flex-wrap gap-2">
         <input
@@ -137,7 +159,13 @@ export function Ideas({ data }: { data: IdeasData }) {
 
       <div className="flex flex-wrap items-start gap-x-6 gap-y-5">
         <div className="min-w-0 flex-[1_1_380px] space-y-4">
-          {shown.length === 0 ? (
+          {view === 'matrix' ? (
+            <Matrix
+              ideas={data.ideas.filter((i) => i.stage !== 'killed')}
+              openId={open?.id ?? null}
+              onOpen={(id) => setParams({ idea: id })}
+            />
+          ) : shown.length === 0 ? (
             <EmptyState headline={stage === 'killed' ? 'Nothing killed' : 'Nothing here'}>
               {stage === 'killed'
                 ? 'A killed idea is kept rather than deleted. The reason you dropped it is what stops the same idea arriving again in six months.'
@@ -422,5 +450,87 @@ function ResearchPanel({
         </p>
       )}
     </Card>
+  )
+}
+
+/**
+ * The two by two, with every live idea placed on it.
+ *
+ * Effort left to right, impact bottom to top, and the four corners named for
+ * what they mean. The same quadrant() the chips use decides the label, so a
+ * dot in the top left and a chip saying quick win can never disagree.
+ */
+function Matrix({
+  ideas,
+  openId,
+  onOpen,
+}: {
+  ideas: IdeasData['ideas']
+  openId: string | null
+  onOpen: (id: string) => void
+}) {
+  if (ideas.length === 0) {
+    return (
+      <EmptyState headline="Nothing to place">
+        An idea needs an effort and an impact before it can sit anywhere on this.
+      </EmptyState>
+    )
+  }
+
+  // Three points per axis, so a dot sits at 20, 50 or 80 percent rather than on
+  // the dividing line where it would read as either side.
+  const at = (level: Level) => [20, 50, 80][level - 1]
+
+  return (
+    <div className="grid grid-cols-[28px_1fr] grid-rows-[1fr_24px] gap-1.5">
+      <div className="eyebrow flex items-center justify-center text-ink-3 [writing-mode:vertical-rl] [transform:rotate(180deg)]">
+        Impact →
+      </div>
+
+      <div className="relative min-h-[420px] border border-rule-2">
+        <div className="absolute inset-x-0 top-1/2 h-px bg-rule" aria-hidden />
+        <div className="absolute inset-y-0 left-1/2 w-px bg-rule" aria-hidden />
+
+        <span className="eyebrow absolute left-3 top-2.5 text-ok">Quick wins</span>
+        <span className="eyebrow absolute right-3 top-2.5 text-brand">Big bets</span>
+        <span className="eyebrow absolute bottom-2.5 left-3 text-ink-4">Fill-ins</span>
+        <span className="eyebrow absolute bottom-2.5 right-3 text-bad">Money pits</span>
+
+        {ideas.map((idea) => {
+          const q = quadrant(idea.effort, idea.impact)
+          return (
+            <button
+              key={idea.id}
+              type="button"
+              onClick={() => onOpen(idea.id)}
+              title={`${idea.title}. ${QUADRANT_ADVICE[q]}`}
+              style={{ left: `${at(idea.effort)}%`, bottom: `${at(idea.impact)}%` }}
+              className={cn(
+                'absolute flex max-w-[190px] -translate-x-1/2 translate-y-1/2 items-center gap-2 border bg-bg px-2 py-1.5 text-left transition-colors duration-150',
+                openId === idea.id ? 'z-2 border-brand' : 'border-rule-2 hover:border-ink',
+              )}
+            >
+              <span
+                aria-hidden
+                className={cn(
+                  'size-1.5 shrink-0',
+                  q === 'quick-win'
+                    ? 'bg-ok'
+                    : q === 'big-bet'
+                      ? 'bg-brand'
+                      : q === 'money-pit'
+                        ? 'bg-bad'
+                        : 'bg-ink-4',
+                )}
+              />
+              <span className="truncate text-[11px] text-ink">{idea.title}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      <span />
+      <div className="eyebrow text-center text-ink-3">Effort →</div>
+    </div>
   )
 }

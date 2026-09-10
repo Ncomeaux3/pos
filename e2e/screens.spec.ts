@@ -950,6 +950,20 @@ test('ideas, the board sorts by quadrant and keeps what was killed', async ({ pa
   await shoot(page, 'ideas')
 })
 
+test('ideas, the effort and impact matrix places every live idea', async ({ page }) => {
+  await page.goto('/ideas')
+  await page.waitForLoadState('networkidle')
+
+  await page.getByRole('button', { name: 'Effort × impact' }).click()
+  await expect(page).toHaveURL(/view=matrix/)
+
+  // The corners are named for what they mean, and an idea sits in the corner
+  // its chip on the board claims.
+  await expect(page.getByText('Quick wins')).toBeVisible()
+  await expect(page.getByText('Money pits')).toBeVisible()
+  await expect(page.getByRole('button', { name: /Voice capture for tasks/ })).toBeVisible()
+})
+
 test('ideas, a killed idea keeps its reason', async ({ page }) => {
   await page.goto('/ideas?stage=killed')
 
