@@ -8,11 +8,14 @@ Format: `[ ]` waiting on you, `[x]` done, with the date and what unblocked.
 
 ## Blocking now
 
-- [ ] **Rotate the Voyage key when convenient.** It was pasted into a chat
-      message, so it lives in that transcript as well as in the encrypted row.
-      Nothing urgent: it is scoped to embeddings against a free allowance, and
-      the stored copy is encrypted. Generate a new one at dash.voyageai.com and
-      paste it on the Connections page whenever you want it clean.
+- [ ] **Finish the Voyage rotation by deleting the old key.** 2026-09-09: a new
+      Voyage key was generated, and a new Anthropic one alongside it. Verified
+      the same evening that all three local connections still test green, which
+      means **the old keys were not revoked and are still live**. Generating a
+      replacement does not rotate anything on its own: the exposed key keeps
+      working until it is deleted at dash.voyageai.com. Do the same for the old
+      Anthropic key at console.anthropic.com if replacing it was deliberate.
+      Then re-test on Settings > Connections, local and production.
 
 - [ ] **Add a payment method to Voyage, or accept three searches a minute.**
       Verified 2026-09-08: without a card on file the account is limited to
