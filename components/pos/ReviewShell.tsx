@@ -17,6 +17,7 @@ export type ReviewStep = { key: string; name: string }
  *
  * Measured, not guessed:
  *   band     h96, padding 24px 28px 18px, 1px --rule underneath
+ *   progress 2px full bleed under the band, --accent on --rule-2
  *   column   760px wide, centred in the space beside the sidebar
  *   kicker   11px, 0.16em, --accent (the one place the eyebrow is not grey)
  *   question 38px / 400 / -0.03em
@@ -72,9 +73,8 @@ export function ReviewShell({
             <span className="status-dot" aria-hidden />
             Week {weekLabel}
           </span>
-          {/* The step is named here rather than in a rail, with the accent
-              underline standing in for the rail's selected row. */}
-          <p className="mt-2 border-b-2 border-brand pb-1.5 text-[15px] text-ink-2">
+          {/* The step is named here rather than in a rail. */}
+          <p className="mt-2.5 text-[15px] text-ink-2">
             {steps[index]?.name} / step {index + 1} of {steps.length}
           </p>
         </div>
@@ -83,6 +83,16 @@ export function ReviewShell({
           {themeToggle}
         </div>
       </header>
+
+      {/* The band's own progress: 2px, full bleed, filled to the step you are
+          on. The dashes at the foot of the column are the same progress made
+          clickable; this is the part you see without looking for it. */}
+      <div className="h-[2px] bg-rule-2" aria-hidden>
+        <div
+          className="h-full bg-brand transition-[width] duration-300"
+          style={{ width: `${Math.round(((index + 1) / steps.length) * 100)}%` }}
+        />
+      </div>
 
       <div className="px-7 py-7">
         <div className="mx-auto w-full max-w-[760px] space-y-6">

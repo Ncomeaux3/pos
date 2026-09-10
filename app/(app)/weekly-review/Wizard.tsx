@@ -20,8 +20,8 @@ import {
 } from '@/components/pos'
 import {
   EMPTY_ANSWERS,
+  noteBlocks,
   outstanding,
-  renderNote,
   STEPS,
   type MissAction,
   type ReviewAnswers,
@@ -44,6 +44,8 @@ export type WeekData = {
   misses: Item[]
   backlog: Item[]
   checks: Check[]
+  /** The module the week note goes to, or null when none takes notes. */
+  noteTarget: string | null
   answers: ReviewAnswers
   closedAt: string | null
   past: { week: string; label: string; priorities: string[] }[]
@@ -121,6 +123,32 @@ export function Wizard({ data }: { data: WeekData }) {
     }),
     pickTitles: Object.fromEntries(candidates.map((b) => [b.id, b.title])),
   }
+
+  // The close reads as a promise, so it says only what the close action does:
+  // the modules move their own carried rows, the picks land on the review row,
+  // and the note goes wherever a module takes notes.
+  const outcomes = [
+    {
+      tag: 'Reschedules',
+      text:
+        carried.length === 0
+          ? 'Nothing carried, so nothing moves.'
+          : `${carried.length} item${carried.length === 1 ? '' : 's'} move${carried.length === 1 ? 's' : ''} to next Monday, rescheduled by the module that owns it.`,
+    },
+    {
+      tag: 'Priorities',
+      text:
+        answers.picks.length === 0
+          ? 'No priorities picked. The week still closes.'
+          : `${answers.picks.length} priorit${answers.picks.length === 1 ? 'y is' : 'ies are'} recorded on the week, in the order you picked them.`,
+    },
+    {
+      tag: 'Note',
+      text: data.noteTarget
+        ? `One note, titled Week of ${data.weekLabel}, is written to ${data.noteTarget}.`
+        : 'No module takes notes, so the write-up stays on the review itself.',
+    },
+  ]
 
   const finish = () =>
     start(async () => {
@@ -291,7 +319,9 @@ export function Wizard({ data }: { data: WeekData }) {
                       />
                     }
                   >
-                    {action && (
+                    {/* Carrying something needs no explanation. Dropping it or
+                        cutting it down does, and the reason goes in the note. */}
+                    {(action === 'drop' || action === 'shrink') && (
                       <input
                         defaultValue={answers.reasons[miss.id] ?? ''}
                         onBlur={(e) =>
@@ -411,18 +441,52 @@ export function Wizard({ data }: { data: WeekData }) {
       )}
 
       {step === 'close' && (
-        <div className="space-y-4">
-          <p className="t-caption text-ink-3">
-            This writes the note below, moves what you carried to next Monday, closes what you
-            dropped, records the check-ins, and files the week. Anything that will not apply is
-            named rather than skipped quietly.
-          </p>
+        <div className="space-y-5">
+          {/* The note as it will be written, before it is written. The server
+              renders these same blocks, so nothing is filed that was not read
+              here first. */}
+          <Card className="space-y-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <Eyebrow>Week of {data.weekLabel} note</Eyebrow>
+              <span className="label text-[10px] tracking-[0.12em] text-ink-3">
+                {data.noteTarget ? `Saves to ${data.noteTarget}` : 'Kept on the review'}
+              </span>
+            </div>
 
-          {/* The note as it will be written, before it is written. Nothing is
-              generated on the server that is not shown here first. */}
-          <pre className="code max-h-[40vh] overflow-auto rounded-md border border-rule-2 bg-bg-deep p-4 text-[12px] leading-relaxed whitespace-pre-wrap text-ink-2">
-            {renderNote(answers, context)}
-          </pre>
+            <div className="space-y-3.5">
+              {noteBlocks(answers, context).map((block) => (
+                <div key={block.head}>
+                  <p className="label text-[9px] tracking-[0.12em] text-brand">{block.head}</p>
+                  {block.lines.length === 0 ? (
+                    <p className="py-1.5 text-[12px] text-ink-3">{block.empty}</p>
+                  ) : (
+                    block.lines.map((line) => (
+                      <div
+                        key={line}
+                        className="flex items-baseline gap-2.5 border-b border-rule py-1.5 text-[13px] leading-[1.5] text-ink"
+                      >
+                        <span className="size-[5px] shrink-0 rounded-full bg-ink-3" aria-hidden />
+                        <span>{line}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {/* What pressing the button does, in the three places it does it. */}
+          <div className="flex flex-wrap gap-2.5">
+            {outcomes.map((outcome) => (
+              <div
+                key={outcome.tag}
+                className="min-w-0 flex-1 basis-[200px] border border-rule-2 bg-bg p-3.5"
+              >
+                <p className="label text-[9px] tracking-[0.12em] text-brand">{outcome.tag}</p>
+                <p className="mt-2 text-[13px] leading-[1.5] text-ink-2">{outcome.text}</p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </ReviewShell>

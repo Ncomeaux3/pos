@@ -91,27 +91,29 @@ export function outstanding(
   return 0
 }
 
-/**
- * The week note, built from the answers. Plain markdown, because the note goes
- * into a module that stores text and the point is that it reads later.
- */
-export function renderNote(
-  answers: ReviewAnswers,
-  context: {
-    weekLabel: string
-    winTitles: Record<string, string>
-    missTitles: Record<string, string>
-    goalLines: string[]
-    pickTitles: Record<string, string>
-  },
-): string {
-  const lines: string[] = [`# Week of ${context.weekLabel}`, '']
+export type NoteContext = {
+  weekLabel: string
+  winTitles: Record<string, string>
+  missTitles: Record<string, string>
+  goalLines: string[]
+  pickTitles: Record<string, string>
+}
 
+/** A section of the week note, and what stands in when it has no lines. */
+export type NoteBlock = { head: string; lines: string[]; empty: string }
+
+/**
+ * The note's four sections, before they are markdown.
+ *
+ * The close step draws these and `renderNote` writes them, so what the screen
+ * shows is what gets filed rather than a second rendering of the same answers
+ * that can drift from the first.
+ */
+export function noteBlocks(answers: ReviewAnswers, context: NoteContext): NoteBlock[] {
   const wins = [
     ...answers.wins.map((id) => context.winTitles[id]).filter(Boolean),
     ...answers.ownWins,
   ]
-  lines.push('## Wins', ...(wins.length > 0 ? wins.map((w) => `- ${w}`) : ['- Nothing ticked.']), '')
 
   const slipped = Object.entries(answers.missActions).map(([id, action]) => {
     const what =
@@ -121,19 +123,34 @@ export function renderNote(
           ? 'shrunk to a smaller first step'
           : 'dropped'
     const why = answers.reasons[id] ? ` (${answers.reasons[id]})` : ''
-    return `- ${context.missTitles[id] ?? id}, ${what}${why}`
+    return `${context.missTitles[id] ?? id}, ${what}${why}`
   })
-  lines.push('## Slipped', ...(slipped.length > 0 ? slipped : ['- Nothing slipped.']), '')
-
-  lines.push(
-    '## Goals',
-    ...(context.goalLines.length > 0 ? context.goalLines.map((g) => `- ${g}`) : ['- No goals yet.']),
-    '',
-  )
 
   const picks = answers.picks.map((id, i) => `${i + 1}. ${context.pickTitles[id] ?? id}`)
-  lines.push('## Next week', ...(picks.length > 0 ? picks : ['- Nothing picked.']))
-  if (answers.intent) lines.push('', `Intent: ${answers.intent}`)
 
-  return lines.join('\n')
+  return [
+    { head: 'Wins', lines: wins, empty: 'Nothing ticked.' },
+    { head: 'Slipped', lines: slipped, empty: 'Nothing slipped.' },
+    { head: 'Goals', lines: context.goalLines, empty: 'No goals yet.' },
+    {
+      head: 'Next week',
+      lines: answers.intent ? [...picks, `Intent: ${answers.intent}`] : picks,
+      empty: 'Nothing picked.',
+    },
+  ]
+}
+
+/**
+ * The week note, built from the answers. Plain markdown, because the note goes
+ * into a module that stores text and the point is that it reads later.
+ */
+export function renderNote(answers: ReviewAnswers, context: NoteContext): string {
+  const lines: string[] = [`# Week of ${context.weekLabel}`, '']
+
+  for (const block of noteBlocks(answers, context)) {
+    const body = block.lines.length > 0 ? block.lines : [block.empty]
+    lines.push(`## ${block.head}`, ...body.map((line) => `- ${line}`), '')
+  }
+
+  return lines.join('\n').trimEnd()
 }

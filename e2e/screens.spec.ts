@@ -534,9 +534,13 @@ test('weekly review, the close shows the note before it writes it', async ({ pag
   // does to switch themes, and what lets a resumed review keep its place.
   await expect(page).toHaveURL(/step=close/)
 
-  // Nothing is generated on the server that is not shown here first.
-  await expect(page.getByText('## Wins')).toBeVisible()
-  await expect(page.getByText('## Next week')).toBeVisible()
+  // Nothing is generated on the server that is not shown here first: the same
+  // four blocks the note is written from are drawn on the step.
+  await expect(page.getByText('Wins', { exact: true })).toBeVisible()
+  await expect(page.getByText('Next week', { exact: true })).toBeVisible()
+
+  // And it says where the note lands rather than implying a filing.
+  await expect(page.getByText(/Saves to|Kept on the review/)).toBeVisible()
 
   await shoot(page, 'weekly-review-close')
 })

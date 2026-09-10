@@ -1,6 +1,7 @@
 import { latestDigests } from '@/core/digests'
 import { pending, slipped, upcoming } from '@/core/review-registry'
-import { getReview, listReviews, weekOf } from '@/core/reviews'
+import { getModule } from '@/core/modules'
+import { getReview, listReviews, noteWriter, weekOf } from '@/core/reviews'
 import { EMPTY_ANSWERS } from '@/core/reviews-shape'
 import { ownerToday } from '@/core/today'
 import { Wizard, type WeekData } from './Wizard'
@@ -57,13 +58,14 @@ export default async function WeeklyReviewPage() {
   const todayIso = await ownerToday()
   const week = weekOf(todayIso)
 
-  const [review, past, glanceLines, slippedBy, upcomingBy, pendingBy] = await Promise.all([
+  const [review, past, glanceLines, slippedBy, upcomingBy, pendingBy, writer] = await Promise.all([
     getReview(week),
     listReviews(),
     glance(),
     slipped(),
     upcoming(),
     pending(),
+    noteWriter(),
   ])
 
   const data: WeekData = {
@@ -76,6 +78,10 @@ export default async function WeeklyReviewPage() {
     misses: slippedBy.flatMap((c) => c.items.map((i) => ({ ...i, module: c.module }))),
     backlog: upcomingBy.flatMap((c) => c.items.map((i) => ({ ...i, module: c.module }))),
     checks: pendingBy.flatMap((c) => c.items.map((i) => ({ ...i, module: c.module }))),
+
+    // Named on the close step, so it says where the note goes rather than
+    // promising a filing that no installed module performs.
+    noteTarget: writer ? (getModule(writer)?.nav.label ?? writer) : null,
 
     answers: review?.answers ?? EMPTY_ANSWERS,
     closedAt: review?.closed_at ? new Date(review.closed_at).toISOString() : null,
