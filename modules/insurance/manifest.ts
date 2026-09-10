@@ -186,6 +186,35 @@ export default defineModule({
     },
   },
 
+  // Renewals, dated. A policy expiring is not a task to carry or drop, so this
+  // module only ever contributes to what is coming.
+  review: {
+    upcoming: async () => {
+      const { rows } = await db().query<{
+        id: string
+        name: string
+        carrier: string
+        expires_on: string
+      }>(
+        `select id, name, carrier, expires_on::text
+           from insurance.policy
+          where status = 'active'
+            and expires_on is not null
+            and expires_on >= core.today()
+            and expires_on < core.today() + 60
+          order by expires_on
+          limit 8`,
+      )
+
+      return rows.map((r) => ({
+        id: r.id,
+        title: `${r.name} renews`,
+        meta: r.carrier || 'No carrier recorded',
+        at: r.expires_on,
+      }))
+    },
+  },
+
   /** See ModuleManifest.tile: the module says how its own numbers read. */
   tile: InsuranceTile,
 

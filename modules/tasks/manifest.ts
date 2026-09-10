@@ -253,8 +253,10 @@ export default defineModule({
         title: string
         project: string | null
         est: number | null
+        due_on: string | null
       }>(
-        `select t.id, t.title, p.name as project, t.estimated_minutes as est
+        `select t.id, t.title, p.name as project, t.estimated_minutes as est,
+                t.due_on::text
            from tasks.task t
            left join tasks.project p on p.id = t.project_id
           where t.status = 'open' and (t.due_on is null or t.due_on >= core.today())
@@ -266,6 +268,7 @@ export default defineModule({
         title: r.title,
         meta: r.project ?? 'No project',
         estimateMinutes: r.est,
+        at: r.due_on,
       }))
     },
 

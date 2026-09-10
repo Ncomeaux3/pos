@@ -237,6 +237,21 @@ export default defineModule({
           meta: `${s.asset_name} / ${dueLabel(toSchedule(s), today)}`,
         }))
     },
+    // What is due but not yet late. The strip on the dashboard reads this, so
+    // a service booked for Thursday shows up before it becomes a miss.
+    upcoming: async () => {
+      const today = await ownerToday()
+      const services = await listServices()
+      return services
+        .filter((s) => s.due_on && s.due_on >= today && dueStatus(toSchedule(s), today) !== 'overdue')
+        .map((s) => ({
+          id: s.id,
+          title: s.title,
+          meta: `${s.asset_name} / ${dueLabel(toSchedule(s), today)}`,
+          at: s.due_on,
+        }))
+    },
+
     apply: async ({ carry, carryTo, drop }) => {
       for (const id of carry) {
         await db().query(

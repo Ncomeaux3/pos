@@ -128,6 +128,14 @@ export type ReviewItem = {
   /** One grey line under it: where it came from, how late it is. */
   meta: string
   estimateMinutes?: number | null
+  /**
+   * The day it falls on, as YYYY-MM-DD, when it has one.
+   *
+   * This is what puts an item on the dashboard's week ahead. A module that
+   * dates its upcoming items appears on the strip; one that does not still
+   * contributes to the review's backlog, which has no dates in it.
+   */
+  at?: string | null
 }
 
 /**

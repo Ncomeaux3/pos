@@ -157,6 +157,34 @@ export default defineModule({
   requires: ['simplefin'],
 
   /** The module says how its own numbers read. See ModuleManifest.tile. */
+  // What Finance puts on the week ahead: the charges it has detected, dated.
+  // Nothing here is a decision to make, so there is no slipped or apply.
+  review: {
+    upcoming: async () => {
+      const { rows } = await db().query<{
+        id: string
+        merchant: string
+        amount_cents: string
+        cadence: string
+        next_charge_on: string
+      }>(
+        `select id, merchant, amount_cents::text, cadence, next_charge_on::text
+           from finance.recurring
+          where next_charge_on >= core.today()
+            and next_charge_on < core.today() + 30
+          order by next_charge_on
+          limit 12`,
+      )
+
+      return rows.map((r) => ({
+        id: r.id,
+        title: r.merchant,
+        meta: `$${(Number(r.amount_cents) / 100).toFixed(2)}, ${r.cadence}`,
+        at: r.next_charge_on,
+      }))
+    },
+  },
+
   tile: FinanceTile,
 
   metrics: {

@@ -61,6 +61,27 @@ test('dashboard shell', async ({ page }) => {
   await shoot(page, 'dashboard')
 })
 
+test('dashboard, the week ahead and arranging the tiles', async ({ page }) => {
+  await page.goto('/')
+
+  // The strip is composed from what every module says is upcoming, so a dated
+  // task from the Tasks module appears on a core screen without core reading
+  // the tasks schema.
+  await expect(page.getByText('Next 7 days')).toBeVisible()
+  // Dated by the module that owns it, not by core.
+  await expect(page.getByText('Pay the Amex statement')).toBeVisible()
+
+  // Arrange lives in the header and the mode lives in the URL, which is what
+  // lets the button be a link rather than a lifted piece of state.
+  await page.waitForLoadState('networkidle')
+  await page.getByRole('link', { name: 'Arrange' }).click()
+  await expect(page).toHaveURL(/arrange=1/)
+  await expect(page.getByText(/Arrange mode/)).toBeVisible()
+
+  await page.getByRole('link', { name: 'Done' }).click()
+  await expect(page.getByText(/Arrange mode/)).toBeHidden()
+})
+
 test('notes, the stub module page', async ({ page }) => {
   await page.goto('/notes')
   await expect(page.getByRole('heading', { name: 'Notes' })).toBeVisible()

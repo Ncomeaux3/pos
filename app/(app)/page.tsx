@@ -7,33 +7,43 @@ import {
   Eyebrow,
   HeatStrip,
   PaceBar,
-  Radar,
   Row,
   RowList,
-  StatusChip,
-  type RadarAxis,
 } from '@/components/pos'
 import { db } from '@/core/db'
+import { Bento, ArrangeToggle, type Tile } from './Bento'
+import { JobRows, SevenDays } from './DashboardTiles'
+import { ProposalList, WarningList } from './Inbox'
 import { getModules } from '@/core/modules'
-import { jobStates, latestSummary } from '@/core/orchestrator'
-import { getDigest } from '@/core/digests'
+import { upcoming } from '@/core/review-registry'
+import { headlineSegments, jobStates, latestSummary } from '@/core/orchestrator'
 import { getSettings } from '@/core/settings'
-import { dayIn } from '@/core/today'
+import { dayIn, ownerToday } from '@/core/today'
 import { RunNow } from './RunNow'
 
 // The bento. Every tile reads core, never a module's own tables: module numbers
 // arrive through their digests, which is what keeps this page ignorant of all
 // of them and stops it breaking when one is deleted.
 
-async function skillAxes(): Promise<RadarAxis[]> {
-  // Through the digest, not skills.xp. The skills schema belongs to a module
-  // and this page reads none of them directly; an uninstalled Skill Tree gives
-  // an empty radar rather than a missing relation.
-  const digest = (await getDigest('skills')) as {
-    attributes?: { name: string; level: number }[]
-  } | null
+/**
+ * What is coming in the next seven days.
+ *
+ * Composed from what each module says is upcoming, which is the same list the
+ * Weekly Review picks next week's three from. Core reads no module schema to
+ * build it and a module that dates nothing simply never appears on the strip.
+ */
+async function nextSevenDays(
+  todayIso: string,
+): Promise<{ id: string; title: string; meta: string; at: string; module: string }[]> {
+  const week = new Date(`${todayIso}T12:00:00`)
+  week.setDate(week.getDate() + 7)
+  const until = week.toISOString().slice(0, 10)
 
-  return (digest?.attributes ?? []).slice(0, 6).map((a) => ({ label: a.name, value: a.level }))
+  return (await upcoming())
+    .flatMap((c) => c.items.map((i) => ({ ...i, module: c.module })))
+    .flatMap((i) => (i.at && i.at >= todayIso && i.at < until ? [{ ...i, at: i.at }] : []))
+    .sort((a, b) => a.at.localeCompare(b.at))
+    .slice(0, 6)
 }
 
 async function unreadWarnings() {
@@ -53,6 +63,19 @@ async function pendingProposals() {
   return rows
 }
 
+/** This month's model spend, by what it was spent on. */
+async function spendByPurpose(): Promise<{ purpose: string; calls: number; cents: number }[]> {
+  const { rows } = await db().query<{ purpose: string; calls: string; cents: string }>(
+    `select purpose, count(*)::text as calls, sum(cost_cents)::text as cents
+       from core.llm_calls
+      where occurred_at >= date_trunc('month', now())
+      group by purpose
+      order by sum(cost_cents) desc
+      limit 4`,
+  )
+  return rows.map((r) => ({ purpose: r.purpose, calls: Number(r.calls), cents: Number(r.cents) }))
+}
+
 const money = (cents: number) => `$${(cents / 100).toFixed(2)}`
 const ago = (at: Date) => {
   const mins = Math.round((Date.now() - new Date(at).getTime()) / 60_000)
@@ -62,21 +85,198 @@ const ago = (at: Date) => {
 }
 
 export default async function DashboardPage() {
-  const [latest, jobs, axes, warnings, proposals, settings] = await Promise.all([
+  // The owner's date, not the server's: on Vercel those differ all evening.
+  // Two forms of it, and they are not interchangeable. `todayIso` is what
+  // dates are compared against; `today` is the label in the band.
+  const settings = await getSettings()
+  const todayIso = await ownerToday()
+  const today = dayIn(new Date(), settings.timezone)
+
+  const [latest, jobs, diary, warnings, proposals, spend] = await Promise.all([
     latestSummary(),
     jobStates(),
-    skillAxes(),
+    nextSevenDays(todayIso),
     unreadWarnings(),
     pendingProposals(),
-    getSettings(),
+    spendByPurpose(),
   ])
 
   const summary = latest?.summary
+  const segments = summary ? headlineSegments(summary) : []
   const failed = jobs.filter((j) => j.status === 'failed')
   const spendCents = summary?.spendCents ?? 0
-  // The owner's date, not the server's: on Vercel those differ all evening.
-  const today = dayIn(new Date(), settings.timezone)
   const capCents = summary?.capCents ?? settings.llm_soft_cap_cents
+
+
+  // The artboard's order: what needs you, what is proposed, what is coming,
+  // then the modules, then the machine. Everything after that is whatever this
+  // device was dragged into.
+  const tiles: Tile[] = [
+    {
+      id: 'warnings',
+      node: (
+        <Card className="flex h-full flex-col gap-3">
+          <CardHead
+            label="Warnings"
+            dot={warnings.length > 0 ? 'warn' : 'ok'}
+            meta={`${warnings.length} unread`}
+          />
+          {warnings.length === 0 ? (
+            <p className="grid flex-1 place-items-center text-[26px] font-light text-ink-3">
+              0 warnings
+            </p>
+          ) : (
+            <WarningList
+              warnings={warnings.map((w) => ({
+                id: w.id,
+                title: w.title,
+                sub: w.body,
+                urgent: w.urgency === 'urgent',
+              }))}
+            />
+          )}
+        </Card>
+      ),
+    },
+    {
+      id: 'review',
+      node: (
+        <Card className="flex h-full flex-col gap-3">
+          <CardHead label="Review · agent proposals" meta={`${proposals.length} pending`} />
+          {proposals.length === 0 ? (
+            <p className="grid flex-1 place-items-center text-[26px] font-light text-ink-3">
+              inbox clear
+            </p>
+          ) : (
+            <ProposalList
+              proposals={proposals.map((p) => ({
+                id: p.id,
+                title: p.title ?? 'Proposal',
+                from: p.agent ?? 'agent',
+              }))}
+            />
+          )}
+          <Link
+            href="/review"
+            className="label mt-auto text-[10px] tracking-[0.1em] text-ink-3 hover:text-ink"
+          >
+            Open review
+          </Link>
+        </Card>
+      ),
+    },
+    {
+      id: 'timeline',
+      node: (
+        <Card className="flex h-full flex-col gap-3">
+          <CardHead label="Next 7 days" meta={`${diary.length} scheduled`} />
+          <SevenDays
+            today={todayIso}
+            items={diary.map((d) => ({
+              id: `${d.module}.${d.id}`,
+              title: d.title,
+              meta: d.meta,
+              at: d.at,
+              module: d.module,
+            }))}
+          />
+        </Card>
+      ),
+    },
+
+    // One tile per module that wrote a digest. A module is responsible for its
+    // own numbers; this page only lays them out.
+    ...(summary?.modules ?? []).map((m) => {
+      const manifest = getModules().find((x) => x.id === m.module)
+      const label = manifest?.nav.label ?? m.module
+      const ModuleTile = manifest?.tile
+
+      return {
+        id: m.module,
+        node: (
+          <Card className="flex h-full flex-col gap-3">
+            <CardHead label={label} meta={ModuleTile ? undefined : 'digest'} />
+            {/* The module says how its own numbers read. Core only places the
+              * result: it has no way to know what a finance payload holds, and
+              * walking the object generically is what put "debt cents 231000"
+              * on the dashboard. */}
+            {ModuleTile ? (
+              <ModuleTile payload={m.payload} />
+            ) : (
+              <GenericDigest payload={m.payload} />
+            )}
+            <Link
+              href={`/${m.module}`}
+              className="label mt-auto text-[10px] tracking-[0.1em] text-ink-3 hover:text-ink"
+            >
+              Open {label}
+            </Link>
+          </Card>
+        ),
+      }
+    }),
+
+    {
+      id: 'jobs',
+      node: (
+        <Card className="flex h-full flex-col gap-3">
+          <CardHead
+            label="System"
+            dot={failed.length > 0 ? 'bad' : 'ok'}
+            meta={`${jobs.length} jobs`}
+          />
+          <HeatStrip cells={jobs.map((j) => ({ label: `${j.module}.${j.name}`, status: j.status }))} />
+          <JobRows
+            jobs={jobs.map((j) => ({
+              name: `${j.module}.${j.name}`,
+              status: j.status,
+              at: j.lastRun ? new Date(j.lastRun).toISOString() : null,
+            }))}
+            timezone={settings.timezone}
+          />
+        </Card>
+      ),
+    },
+    {
+      id: 'llm',
+      node: (
+        <Card className="flex h-full flex-col gap-3">
+          <CardHead label="Model spend · month" meta={`cap ${money(capCents)}`} />
+          <div className="flex items-baseline gap-2.5">
+            <span className="num text-[30px] font-light leading-none text-ink">
+              {money(spendCents)}
+            </span>
+            <span className="num text-[11px] text-ink-3">
+              {capCents > 0 ? `${Math.round((spendCents / capCents) * 100)}% of cap` : 'no cap set'}
+            </span>
+          </div>
+          <PaceBar
+            value={spendCents}
+            max={capCents}
+            tone={spendCents >= capCents ? 'bad' : spendCents > capCents * 0.8 ? 'warn' : 'brand'}
+          />
+          {spend.length === 0 ? (
+            <p className="t-caption text-ink-3">
+              Nothing has been spent this month. Past the cap, research runs are refused and logged.
+            </p>
+          ) : (
+            <div className="flex flex-col">
+              {spend.map((row) => (
+                <div
+                  key={row.purpose}
+                  className="grid grid-cols-[1fr_auto_auto] gap-3 border-b border-rule py-[7px] text-[12px]"
+                >
+                  <span className="truncate text-ink-2">{row.purpose}</span>
+                  <span className="num text-[11px] text-ink-3">{row.calls}</span>
+                  <span className="num text-[11px] text-ink">{money(row.cents)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      ),
+    },
+  ]
 
   return (
     <div className="space-y-7">
@@ -84,9 +284,25 @@ export default async function DashboardPage() {
         * actions, then the summary as the page's opening statement. The two
         * were merged into one PageHeader, which made the headline a title and
         * shrank it to a title's size. */}
-      <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-rule pb-3">
-        <span className="eyebrow text-ink-3">Dashboard / {today}</span>
-        <RunNow />
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-rule pb-3">
+        <span className="eyebrow shrink-0 whitespace-nowrap text-ink-3">
+          Dashboard <span className="text-ink-4">/</span> {today}
+        </span>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-4">
+          {/* A GET form, so search from the dashboard needs no javascript and
+              lands on the same screen the palette does. */}
+          <form action="/search" className="min-w-[220px] max-w-[320px] flex-1">
+            <input
+              type="search"
+              name="q"
+              aria-label="Search everything"
+              placeholder="Search everything"
+              className="h-[34px] w-full border border-rule-2 bg-transparent px-3 text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand"
+            />
+          </form>
+          <ArrangeToggle />
+          <RunNow />
+        </div>
       </header>
 
       <section className="space-y-2">
@@ -101,9 +317,25 @@ export default async function DashboardPage() {
             : 'No run yet'}
         </span>
         {/* The opening statement, at the size the design gives it. It is the
-          * first thing on the page and reads as a sentence, not a heading. */}
-        <h1 className="max-w-[46ch] text-[clamp(22px,2.6vw,34px)] font-light leading-[1.25] tracking-[-0.02em] text-ink">
-          {latest?.headline ?? 'Nothing has run yet.'}
+          * first thing on the page and reads as a sentence, not a heading, and
+          * the parts of it that name something you can open are links, which
+          * is the artboard's one piece of colour in the sentence. */}
+        <h1 className="max-w-[920px] text-pretty text-[clamp(22px,2.2vw,30px)] font-normal leading-[1.25] tracking-[-0.03em] text-ink">
+          {segments.length > 0
+            ? segments.map((s, i) =>
+                s.href ? (
+                  <Link
+                    key={i}
+                    href={s.href}
+                    className="underline decoration-brand decoration-1 underline-offset-4 hover:text-brand"
+                  >
+                    {s.text}
+                  </Link>
+                ) : (
+                  <span key={i}>{s.text}</span>
+                ),
+              )
+            : (latest?.headline ?? 'Nothing has run yet.')}
         </h1>
         <p className="t-caption text-ink-3">
           {latest
@@ -112,125 +344,7 @@ export default async function DashboardPage() {
         </p>
       </section>
 
-      {/* items-start, so a tile is as tall as its own content. Grid items
-        * stretch by default, which made every tile in a row as tall as the
-        * tallest one and left the short ones with a block of dead space under
-        * their last line. The prototype's tiles hug what is in them. */}
-      <div className="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
-        <Card className="space-y-3">
-          <CardHead
-            label="Warnings"
-            dot={warnings.length > 0 ? 'warn' : 'ok'}
-            meta={`${warnings.length} unread`}
-          />
-          {warnings.length === 0 ? (
-            <p className="t-caption text-ink-3">Nothing needs you today.</p>
-          ) : (
-            <RowList>
-              {warnings.map((w) => (
-                <Row
-                  key={w.id}
-                  title={w.title}
-                  right={
-                    w.urgency === 'urgent' ? <StatusChip tone="bad">Urgent</StatusChip> : undefined
-                  }
-                />
-              ))}
-            </RowList>
-          )}
-        </Card>
-
-        <Card className="space-y-3">
-          <CardHead label="Review" meta={`${proposals.length} pending`} />
-          {proposals.length === 0 ? (
-            <p className="t-caption text-ink-3">Inbox clear.</p>
-          ) : (
-            <RowList>
-              {proposals.map((p) => (
-                <Row key={p.id} title={p.title ?? 'Proposal'} meta={p.agent ?? undefined} />
-              ))}
-            </RowList>
-          )}
-          <Link href="/review" className="label text-[10px] tracking-[0.1em] text-ink-3 hover:text-ink">
-            Open review
-          </Link>
-        </Card>
-
-        <Card className="space-y-3">
-          <CardHead label="Model spend" meta="this month" />
-          <p className="num text-[30px] font-light leading-none text-ink">{money(spendCents)}</p>
-          <PaceBar
-            value={spendCents}
-            max={capCents}
-            tone={spendCents >= capCents ? 'bad' : spendCents > capCents * 0.8 ? 'warn' : 'brand'}
-          />
-          <p className="t-caption text-ink-3">
-            of {money(capCents)} cap. Past it, research runs are refused and logged.
-          </p>
-        </Card>
-
-        <Card className="space-y-3">
-          <CardHead
-            label="System"
-            dot={failed.length > 0 ? 'bad' : 'ok'}
-            meta={`${jobs.length} jobs`}
-          />
-          <HeatStrip cells={jobs.map((j) => ({ label: `${j.module}.${j.name}`, status: j.status }))} />
-          {failed.length > 0 ? (
-            <RowList>
-              {failed.map((j) => (
-                <Row
-                  key={`${j.module}.${j.name}`}
-                  title={`${j.module}.${j.name}`}
-                  right={<StatusChip tone="bad">Failed</StatusChip>}
-                />
-              ))}
-            </RowList>
-          ) : (
-            <p className="t-caption text-ink-3">
-              Every job clean. Next run 09:00 UTC.
-            </p>
-          )}
-        </Card>
-
-        <Card className="space-y-3">
-          <CardHead label="Skill tree" meta={axes.length > 0 ? `${axes.length} tracked` : 'no xp yet'} />
-          {axes.length >= 3 ? (
-            <div className="flex justify-center">
-              <Radar axes={axes} />
-            </div>
-          ) : (
-            <p className="t-caption text-ink-3">
-              XP arrives as entities are classified. The Skill Tree module renders the whole thing.
-            </p>
-          )}
-        </Card>
-
-        {/* One tile per module that wrote a digest. A module is responsible for
-            its own numbers; this page only lays them out. */}
-        {(summary?.modules ?? []).map((m) => {
-          const manifest = getModules().find((x) => x.id === m.module)
-          const label = manifest?.nav.label ?? m.module
-          const Tile = manifest?.tile
-
-          return (
-            <Card key={m.module} className="space-y-3">
-              <CardHead label={label} meta={Tile ? undefined : 'digest'} />
-              {/* The module says how its own numbers read. Core only places
-                * the result: it has no way to know what a finance payload
-                * holds, and walking the object generically is what put
-                * "debt cents 231000" on the dashboard. */}
-              {Tile ? <Tile payload={m.payload} /> : <GenericDigest payload={m.payload} />}
-              <Link
-                href={`/${m.module}`}
-                className="label text-[10px] tracking-[0.1em] text-ink-3 hover:text-ink"
-              >
-                Open {label}
-              </Link>
-            </Card>
-          )
-        })}
-      </div>
+      <Bento tiles={tiles} />
 
       {!latest && (
         <EmptyState headline="No run yet">

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { writeHeadline } from './orchestrator'
+import { headlineSegments, writeHeadline } from './orchestrator'
 import type { Summary } from './orchestrator'
 
 // The sentence at the top of the dashboard. It used to be written by Haiku and
@@ -70,5 +70,30 @@ describe('writeHeadline', () => {
     const text = writeHeadline(summary({ alerts: [alert('bad')], pendingProposals: 3 })) ?? ''
     const digits = text.match(/\d+/g) ?? []
     expect(digits).toEqual(['1', '3'])
+  })
+})
+
+describe('headlineSegments', () => {
+  // The dashboard underlines the runs that name something you can open, so the
+  // pieces have to come out separately and still read as one sentence.
+  it('links each part and joins back to the plain sentence', () => {
+    const s = summary({ alerts: [alert('bad')], failedJobs: [{ module: 'core', name: 'nightly' }], pendingProposals: 2 })
+    const segments = headlineSegments(s)
+
+    expect(segments.map((x) => x.text).join('')).toBe(writeHeadline(s))
+    expect(segments.filter((x) => x.href).map((x) => x.href)).toEqual([
+      '/notifications',
+      '/agent-log',
+      '/review',
+    ])
+  })
+
+  it('is empty on a quiet night, which is what makes the headline null', () => {
+    expect(headlineSegments(summary())).toEqual([])
+  })
+
+  it('points the cap sentence at the setting that raises it', () => {
+    const segments = headlineSegments(summary({ pendingProposals: 1, spendCents: 1000, capCents: 1000 }))
+    expect(segments.find((x) => x.href === '/settings')?.text).toBe('10.00 cap')
   })
 })

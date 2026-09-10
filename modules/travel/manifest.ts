@@ -221,6 +221,31 @@ export default defineModule({
     },
   },
 
+  // Trips, dated by the day they start.
+  review: {
+    upcoming: async () => {
+      const { rows } = await db().query<{
+        id: string
+        name: string
+        destination: string
+        starts_on: string
+      }>(
+        `select id, name, destination, starts_on::text
+           from travel.trip
+          where starts_on is not null and starts_on >= core.today()
+          order by starts_on
+          limit 8`,
+      )
+
+      return rows.map((r) => ({
+        id: r.id,
+        title: `${r.name} begins`,
+        meta: r.destination || 'No destination yet',
+        at: r.starts_on,
+      }))
+    },
+  },
+
   /** See ModuleManifest.tile: the module says how its own numbers read. */
   tile: TravelTile,
 

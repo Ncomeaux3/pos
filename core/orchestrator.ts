@@ -96,12 +96,6 @@ export async function buildSummary(): Promise<Summary> {
   }
 }
 
-/** "a", "b" and "c". An Oxford comma would be wrong in a spoken sentence. */
-function list(parts: string[]): string {
-  if (parts.length <= 1) return parts[0] ?? ''
-  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`
-}
-
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 
 /**
@@ -116,27 +110,58 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
  * headline is a quiet night, which is the correct output.
  */
 export function writeHeadline(summary: Summary): string | null {
-  const parts: string[] = []
+  const segments = headlineSegments(summary)
+  return segments.length === 0 ? null : segments.map((s) => s.text).join('')
+}
+
+/** A run of the headline, with where it points when it points anywhere. */
+export type HeadlineSegment = { text: string; href?: string }
+
+/**
+ * The headline in pieces, so the dashboard can link the parts of the sentence
+ * that name something you can go and look at.
+ *
+ * The artboard underlines those runs in accent and leaves the joining words
+ * alone, which is why the separators are segments of their own rather than
+ * something the caller has to reconstruct. `writeHeadline` joins them back
+ * into the plain string that goes in the database and the email.
+ */
+export function headlineSegments(summary: Summary): HeadlineSegment[] {
+  const parts: HeadlineSegment[] = []
 
   const bad = summary.alerts.filter((a) => a.tone === 'bad').length
   const other = summary.alerts.length - bad
-  if (bad > 0) parts.push(plural(bad, 'thing') + ' needing attention')
-  if (other > 0) parts.push(plural(other, 'warning'))
-  if (summary.failedJobs.length > 0) parts.push(plural(summary.failedJobs.length, 'failed job'))
+  if (bad > 0) {
+    parts.push({ text: `${plural(bad, 'thing')} needing attention`, href: '/notifications' })
+  }
+  if (other > 0) parts.push({ text: plural(other, 'warning'), href: '/notifications' })
+  if (summary.failedJobs.length > 0) {
+    parts.push({ text: plural(summary.failedJobs.length, 'failed job'), href: '/agent-log' })
+  }
   if (summary.pendingProposals > 0) {
-    parts.push(`${plural(summary.pendingProposals, 'proposal')} waiting`)
+    parts.push({ text: `${plural(summary.pendingProposals, 'proposal')} waiting`, href: '/review' })
   }
 
-  if (parts.length === 0) return null
+  if (parts.length === 0) return []
+
+  const out: HeadlineSegment[] = []
+  parts.forEach((part, i) => {
+    if (i > 0) out.push({ text: i === parts.length - 1 ? ' and ' : ', ' })
+    out.push({ ...part, text: i === 0 ? capitalise(part.text) : part.text })
+  })
+  out.push({ text: '.' })
 
   // The cap is the one number worth naming unprompted: it is the only thing
   // here that stops working when it is reached.
-  const overCap = summary.capCents > 0 && summary.spendCents >= summary.capCents
-  const tail = overCap
-    ? ` Model spend has reached the ${(summary.capCents / 100).toFixed(2)} cap, so research is paused.`
-    : ''
+  if (summary.capCents > 0 && summary.spendCents >= summary.capCents) {
+    out.push(
+      { text: ' Model spend has reached the ' },
+      { text: `${(summary.capCents / 100).toFixed(2)} cap`, href: '/settings' },
+      { text: ', so research is paused.' },
+    )
+  }
 
-  return `${capitalise(list(parts))}.${tail}`
+  return out
 }
 
 const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
