@@ -1,5 +1,28 @@
 'use client'
 
+import {
+  Activity,
+  Bell,
+  Brain,
+  CalendarCheck,
+  FileText,
+  House,
+  Inbox,
+  LayoutGrid,
+  Lightbulb,
+  LineChart,
+  ListChecks,
+  MoreHorizontal,
+  Network,
+  Plane,
+  ScrollText,
+  Search,
+  Settings,
+  Shield,
+  Target,
+  Utensils,
+  type LucideIcon,
+} from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTransition } from 'react'
@@ -168,8 +191,44 @@ export function Sidebar({
 }
 
 /**
+ * One icon per route, for the bottom tab bar.
+ *
+ * The phone artboard draws a glyph per tab, not the two digit code the rail
+ * uses: at 78px of width a code and a label are two lines of small type and
+ * the bar reads as a table. Keyed by href so a module without an entry falls
+ * back to its code rather than to a wrong picture.
+ */
+const NAV_ICON: Record<string, LucideIcon> = {
+  '/': LayoutGrid,
+  '/finance': LineChart,
+  '/tasks': ListChecks,
+  '/fitness': Activity,
+  '/brain': Brain,
+  '/notes': FileText,
+  '/skills': Network,
+  '/goals': Target,
+  '/health': Activity,
+  '/home': House,
+  '/ideas': Lightbulb,
+  '/insurance': Shield,
+  '/meals': Utensils,
+  '/travel': Plane,
+  '/review': Inbox,
+  '/search': Search,
+  '/weekly-review': CalendarCheck,
+  '/notifications': Bell,
+  '/agent-log': ScrollText,
+  '/settings': Settings,
+}
+
+/**
  * Below 720px the sidebar is a bottom tab bar: the first four nav entries plus
  * More, which opens the rest. Same list, same order, same badge.
+ *
+ * Measured off PosPhone.dc.html: 56px rows on `8px 6px 26px` padding, an 18px
+ * glyph over a 9px label, accent for the current tab. The 26px at the bottom
+ * is the home indicator's, and without it the labels sat on the very edge of
+ * the screen under it.
  */
 export function MobileTabBar({
   nav,
@@ -187,31 +246,34 @@ export function MobileTabBar({
   return (
     <nav
       aria-label="Sections"
-      className="fixed inset-x-0 bottom-0 z-40 flex border-t border-rule bg-bg-elev md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 flex border-t border-rule-2 bg-bg-elev px-1.5 pb-[26px] pt-2 md:hidden"
     >
-      {primary.map((item) => (
+      {primary.map((item, i) => (
         <Link
           key={item.href}
           href={item.href}
           aria-current={isActive(pathname, item.href) ? 'page' : undefined}
           className={cn(
-            'flex min-h-[52px] flex-1 flex-col items-center justify-center gap-1 px-1 py-2',
-            isActive(pathname, item.href) ? 'text-ink' : 'text-ink-3',
+            'flex min-h-[56px] flex-1 flex-col items-center justify-center gap-[5px] px-0.5 py-1.5',
+            isActive(pathname, item.href) ? 'text-brand' : 'text-ink-3',
           )}
         >
-          <span className="label text-[9px] tracking-[0.1em]">{item.code}</span>
-          <span className="max-w-full truncate text-[10px]">{item.label}</span>
+          {/* The count rides the first tab, which is where a proposal lands.
+            * It used to be the More tab's top line, where it read as that
+            * tab's own label rather than as something waiting. */}
+          <TabGlyph item={item} badge={i === 0 ? reviewCount : 0} />
+          <span className="label max-w-full truncate text-[9px] tracking-[0.08em]">
+            {item.label}
+          </span>
         </Link>
       ))}
 
       <details className="group relative flex-1">
-        <summary className="flex min-h-[52px] cursor-pointer list-none flex-col items-center justify-center gap-1 px-1 py-2 text-ink-3">
-          <span className="label text-[9px] tracking-[0.1em]">
-            {reviewCount > 0 ? reviewCount : '···'}
-          </span>
-          <span className="text-[10px]">More</span>
+        <summary className="flex min-h-[56px] cursor-pointer list-none flex-col items-center justify-center gap-[5px] px-0.5 py-1.5 text-ink-3">
+          <MoreHorizontal size={18} strokeWidth={1.3} aria-hidden />
+          <span className="label text-[9px] tracking-[0.08em]">More</span>
         </summary>
-        <div className="absolute bottom-full right-0 mb-px grid w-[62vw] grid-cols-2 border border-rule-2 bg-bg-elev">
+        <div className="absolute bottom-full right-0 mb-px grid w-[78vw] grid-cols-2 border border-rule-2 bg-bg-elev">
           {rest.map((item) => (
             <Link
               key={item.href}
@@ -224,5 +286,25 @@ export function MobileTabBar({
         </div>
       </details>
     </nav>
+  )
+}
+
+/** The tab's glyph, or its code when this repo has no icon for that route. */
+function TabGlyph({ item, badge }: { item: NavItem; badge: number }) {
+  const Icon = NAV_ICON[item.href]
+
+  return (
+    <span className="relative grid place-items-center">
+      {Icon ? (
+        <Icon size={18} strokeWidth={1.3} aria-hidden />
+      ) : (
+        <span className="label text-[11px] tracking-[0.1em]">{item.code}</span>
+      )}
+      {badge > 0 && (
+        <span className="num absolute -right-2.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-brand px-1 text-[9px] text-white">
+          {badge}
+        </span>
+      )}
+    </span>
   )
 }

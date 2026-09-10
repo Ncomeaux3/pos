@@ -45,7 +45,10 @@ export default async function AppLayout({ children }: LayoutProps<'/'>) {
         // The sidebar is fixed so the rail never scrolls with the page; this
         // keeps the column clear of it and clear of the mobile tab bar.
         style={{ ['--rail' as string]: collapsed ? '64px' : '232px' }}
-        className="min-w-0 flex-1 p-7 pb-24 md:pb-7 md:[margin-left:var(--rail)]"
+        // 18px of side padding on a phone, not 28: the artboard's body runs
+        // `14px 18px 22px`, and 28 on a 402px screen was costing 20px of a
+        // column that was already truncating its own rows.
+        className="min-w-0 flex-1 p-[18px] pb-28 md:p-7 md:pb-7 md:[margin-left:var(--rail)]"
       >
         {children}
       </main>

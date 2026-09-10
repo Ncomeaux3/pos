@@ -74,7 +74,10 @@ export function MetricStrip({
   return (
     <div
       className={cn(
-        'grid gap-px border border-rule-2 bg-rule-2 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,170px),1fr))]',
+        // Two up on a phone. One per row put a 34px number in a full width
+        // block and pushed everything else off the screen; the phone artboard
+        // lays its KPIs out `1fr 1fr` and steps the numbers down to 24.
+        'grid grid-cols-2 gap-px border border-rule-2 bg-rule-2 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,170px),1fr))]',
         className,
       )}
     >
@@ -99,8 +102,8 @@ export function MetricStrip({
  */
 const METRIC_SIZE = {
   sm: 'text-[24px]',
-  md: 'text-[30px]',
-  lg: 'text-[34px]',
+  md: 'text-[24px] sm:text-[30px]',
+  lg: 'text-[24px] sm:text-[34px]',
 } as const
 
 export function MetricTile({
@@ -122,7 +125,7 @@ export function MetricTile({
   children?: ReactNode
 }) {
   return (
-    <div className={cn('flex flex-col gap-2 bg-bg-elev px-5 py-4', className)}>
+    <div className={cn('flex flex-col gap-2 bg-bg-elev px-4 py-3.5 sm:px-5 sm:py-4', className)}>
       <Eyebrow>{label}</Eyebrow>
       <p
         className={cn(

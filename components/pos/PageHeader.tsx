@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { BandSearch } from './BandSearch'
+import { BandSearch, SearchButton } from './BandSearch'
 import { Eyebrow, type DotTone } from './text'
 
 /**
@@ -39,16 +39,26 @@ export function PageHeader({
 }) {
   return (
     <div className={cn('space-y-6', className)}>
-      <div className="-mx-7 -mt-7 flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-rule px-7 py-3.5">
+      {/* The negative margins cancel `main`'s padding, which is 18px on a
+        * phone and 28 from md up. */}
+      <div className="-mx-[18px] -mt-[18px] flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-rule px-[18px] py-3.5 md:-mx-7 md:-mt-7 md:px-7">
         <Eyebrow dot={dot}>{eyebrow}</Eyebrow>
-        <BandSearch className="order-last w-full md:order-none md:ml-auto" />
+        {/* A full width search field is a desktop affordance: on the phone
+          * artboard search is a 44px button in this band that opens a sheet.
+          * The button asks the palette for itself through the same event the
+          * field does, so there is still one query in one place. */}
+        <SearchButton className="ml-auto md:hidden" />
+        <BandSearch className="order-last hidden w-full md:order-none md:ml-auto md:block" />
         {status && <div className="flex items-center gap-3 md:order-last">{status}</div>}
       </div>
 
       <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
         <div className="min-w-0 space-y-2">
           <h1 className="t-headline text-ink">{title}</h1>
-          {lede && <p className="t-lede max-w-[78ch] text-ink-3">{lede}</p>}
+          {/* Hidden on a phone. None of the four phone artboards carries a
+            * description under its title, and at 402px this paragraph was
+            * costing most of a screen before any content. */}
+          {lede && <p className="t-lede hidden max-w-[78ch] text-ink-3 md:block">{lede}</p>}
         </div>
         {/* ml-auto so the actions stay right aligned even after they wrap onto
             their own line, which they do as soon as the lede is long. */}

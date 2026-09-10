@@ -9,6 +9,7 @@ import {
   PaceBar,
   Row,
   RowList,
+  SearchButton,
 } from '@/components/pos'
 import { db } from '@/core/db'
 import { Bento, ArrangeToggle, type Tile } from './Bento'
@@ -291,7 +292,10 @@ export default async function DashboardPage() {
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-4">
           {/* A GET form, so search from the dashboard needs no javascript and
               lands on the same screen the palette does. */}
-          <form action="/search" className="min-w-[220px] max-w-[320px] flex-1">
+          {/* On a phone the artboard carries a 44px search icon in this band,
+              not a field. Same destination, and still no javascript. */}
+          <SearchButton href="/search" className="md:hidden" />
+          <form action="/search" className="hidden min-w-[220px] max-w-[320px] flex-1 md:block">
             <input
               type="search"
               name="q"
@@ -337,7 +341,9 @@ export default async function DashboardPage() {
               )
             : (latest?.headline ?? 'Nothing has run yet.')}
         </h1>
-        <p className="t-caption text-ink-3">
+        {/* Hidden on a phone, as everywhere else: none of the four phone
+          * artboards puts a paragraph under its opening line. */}
+        <p className="t-caption hidden text-ink-3 md:block">
           {latest
             ? 'Written from module digests only. Raw data is touched when you ask a direct question.'
             : 'Press Run now, or wait for the nightly cron.'}

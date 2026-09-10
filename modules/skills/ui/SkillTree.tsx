@@ -195,7 +195,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
               * grid colour is `rule`, not `rule-2`: when the pips wrap, the
               * remainder of the row is this background, and at rule-2 in light
               * that leftover reads as a solid grey block. */}
-            <div className="flex flex-wrap gap-px border border-white/12 bg-white/12">
+            <div className="flex flex-wrap justify-end gap-px border border-white/12 bg-white/12">
               {attributes.map((a) => (
                 <button
                   key={a.id}

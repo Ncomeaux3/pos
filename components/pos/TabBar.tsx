@@ -8,11 +8,15 @@ import { useSwipe } from './gestures'
 export type Tab<T extends string> = { value: T; label: ReactNode; count?: number }
 
 const TAB_BASE =
-  'flex items-center gap-2 border-b-2 pb-2.5 pt-1 text-sm transition-colors duration-150'
+  'flex shrink-0 items-center gap-2 border-b-2 pb-2.5 pt-1 text-sm transition-colors duration-150'
 const TAB_ON = 'border-brand text-ink'
 const TAB_OFF = 'border-transparent text-ink-3 hover:text-ink-2'
 const TAB_SOON = 'border-transparent text-ink-4 cursor-not-allowed'
-const TAB_ROW = '-mb-px flex flex-wrap gap-6 border-b border-rule'
+// Scrolls rather than wraps. Five tabs at 402px wrapped onto two lines with
+// the underline of the first row cutting through the second, where the phone
+// artboard runs its segmented control off the edge of the screen instead.
+const TAB_ROW =
+  '-mb-px flex gap-6 overflow-x-auto border-b border-rule [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex-wrap md:overflow-visible'
 
 function TabCount({ count }: { count?: number }) {
   if (count === undefined) return null

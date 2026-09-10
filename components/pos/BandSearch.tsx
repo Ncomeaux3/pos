@@ -23,3 +23,40 @@ export function BandSearch({ className }: { className?: string }) {
     </button>
   )
 }
+
+/**
+ * The same thing as a 44px square, for the phone band.
+ *
+ * The artboard's header has no room for a field: it carries a search icon
+ * beside the title at a 44px touch target, and the query itself belongs to the
+ * palette either way, so this asks for the palette through the same event.
+ */
+export function SearchButton({ className, href }: { className?: string; href?: string }) {
+  const shape = cn(
+    'grid size-11 shrink-0 place-items-center border border-rule-2 text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink',
+    className,
+  )
+  const glyph = (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.4} aria-hidden>
+      <circle cx="7" cy="7" r="4.6" />
+      <path d="M10.5 10.5 L14.5 14.5" />
+    </svg>
+  )
+
+  // A link where the page's own search is a form that works without
+  // javascript, so shrinking it to an icon does not quietly make it need any.
+  return href ? (
+    <a href={href} aria-label="Search" className={shape}>
+      {glyph}
+    </a>
+  ) : (
+    <button
+      type="button"
+      aria-label="Search"
+      onClick={() => window.dispatchEvent(new Event('pos:search'))}
+      className={shape}
+    >
+      {glyph}
+    </button>
+  )
+}
