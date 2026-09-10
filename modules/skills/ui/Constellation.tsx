@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { SkillStat } from '../data'
 import type { SkillNode } from '../tree'
 import { layout, nodeRadius, ROOT_ID, type Placed } from './layout'
@@ -10,6 +10,25 @@ import { layout, nodeRadius, ROOT_ID, type Placed } from './layout'
 const VIEW = 900
 const ZOOM_MIN = 0.4
 const ZOOM_MAX = 3
+
+/**
+ * The pointer in viewBox units, and the pixels-per-unit that got it there.
+ *
+ * The svg is fitted xMidYMid meet, so the viewBox is scaled by the *smaller*
+ * side and centred in the larger one. Dividing by the width alone, which is
+ * what the pan used to do, makes a drag move the canvas at the wrong rate on
+ * any box that is not square, and this one never is.
+ */
+function viewPoint(svg: SVGSVGElement, clientX: number, clientY: number) {
+  const box = svg.getBoundingClientRect()
+  const scale = Math.min(box.width, box.height) / VIEW
+
+  return {
+    scale,
+    x: (clientX - box.left - (box.width - VIEW * scale) / 2) / scale - VIEW / 2,
+    y: (clientY - box.top - (box.height - VIEW * scale) / 2) / scale - VIEW / 2,
+  }
+}
 
 export type Tone = 'gaining' | 'active' | 'stagnant'
 
@@ -88,7 +107,56 @@ export function Constellation({
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [hover, setHover] = useState<Placed | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
-  const drag = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null)
+  // A drag only becomes a pan once the pointer has actually moved. Until then
+  // the press is a click on whatever is under it, which is what makes clicking
+  // a node work at all: capturing the pointer on pointerdown retargets the
+  // click to the svg, and the node's own handler never runs.
+  const drag = useRef<{ x: number; y: number; panX: number; panY: number; panning: boolean } | null>(
+    null,
+  )
+  /** True from the moment a pan starts until the click it would produce is
+   * swallowed, so letting go after dragging does not also select a node. */
+  const panned = useRef(false)
+
+  const svg = useRef<SVGSVGElement>(null)
+
+  /**
+   * Wheel to zoom, on a listener of our own.
+   *
+   * React attaches onWheel passively, so a handler there cannot stop the page
+   * scrolling behind the canvas: zooming in would also walk the page down,
+   * which is most of what made this feel slippery. Native and non-passive is
+   * the only way to hold the page still.
+   */
+  useEffect(() => {
+    const el = svg.current
+    if (!el) return
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+
+      // Exponential in the delta, so a step is symmetric: in then out returns
+      // exactly where you were, which z * 1.1 and z * 0.9 do not (they
+      // compound to 0.99 and drift smaller). Proportional too, so a trackpad's
+      // many small deltas and a wheel's few large ones cover the same ground.
+      const lines = e.deltaMode === 1 ? 16 : 1
+      const next = Math.min(
+        ZOOM_MAX,
+        Math.max(ZOOM_MIN, zoom * Math.exp(-e.deltaY * lines * 0.0015)),
+      )
+      if (next === zoom) return
+
+      // Anchor on the cursor. The group is scale(z) translate(p), so the point
+      // under the pointer holds still when p moves by c(1/z' - 1/z).
+      const at = viewPoint(el, e.clientX, e.clientY)
+      const shift = 1 / next - 1 / zoom
+      setPan({ x: pan.x + at.x * shift, y: pan.y + at.y * shift })
+      setZoom(next)
+    }
+
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [zoom, pan])
 
   const edges = placed.filter((p) => p.id !== ROOT_ID)
   const positionOf = (id: string) => placed.find((p) => p.id === id)
@@ -116,29 +184,58 @@ export function Constellation({
       </div>
 
       <svg
+        ref={svg}
         role="img"
         aria-label="Skill constellation"
         viewBox={`${-VIEW / 2} ${-VIEW / 2} ${VIEW} ${VIEW}`}
         className="h-[min(70vh,620px)] w-full cursor-grab touch-none select-none active:cursor-grabbing"
-        onWheel={(e) => {
-          setZoom((z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z * (e.deltaY < 0 ? 1.1 : 0.9))))
-        }}
         onPointerDown={(e) => {
-          drag.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y }
-          e.currentTarget.setPointerCapture(e.pointerId)
+          drag.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y, panning: false }
+          panned.current = false
         }}
         onPointerMove={(e) => {
           if (!drag.current) return
-          const scale = VIEW / e.currentTarget.getBoundingClientRect().width / zoom
-          setPan({
-            x: drag.current.panX + (e.clientX - drag.current.x) * scale,
-            y: drag.current.panY + (e.clientY - drag.current.y) * scale,
-          })
+
+          const dx = e.clientX - drag.current.x
+          const dy = e.clientY - drag.current.y
+          // Three pixels of slop, so a press that wobbles is still a click.
+          if (!drag.current.panning && Math.hypot(dx, dy) < 3) return
+
+          if (!drag.current.panning) {
+            drag.current.panning = true
+            panned.current = true
+            e.currentTarget.setPointerCapture(e.pointerId)
+          }
+
+          // Screen pixels to translate units: through the fitted scale, then
+          // through the zoom the group applies after the translate.
+          const units = 1 / (viewPoint(e.currentTarget, 0, 0).scale * zoom)
+          setPan({ x: drag.current.panX + dx * units, y: drag.current.panY + dy * units })
         }}
-        onPointerUp={() => {
+        onPointerUp={(e) => {
+          if (drag.current?.panning) e.currentTarget.releasePointerCapture(e.pointerId)
           drag.current = null
         }}
-        onDoubleClick={() => setZoom((z) => Math.min(ZOOM_MAX, z * 1.5))}
+        onPointerCancel={() => {
+          drag.current = null
+        }}
+        // Clicking the space between stars clears the selection, the way
+        // clicking off a row does everywhere else.
+        onClick={() => {
+          if (panned.current) {
+            panned.current = false
+            return
+          }
+          onSelect(null)
+        }}
+        onDoubleClick={(e) => {
+          const next = Math.min(ZOOM_MAX, zoom * 1.5)
+          if (next === zoom) return
+          const at = viewPoint(e.currentTarget, e.clientX, e.clientY)
+          const shift = 1 / next - 1 / zoom
+          setPan({ x: pan.x + at.x * shift, y: pan.y + at.y * shift })
+          setZoom(next)
+        }}
       >
         <defs>
           {/* The bloom on a node itself: blurred copy merged back under the
@@ -205,12 +302,25 @@ export function Constellation({
             return (
               <g
                 key={node.id}
+                data-skill={node.id}
                 transform={`translate(${node.x} ${node.y})`}
                 onPointerEnter={() => setHover(node)}
                 onPointerLeave={() => setHover((h) => (h?.id === node.id ? null : h))}
                 onClick={(e) => {
                   e.stopPropagation()
+                  // A pan that ended on a node is not a click on it.
+                  if (panned.current) {
+                    panned.current = false
+                    return
+                  }
                   if (!isRoot) onSelect(isSelected ? null : node.id)
+                }}
+                // The artboard's double-click: fly to the node rather than
+                // zooming wherever the pointer happens to be.
+                onDoubleClick={(e) => {
+                  e.stopPropagation()
+                  setPan({ x: -node.x, y: -node.y })
+                  setZoom((z) => Math.min(ZOOM_MAX, Math.max(1.6, z * 1.5)))
                 }}
                 onDragOver={(e) => {
                   if (isRoot || !onReassign) return

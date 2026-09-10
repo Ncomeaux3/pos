@@ -115,6 +115,48 @@ test('skill tree, constellation and the selected skill panel', async ({ page }) 
   await expect(page.getByText('Goal weight')).toBeVisible()
 })
 
+test('skill tree, the constellation hovers, selects, pans and zooms', async ({ page }) => {
+  await page.goto('/skills')
+  await page.waitForLoadState('networkidle')
+
+  const star = page.locator('g[data-skill="coding"]')
+
+  // Hover names what is under the pointer, which is the artboard's card.
+  await star.hover({ force: true })
+  await expect(page.getByText('Coding', { exact: true }).first()).toBeVisible()
+
+  // Clicking a star opens it in the panel. This used to do nothing: the svg
+  // captured the pointer on pointerdown, which retargets the click away from
+  // the node and onto the canvas.
+  await star.click({ force: true })
+  await expect(page).toHaveURL(/skill=coding/)
+
+  // Zoom anchors on the cursor, and a step is symmetric: in then out puts the
+  // node back exactly where it was, at the size it was.
+  const before = (await star.boundingBox())!
+  const at = { x: before.x + before.width / 2, y: before.y + before.height / 2 }
+
+  await page.mouse.move(at.x, at.y)
+  await page.mouse.wheel(0, -240)
+  const zoomed = (await star.boundingBox())!
+  expect(zoomed.width).toBeGreaterThan(before.width)
+  expect(Math.abs(zoomed.x + zoomed.width / 2 - at.x)).toBeLessThan(4)
+
+  await page.mouse.wheel(0, 240)
+  const back = (await star.boundingBox())!
+  expect(Math.abs(back.x - before.x)).toBeLessThan(2)
+  expect(Math.abs(back.y - before.y)).toBeLessThan(2)
+
+  // Dragging pans and does not select: a pan that ends on a star is not a
+  // click on it.
+  await page.goto('/skills')
+  await page.mouse.move(at.x, at.y)
+  await page.mouse.down()
+  await page.mouse.move(at.x + 90, at.y + 40, { steps: 8 })
+  await page.mouse.up()
+  await expect(page).not.toHaveURL(/skill=/)
+})
+
 test('settings, skills', async ({ page }) => {
   await page.goto('/settings/skills')
   await expect(page.getByRole('heading', { name: 'Skills' })).toBeVisible()
