@@ -29,7 +29,7 @@ jobs:
 
       # The suites talk to Postgres, so the same Docker stack the owner runs
       # locally comes up here. supabase start is what CI and a laptop share.
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
           version: latest
 
@@ -76,7 +76,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
 
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
           version: latest
       - name: Start Supabase
