@@ -33,18 +33,20 @@
   --accent: #037a68;
   --accent-soft: rgba(3, 122, 104, 0.14);
 
-  /* The green measures 3.80:1 on this ground: AA for large text only. Teal is
-   * 8.14:1 and carries anything smaller, so accent text under about 14px uses
-   * this and the green keeps borders, fills, bars, rules and the mark spine. */
-  --teal: #2fb8a6;
+  /* No second green. The 2026-09-09 design bundle's colour table has exactly
+   * one saturated colour, --accent, and measuring the prototypes confirms it:
+   * small coloured text renders as --green #6BD49C, never as a teal of its
+   * own. A --teal: #2fb8a6 used to sit here for contrast at small sizes,
+   * which solved the right problem with a colour the design does not contain
+   * and made every chip, badge and active nav item the wrong green. */
 
   --green: #6bd49c;
   --amber: #f5c04a;
   --red: #ff6b6b;
 }
 
-/* Light overrides the grounds and the inks. Accent, teal and the three state
- * colours are shared. */
+/* Light overrides the grounds and the inks. Accent and the three state
+ * colours are shared, which is what the design bundle's light table says. */
 [data-theme="light"] {
   --bg: #f4f2ec;
   --bg-elev: #fbfaf6;
@@ -72,7 +74,6 @@
    * means a hover surface by it, which here is the soft fill. */
   --color-brand: var(--accent);
   --color-brand-soft: var(--accent-soft);
-  --color-teal: var(--teal);
 
   --color-ok: var(--green);
   --color-warn: var(--amber);

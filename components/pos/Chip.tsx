@@ -8,7 +8,7 @@ export type ChipTone = 'neutral' | 'brand' | 'ok' | 'warn' | 'bad' | 'quiet'
 // be the only signal.
 const TONE: Record<ChipTone, string> = {
   neutral: 'border-rule-2 text-ink-2',
-  brand: 'border-brand text-teal',
+  brand: 'border-brand text-ok',
   ok: 'border-ok/60 text-ok',
   warn: 'border-warn/60 text-warn',
   bad: 'border-bad/60 text-bad',

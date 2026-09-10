@@ -115,7 +115,7 @@ export function Calendar({
                   <span
                     className={cn(
                       'num block text-[11px]',
-                      isToday ? 'text-teal' : past ? 'text-ink-4' : 'text-ink-3',
+                      isToday ? 'text-ok' : past ? 'text-ink-4' : 'text-ink-3',
                     )}
                   >
                     {String(day).padStart(2, '0')}

@@ -205,23 +205,18 @@ export default async function DashboardPage() {
         {/* One tile per module that wrote a digest. A module is responsible for
             its own numbers; this page only lays them out. */}
         {(summary?.modules ?? []).map((m) => {
-          const label = getModules().find((x) => x.id === m.module)?.nav.label ?? m.module
-          const entries = Object.entries(m.payload).filter(
-            ([, v]) => typeof v === 'number' || typeof v === 'string',
-          )
+          const manifest = getModules().find((x) => x.id === m.module)
+          const label = manifest?.nav.label ?? m.module
+          const Tile = manifest?.tile
 
           return (
             <Card key={m.module} className="space-y-3">
-              <CardHead label={label} meta="digest" />
-              <RowList>
-                {entries.slice(0, 4).map(([key, value]) => (
-                  <Row
-                    key={key}
-                    title={key.replace(/([A-Z])|(\d+)/g, ' $1$2').trim().toLowerCase()}
-                    right={<span className="num text-sm text-ink">{String(value)}</span>}
-                  />
-                ))}
-              </RowList>
+              <CardHead label={label} meta={Tile ? undefined : 'digest'} />
+              {/* The module says how its own numbers read. Core only places
+                * the result: it has no way to know what a finance payload
+                * holds, and walking the object generically is what put
+                * "debt cents 231000" on the dashboard. */}
+              {Tile ? <Tile payload={m.payload} /> : <GenericDigest payload={m.payload} />}
               <Link
                 href={`/${m.module}`}
                 className="label text-[10px] tracking-[0.1em] text-ink-3 hover:text-ink"
@@ -254,4 +249,59 @@ export default async function DashboardPage() {
       </div>
     </div>
   )
+}
+
+/**
+ * The fallback for a module that supplies no tile.
+ *
+ * Still generic, because core cannot be otherwise, but no longer raw: a key
+ * becomes words rather than a column name, and a value that is plainly cents
+ * becomes money. A module that wants better than this supplies a `tile`.
+ */
+function GenericDigest({ payload }: { payload: Record<string, unknown> }) {
+  const entries = Object.entries(payload)
+    .filter((e): e is [string, number | string] => {
+      const v = e[1]
+      return typeof v === 'number' || typeof v === 'string'
+    })
+    .slice(0, 4)
+
+  if (entries.length === 0) {
+    return <p className="t-caption text-ink-3">This module wrote no numbers last night.</p>
+  }
+
+  return (
+    <RowList>
+      {entries.map(([key, value]) => (
+        <Row
+          key={key}
+          title={readableKey(key)}
+          right={<span className="num text-sm text-ink">{readableValue(key, value)}</span>}
+        />
+      ))}
+    </RowList>
+  )
+}
+
+/** "debtCents" and "debt_cents" both become "Debt". */
+function readableKey(key: string): string {
+  const words = key
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z\d])([A-Z])/g, '$1 $2')
+    .toLowerCase()
+    .replace(/\bcents\b/g, '')
+    .trim()
+  return words.charAt(0).toUpperCase() + words.slice(1)
+}
+
+/**
+ * A key ending in `cents` is money, which is the one convention core is
+ * allowed to know: it is written down in CLAUDE.md as a repo-wide rule, not
+ * as a fact about any one module.
+ */
+function readableValue(key: string, value: number | string): string {
+  if (typeof value === 'number' && /cents$/i.test(key)) {
+    return `$${(value / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+  }
+  return typeof value === 'number' ? value.toLocaleString() : String(value)
 }

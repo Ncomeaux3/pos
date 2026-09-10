@@ -11,6 +11,7 @@ import {
   snapshotBalances,
 } from './jobs/nightly-digest'
 import { syncSimpleFin } from './jobs/sync-simplefin'
+import { FinanceTile } from './ui/Tile'
 import FinancePage from './ui/FinancePage'
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD')
@@ -154,6 +155,9 @@ export default defineModule({
    */
   guarded: ['set_budget', 'write_subscription'],
   requires: ['simplefin'],
+
+  /** The module says how its own numbers read. See ModuleManifest.tile. */
+  tile: FinanceTile,
 
   metrics: {
     net_worth: {

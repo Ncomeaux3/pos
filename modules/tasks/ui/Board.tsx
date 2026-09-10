@@ -296,7 +296,7 @@ function Card({
           <span
             className={cn(
               'label text-[10px] tracking-[0.08em]',
-              state === 'overdue' ? 'text-bad' : state === 'today' ? 'text-teal' : 'text-ink-3',
+              state === 'overdue' ? 'text-bad' : state === 'today' ? 'text-ok' : 'text-ink-3',
             )}
           >
             {dueLabel(task.dueInDays, today)}

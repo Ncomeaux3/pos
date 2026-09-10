@@ -39,7 +39,7 @@ function NavRow({
           : 'border-transparent text-ink-3 hover:bg-bg-elev hover:text-ink-2',
       )}
     >
-      <span className={cn('label w-5 shrink-0 text-[10px] tracking-[0.1em]', active ? 'text-teal' : 'text-ink-4')}>
+      <span className={cn('label w-5 shrink-0 text-[10px] tracking-[0.1em]', active ? 'text-ok' : 'text-ink-4')}>
         {item.code}
       </span>
       <span
@@ -53,7 +53,7 @@ function NavRow({
       {badge !== undefined && badge > 0 && (
         <span
           className={cn(
-            'num shrink-0 rounded-md border border-brand px-1.5 py-0.5 text-[10px] leading-none text-teal transition-opacity duration-200',
+            'num shrink-0 rounded-md border border-brand px-1.5 py-0.5 text-[10px] leading-none text-ok transition-opacity duration-200',
             collapsed && 'opacity-0',
           )}
         >

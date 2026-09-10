@@ -5,6 +5,7 @@ import { defineModule, defineTool } from '@/core/module-contract'
 import { checkIn, patchGoal } from './data'
 import { nightlyDigest, pullMetrics } from './jobs/nightly-digest'
 import GoalsPage from './ui/GoalsPage'
+import { GoalsTile } from './ui/Tile'
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD')
 const kind = z.enum(['number', 'count', 'streak', 'milestone'])
@@ -152,6 +153,8 @@ export default defineModule({
       }
     },
   },
+
+  tile: GoalsTile,
 
   jobs: [
     { name: 'pull_metrics', run: pullMetrics },

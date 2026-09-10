@@ -108,7 +108,7 @@ export function RunLog({
                       <span
                         className={cn(
                           'label text-[11px] tracking-[0.12em]',
-                          r.status === 'clean' ? 'text-teal' : 'text-warn',
+                          r.status === 'clean' ? 'text-ok' : 'text-warn',
                         )}
                       >
                         {r.date}
@@ -160,7 +160,7 @@ export function RunLog({
                               <span
                                 className={cn(
                                   'label text-[10px] tracking-[0.12em]',
-                                  e.undone ? 'text-ink-3' : 'text-teal',
+                                  e.undone ? 'text-ink-3' : 'text-ok',
                                 )}
                               >
                                 {e.moduleLabel.toUpperCase()}

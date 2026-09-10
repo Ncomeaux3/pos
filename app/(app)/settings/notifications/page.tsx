@@ -129,7 +129,7 @@ export default async function NotificationSettingsPage() {
         <CardHead label="Per module" meta="Writes every rule in the row" />
         <ChannelGrid rows={rows} paused={paused} />
         <p className="t-caption text-ink-3">
-          <Link href="/notifications" className="text-teal underline underline-offset-4">
+          <Link href="/notifications" className="text-ok underline underline-offset-4">
             The Notifications screen
           </Link>{' '}
           edits one rule at a time, with lead times, urgency and per-rule snooze.

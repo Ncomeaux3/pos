@@ -309,7 +309,7 @@ export function Brain({ data }: { data: BrainData }) {
                     href={openNote.sourceUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="label text-[10px] text-teal underline underline-offset-4"
+                    className="label text-[10px] text-ok underline underline-offset-4"
                   >
                     Open the original
                   </a>

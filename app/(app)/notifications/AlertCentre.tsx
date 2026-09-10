@@ -66,7 +66,7 @@ export function AlertCentre({ alerts }: { alerts: AlertItem[] }) {
               <StatusDot tone={a.tone} className="mt-2" />
               <div className="min-w-0 flex-1 basis-[180px] space-y-1">
                 <div className="flex flex-wrap items-baseline gap-x-2.5">
-                  <span className="label text-[10px] tracking-[0.12em] text-teal">{a.module}</span>
+                  <span className="label text-[10px] tracking-[0.12em] text-ok">{a.module}</span>
                   <span className="label text-[10px] tracking-[0.1em] text-ink-3">{a.via}</span>
                 </div>
                 <p className="t-body text-ink">{a.title}</p>

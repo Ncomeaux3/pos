@@ -263,7 +263,7 @@ export function Notifications({
                       <span
                         className={cn(
                           'label text-[10px] tracking-[0.12em]',
-                          live ? 'text-teal' : 'text-ink-3',
+                          live ? 'text-ok' : 'text-ink-3',
                         )}
                       >
                         {(moduleLabels[rule.module] ?? rule.module).toUpperCase()}

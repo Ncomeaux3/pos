@@ -81,6 +81,23 @@ export type ModuleManifest = {
    * erroring.
    */
   metrics?: Record<string, { label: string; unit: string; get: () => Promise<number> }>
+
+  /**
+   * The module's own dashboard tile, rendered from its own digest payload.
+   *
+   * The same seam as `metrics` and `review`, and for the same reason. The
+   * dashboard used to lay out every digest generically, by walking the payload
+   * object and printing its keys, which is how "debt cents 231000" ended up on
+   * screen: a database field name and an unformatted integer, in front of the
+   * owner, every morning.
+   *
+   * Core cannot format that itself without knowing what a finance payload
+   * contains, which is exactly the coupling the architecture forbids. So the
+   * module says how its own numbers read, and core only places the result.
+   * A module with no tile falls back to the generic list, so this stays
+   * optional and a fork that deletes a module loses only that module's tile.
+   */
+  tile?: ComponentType<{ payload: Record<string, unknown> }>
   /**
    * What this module contributes to the Weekly Review.
    *

@@ -83,7 +83,7 @@ export function WizardShell({
                   <span
                     className={cn(
                       'label w-4 shrink-0 text-[11px] tracking-[0.1em]',
-                      done ? 'text-teal' : on ? 'text-ink' : 'text-ink-4',
+                      done ? 'text-ok' : on ? 'text-ink' : 'text-ink-4',
                     )}
                   >
                     {done ? '✓' : String(i + 1).padStart(2, '0')}
