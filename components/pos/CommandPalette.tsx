@@ -29,8 +29,17 @@ export function CommandPalette({ nav }: { nav: NavItem[] }) {
       }
       if (e.key === 'Escape') setOpen(false)
     }
+    // The search box in the page band is a button, not a second input: one
+    // palette owns the query so there is never a half typed search in two
+    // places. It asks for the palette through this event.
+    const onAsk = () => setOpen(true)
+
     document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    window.addEventListener('pos:search', onAsk)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      window.removeEventListener('pos:search', onAsk)
+    }
   }, [])
 
   useEffect(() => {

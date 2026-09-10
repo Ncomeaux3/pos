@@ -3,6 +3,9 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useRef, useState, useTransition } from 'react'
 import {
+  PageHeader,
+  DataRow,
+  DataTable,
   ActionButton,
   Card,
   CardHead,
@@ -125,7 +128,33 @@ export function Insurance({ data }: { data: InsuranceData }) {
   const linked = active.filter((p) => p.postToFinance).length
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow={
+          soon.length > 0
+            ? `Insurance / ${soon.length} expiring inside 60 days`
+            : next
+              ? `Insurance / next renewal in ${daysUntil(next.expiresOn, data.todayIso)} days`
+              : 'Insurance / nothing expiring'
+        }
+        dot={soon.length > 0 ? 'warn' : 'ok'}
+        title="Insurance and policies"
+        lede="Sorted by what expires first. Reminders fire 60, 30 and 7 days out by default. What each policy covers is recorded in the words on the declarations page and nothing here judges whether it is enough: no gap analysis, no scoring, no opinion."
+        status={
+          <span className="num text-[11px] text-ink-3">
+            ${Math.round(annual / 100).toLocaleString('en-US')} a year
+          </span>
+        }
+        actions={
+          <>
+            <ActionButton onClick={() => setParams({ upload: '1' })}>Upload PDF</ActionButton>
+            <ActionButton variant="brand" onClick={() => setParams({ policy: 'new', edit: '1' })}>
+              Add policy
+            </ActionButton>
+          </>
+        }
+      />
+
       <MetricStrip>
         <MetricTile
           label="Annual premium"
@@ -151,51 +180,60 @@ export function Insurance({ data }: { data: InsuranceData }) {
         />
       </MetricStrip>
 
-      <div className="flex flex-wrap gap-2">
-        <ActionButton variant="brand" onClick={() => setParams({ upload: '1' })}>
-          Upload PDF
-        </ActionButton>
-        <ActionButton onClick={() => setParams({ policy: 'new', edit: '1' })}>
-          Add policy
-        </ActionButton>
-      </div>
-
-      <Card className="space-y-3">
-        <CardHead label="Policies" meta="sorted by what expires first" />
+      <DataTable
+        head={['', 'Policy', 'Premium', 'Expires', 'Reminder', 'Status']}
+        cols="64px minmax(0,2.4fr) minmax(0,1fr) minmax(0,1fr) minmax(0,0.8fr) 92px"
+      >
         {data.policies.length === 0 ? (
-          <EmptyState headline="No policies" className="border-0">
+          <EmptyState headline="No policies" className="mt-4">
             Add one by hand, or drop a declarations page and confirm what is read off it.
           </EmptyState>
         ) : (
-          <RowList>
-            {data.policies.map((policy) => {
-              const status = policyStatus(policy.expiresOn, data.todayIso)
-              return (
-                <Row
-                  key={policy.id}
-                  title={policy.name}
-                  meta={`${policy.carrier} / ${policy.maskedNumber}`}
-                  selected={open?.id === policy.id}
-                  muted={policy.status !== 'active'}
-                  onClick={() => setParams({ policy: policy.id, edit: null })}
-                  right={
-                    <>
-                      <Chip tone="quiet">{policy.kind}</Chip>
-                      <span className="num text-[11px] text-ink-2">
-                        {money(policy.premiumCents)} {CADENCE_LABELS[policy.cadence].toLowerCase()}
-                      </span>
-                      <span className="num text-[11px] text-ink-3">
-                        {expiryLabel(policy.expiresOn, data.todayIso)}
-                      </span>
-                      <StatusChip tone={TONE[status]}>{STATUS_LABELS[status]}</StatusChip>
-                    </>
-                  }
-                />
-              )
-            })}
-          </RowList>
+          data.policies.map((policy) => {
+            const status = policyStatus(policy.expiresOn, data.todayIso)
+            return (
+              <DataRow
+                key={policy.id}
+                selected={open?.id === policy.id}
+                onClick={() => setParams({ policy: policy.id, edit: null })}
+              >
+                <span className="label text-[10px] tracking-[0.12em] text-ink-3">{policy.kind}</span>
+                <span className="min-w-0">
+                  <span
+                    className={cn(
+                      'block truncate t-body',
+                      policy.status === 'active' ? 'text-ink' : 'text-ink-3',
+                    )}
+                  >
+                    {policy.name}
+                  </span>
+                  <span className="block truncate text-[11px] text-ink-3">
+                    {policy.carrier} / {policy.maskedNumber}
+                  </span>
+                </span>
+                <span className="num text-[13px] text-ink">
+                  {money(policy.premiumCents)}{' '}
+                  <span className="text-[11px] text-ink-3">
+                    {CADENCE_LABELS[policy.cadence].toLowerCase()}
+                  </span>
+                </span>
+                <span className="num text-[13px]">
+                  <span className={TONE[status] === 'bad' ? 'text-bad' : TONE[status] === 'warn' ? 'text-warn' : 'text-ok'}>
+                    {expiryLabel(policy.expiresOn, data.todayIso)}
+                  </span>
+                  <span className="block text-[11px] text-ink-3">{policy.expiresOn}</span>
+                </span>
+                <span className="num text-[12px] text-ink-3">
+                  {(policy.reminderLeads.length > 0 ? policy.reminderLeads : [60])
+                    .map((d) => `${d}d`)
+                    .join(' / ')}
+                </span>
+                <StatusChip tone={TONE[status]}>{STATUS_LABELS[status]}</StatusChip>
+              </DataRow>
+            )
+          })
         )}
-      </Card>
+      </DataTable>
 
       <Overlay
         open={open !== null && !editing}
