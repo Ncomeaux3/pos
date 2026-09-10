@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Eyebrow, fieldClass } from '@/components/pos'
+import { ComeauxverseLockup, Eyebrow, fieldClass } from '@/components/pos'
 import { ownerVerdict } from '@/core/auth'
 import { serverClient } from '@/core/db'
 import { getOrigin } from '@/core/origin'
@@ -51,8 +51,15 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
   const email = EMAIL.test(raw) && raw.length <= 254 ? raw : ''
 
   return (
-    <main className="grid min-h-dvh place-items-center p-6">
-      <div className="w-full max-w-[400px] rounded-lg border border-rule-2 bg-bg-elev p-7">
+    <div className="flex min-h-dvh flex-col">
+      {/* The artboard's top band: the lockup, and what this install is. */}
+      <header className="flex h-14 shrink-0 flex-wrap items-center justify-between gap-3 px-7">
+        <ComeauxverseLockup className="h-5 text-ink" />
+        <Eyebrow dot="brand">POS / single owner / v0.1</Eyebrow>
+      </header>
+
+      <main className="grid flex-1 place-items-center p-6">
+      <div className="w-full max-w-[440px] border border-rule-2 bg-bg-elev p-9 pb-7">
         {sent ? (
           <div className="space-y-5">
             <div className="space-y-3">
@@ -94,14 +101,13 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
           </div>
         ) : (
           <div className="space-y-6">
+            {/* The artboard's order: what you are doing is the eyebrow, what
+              * you are signing in to is the heading. */}
             <div className="space-y-3">
-              <Eyebrow dot="brand">POS · single owner</Eyebrow>
-              <div className="space-y-1">
-                <h1 className="t-headline text-ink">Sign in</h1>
-                <p className="label text-[10px] tracking-[0.12em] text-ink-3">
-                  Personal Operating System
-                </p>
-              </div>
+              <Eyebrow>Sign in</Eyebrow>
+              <h1 className="text-[30px] font-normal leading-[1.05] tracking-[-0.03em] text-ink">
+                Personal Operating System
+              </h1>
               <p className="t-caption text-ink-3">
                 One owner, one login. Enter the owner email and a single-use link comes back.
               </p>
@@ -142,7 +148,9 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
                 )}
               </div>
 
-              <SubmitButton idle="Send sign-in link" busy="Sending" />
+              <div className="flex justify-end pt-2">
+                <SubmitButton idle="Send sign-in link" busy="Sending" />
+              </div>
             </form>
 
             <div className="flex flex-wrap justify-between gap-2 border-t border-rule pt-3">
@@ -156,6 +164,7 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
           </div>
         )}
       </div>
-    </main>
+      </main>
+    </div>
   )
 }
