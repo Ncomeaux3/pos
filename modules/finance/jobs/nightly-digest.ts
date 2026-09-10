@@ -12,6 +12,8 @@ export type FinanceDigest = {
   /** Due in the next fortnight. */
   upcomingCents: number
   upcomingCount: number
+  /** Net worth over the last 30 days, in dollars, for the tile's sparkline. */
+  netWorthSeries: number[]
   /** Categories past the alert threshold. */
   overBudget: { name: string; percent: number }[]
   unusual: { descriptor: string; amountCents: number; occurredOn: string }[]
@@ -60,6 +62,9 @@ export async function nightlyDigest(): Promise<FinanceDigest> {
     changeCents: change,
     assetsCents: assets,
     debtCents: assets - netWorth,
+    // Dollars, not cents: the line is a shape, and the numbers beside it are
+    // where the precision belongs.
+    netWorthSeries: series.map((p) => Math.round(p.cents / 100)),
     upcomingCents: upcoming.reduce((sum, c) => sum + Number(c.amount_cents), 0),
     upcomingCount: upcoming.length,
     overBudget: spend

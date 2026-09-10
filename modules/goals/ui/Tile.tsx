@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils'
 import type { GoalsDigest } from '../jobs/nightly-digest'
 
 // The Goals dashboard tile. The design shows the goals that need a look, with
@@ -41,8 +42,23 @@ export function GoalsTile({ payload }: { payload: Record<string, unknown> }) {
               {LABEL[g.status] ?? g.status}
             </span>
           </div>
-          {/* The sentence that produced the status, which is the module's own
-            * rule text. Goals never shows a status without showing why. */}
+          {/* The bar and the number the artboard puts under the title, then
+            * the sentence that produced the status. Goals never shows a status
+            * without showing why. */}
+          <div className="flex items-center gap-2.5">
+            <div className="h-0.5 flex-1 bg-rule-2">
+              <div
+                className={cn(
+                  'h-0.5',
+                  g.status === 'at_risk' ? 'bg-warn' : g.status === 'stalled' ? 'bg-bad' : 'bg-ok',
+                )}
+                style={{ width: `${g.percent ?? 0}%` }}
+              />
+            </div>
+            <span className="num w-8 shrink-0 text-right text-[11px] text-ink-3">
+              {g.percent ?? 0}%
+            </span>
+          </div>
           <p className="t-caption text-ink-3">{g.rule}</p>
         </div>
       ))}

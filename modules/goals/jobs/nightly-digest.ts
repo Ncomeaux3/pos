@@ -8,7 +8,7 @@ export type GoalsDigest = {
   stalled: number
   done: number
   /** The ones worth a sentence in the morning, worst first. */
-  attention: { id: string; title: string; status: Status; rule: string }[]
+  attention: { id: string; title: string; status: Status; rule: string; percent: number }[]
 }
 
 /**
@@ -70,7 +70,13 @@ export async function nightlyDigest(): Promise<GoalsDigest> {
     counts[p.status]++
 
     if (p.status === 'at_risk' || p.status === 'stalled') {
-      attention.push({ id: row.id, title: row.title, status: p.status, rule: rule(shape, p, row.unit) })
+      attention.push({
+        id: row.id,
+        title: row.title,
+        status: p.status,
+        rule: rule(shape, p, row.unit),
+        percent: Math.round(p.percent),
+      })
     }
   }
 

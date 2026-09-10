@@ -1,3 +1,4 @@
+import { Sparkline } from '@/components/pos'
 import type { FinanceDigest } from '../jobs/nightly-digest'
 
 // The Finance dashboard tile. The module says how its own numbers read,
@@ -16,9 +17,10 @@ export function FinanceTile({ payload }: { payload: Record<string, unknown> }) {
   const change = d.changeCents ?? 0
   const upcoming = d.upcomingCents ?? 0
   const overBudget = d.overBudget ?? []
+  const series = d.netWorthSeries ?? []
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-1 flex-col gap-3">
       <div className="flex flex-wrap gap-x-8 gap-y-3">
         <div>
           <span className="eyebrow block text-ink-3">Net worth</span>
@@ -40,6 +42,11 @@ export function FinanceTile({ payload }: { payload: Record<string, unknown> }) {
           </span>
         </div>
       </div>
+
+      {/* The artboard's line under the two numbers: thirty days of net worth,
+        * unlabelled, because the number above it is the one that matters and
+        * this is only its direction. */}
+      {series.length > 1 && <Sparkline points={series} height={56} className="mt-auto" />}
 
       {overBudget.length > 0 && (
         <p className="t-caption text-amber">
