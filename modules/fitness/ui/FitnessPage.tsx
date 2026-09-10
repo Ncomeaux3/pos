@@ -1,17 +1,20 @@
-import { MetricStrip, MetricTile, PageHeader } from '@/components/pos'
+import { MetricStrip, MetricTile, PageHeader, SyncBand } from '@/components/pos'
 import { listProposals } from '@/core/proposals'
+import { syncState } from '@/core/sync'
 import { activePlan, latestMetrics, listExercises, listPlanItems, listWorkouts, thisWeek } from '../data'
 import { load, mass } from '../units'
 import { Fitness, type FitnessData } from './Fitness'
+import { syncFitness } from './sync'
 
 export default async function FitnessPage() {
-  const [workouts, week, metrics, exercises, plan, pending] = await Promise.all([
+  const [workouts, week, metrics, exercises, plan, pending, sync] = await Promise.all([
     listWorkouts(),
     thisWeek(),
     latestMetrics(),
     listExercises(),
     activePlan(),
     listProposals('pending'),
+    syncState('fitness'),
   ])
 
   const items = plan ? await listPlanItems(plan.id) : []
@@ -85,6 +88,17 @@ export default async function FitnessPage() {
     <div className="space-y-7">
       <PageHeader
         eyebrow={`Fitness / ${data.weekWorkouts} this week / ${data.workouts.length} logged`}
+        // The artboard names the source and when it last pulled, with the
+        // button that pulls now, in the first band.
+        status={
+          <SyncBand
+            provider={sync.provider}
+            at={sync.at}
+            status={sync.status}
+            connected={sync.connected}
+            onSync={syncFitness}
+          />
+        }
         dot={data.weekWorkouts > 0 ? 'brand' : 'idle'}
         title="Fitness"
         lede="Workouts, what they came to, and the body metrics behind them. Training load is duration weighted by kind, which is a crude measure and says so."

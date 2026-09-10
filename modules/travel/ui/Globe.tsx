@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { cn } from '@/lib/utils'
 import { graticule, project, visible, type Rotation } from '../globe'
 
 // A wireframe globe with a dot per place. Drag to spin it.
@@ -12,7 +13,15 @@ export type Place = { id: string; name: string; country: string; lat: number; lo
 
 const R = 100
 
-export function Globe({ places, onPick }: { places: Place[]; onPick?: (id: string) => void }) {
+export function Globe({
+  places,
+  onPick,
+  className,
+}: {
+  places: Place[]
+  onPick?: (id: string) => void
+  className?: string
+}) {
   // Start looking at the middle of where the owner has actually been, so a
   // globe of European trips does not open on the Pacific.
   const [rotation, setRotation] = useState<Rotation>(() => {
@@ -49,7 +58,7 @@ export function Globe({ places, onPick }: { places: Place[]; onPick?: (id: strin
       onPointerMove={spin}
       onPointerUp={() => setDragging(null)}
       onPointerCancel={() => setDragging(null)}
-      className="w-full max-w-[420px] cursor-grab touch-none active:cursor-grabbing"
+      className={cn('w-full max-w-[420px] cursor-grab touch-none active:cursor-grabbing', className)}
     >
       <circle cx={0} cy={0} r={R} fill="var(--bg-deep)" stroke="var(--rule-2)" strokeWidth={1} />
 

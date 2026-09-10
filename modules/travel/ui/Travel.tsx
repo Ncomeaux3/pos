@@ -102,6 +102,15 @@ export function Travel({ data }: { data: TravelData }) {
 
   return (
     <div className="space-y-5">
+      {/* The globe sits above the views rather than inside one, which is what
+        * the artboard does: this screen is a map of where you have been, and
+        * the lists under it are the detail. */}
+      {data.places.length > 0 && (
+        <div className="grid h-[clamp(240px,38vh,420px)] place-items-center border border-rule bg-bg-elev p-3">
+          <Globe places={data.places} className="h-full" />
+        </div>
+      )}
+
       <TabBar
         label="Travel views"
         value={tab}
@@ -257,16 +266,14 @@ export function Travel({ data }: { data: TravelData }) {
 
       {tab === 'map' && (
         <div className="flex flex-wrap items-start gap-x-6 gap-y-5">
-          <div className="min-w-0 flex-[1_1_360px]">
-            {data.places.length === 0 ? (
+          {data.places.length === 0 && (
+            <div className="min-w-0 flex-[1_1_360px]">
               <EmptyState headline="Nowhere yet">
                 A place lands here when a booked trip ends, and stays even if the trip is archived:
                 the map is a record of where you have been, not of what is still on the list.
               </EmptyState>
-            ) : (
-              <Globe places={data.places} />
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="min-w-0 flex-[1_1_280px]">
             <RowList>
