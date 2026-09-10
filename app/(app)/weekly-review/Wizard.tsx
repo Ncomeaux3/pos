@@ -8,12 +8,13 @@ import {
   Chip,
   EmptyState,
   Eyebrow,
-  MetricTile,
   PillGroup,
   Row,
   RowList,
   StatusChip,
-  WizardShell,
+  GlanceCard,
+  ReviewNote,
+  ReviewShell,
   fieldClass,
   useToast,
 } from '@/components/pos'
@@ -159,9 +160,8 @@ export function Wizard({ data }: { data: WeekData }) {
   }
 
   return (
-    <WizardShell
-      railTitle="Weekly review"
-      railLede={`Week of ${data.weekLabel}. Usually eight minutes.`}
+    <ReviewShell
+      weekLabel={data.weekLabel}
       steps={STEPS.map((s) => ({ key: s.key, name: s.name }))}
       current={step}
       onStep={(key) => setStep(key as StepKey)}
@@ -190,16 +190,16 @@ export function Wizard({ data }: { data: WeekData }) {
               the dashboard and this fills in.
             </EmptyState>
           ) : (
-            <div className="grid gap-2.5 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,150px),1fr))]">
+            <div className="grid gap-2.5 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,178px),1fr))]">
               {data.glance.map((g) => (
-                <MetricTile key={`${g.module}.${g.label}`} label={g.label} value={g.value} />
+                <GlanceCard key={`${g.module}.${g.label}`} label={g.label} value={g.value} />
               ))}
             </div>
           )}
-          <p className="t-caption text-ink-3">
-            Every number here comes from a module digest, never from a module&apos;s own tables. A module
-            that is not installed contributes no line.
-          </p>
+          <ReviewNote>
+            Every number here comes from a module digest, never from a module&apos;s own tables. A
+            module that is not installed contributes no line.
+          </ReviewNote>
         </div>
       )}
 
@@ -425,6 +425,6 @@ export function Wizard({ data }: { data: WeekData }) {
           </pre>
         </div>
       )}
-    </WizardShell>
+    </ReviewShell>
   )
 }
