@@ -1,4 +1,5 @@
-import { PageHeader } from '@/components/pos'
+import { PageHeader, SyncBand } from '@/components/pos'
+import { syncState } from '@/core/sync'
 import { ownerToday } from '@/core/today'
 import {
   categorySpend,
@@ -9,15 +10,25 @@ import {
 } from '../data'
 import { monthPace } from '../money'
 import { Finance, type FinanceData } from './Finance'
+import { syncFinance } from './sync'
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/** "10 Sep 2026", the date the band states the numbers are as of. */
+function shortDate(iso: string): string {
+  const d = new Date(`${iso}T12:00:00`)
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`
+}
 
 export default async function FinancePage() {
-  const [accounts, series, spend, upcoming, transactions, todayIso] = await Promise.all([
+  const [accounts, series, spend, upcoming, transactions, todayIso, sync] = await Promise.all([
     listAccounts(),
     netWorthSeries(30),
     categorySpend(),
     upcomingCharges(14),
     listTransactions({ limit: 60 }),
     ownerToday(),
+    syncState('finance'),
   ])
 
   const netWorth = accounts.reduce((sum, a) => sum + Number(a.balance_cents), 0)
@@ -94,13 +105,25 @@ export default async function FinancePage() {
   return (
     <div className="space-y-7">
       <PageHeader
-        eyebrow={`Finance / ${data.accounts.length} accounts / ${hot} budgets hot`}
+        eyebrow="Finance / Overview"
         dot={hot > 0 ? 'warn' : 'brand'}
+        // The artboard puts the provider and the last pull in the first band,
+        // beside the search, with the button that does it now.
+        status={
+          <SyncBand
+            provider={sync.provider}
+            at={sync.at}
+            status={sync.status}
+            connected={sync.connected}
+            onSync={syncFinance}
+          />
+        }
         title="Finance"
         lede="Net worth from nightly balance snapshots, spending against this month's limits, and what is due in the next fortnight. Transactions are categorised by rules first; every one shows which rule decided it."
         actions={
           <span className="num text-[11px] text-ink-3">
-            {data.transactions.length} recent transactions
+            {shortDate(todayIso)} / {data.accounts.length} accounts / {hot}{' '}
+            {hot === 1 ? 'flag' : 'flags'}
           </span>
         }
       />

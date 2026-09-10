@@ -279,13 +279,17 @@ export function Finance({ data }: { data: FinanceData }) {
           </div>
 
           <div className="grid items-start gap-2.5 lg:grid-cols-2">
-            <Card className="space-y-3">
-              <CardHead label="Net worth / 30 days" meta={`${data.series.length} daily snapshots`} />
+            {/* The chart owns its own header, because the high, low and
+              * average belong beside the title rather than under the line. */}
+            <Card className="flex min-h-[340px] flex-col">
               {data.series.length < 2 ? (
-                <EmptyState headline="No history yet" className="border-0">
-                  The chart is built from one balance snapshot per account per night. It fills in as
-                  the nightly job runs; a balance not recorded on the day is gone.
-                </EmptyState>
+                <>
+                  <CardHead label="Net worth / 30 days" meta="no history yet" />
+                  <EmptyState headline="No history yet" className="mt-3 border-0">
+                    The chart is built from one balance snapshot per account per night. It fills in
+                    as the nightly job runs; a balance not recorded on the day is gone.
+                  </EmptyState>
+                </>
               ) : (
                 <NetWorthChart values={data.series} dates={data.seriesDates} />
               )}
@@ -581,41 +585,170 @@ function BudgetBar({
 }
 
 /** The 31 point line. Hand rolled SVG: no chart library anywhere in this app. */
+/**
+ * Thirty days of net worth, drawn the way the artboard draws it.
+ *
+ * Four gridlines, the value thirty days ago as a dashed baseline, the high and
+ * the low marked, and a crosshair that says what a given day was and how far
+ * from the start it had moved. The axis labels are outside the plot in their
+ * own 64px column, so the line is never squeezed by the width of a number.
+ */
 function NetWorthChart({ values, dates }: { values: number[]; dates: string[] }) {
-  const width = 100
-  const height = 32
+  const [hover, setHover] = useState<number | null>(null)
+
+  const width = 600
+  const height = 160
   const min = Math.min(...values)
   const max = Math.max(...values)
   const span = max - min || 1
 
   const x = (i: number) => (i / Math.max(1, values.length - 1)) * width
-  const y = (v: number) => height - ((v - min) / span) * (height - 2) - 1
+  const y = (v: number) => height - ((v - min) / span) * height
 
-  const line = values.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(2)},${y(v).toFixed(2)}`).join(' ')
+  const line = values.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')
   const area = `${line} L${width},${height} L0,${height} Z`
 
+  const hi = values.indexOf(max)
+  const lo = values.indexOf(min)
+  const start = values[0]
+
+  // The biggest single day move in each direction, which is the one thing the
+  // shape of the line does not tell you at a glance.
+  const moves = values.slice(1).map((v, i) => v - values[i])
+  const best = moves.length > 0 ? Math.max(...moves) : 0
+  const worst = moves.length > 0 ? Math.min(...moves) : 0
+
+  const at = hover === null ? null : values[hover]
+
   return (
-    <div className="space-y-1.5">
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        preserveAspectRatio="none"
-        role="img"
-        aria-label={`Net worth over ${values.length} days, from ${compactMoney(values[0])} to ${compactMoney(values[values.length - 1])}`}
-        className="h-28 w-full"
-      >
-        <path d={area} fill="var(--accent-soft)" />
-        <path
-          d={line}
-          fill="none"
-          stroke="var(--accent)"
-          strokeWidth={0.6}
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
-      <div className="flex justify-between">
-        <span className="label text-[10px] text-ink-3">{shortDate(dates[0])}</span>
-        <span className="label text-[10px] text-ink-3">{compactMoney(min)} to {compactMoney(max)}</span>
-        <span className="label text-[10px] text-ink-3">{shortDate(dates[dates.length - 1])}</span>
+    <div className="flex flex-1 flex-col">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <span className="eyebrow text-ink-3">Net worth / 30 days</span>
+        <span className="flex gap-4 text-[11px] text-ink-3">
+          <span>
+            High <span className="num text-ink">{compactMoney(max)}</span>
+          </span>
+          <span>
+            Low <span className="num text-ink">{compactMoney(min)}</span>
+          </span>
+          <span>
+            Avg{' '}
+            <span className="num text-ink">
+              {compactMoney(Math.round(values.reduce((sum, v) => sum + v, 0) / values.length))}
+            </span>
+          </span>
+        </span>
+      </div>
+
+      <div className="mt-2.5 grid flex-1 grid-cols-[1fr_64px]">
+        <div className="relative min-h-[200px]">
+          <svg
+            viewBox={`0 0 ${width} ${height}`}
+            preserveAspectRatio="none"
+            role="img"
+            aria-label={`Net worth over ${values.length} days, from ${compactMoney(values[0])} to ${compactMoney(values[values.length - 1])}`}
+            className="block h-full w-full cursor-crosshair overflow-visible"
+            onMouseMove={(e) => {
+              const box = e.currentTarget.getBoundingClientRect()
+              const share = (e.clientX - box.left) / box.width
+              setHover(Math.max(0, Math.min(values.length - 1, Math.round(share * (values.length - 1)))))
+            }}
+            onMouseLeave={() => setHover(null)}
+          >
+            {[0, 53, 107].map((line_) => (
+              <line key={line_} x1="0" y1={line_} x2={width} y2={line_} stroke="var(--rule)" />
+            ))}
+            <line x1="0" y1={height} x2={width} y2={height} stroke="var(--rule-2)" />
+
+            {/* Where it stood thirty days ago: everything above this line is
+              * the month's gain, and the eye reads that without arithmetic. */}
+            <line
+              x1="0"
+              y1={y(start)}
+              x2={width}
+              y2={y(start)}
+              stroke="var(--ink-4)"
+              strokeDasharray="3 4"
+              vectorEffect="non-scaling-stroke"
+            />
+
+            <path d={area} fill="var(--accent-soft)" />
+            <path
+              d={line}
+              fill="none"
+              stroke="var(--accent)"
+              strokeWidth={1.5}
+              vectorEffect="non-scaling-stroke"
+            />
+
+            <circle cx={x(hi)} cy={y(max)} r={2.5} fill="var(--bg-elev)" stroke="var(--ink-2)" vectorEffect="non-scaling-stroke" />
+            <circle cx={x(lo)} cy={y(min)} r={2.5} fill="var(--bg-elev)" stroke="var(--ink-2)" vectorEffect="non-scaling-stroke" />
+            <circle cx={width} cy={y(values[values.length - 1])} r={3} fill="var(--accent)" />
+
+            {hover !== null && at !== undefined && at !== null && (
+              <g>
+                <line x1={x(hover)} y1="0" x2={x(hover)} y2={height} stroke="var(--ink-2)" vectorEffect="non-scaling-stroke" />
+                <circle cx={x(hover)} cy={y(at)} r={3.5} fill="var(--ink)" />
+              </g>
+            )}
+          </svg>
+
+          {hover !== null && at !== undefined && at !== null && (
+            <div
+              className="pointer-events-none absolute top-0 z-2 whitespace-nowrap border border-rule-2 bg-bg px-2.5 py-1.5 text-[11px]"
+              style={{
+                left: `${(hover / Math.max(1, values.length - 1)) * 100}%`,
+                transform: hover > values.length / 2 ? 'translateX(-100%)' : 'none',
+              }}
+            >
+              <span className="text-ink-3">{shortDate(dates[hover])}</span>{' '}
+              <span className="num ml-2 text-ink">{money(at)}</span>{' '}
+              <span className={cn('num ml-2', at - start >= 0 ? 'text-ok' : 'text-bad')}>
+                {signedMoney(at - start)}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col justify-between pl-3 text-[11px] text-ink-3">
+          {[max, min + (span * 2) / 3, min + span / 3, min].map((v, i) => (
+            <span key={i} className="num leading-none">
+              {compactMoney(Math.round(v))}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-2.5 grid grid-cols-[1fr_64px]">
+        <div className="flex justify-between text-[11px] text-ink-3">
+          {dates
+            .filter((unused, i) => i % Math.max(1, Math.round(dates.length / 6)) === 0)
+            .map((d) => (
+              <span key={d} className="num">
+                {shortDate(d)}
+              </span>
+            ))}
+        </div>
+        <span />
+      </div>
+
+      <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-2 border-t border-rule pt-2.5 text-[11px] text-ink-3">
+        <span className="flex items-center gap-1.5">
+          <span className="h-0.5 w-3 bg-brand" aria-hidden />
+          Daily net worth
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 border-t border-dashed border-ink-3" aria-hidden />
+          30d ago {compactMoney(start)}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-1.5 rounded-full border border-ink-2" aria-hidden />
+          High / low
+        </span>
+        <span className="ml-auto">
+          Best day <span className="num text-ok">{signedMoney(best)}</span> · worst{' '}
+          <span className="num text-bad">{signedMoney(worst)}</span>
+        </span>
       </div>
     </div>
   )
