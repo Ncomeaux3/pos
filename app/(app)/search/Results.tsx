@@ -13,6 +13,8 @@ export type Hit = {
   snippet: string | null
   score: number
   skills: string[]
+  /** Other entities the classifier put under the same skills. */
+  related: { id: string; title: string; module: string; moduleLabel: string }[]
 }
 
 const SHOWN = 3
@@ -118,6 +120,25 @@ export function Results({ hits, query, top }: { hits: Hit[]; query: string; top:
                 <Row title="Module" right={<Chip tone="quiet">{open.moduleLabel}</Chip>} />
                 <Row title="Type" right={<Chip tone="quiet">{open.entityType}</Chip>} />
               </RowList>
+            </div>
+
+            <div className="space-y-2">
+              <Eyebrow>Related</Eyebrow>
+              {open.related.length > 0 ? (
+                <RowList>
+                  {open.related.map((r) => (
+                    <Row
+                      key={r.id}
+                      title={r.title}
+                      right={<Chip tone="quiet">{r.moduleLabel}</Chip>}
+                    />
+                  ))}
+                </RowList>
+              ) : (
+                <p className="t-caption text-ink-3">
+                  Nothing else shares a skill with this yet.
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

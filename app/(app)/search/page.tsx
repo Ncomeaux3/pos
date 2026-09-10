@@ -7,6 +7,45 @@ import { cn } from '@/lib/utils'
 import { Results, type Hit } from './Results'
 import { SearchBox } from './SearchBox'
 
+/**
+ * What else is linked to the same skills, for the artboard's Related list.
+ *
+ * Through core.skill_links and core.entities, so it works across every module
+ * without knowing what any of them hold: two things are related here when the
+ * classifier put them under the same skill.
+ */
+async function relatedFor(ids: string[]): Promise<Map<string, { id: string; title: string; module: string }[]>> {
+  if (ids.length === 0) return new Map()
+
+  const { rows } = await db().query<{
+    source: string
+    id: string
+    title: string
+    module: string
+  }>(
+    `select mine.entity_ref as source, en.id, en.title, en.module
+       from core.skill_links mine
+       join core.skill_links theirs
+         on theirs.skill_id = mine.skill_id and theirs.entity_ref <> mine.entity_ref
+       join core.entities en on en.id = theirs.entity_ref
+      where mine.entity_ref = any($1)
+        and mine.classified_by <> 'unclassified'
+      group by mine.entity_ref, en.id, en.title, en.module
+      order by max(theirs.confidence) desc
+      limit 200`,
+    [ids],
+  )
+
+  const out = new Map<string, { id: string; title: string; module: string }[]>()
+  for (const r of rows) {
+    const seen = out.get(r.source) ?? []
+    if (seen.length < 5 && !seen.some((x) => x.id === r.id)) {
+      out.set(r.source, [...seen, { id: r.id, title: r.title, module: r.module }])
+    }
+  }
+  return out
+}
+
 /** Skill names per entity, fetched for the page of hits rather than joined in. */
 async function skillsFor(ids: string[]): Promise<Map<string, string[]>> {
   if (ids.length === 0) return new Map()
@@ -23,7 +62,11 @@ async function skillsFor(ids: string[]): Promise<Map<string, string[]>> {
   return out
 }
 
-function decorate(hits: SearchHit[], skills: Map<string, string[]>): Hit[] {
+function decorate(
+  hits: SearchHit[],
+  skills: Map<string, string[]>,
+  related: Map<string, { id: string; title: string; module: string }[]>,
+): Hit[] {
   return hits.map((h) => ({
     id: h.id,
     module: h.module,
@@ -33,6 +76,10 @@ function decorate(hits: SearchHit[], skills: Map<string, string[]>): Hit[] {
     snippet: h.snippet,
     score: h.score,
     skills: skills.get(h.id) ?? [],
+    related: (related.get(h.id) ?? []).map((r) => ({
+      ...r,
+      moduleLabel: getModule(r.module)?.nav.label ?? r.module,
+    })),
   }))
 }
 
@@ -54,8 +101,11 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
   const guessing = result.mode === 'guessed' || (scoped.length === 0 && fallback.length > 0)
 
   const shown = scoped.length > 0 ? scoped : fallback
-  const skills = await skillsFor(shown.map((h) => h.id))
-  const hits = decorate(shown, skills)
+  const [skills, related] = await Promise.all([
+    skillsFor(shown.map((h) => h.id)),
+    relatedFor(shown.map((h) => h.id)),
+  ])
+  const hits = decorate(shown, skills, related)
   const top = hits[0]?.score || 1
 
   const counts = new Map<string, number>()
