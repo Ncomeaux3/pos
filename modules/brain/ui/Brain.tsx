@@ -117,19 +117,24 @@ export function Brain({ data }: { data: BrainData }) {
 
   return (
     <div className="space-y-5">
-      <TabBar
-        label="Folders"
-        value={folder}
-        onChange={(next) => setParams({ folder: next === 'inbox' ? null : next, note: null })}
-        tabs={[
-          { value: 'inbox', label: 'Inbox', count: counts.inbox },
-          ...KINDS.filter((k) => counts[k] > 0 || k === 'note').map((k) => ({
-            value: k,
-            label: k === 'daily' ? 'Daily' : `${k[0].toUpperCase()}${k.slice(1)}s`,
-            count: counts[k],
-          })),
-        ]}
-      />
+      {/* The artboard's folder row: the folders on the left, and on the right
+        * the line that explains why nothing here is the source of truth. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+        <TabBar
+          label="Folders"
+          value={folder}
+          onChange={(next) => setParams({ folder: next === 'inbox' ? null : next, note: null })}
+          tabs={[
+            { value: 'inbox', label: 'Inbox', count: counts.inbox },
+            ...KINDS.filter((k) => counts[k] > 0 || k === 'note').map((k) => ({
+              value: k,
+              label: k === 'daily' ? 'Daily' : `${k[0].toUpperCase()}${k.slice(1)}s`,
+              count: counts[k],
+            })),
+          ]}
+        />
+        <span className="text-[11px] text-ink-4">Vault in git is the source of truth</span>
+      </div>
 
       <div className="flex flex-wrap items-start gap-x-6 gap-y-5">
         <div className="min-w-0 flex-[1_1_420px] space-y-4">

@@ -90,11 +90,25 @@ export function MetricStrip({
  * A cell, not a card: it carries no border of its own because MetricStrip
  * draws the one border around the whole strip.
  */
+/**
+ * The number sizes the artboards use for a KPI strip.
+ *
+ * Not one size everywhere: Finance leads with 34, Insurance with 24, and the
+ * Weekly Review's glance cards sit between them. The strip is the loudest thing
+ * on a screen and how loud it is belongs to the screen.
+ */
+const METRIC_SIZE = {
+  sm: 'text-[24px]',
+  md: 'text-[30px]',
+  lg: 'text-[34px]',
+} as const
+
 export function MetricTile({
   label,
   value,
   delta,
   deltaTone = 'quiet',
+  size = 'md',
   className,
   children,
 }: {
@@ -102,6 +116,7 @@ export function MetricTile({
   value: ReactNode
   delta?: ReactNode
   deltaTone?: DeltaTone
+  size?: keyof typeof METRIC_SIZE
   className?: string
   /** A sparkline or bar, rendered under the delta. */
   children?: ReactNode
@@ -109,7 +124,14 @@ export function MetricTile({
   return (
     <div className={cn('flex flex-col gap-2 bg-bg-elev px-5 py-4', className)}>
       <Eyebrow>{label}</Eyebrow>
-      <p className="num text-[30px] font-light leading-none tracking-[-0.02em] text-ink">{value}</p>
+      <p
+        className={cn(
+          'num font-light leading-none tracking-[-0.02em] text-ink',
+          METRIC_SIZE[size],
+        )}
+      >
+        {value}
+      </p>
       {delta && (
         <p className={cn('label text-[10px] tracking-[0.1em]', DELTA[deltaTone])}>{delta}</p>
       )}

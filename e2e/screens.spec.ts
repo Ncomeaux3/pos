@@ -1025,7 +1025,7 @@ test('home, logging service moves the schedule it belongs to', async ({ page }) 
 
 test('insurance, sorted by what expires first with numbers masked', async ({ page }) => {
   await page.goto('/insurance')
-  await expect(page.getByRole('heading', { name: 'Insurance and policies' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Insurance', exact: true })).toBeVisible()
 
   // Masked in the query, so the plaintext is not in this page at all.
   await expect(page.getByText('**** 7730')).toBeVisible()

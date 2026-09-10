@@ -135,7 +135,7 @@ export function Insurance({ data }: { data: InsuranceData }) {
               : 'Insurance / nothing expiring'
         }
         dot={soon.length > 0 ? 'warn' : 'ok'}
-        title="Insurance and policies"
+        title="Insurance"
         lede="Sorted by what expires first. Reminders fire 60, 30 and 7 days out by default. What each policy covers is recorded in the words on the declarations page and nothing here judges whether it is enough: no gap analysis, no scoring, no opinion."
         status={
           <span className="num text-[11px] text-ink-3">
@@ -154,22 +154,26 @@ export function Insurance({ data }: { data: InsuranceData }) {
 
       <MetricStrip>
         <MetricTile
+          size="sm"
           label="Annual premium"
           value={money(annual)}
           delta={`${active.length} active policies`}
         />
         <MetricTile
+          size="sm"
           label="Per month"
           value={money(Math.round(annual / 12))}
           delta={`${linked} posting to Finance`}
           deltaTone="quiet"
         />
         <MetricTile
+          size="sm"
           label="Next renewal"
           value={next ? `${daysUntil(next.expiresOn, data.todayIso)} days` : 'none'}
           delta={next ? `${next.name} / ${next.expiresOn}` : 'nothing dated'}
         />
         <MetricTile
+          size="sm"
           label="Expiring in 60d"
           value={soon.length}
           delta={soon.length > 0 ? soon.map((p) => p.name).join(', ') : 'nothing soon'}

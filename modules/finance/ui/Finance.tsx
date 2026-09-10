@@ -165,11 +165,13 @@ export function Finance({ data }: { data: FinanceData }) {
             * the budgets. The other tabs stay as the drill in. */}
           <MetricStrip>
             <MetricTile
+              size="lg"
               label="Net worth"
               value={balance(data.netWorthCents)}
               delta={`assets ${money(data.assetsCents)} / debt ${money(data.debtCents)}`}
             />
             <MetricTile
+              size="lg"
               label="30 day change"
               value={signedMoney(data.changeCents)}
               delta={
@@ -180,6 +182,7 @@ export function Finance({ data }: { data: FinanceData }) {
               deltaTone={data.changeCents >= 0 ? 'ok' : 'bad'}
             />
             <MetricTile
+              size="lg"
               label="Due in 14 days"
               value={money(upcomingTotal, true)}
               delta={
@@ -189,6 +192,7 @@ export function Finance({ data }: { data: FinanceData }) {
               }
             />
             <MetricTile
+              size="lg"
               label={`Budgets over ${ALERT} percent`}
               value={hot.length}
               delta={hot.length > 0 ? hot.map((b) => b.name).join(' / ') : 'all within limits'}
@@ -481,6 +485,7 @@ export function Finance({ data }: { data: FinanceData }) {
             <div className="grid grid-cols-2 gap-2.5">
               <MetricTile label="Balance" value={balance(openAccount.balanceCents)} />
               <MetricTile
+              size="lg"
                 label="30 day change"
                 value={openAccount.changeCents === null ? 'new' : signedMoney(openAccount.changeCents)}
               />
