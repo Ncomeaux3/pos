@@ -1,4 +1,5 @@
 import { PageHeader } from '@/components/pos'
+import { getDigest } from '@/core/digests'
 import { readMetric } from '@/core/metrics'
 import { ownerToday } from '@/core/today'
 import {
@@ -12,7 +13,17 @@ import {
 import { Health, type HealthData } from './Health'
 
 export default async function HealthPage() {
-  const [appointments, medications, vitals, records, screenings, providers, todayIso, bodyWeight] =
+  const [
+    appointments,
+    medications,
+    vitals,
+    records,
+    screenings,
+    providers,
+    todayIso,
+    bodyWeight,
+    insurance,
+  ] =
     await Promise.all([
       listAppointments(),
       listMedications(),
@@ -25,11 +36,29 @@ export default async function HealthPage() {
       // duplicated into a health.vital row, so there is one source of truth and
       // it is simply absent when that module is not installed.
       readMetric('fitness.body_weight'),
+      // What health cover costs, from the Insurance module's digest. Through
+      // core.digests rather than the insurance schema: this module reads no
+      // other module's tables, and an Insurance that has not run tonight
+      // contributes no line rather than an error.
+      getDigest('insurance'),
     ])
+
+  const money = (cents: number) =>
+    `$${Math.round(cents / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+
+  const annual = typeof insurance?.annualCents === 'number' ? insurance.annualCents : null
+  const active = typeof insurance?.active === 'number' ? insurance.active : null
+  const expiring = Array.isArray(insurance?.expiring) ? insurance.expiring.length : null
 
   const data: HealthData = {
     todayIso,
     bodyWeightLb: bodyWeight,
+    coverage: [
+      ...(annual === null ? [] : [{ label: 'Premiums a year', value: money(annual) }]),
+      ...(annual === null ? [] : [{ label: 'A month', value: money(Math.round(annual / 12)) }]),
+      ...(active === null ? [] : [{ label: 'Active policies', value: String(active) }]),
+      ...(expiring ? [{ label: 'Expiring inside 60 days', value: String(expiring) }] : []),
+    ],
     appointments: appointments.map((a) => ({
       id: a.id,
       what: a.what,

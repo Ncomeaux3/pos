@@ -862,6 +862,18 @@ test('health, screenings show every state including never', async ({ page }) => 
   await shoot(page, 'health-screenings')
 })
 
+test('health, the rail says what is owed and what cover costs', async ({ page }) => {
+  await page.goto('/health')
+
+  // Three things that are true whichever tab is open.
+  await expect(page.getByText('Due and overdue')).toBeVisible()
+  await expect(page.getByText('Insurance and cost')).toBeVisible()
+
+  // The cost comes from the Insurance module's digest, not from a number
+  // copied into Health, so there is one figure and it is the current one.
+  await expect(page.getByText('Premiums a year')).toBeVisible()
+})
+
 test('health, an appointment carries what to do beforehand', async ({ page }) => {
   await page.goto('/health')
 

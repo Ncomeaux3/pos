@@ -10,12 +10,13 @@ import {
   MetricTile,
   Row,
   RowList,
+  Eyebrow,
   StatusChip,
   Switch,
   TabBar,
   useToast,
 } from '@/components/pos'
-import { screeningLabel, screeningStatus, streak } from '../screening'
+import { dueOn, screeningLabel, screeningStatus, streak } from '../screening'
 import {
   completeScreening,
   markMedication,
@@ -58,9 +59,17 @@ export type HealthData = {
     snoozeUntil: string | null
   }[]
   providers: { id: string; name: string; role: string; phone: string; notes: string }[]
+  /** From the Insurance module's digest, or empty when it wrote none. */
+  coverage: { label: string; value: string }[]
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/** "21 Sep", for a due date with no time on it. */
+const shortDate = (iso: string) => {
+  const d = new Date(`${iso}T12:00:00`)
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}`
+}
 
 const when = (iso: string) => {
   const d = new Date(iso)
@@ -113,8 +122,13 @@ export function Health({ data }: { data: HealthData }) {
   const now = new Date()
   const active = data.medications.filter((m) => !m.ended)
 
+  const dueSoon = data.screenings
+    .map((sc) => ({ ...sc, status: screeningStatus(sc, data.todayIso), due: dueOn(sc) }))
+    .filter((sc) => sc.status === 'due' || sc.status === 'overdue' || sc.status === 'never')
+
   return (
-    <div className="space-y-5">
+    <div className="flex flex-wrap items-start gap-x-7 gap-y-5">
+      <div className="min-w-0 flex-[1_1_540px] space-y-5">
       <TabBar
         label="Health views"
         value={tab}
@@ -328,6 +342,73 @@ export function Health({ data }: { data: HealthData }) {
             ))}
           </RowList>
         ))}
+      </div>
+
+      {/* The artboard's rail: what is owed, what it costs, and who to ring.
+        * Three things that are true whichever tab is open. */}
+      <aside className="min-w-0 flex-[1_1_320px] space-y-6 lg:max-w-[400px]">
+        <section className="space-y-2.5">
+          <Eyebrow dot={dueSoon.length > 0 ? 'warn' : 'ok'}>Due and overdue</Eyebrow>
+          {dueSoon.length === 0 ? (
+            <p className="t-caption text-ink-3">
+              Nothing is owed. A screening you have never had would say so here rather than
+              claiming to be late.
+            </p>
+          ) : (
+            <RowList>
+              {dueSoon.map((sc) => (
+                <Row
+                  key={sc.id}
+                  title={sc.name}
+                  meta={
+                    sc.status === 'never'
+                      ? 'never done'
+                      : `due ${sc.due ? shortDate(sc.due) : 'unknown'}`
+                  }
+                  right={
+                    <StatusChip tone={sc.status === 'overdue' ? 'bad' : 'warn'}>
+                      {sc.status}
+                    </StatusChip>
+                  }
+                />
+              ))}
+            </RowList>
+          )}
+        </section>
+
+        <section className="space-y-2.5">
+          <Eyebrow>Insurance and cost</Eyebrow>
+          {data.coverage.length === 0 ? (
+            <p className="t-caption text-ink-3">
+              Nothing from Insurance. Its nightly digest is where these come from, so a module that
+              has not run tonight contributes no line.
+            </p>
+          ) : (
+            <RowList>
+              {data.coverage.map((c) => (
+                <Row key={c.label} title={c.label} right={<span className="num text-[13px] text-ink">{c.value}</span>} />
+              ))}
+            </RowList>
+          )}
+          <p className="t-caption text-ink-4">
+            Read from Insurance rather than copied here, so there is one number and it is the
+            current one.
+          </p>
+        </section>
+
+        <section className="space-y-2.5">
+          <Eyebrow>Care team</Eyebrow>
+          {data.providers.length === 0 ? (
+            <p className="t-caption text-ink-3">Nobody yet.</p>
+          ) : (
+            <RowList>
+              {data.providers.slice(0, 5).map((p) => (
+                <Row key={p.id} title={p.name} meta={[p.role, p.phone].filter(Boolean).join(' / ')} />
+              ))}
+            </RowList>
+          )}
+        </section>
+      </aside>
     </div>
   )
 }
