@@ -54,6 +54,43 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
   const statById = useMemo(() => new Map(data.stats.map((s) => [s.id, s])), [data.stats])
   const attributes = data.stats.filter((s) => !s.parent)
 
+  // Leaves only in the summary columns: an attribute's number is the sum of
+  // its children, so listing both says the same thing twice.
+  const leaves = useMemo(
+    () => data.stats.filter((s) => s.parent && !data.stats.some((c) => c.parent === s.id)),
+    [data.stats],
+  )
+
+  const gainingFastest = useMemo(
+    () => [...leaves].filter((s) => s.gained30d > 0).sort((a, b) => b.gained30d - a.gained30d).slice(0, 4),
+    [leaves],
+  )
+
+  const stagnant = useMemo(
+    () =>
+      leaves
+        .filter((s) => s.xp > 0 && toneFor(s, now) === 'stagnant')
+        .sort((a, b) => b.xp - a.xp)
+        .slice(0, 4),
+    [leaves, now],
+  )
+
+  /**
+   * A skill that crossed a level in the last 30 days.
+   *
+   * Worked out rather than stored: level is a function of XP, and gained30d is
+   * how much of that XP arrived this month, so the level a month ago is the
+   * level of the difference. No history table needed for a question this shape.
+   */
+  const levelUps = useMemo(
+    () =>
+      leaves
+        .filter((s) => s.gained30d > 0 && levelOf(s.xp) > levelOf(s.xp - s.gained30d))
+        .sort((a, b) => b.level - a.level)
+        .slice(0, 4),
+    [leaves],
+  )
+
   const stat = selected ? statById.get(selected) : undefined
   const children = data.stats.filter((s) => s.parent === selected)
 
@@ -102,10 +139,43 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-5">
         <Card>
-          <CardHead label="Constellation" />
+          {/* Character sits on the canvas, top left, the way the design has
+            * it: the constellation is the page and this is a legend for it,
+            * not a separate card underneath. */}
+          <div className="mb-3 flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+            <div>
+              <span className="eyebrow text-ink-3">Character</span>
+              <div className="mt-2 flex items-baseline gap-3">
+                <span className="num text-[34px] font-light leading-none tracking-[-0.02em] text-ink">
+                  Lv {data.characterLevel}
+                </span>
+                <span className="text-[15px] text-ink-2">{characterTitle(data.characterLevel)}</span>
+              </div>
+              <div className="num mt-1.5 text-[11px] text-ink-3">
+                {round(data.totalXp)} XP · {round(toNext(data.totalXp).needed)} TO LV{' '}
+                {toNext(data.totalXp).next}
+              </div>
+            </div>
+
+            {/* One tile per attribute, which is the character sheet. */}
+            <div className="flex flex-wrap gap-px bg-rule-2">
+              {attributes.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => setSelected(a.id)}
+                  className="min-w-[72px] bg-surface px-3 py-2 text-left hover:bg-brand-soft"
+                >
+                  <span className="eyebrow block truncate text-[9px] text-ink-3">{a.name}</span>
+                  <span className="num text-[17px] text-ink">{a.level}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <Constellation
             nodes={data.nodes}
             stats={data.stats}
@@ -121,8 +191,12 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
                 <span
                   className="inline-block h-2 w-2 rounded-full"
                   style={{
-                    background: tone === 'gaining' ? 'var(--accent)' : tone === 'active' ? 'var(--ink-2)' : 'var(--ink-3)',
-                    opacity: tone === 'stagnant' ? 0.45 : 1,
+                    background:
+                      tone === 'gaining'
+                        ? 'var(--accent)'
+                        : tone === 'active'
+                          ? '#9fd1ff'
+                          : '#5b6b7d',
                   }}
                 />
                 {tone === 'stagnant' ? 'stagnant 60d+' : tone}
@@ -131,32 +205,60 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
           </div>
         </Card>
 
-        <Card>
-          <CardHead label="Character" meta={<Chip tone="quiet">Lv {data.characterLevel}</Chip>} />
-          <div className="mt-4 grid gap-5 sm:grid-cols-[132px_minmax(0,1fr)]">
-            <Radar axes={attributes.map((a) => ({ label: a.name, value: a.level }))} />
-            <div className="space-y-2">
-              <div className="num text-[11px] text-ink-3">
-                {round(data.totalXp)} XP · {round(toNext(data.totalXp).needed)} TO LV{' '}
-                {toNext(data.totalXp).next}
-              </div>
-              {attributes.map((a) => (
-                <button
-                  key={a.id}
-                  type="button"
-                  onClick={() => setSelected(a.id)}
-                  className="flex w-full items-center justify-between gap-3 rounded-[8px] px-2 py-1.5 text-left hover:bg-rule-2"
-                >
-                  <span className="text-[13px] text-ink-2">{a.name}</span>
-                  <span className="num text-[11px] text-ink-3">Lv {a.level}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </Card>
+        {/* The four column read of the whole tree, under the canvas. */}
+        <div className="grid gap-px bg-rule-2 sm:grid-cols-2 lg:grid-cols-4">
+          <Column label="Gaining fastest">
+            {gainingFastest.length === 0 ? (
+              <Quiet>Nothing gained XP in 30 days.</Quiet>
+            ) : (
+              gainingFastest.map((sk) => (
+                <Line key={sk.id} onClick={() => setSelected(sk.id)} name={sk.name}>
+                  <span className="text-brand">+{round(sk.gained30d)}</span>
+                </Line>
+              ))
+            )}
+          </Column>
+
+          <Column label="Stagnant 60d+">
+            {stagnant.length === 0 ? (
+              <Quiet>Nothing has been idle that long.</Quiet>
+            ) : (
+              stagnant.map((sk) => (
+                <Line key={sk.id} onClick={() => setSelected(sk.id)} name={sk.name}>
+                  Lv {sk.level}
+                </Line>
+              ))
+            )}
+          </Column>
+
+          <Column label="Goal weight high, low activity">
+            {/* Nothing stores a goal weight, so this says so rather than
+              * showing a number nobody computed. */}
+            <Quiet>No goal weights are stored yet, so this cannot be worked out.</Quiet>
+          </Column>
+
+          <Column label="Level-ups this month">
+            {levelUps.length === 0 ? (
+              <Quiet>No skill crossed a level in 30 days.</Quiet>
+            ) : (
+              levelUps.map((sk) => (
+                <Line key={sk.id} onClick={() => setSelected(sk.id)} name={sk.name}>
+                  <span className="text-brand">&rarr; Lv {sk.level}</span>
+                </Line>
+              ))
+            )}
+          </Column>
+        </div>
       </div>
 
       <div className="space-y-5">
+        <Card>
+          <CardHead label="Attributes" />
+          <div className="mt-3 flex justify-center">
+            <Radar axes={attributes.map((a) => ({ label: a.name, value: a.level }))} />
+          </div>
+        </Card>
+
         {!stat ? (
           <Card>
             <CardHead label="Skill" />
@@ -296,4 +398,54 @@ function EventRow({ event }: { event: SkillEvent }) {
       <span className="num shrink-0 text-[11px] text-ink-3">+{Math.round(event.xp)}</span>
     </li>
   )
+}
+
+/** A title for the character level. Flavour, and the design shows one. */
+function characterTitle(level: number): string {
+  if (level >= 30) return 'Master'
+  if (level >= 20) return 'Practitioner'
+  if (level >= 12) return 'Builder'
+  if (level >= 6) return 'Apprentice'
+  return 'Novice'
+}
+
+/** One of the four summary columns under the canvas. */
+function Column({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-surface p-3.5">
+      <span className="eyebrow block text-ink-3">{label}</span>
+      <div className="mt-2.5 space-y-1.5">{children}</div>
+    </div>
+  )
+}
+
+function Line({
+  name,
+  onClick,
+  children,
+}: {
+  name: string
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-baseline justify-between gap-3 text-left hover:text-ink"
+    >
+      <span className="truncate text-[13px] text-ink-2">{name}</span>
+      <span className="num shrink-0 text-[11px] text-ink-3">{children}</span>
+    </button>
+  )
+}
+
+/**
+ * An empty column says why it is empty.
+ *
+ * The design fills these with data; with none, a blank column reads as broken
+ * rather than as quiet, and the owner cannot tell which it is.
+ */
+function Quiet({ children }: { children: React.ReactNode }) {
+  return <p className="text-[12px] leading-snug text-ink-3">{children}</p>
 }
