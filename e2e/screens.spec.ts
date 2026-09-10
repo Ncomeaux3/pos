@@ -508,7 +508,13 @@ test('weekly review, six steps and a note built from the answers', async ({ page
   await expect(page.getByText(/comes from a module digest/)).toBeVisible()
   await shoot(page, 'weekly-review')
 
-  await page.getByRole('button', { name: 'Continue' }).click()
+  // Every click below needs a hydrated page: a click that lands before React
+  // attaches is swallowed, and the assertions after it then pass or fail on
+  // whatever the server rendered rather than on what the click did.
+  await page.waitForLoadState('networkidle')
+
+  // The first step's primary is named for what it starts, not for advancing.
+  await page.getByRole('button', { name: 'Start the review' }).click()
   await page.getByLabel('Add a win').fill('Shipped the notifications screen')
   await page.getByRole('button', { name: 'Add' }).click()
   await expect(page.getByText('Shipped the notifications screen')).toBeVisible()
@@ -518,7 +524,10 @@ test('weekly review, six steps and a note built from the answers', async ({ page
   await page.getByRole('button', { name: 'Continue' }).click()
   await expect(page.getByText(/still undecided/)).toBeVisible()
 
+  // Deciding one of them is what the step is for, so the count says so.
   await page.getByRole('radio', { name: /^Carry$/ }).first().click()
+  await expect(page.getByText(/1 of \d+ decided/)).toBeVisible()
+
   await shoot(page, 'weekly-review-misses')
 })
 

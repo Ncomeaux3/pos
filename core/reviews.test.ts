@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { weekOf } from './reviews'
+import { weekNumber, weekOf } from './reviews'
 import { EMPTY_ANSWERS, outstanding, renderNote, type ReviewAnswers } from './reviews-shape'
 
 describe('weekOf', () => {
@@ -20,6 +20,22 @@ describe('weekOf', () => {
   it('crosses a month and a year boundary', () => {
     expect(weekOf('2026-10-01')).toBe('2026-09-28')
     expect(weekOf('2027-01-01')).toBe('2026-12-28')
+  })
+})
+
+describe('weekNumber', () => {
+  it('counts ISO weeks, which is what the band calls the week', () => {
+    // 2026-09-07 is the Monday of ISO week 37, and every day of that week
+    // answers with the same number.
+    expect(weekNumber('2026-09-07')).toBe(37)
+    expect(weekNumber('2026-09-13')).toBe(37)
+    expect(weekNumber('2026-01-01')).toBe(1)
+  })
+
+  it('gives late December the week one it belongs to', () => {
+    // 2025-12-29 is the Monday of the week holding 1 January 2026, so it is
+    // week one of 2026 rather than week 53 of 2025.
+    expect(weekNumber('2025-12-29')).toBe(1)
   })
 })
 

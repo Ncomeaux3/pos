@@ -270,6 +270,56 @@ export default defineModule({
     },
   },
 
+  // Training is the one part of the week that is a win by simply having
+  // happened, so this is the only thing Fitness puts in the review.
+  review: {
+    wins: async () => {
+      // Bucketed in SQL against core.today(), so "this week" is the owner's
+      // week rather than the server's.
+      const { rows } = await db().query<{
+        weeks_ago: number
+        n: string
+        secs: string
+        metres: string
+      }>(
+        `select ((date_trunc('week', core.today())::date
+                  - date_trunc('week', started_at)::date) / 7)::int as weeks_ago,
+                count(*)::text as n,
+                coalesce(sum(duration_s), 0)::text as secs,
+                coalesce(sum(distance_m), 0)::text as metres
+           from fitness.workout
+          where started_at >= core.today() - interval '56 days'
+          group by 1`,
+      )
+
+      const current = rows.find((r) => r.weeks_ago === 0)
+      if (!current || Number(current.n) === 0) return []
+
+      // Weeks trained back to back, this one included. A week off ends it,
+      // which is the only reading of a streak worth putting on a screen.
+      const trained = new Set(rows.filter((r) => Number(r.n) > 0).map((r) => r.weeks_ago))
+      let streak = 0
+      while (trained.has(streak)) streak++
+
+      const count = Number(current.n)
+      const minutes = Math.round(Number(current.secs) / 60)
+      const km = Number(current.metres) / 1000
+      const parts = [
+        minutes < 60 ? `${minutes}m` : minutes % 60 === 0 ? `${minutes / 60}h` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`,
+      ]
+      if (km >= 0.1) parts.push(`${km.toFixed(1)} km`)
+
+      return [
+        {
+          id: 'fitness-week',
+          title: `${count} workout${count === 1 ? '' : 's'}`,
+          meta: `Fitness, ${parts.join(', ')}`,
+          tag: streak > 1 ? `streak ${streak}w` : undefined,
+        },
+      ]
+    },
+  },
+
   /** See ModuleManifest.tile: the module says how its own numbers read. */
   tile: FitnessTile,
 

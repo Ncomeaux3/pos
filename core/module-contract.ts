@@ -108,6 +108,8 @@ export type ModuleManifest = {
    * closes.
    */
   review?: {
+    /** Went well this week, offered for the owner to tick. */
+    wins?: () => Promise<ReviewWin[]>
     /** Slipped this week and needs a decision: carry, shrink or drop. */
     slipped?: () => Promise<ReviewItem[]>
     /** Could be next week. Feeds the three priorities. */
@@ -128,6 +130,21 @@ export type ReviewItem = {
   estimateMinutes?: number | null
 }
 
+/**
+ * Something that went well, proposed rather than asserted.
+ *
+ * A module offers what it can measure; whether it counts as a win is the
+ * owner's call, which is why these arrive ticked by nobody.
+ */
+export type ReviewWin = {
+  id: string
+  title: string
+  /** One grey line under it: the module, the count, the time it took. */
+  meta: string
+  /** A short mark on the right: "biggest", "new skill", "streak 3w". */
+  tag?: string
+}
+
 /** Something the owner has to put a number on before the week closes. */
 export type ReviewCheck = {
   id: string
@@ -135,7 +152,19 @@ export type ReviewCheck = {
   unit: string
   /** True when the module computes it and no input is needed. */
   computed: boolean
+  /** Where the number comes from: "Fitness, best 5K in 30 days". */
+  source?: string
+  /** 0 to 100. Absent when the module tracks no target. */
+  percent?: number
+  /** Points moved since last week, or null when there is nothing to compare. */
+  movement?: number | null
+  /** The module's own reading of whether it will make it. */
+  status?: ReviewStatus
+  /** One line saying why it has that status. Never a bare label. */
+  note?: string
 }
+
+export type ReviewStatus = 'done' | 'on_track' | 'at_risk' | 'stalled'
 
 /** What the owner decided, handed back to the module that owns the rows. */
 export type ReviewDecisions = {

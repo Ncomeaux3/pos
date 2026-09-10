@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
-import { checkIn, patchGoal } from './data'
+import { checkIn, measuredGoals, patchGoal } from './data'
 import { nightlyDigest, pullMetrics } from './jobs/nightly-digest'
 import GoalsPage from './ui/GoalsPage'
 import { GoalsTile } from './ui/Tile'
@@ -134,18 +134,22 @@ export default defineModule({
   // What Goals contributes to the Weekly Review. A goal that computes itself
   // needs no input, which is what the step says out loud.
   review: {
-    pending: async () => {
-      const { rows } = await db().query<{
-        id: string
-        title: string
-        unit: string
-        computed: boolean
-      }>(
-        `select id, title, unit, (metric_source is not null) as computed
-           from goals.goal where archived = false order by title`,
-      )
-      return rows
-    },
+    // Percent, status and the sentence behind the status are this module's
+    // arithmetic, not the review's. The review draws what it is handed.
+    pending: async () =>
+      (await measuredGoals()).map(({ row, progress, rule, movement }) => ({
+        id: row.id,
+        title: row.title,
+        unit: row.unit,
+        computed: row.metric_source !== null,
+        source: row.metric_source
+          ? `Computed from ${row.metric_source}`
+          : 'Manual check-in',
+        percent: Math.round(progress.percent),
+        movement,
+        status: progress.status,
+        note: rule,
+      })),
 
     apply: async ({ values }) => {
       for (const [goalId, value] of Object.entries(values)) {

@@ -213,6 +213,35 @@ export default defineModule({
     },
   },
 
+  // Notes published this week. A draft is not a win: the whole point of the
+  // draft state is that nobody has read it yet.
+  review: {
+    wins: async () => {
+      const { rows } = await db().query<{ kind: string; n: string }>(
+        `select kind, count(*)::text as n
+           from brain.note
+          where status = 'published'
+            and updated_at >= core.today() - interval '7 days'
+          group by kind
+          order by count(*) desc`,
+      )
+
+      const total = rows.reduce((sum, r) => sum + Number(r.n), 0)
+      if (total === 0) return []
+
+      const books = Number(rows.find((r) => r.kind === 'book')?.n ?? 0)
+
+      return [
+        {
+          id: 'brain-week',
+          title: `${total} note${total === 1 ? '' : 's'} filed`,
+          meta: `Second Brain, ${rows.map((r) => `${r.n} ${r.kind}`).join(', ')}`,
+          tag: books > 0 ? `${books} book${books === 1 ? '' : 's'}` : undefined,
+        },
+      ]
+    },
+  },
+
   /** See ModuleManifest.tile: the module says how its own numbers read. */
   tile: BrainTile,
 

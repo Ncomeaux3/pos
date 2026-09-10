@@ -1,5 +1,5 @@
 import { getModules } from './modules'
-import type { ReviewCheck, ReviewDecisions, ReviewItem } from './module-contract'
+import type { ReviewCheck, ReviewDecisions, ReviewItem, ReviewWin } from './module-contract'
 
 // What every installed module contributes to the Weekly Review, composed by
 // core without core knowing what any of it means.
@@ -31,6 +31,7 @@ async function gather<T>(
 // Only used for the type of the argument above.
 const source = (m: ReturnType<typeof getModules>[number]) => m.review
 
+export const wins = () => gather<ReviewWin>((r) => r.wins)
 export const slipped = () => gather<ReviewItem>((r) => r.slipped)
 export const upcoming = () => gather<ReviewItem>((r) => r.upcoming)
 export const pending = () => gather<ReviewCheck>((r) => r.pending)

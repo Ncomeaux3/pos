@@ -36,7 +36,7 @@ export const STEPS: { key: StepKey; name: string; kicker: string; question: stri
   {
     key: 'glance',
     name: 'The week',
-    kicker: 'Step one, what happened',
+    kicker: 'Step one · what happened',
     question: 'Here is the week, measured',
     helper:
       'Pulled from the module digests. Nothing here needs your input; read it, then move on.',
@@ -44,7 +44,7 @@ export const STEPS: { key: StepKey; name: string; kicker: string; question: stri
   {
     key: 'wins',
     name: 'Wins',
-    kicker: 'Step two, what worked',
+    kicker: 'Step two · what worked',
     question: 'What went well?',
     helper:
       'Tick the ones that count. These become the wins section of the week note.',
@@ -52,28 +52,28 @@ export const STEPS: { key: StepKey; name: string; kicker: string; question: stri
   {
     key: 'misses',
     name: 'Misses',
-    kicker: 'Step three, what slipped',
+    kicker: 'Step three · what slipped',
     question: 'What slipped, and what happens to it?',
     helper: 'Each one needs a decision: carry it, shrink it, or drop it.',
   },
   {
     key: 'goals',
     name: 'Goals',
-    kicker: 'Step four, check in',
+    kicker: 'Step four · check in',
     question: 'Where do the goals stand?',
     helper: 'Computed goals updated themselves. The rest need a number from you.',
   },
   {
     key: 'plan',
     name: 'Next week',
-    kicker: 'Step five, what matters next',
+    kicker: 'Step five · what matters next',
     question: 'What are the three things for next week?',
     helper: 'Picked items move to the top of Monday. Everything else stays in the backlog.',
   },
   {
     key: 'close',
     name: 'Close',
-    kicker: 'Step six, close the week',
+    kicker: 'Step six · close the week',
     question: 'Ready to close the week?',
     helper:
       'This writes one note, reschedules what you carried, and records the three priorities.',

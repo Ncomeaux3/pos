@@ -1,5 +1,6 @@
 import { db } from '@/core/db'
-import type { GoalKind, Point } from './progress'
+import { ownerToday } from '@/core/today'
+import { progress, rule, type Goal, type GoalKind, type Point, type Progress } from './progress'
 
 // Reads for the screen and the digest. The shape it renders and the arithmetic
 // over it live in ./progress.ts, which a client component can import.
@@ -110,4 +111,65 @@ export async function patchGoal(id: string, patch: GoalPatch): Promise<void> {
     id,
     ...fields.map((f) => patch[f]),
   ])
+}
+
+/** A live goal with its arithmetic done, and where it stood a week ago. */
+export type MeasuredGoal = {
+  row: GoalRow
+  progress: Progress
+  /** The sentence behind the status. */
+  rule: string
+  /** Points of progress gained since last week, or null with nothing to compare. */
+  movement: number | null
+}
+
+/**
+ * Every live goal, measured.
+ *
+ * The Weekly Review shows a goal's percent, its status and the reason for the
+ * status, and none of that is the review's arithmetic to do: it is this
+ * module's, handed over through the review contract.
+ */
+export async function measuredGoals(): Promise<MeasuredGoal[]> {
+  const [rows, history, todayIso] = await Promise.all([
+    listGoals(false),
+    historyByGoal(),
+    ownerToday(),
+  ])
+
+  const days = (fromIso: string, toIso: string) =>
+    Math.round(
+      (new Date(`${toIso}T12:00:00`).getTime() - new Date(`${fromIso}T12:00:00`).getTime()) /
+        86_400_000,
+    )
+
+  return rows.map((row) => {
+    const shape: Goal = {
+      kind: row.kind,
+      startValue: Number(row.start_value),
+      targetValue: Number(row.target_value),
+      deadlineInDays: days(todayIso, row.deadline),
+      ageInDays: Math.max(1, days(new Date(row.created_at).toISOString().slice(0, 10), todayIso)),
+      history: history.get(row.id) ?? [],
+    }
+
+    const now = progress(shape)
+
+    // Where it stood a week ago: the same arithmetic over the history that
+    // existed then, so the movement is the goal's rather than the formula's.
+    const older = shape.history.filter((p) => p.daysAgo >= 7)
+    const then = progress({
+      ...shape,
+      deadlineInDays: shape.deadlineInDays + 7,
+      ageInDays: Math.max(1, shape.ageInDays - 7),
+      history: older.map((p) => ({ ...p, daysAgo: p.daysAgo - 7 })),
+    })
+
+    return {
+      row,
+      progress: now,
+      rule: rule(shape, now, row.unit),
+      movement: older.length > 0 ? Math.round(now.percent - then.percent) : null,
+    }
+  })
 }

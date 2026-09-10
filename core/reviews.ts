@@ -22,6 +22,24 @@ export function weekOf(iso: string): string {
   return d.toISOString().slice(0, 10)
 }
 
+/**
+ * The ISO week number, which is what the band calls the week.
+ *
+ * ISO 8601: week one is the one holding the first Thursday of the year, so the
+ * count is taken from the Thursday of the week in question rather than from
+ * its Monday. The last days of December can belong to week one of the year
+ * after, and this returns that.
+ */
+export function weekNumber(iso: string): number {
+  const thursday = new Date(`${weekOf(iso)}T12:00:00`)
+  thursday.setDate(thursday.getDate() + 3)
+
+  const firstThursday = new Date(`${thursday.getFullYear()}-01-04T12:00:00`)
+  firstThursday.setDate(firstThursday.getDate() - ((firstThursday.getDay() + 6) % 7) + 3)
+
+  return 1 + Math.round((thursday.getTime() - firstThursday.getTime()) / (7 * 86_400_000))
+}
+
 export async function getReview(week: string): Promise<Review | null> {
   const { rows } = await db().query<Review>(
     `select id, week_of::text, answers, priorities, note_ref, closed_at

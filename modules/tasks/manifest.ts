@@ -4,6 +4,7 @@ import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
 import { findOrCreateProject, patchTask } from './data'
 import { nightlyDigest, rollForward } from './jobs/nightly-digest'
+import { loadLabel } from './shape'
 import TasksPage from './ui/TasksPage'
 import { TasksTile } from './ui/Tile'
 
@@ -187,6 +188,42 @@ export default defineModule({
   // reading the tasks schema, and a fork that deletes this folder gets a
   // review with no misses step rather than a broken one.
   review: {
+    // What closed this week, grouped by the project it belonged to. Grouped
+    // rather than listed one by one: eleven ticked boxes is a list, "six tasks
+    // on POS v1" is a week. The biggest group is marked as such.
+    wins: async () => {
+      const { rows } = await db().query<{
+        project: string | null
+        done: string
+        minutes: string | null
+      }>(
+        `select p.name as project, count(*)::text as done,
+                sum(t.estimated_minutes)::text as minutes
+           from tasks.task t
+           left join tasks.project p on p.id = t.project_id
+          where t.status = 'done'
+            and t.completed_at >= core.today() - interval '7 days'
+          group by p.name
+          order by count(*) desc
+          limit 5`,
+      )
+
+      return rows.map((r, i) => {
+        const done = Number(r.done)
+        const spent = loadLabel(Number(r.minutes ?? 0))
+
+        return {
+          id: `tasks-${r.project ?? 'none'}`,
+          title: `${done} task${done === 1 ? '' : 's'} closed${r.project ? ` on ${r.project}` : ''}`,
+          meta: `Tasks${r.project ? '' : ', no project'}${spent ? `, ${spent}` : ''}`,
+          // Only when it is actually the biggest. Two groups of one are not a
+          // ranking, and marking either would be a claim the data does not
+          // support.
+          tag: i === 0 && done > Number(rows[1]?.done ?? 0) ? 'biggest' : undefined,
+        }
+      })
+    },
+
     slipped: async () => {
       const { rows } = await db().query<{
         id: string

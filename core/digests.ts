@@ -45,6 +45,25 @@ export async function latestDigests(): Promise<Digest[]> {
   return rows.map((r) => ({ module: r.module, runAt: r.run_at, payload: r.payload }))
 }
 
+/**
+ * The newest digest per module from before a cutoff, for a comparison.
+ *
+ * The table is append only, so last week's numbers are still in it and a
+ * week-over-week delta is a read rather than a stored figure. A module with no
+ * digest that old is simply absent, and the screen shows a number with no
+ * delta rather than a delta against zero.
+ */
+export async function digestsBefore(days: number): Promise<Digest[]> {
+  const { rows } = await db().query<{ module: string; run_at: Date; payload: Record<string, unknown> }>(
+    `select distinct on (module) module, run_at, payload
+       from core.digests
+      where run_at < now() - make_interval(days => $1)
+      order by module, run_at desc`,
+    [days],
+  )
+  return rows.map((r) => ({ module: r.module, runAt: r.run_at, payload: r.payload }))
+}
+
 export async function getDigest(module: string): Promise<Record<string, unknown> | null> {
   const { rows } = await db().query<{ payload: Record<string, unknown> }>(
     `select payload from core.digests where module = $1 order by run_at desc limit 1`,
