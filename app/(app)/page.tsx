@@ -112,7 +112,11 @@ export default async function DashboardPage() {
         </p>
       </section>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {/* items-start, so a tile is as tall as its own content. Grid items
+        * stretch by default, which made every tile in a row as tall as the
+        * tallest one and left the short ones with a block of dead space under
+        * their last line. The prototype's tiles hug what is in them. */}
+      <div className="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
         <Card className="space-y-3">
           <CardHead
             label="Warnings"

@@ -9,6 +9,7 @@ import {
   Chip,
   EmptyState,
   Eyebrow,
+  MetricStrip,
   MetricTile,
   Overlay,
   PillGroup,
@@ -125,7 +126,7 @@ export function Insurance({ data }: { data: InsuranceData }) {
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-2.5 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,170px),1fr))]">
+      <MetricStrip>
         <MetricTile
           label="Annual premium"
           value={money(annual)}
@@ -148,7 +149,7 @@ export function Insurance({ data }: { data: InsuranceData }) {
           delta={soon.length > 0 ? soon.map((p) => p.name).join(', ') : 'nothing soon'}
           deltaTone={soon.length > 0 ? 'warn' : 'quiet'}
         />
-      </div>
+      </MetricStrip>
 
       <div className="flex flex-wrap gap-2">
         <ActionButton variant="brand" onClick={() => setParams({ upload: '1' })}>

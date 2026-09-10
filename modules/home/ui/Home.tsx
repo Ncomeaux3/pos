@@ -9,6 +9,7 @@ import {
   Chip,
   EmptyState,
   Eyebrow,
+  MetricStrip,
   MetricTile,
   Overlay,
   PillGroup,
@@ -170,7 +171,7 @@ export function Home({ data }: { data: HomeData }) {
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-2.5 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,170px),1fr))]">
+      <MetricStrip>
         <MetricTile
           label="Assets tracked"
           value={data.assets.length}
@@ -191,7 +192,7 @@ export function Home({ data }: { data: HomeData }) {
           delta={`${scheduled.length} scheduled jobs, estimated`}
           deltaTone="quiet"
         />
-      </div>
+      </MetricStrip>
 
       <div className="flex flex-wrap items-start gap-x-6 gap-y-5">
         <div className="min-w-0 flex-[1_1_460px] space-y-5">

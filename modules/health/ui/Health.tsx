@@ -6,6 +6,7 @@ import {
   ActionButton,
   Chip,
   EmptyState,
+  MetricStrip,
   MetricTile,
   Row,
   RowList,
@@ -255,7 +256,7 @@ export function Health({ data }: { data: HealthData }) {
 
       {tab === 'vitals' && (
         <div className="space-y-4">
-          <div className="grid gap-2.5 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,170px),1fr))]">
+          <MetricStrip>
             {data.bodyWeightLb !== null && (
               <MetricTile
                 label="Body weight"
@@ -275,7 +276,7 @@ export function Health({ data }: { data: HealthData }) {
                 deltaTone="quiet"
               />
             ))}
-          </div>
+          </MetricStrip>
 
           {data.vitals.length === 0 && data.bodyWeightLb === null && (
             <EmptyState headline="No readings">

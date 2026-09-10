@@ -6,7 +6,7 @@ import { useTransition } from 'react'
 import type { NavItem } from '@/core/nav'
 import type { Theme } from '@/core/theme'
 import { cn } from '@/lib/utils'
-import { ComeauxverseLockup, ComeauxverseMark } from './Logo'
+import { ComeauxverseMark } from './Logo'
 
 // 232px, collapsing to 64px. Labels fade rather than unmount, so the collapsed
 // rail keeps its accessible names and a screen reader still reads the nav.
@@ -70,6 +70,7 @@ export function Sidebar({
   collapsed,
   theme,
   reviewCount,
+  ownerName,
   onToggleCollapse,
   onToggleTheme,
 }: {
@@ -78,6 +79,8 @@ export function Sidebar({
   collapsed: boolean
   theme: Theme
   reviewCount: number
+  /** From core.settings. Empty on a fresh install, which is why it falls back. */
+  ownerName: string
   onToggleCollapse: (next: boolean) => Promise<void>
   onToggleTheme: (current: Theme) => Promise<void>
 }) {
@@ -90,10 +93,21 @@ export function Sidebar({
       className="fixed inset-y-0 left-0 z-40 hidden shrink-0 flex-col border-r border-rule bg-bg-elev md:flex"
     >
       <div className="flex h-14 items-center border-b border-rule px-3">
-        {/* Clear space around the lockup equals the mark radius, so the rail
-            gives it its own band rather than crowding it against the nav. */}
-        <Link href="/" aria-label="ComeauxVerse, dashboard" className="min-w-0">
-          {collapsed ? <ComeauxverseMark size={26} /> : <ComeauxverseLockup />}
+        {/* Mark only at 28px with the owner's name beside it, which is what the
+            design bundle asks for by name: "The sidebar renders it at 28px
+            square, mark only, with the owner name beside it in Manrope 600
+            13px. Do not use a wordmark lockup." The name is a setting, never a
+            literal, because this repo holds nothing personal. */}
+        <Link href="/" aria-label="Dashboard" className="flex min-w-0 items-center gap-2.5">
+          <ComeauxverseMark size={28} />
+          <span
+            className={cn(
+              'min-w-0 truncate text-[13px] font-semibold leading-none text-ink transition-opacity duration-200',
+              collapsed && 'pointer-events-none opacity-0',
+            )}
+          >
+            {ownerName}
+          </span>
         </Link>
       </div>
 

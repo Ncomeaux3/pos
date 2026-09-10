@@ -1,4 +1,4 @@
-import { MetricTile, PageHeader } from '@/components/pos'
+import { MetricStrip, MetricTile, PageHeader } from '@/components/pos'
 import { listProposals } from '@/core/proposals'
 import { activePlan, latestMetrics, listExercises, listPlanItems, listWorkouts, thisWeek } from '../data'
 import { load, mass } from '../units'
@@ -90,7 +90,7 @@ export default async function FitnessPage() {
         lede="Workouts, what they came to, and the body metrics behind them. Training load is duration weighted by kind, which is a crude measure and says so."
       />
 
-      <div className="grid gap-2.5 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,170px),1fr))]">
+      <MetricStrip>
         <MetricTile
           label="This week"
           value={data.weekWorkouts}
@@ -113,7 +113,7 @@ export default async function FitnessPage() {
           delta={weight ? `measured ${weight.measuredOn}` : 'no reading'}
           deltaTone="quiet"
         />
-      </div>
+      </MetricStrip>
 
       <Fitness data={data} />
     </div>

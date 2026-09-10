@@ -1,6 +1,7 @@
 import { requireOwner } from '@/core/auth'
 import { db } from '@/core/db'
 import { getNav, NAV_FOOTER } from '@/core/nav'
+import { getSettings } from '@/core/settings'
 import { getSidebarCollapsed, getTheme } from '@/core/theme'
 import { CommandPalette } from '@/components/pos/CommandPalette'
 import { MobileTabBar, Sidebar } from '@/components/pos/Sidebar'
@@ -17,11 +18,12 @@ async function pendingProposals(): Promise<number> {
 export default async function AppLayout({ children }: LayoutProps<'/'>) {
   await requireOwner()
 
-  const [nav, collapsed, theme, reviewCount] = await Promise.all([
+  const [nav, collapsed, theme, reviewCount, settings] = await Promise.all([
     getNav(),
     getSidebarCollapsed(),
     getTheme(),
     pendingProposals(),
+    getSettings(),
   ])
 
   return (
@@ -32,6 +34,7 @@ export default async function AppLayout({ children }: LayoutProps<'/'>) {
         collapsed={collapsed}
         theme={theme}
         reviewCount={reviewCount}
+        ownerName={settings.owner_name || 'Personal OS'}
         onToggleCollapse={toggleSidebar}
         onToggleTheme={toggleTheme}
       />

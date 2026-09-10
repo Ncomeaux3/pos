@@ -9,6 +9,7 @@ import {
   Chip,
   EmptyState,
   Eyebrow,
+  MetricStrip,
   MetricTile,
   Overlay,
   PaceBar,
@@ -157,7 +158,7 @@ export function Finance({ data }: { data: FinanceData }) {
 
       {tab === 'overview' && (
         <div className="space-y-5">
-          <div className="grid gap-2.5 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,170px),1fr))]">
+          <MetricStrip>
             <MetricTile
               label="Net worth"
               value={balance(data.netWorthCents)}
@@ -176,7 +177,7 @@ export function Finance({ data }: { data: FinanceData }) {
               value={money(upcomingTotal, true)}
               delta={`${data.upcoming.length} charges`}
             />
-          </div>
+          </MetricStrip>
 
           <Card className="space-y-3">
             <CardHead

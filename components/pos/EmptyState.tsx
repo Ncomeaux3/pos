@@ -22,11 +22,11 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        'flex flex-col items-center gap-3 rounded-lg border border-dashed border-rule-2 px-6 py-8 text-center',
+        'flex flex-col items-center gap-3 border border-dashed border-rule-2 p-[30px] text-center',
         className,
       )}
     >
-      <p className="label text-[22px] font-medium leading-none tracking-[0.08em] text-ink-3">
+      <p className="label text-[22px] font-light leading-none tracking-[0.08em] text-ink-3">
         {headline}
       </p>
       <p className="t-caption max-w-[46ch] text-ink-3">{children}</p>

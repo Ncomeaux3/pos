@@ -13,7 +13,7 @@ export {
   type TimelineItem,
 } from './charts'
 export { Chip, StatusChip, type ChipTone } from './Chip'
-export { Card, CardHead, MetricTile, type DeltaTone } from './Card'
+export { Card, CardHead, MetricStrip, MetricTile, type DeltaTone } from './Card'
 export { PageHeader } from './PageHeader'
 export { Row, RowList } from './Row'
 export { EmptyState } from './EmptyState'

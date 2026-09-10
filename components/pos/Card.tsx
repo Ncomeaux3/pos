@@ -2,7 +2,10 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { Eyebrow, type DotTone } from './text'
 
-/** 1px rule-2 on bg-elev, 16px padding, 12px radius. The container for everything. */
+/** 1px rule-2 on bg-elev, 16px vertical and 20px horizontal padding, no radius.
+ * The container for everything. The padding is measured off the prototypes,
+ * which run `16px 20px`; a flat 16px was squeezing every card's contents
+ * against its border. */
 export function Card({
   children,
   className,
@@ -16,7 +19,7 @@ export function Card({
   return (
     <div
       className={cn(
-        'rounded-lg border bg-bg-elev p-4',
+        'border bg-bg-elev px-5 py-4',
         selected ? 'border-brand bg-brand-soft' : 'border-rule-2',
         className,
       )}
@@ -56,8 +59,36 @@ const DELTA: Record<DeltaTone, string> = {
 }
 
 /**
+ * The KPI strip: one bordered container whose cells are divided by hairlines,
+ * not a row of separate cards with gaps between them. Every prototype that
+ * carries KPIs draws them joined, and the 1px `gap` over a `--rule-2` ground is
+ * what makes the dividers survive wrapping, which `divide-x` does not.
+ */
+export function MetricStrip({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        'grid gap-px border border-rule-2 bg-rule-2 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,170px),1fr))]',
+        className,
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
+/**
  * Label over a big number over a small coloured delta. The KPI shape on
  * Finance, Home, Health, Fitness, Agent Log and the Weekly Review glance.
+ *
+ * A cell, not a card: it carries no border of its own because MetricStrip
+ * draws the one border around the whole strip.
  */
 export function MetricTile({
   label,
@@ -76,13 +107,13 @@ export function MetricTile({
   children?: ReactNode
 }) {
   return (
-    <Card className={cn('flex flex-col gap-2', className)}>
+    <div className={cn('flex flex-col gap-2 bg-bg-elev px-5 py-4', className)}>
       <Eyebrow>{label}</Eyebrow>
       <p className="num text-[30px] font-light leading-none tracking-[-0.02em] text-ink">{value}</p>
       {delta && (
         <p className={cn('label text-[10px] tracking-[0.1em]', DELTA[deltaTone])}>{delta}</p>
       )}
       {children}
-    </Card>
+    </div>
   )
 }

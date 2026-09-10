@@ -189,7 +189,11 @@
     letter-spacing: -0.02em;
   }
   .t-headline {
-    font-size: clamp(22px, 2.2vw, 30px);
+    /* Measured off the prototypes: every page title renders at 28px/400 with
+     * -0.03em at 1440. The README's table says the ramp tops out at 30px, but
+     * 2.2vw of a 1440 viewport is 31.68px, so the clamp never produced the 28
+     * the artboards actually show. The ramp is kept, the ceiling is corrected. */
+    font-size: clamp(22px, 2.2vw, 28px);
     font-weight: 400;
     line-height: 1.15;
     letter-spacing: -0.03em;
@@ -202,6 +206,14 @@
   }
   .t-body {
     font-size: 14px;
+    font-weight: 400;
+    line-height: 1.55;
+  }
+  .t-lede {
+    /* The one grey sentence under a page title. 13px in every prototype, which
+     * is the bottom of the README's 13-15px body range rather than the 14px
+     * .t-body sits at. */
+    font-size: 13px;
     font-weight: 400;
     line-height: 1.55;
   }
@@ -232,14 +244,18 @@
    * tracked uppercase treatment is what the design bundle used monospace for;
    * the brand does the same job with Manrope 500 and wide tracking. */
   .label {
-    font-weight: 500;
+    /* 400, not 500. The README's type table lists the eyebrow at 500, but every
+     * prototype renders .eyebrow and every chip at 400 with the same tracking,
+     * and the prototype is what governs. 500 is what made the tracked uppercase
+     * labels read heavier than the artboards on every screen. */
+    font-weight: 400;
     letter-spacing: 0.16em;
     text-transform: uppercase;
     font-variant-numeric: tabular-nums;
   }
 
   .eyebrow {
-    font-weight: 500;
+    font-weight: 400;
     font-size: 11px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
