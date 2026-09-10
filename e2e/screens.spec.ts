@@ -121,7 +121,12 @@ test('skill tree, the constellation hovers, selects, pans and zooms', async ({ p
 
   const star = page.locator('g[data-skill="coding"]')
 
-  // Hover names what is under the pointer, which is the artboard's card.
+  // Hover draws the design's card beside the star: what it is, how many
+  // branches hang off it, their levels, and what the month came to.
+  await page.locator('g[data-skill="health"]').hover({ force: true })
+  await expect(page.getByText(/branches/)).toBeVisible()
+  await expect(page.getByText(/XP in 30 days/)).toBeVisible()
+
   await star.hover({ force: true })
   await expect(page.getByText('Coding', { exact: true }).first()).toBeVisible()
 

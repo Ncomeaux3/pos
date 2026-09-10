@@ -17,7 +17,14 @@ const round = (n: number) => Math.round(n).toLocaleString()
 const levelOf = (xp: number) => Math.min(99, Math.floor(Math.sqrt(Math.max(xp, 0) / 100)))
 const toNext = (xp: number) => {
   const next = levelOf(xp) + 1
-  return { next, needed: Math.max(0, next * next * 100 - Math.floor(xp)) }
+  const floor = levelOf(xp) * levelOf(xp) * 100
+  const ceiling = next * next * 100
+  return {
+    next,
+    needed: Math.max(0, ceiling - Math.floor(xp)),
+    /** How far through the current level, for the bar under the name. */
+    percent: Math.max(0, Math.min(100, ((xp - floor) / Math.max(1, ceiling - floor)) * 100)),
+  }
 }
 
 function since(iso: string | null, now: number): string {
@@ -298,8 +305,21 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
               />
               <div className="mt-4 space-y-3">
                 {path && <div className="eyebrow text-ink-3">{path}</div>}
-                <div className="num text-[11px] text-ink-3">
-                  {round(stat.xp)} XP · {round(toNext(stat.xp).needed)} to Lv {toNext(stat.xp).next}
+
+                {/* The design puts a bar under the name with the XP on the
+                  * left and what the next level costs on the right, so how
+                  * close you are is a length rather than a subtraction. */}
+                <div className="h-0.5 bg-rule-2">
+                  <div
+                    className="h-0.5 bg-brand"
+                    style={{ width: `${Math.round(toNext(stat.xp).percent)}%` }}
+                  />
+                </div>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="num text-[11px] text-ink-3">{round(stat.xp)} XP</span>
+                  <span className="num text-[11px] text-ink-3">
+                    {round(toNext(stat.xp).needed)} to Lv {toNext(stat.xp).next}
+                  </span>
                 </div>
                 <dl className="grid grid-cols-3 gap-3 border-t border-rule pt-3">
                   <Stat label="30 days" value={stat.gained30d > 0 ? `+${round(stat.gained30d)}` : '0'} />
@@ -319,6 +339,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
               </div>
             </Card>
 
+            {children.length === 0 && (
             <Card>
               <CardHead
                 label="Events · 30 days"
@@ -346,6 +367,37 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
               </div>
             </Card>
 
+            )}
+
+            {children.length > 0 && (
+              <Card>
+                <CardHead label="Children" />
+                <ul className="-mx-2 mt-3">
+                  {children.map((c) => (
+                    <li key={c.id}>
+                      <button
+                        type="button"
+                        onClick={() => setSelected(c.id)}
+                        className="flex w-full items-center justify-between gap-3 rounded-[8px] px-2 py-2 text-left hover:bg-rule-2"
+                      >
+                        <span className="text-[13px] text-ink-2">{c.name}</span>
+                        {/* The design's two figures: what it gained this
+                          * month, then where it stands. */}
+                        <span className="flex shrink-0 items-baseline gap-3">
+                          <span className="num text-[11px] text-brand">
+                            {c.gained30d > 0 ? `+${round(c.gained30d)} / 30d` : ''}
+                          </span>
+                          <span className="num text-[11px] text-ink-3">Lv {c.level}</span>
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <p className="t-caption mt-2 text-ink-4">
+                  Drop an event here to reassign it to that skill.
+                </p>
+              </Card>
+            )}
             <Card>
               <CardHead label="Keywords" meta={<span className="eyebrow text-ink-3">skills.yaml</span>} />
               <div className="mt-4 flex flex-wrap gap-1.5">
@@ -363,27 +415,6 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
               </div>
             </Card>
 
-            {children.length > 0 && (
-              <Card>
-                <CardHead label="Children" />
-                <ul className="-mx-2 mt-3">
-                  {children.map((c) => (
-                    <li key={c.id}>
-                      <button
-                        type="button"
-                        onClick={() => setSelected(c.id)}
-                        className="flex w-full items-center justify-between gap-3 rounded-[8px] px-2 py-2 text-left hover:bg-rule-2"
-                      >
-                        <span className="text-[13px] text-ink-2">{c.name}</span>
-                        <span className="num text-[11px] text-ink-3">
-                          {c.gained30d > 0 ? `+${round(c.gained30d)} · ` : ''}Lv {c.level}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            )}
           </>
         )}
 

@@ -105,7 +105,7 @@ export function Constellation({
 
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
-  const [hover, setHover] = useState<Placed | null>(null)
+  const [hover, setHover] = useState<{ node: Placed; x: number; y: number } | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   // A drag only becomes a pan once the pointer has actually moved. Until then
   // the press is a click on whatever is under it, which is what makes clicking
@@ -166,7 +166,8 @@ export function Constellation({
     setPan({ x: 0, y: 0 })
   }
 
-  const hovered = hover ? statById.get(hover.id) : undefined
+  const hovered = hover ? statById.get(hover.node.id) : undefined
+  const branches = hover ? stats.filter((s) => s.parent === hover.node.id) : []
 
   // Seeded once. A field regenerated per render would flicker on every hover.
   const stars = useMemo(() => starfield(150, 20260909, VIEW), [])
@@ -304,8 +305,18 @@ export function Constellation({
                 key={node.id}
                 data-skill={node.id}
                 transform={`translate(${node.x} ${node.y})`}
-                onPointerEnter={() => setHover(node)}
-                onPointerLeave={() => setHover((h) => (h?.id === node.id ? null : h))}
+                onPointerEnter={(e) => {
+                  // Where the star actually is on screen, measured rather than
+                  // reprojected, so the card follows it through pan and zoom.
+                  const star = e.currentTarget.getBoundingClientRect()
+                  const box = e.currentTarget.ownerSVGElement?.getBoundingClientRect()
+                  setHover({
+                    node,
+                    x: star.x + star.width / 2 - (box?.x ?? 0),
+                    y: star.y + star.height / 2 - (box?.y ?? 0),
+                  })
+                }}
+                onPointerLeave={() => setHover((h) => (h?.node.id === node.id ? null : h))}
                 onClick={(e) => {
                   e.stopPropagation()
                   // A pan that ended on a node is not a click on it.
@@ -401,12 +412,54 @@ export function Constellation({
         * legend is a normal block under the svg now and cannot collide with
         * anything. Only the card, which appears on demand and is small,
         * overlays, and it sits in a corner the tree does not reach. */}
-      {hovered && (
-        <div className="pointer-events-none absolute bottom-3 left-3 border border-rule-2 bg-surface px-3 py-2">
-          <div className="text-[13px] text-ink">{hovered.name}</div>
-          <div className="num text-[11px] text-ink-3">
-            Lv {hovered.level} · {Math.round(hovered.xp)} XP
-            {hovered.gained30d > 0 ? ` · +${Math.round(hovered.gained30d)} in 30d` : ''}
+      {hovered && hover && (
+        <div
+          className="pointer-events-none absolute z-20 w-[228px] border border-rule-2 bg-surface"
+          style={{
+            // Beside the star, and flipped to the other side near an edge so
+            // the card never hangs off the canvas.
+            left: hover.x + 18,
+            top: hover.y + 14,
+            transform: `translate(${hover.x > 620 ? '-100%' : '0'}, ${hover.y > 380 ? '-100%' : '0'})`,
+          }}
+        >
+          <div className="flex items-baseline justify-between gap-3 border-b border-rule px-3 py-2">
+            <span className="truncate text-[13px] text-ink">{hovered.name}</span>
+            <span className="num shrink-0 text-[11px] text-ink-3">
+              Lv {hovered.level}
+              {branches.length > 0 &&
+                ` · ${branches.length} ${branches.length === 1 ? 'branch' : 'branches'}`}
+            </span>
+          </div>
+
+          {/* What is under it, which is what makes hovering an attribute worth
+            * doing: the levels of its children without opening anything. */}
+          {branches.length > 0 ? (
+            <div className="px-3 py-1.5">
+              {branches.slice(0, 6).map((b) => (
+                <div key={b.id} className="flex items-baseline justify-between gap-3 py-[3px]">
+                  <span className="truncate text-[12px] text-ink-2">{b.name}</span>
+                  <span className="num shrink-0 text-[11px] text-ink-3">
+                    Lv {b.level} ({Math.round(b.xp).toLocaleString()})
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="px-3 py-1.5">
+              <div className="flex items-baseline justify-between gap-3 py-[3px]">
+                <span className="text-[12px] text-ink-2">Total</span>
+                <span className="num text-[11px] text-ink-3">
+                  {Math.round(hovered.xp).toLocaleString()} XP
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div className="label border-t border-rule px-3 py-1.5 text-[10px] tracking-[0.08em] text-ink-3">
+            {hovered.gained30d > 0
+              ? `+${Math.round(hovered.gained30d).toLocaleString()} XP in 30 days`
+              : 'Nothing in 30 days'}
           </div>
         </div>
       )}
