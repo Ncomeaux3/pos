@@ -133,6 +133,18 @@ export function GoalList({
         ]}
       />
 
+      {/* A goal is three fields, so the artboard adds one here rather than
+        * behind a screen of its own. More options opens the drawer, where the
+        * unit, the kind and the metric source live. */}
+      {tab === 'active' && (
+        <AddGoal
+          todayIso={todayIso}
+          open={params.get('new') === '1'}
+          onOpen={(on) => setParams({ new: on ? '1' : null })}
+          onRun={run}
+        />
+      )}
+
       {shown.length === 0 ? (
         <EmptyState headline={tab === 'archive' ? 'Nothing archived' : 'No goals yet'}>
           {tab === 'archive'
@@ -140,13 +152,25 @@ export function GoalList({
             : 'A goal is a target, a deadline, and a way of knowing where you stand. Point it at a module metric and it checks itself in nightly.'}
         </EmptyState>
       ) : (
-        areas.map((area) => (
-          <section key={area} className="space-y-2.5">
-            <Eyebrow>{area}</Eyebrow>
-            <div className="grid gap-2.5 lg:grid-cols-2">
-              {shown
-                .filter((g) => g.area === area)
-                .map((goal) => (
+        areas.map((area) => {
+          const inArea = shown.filter((g) => g.area === area)
+          const wrong = inArea.filter(
+            (g) => g.progress.status === 'at_risk' || g.progress.status === 'stalled',
+          ).length
+
+          return (
+            <section key={area} className="space-y-3">
+              {/* The artboard's group head: the area on the left, how it is
+                * going on the right, on a rule. */}
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-rule-2 pb-2">
+                <span className="text-[15px] text-ink">{area}</span>
+                <span className="num text-[11px] text-ink-3">
+                  {inArea.length} {inArea.length === 1 ? 'goal' : 'goals'}
+                  {wrong > 0 ? ` / ${wrong} needing a look` : ' / all on track'}
+                </span>
+              </div>
+              <div className="grid gap-2.5 lg:grid-cols-2">
+                {inArea.map((goal) => (
                   <Row
                     key={goal.id}
                     goal={goal}
@@ -154,9 +178,10 @@ export function GoalList({
                     onOpen={() => setSelected(goal)}
                   />
                 ))}
-            </div>
-          </section>
-        ))
+              </div>
+            </section>
+          )
+        })
       )}
 
       <Detail
@@ -167,6 +192,105 @@ export function GoalList({
         onRun={run}
       />
     </div>
+  )
+}
+
+/**
+ * Add a goal in three fields, on the page.
+ *
+ * Closed it is a dashed line you press. Open it is title, target and deadline,
+ * which is the least a goal can be: a target with no deadline has no pace, and
+ * pace is the whole of what this screen reads.
+ */
+function AddGoal({
+  todayIso,
+  open,
+  onOpen,
+  onRun,
+}: {
+  todayIso: string
+  /** In the URL, so New goal in the page header can be a link. */
+  open: boolean
+  onOpen: (on: boolean) => void
+  onRun: (action: () => Promise<ActionResult>, ok?: string) => void
+}) {
+  const [title, setTitle] = useState('')
+  const [target, setTarget] = useState('')
+  const [deadline, setDeadline] = useState('')
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => onOpen(true)}
+        className="w-full border border-dashed border-rule-2 px-4 py-3 text-left text-[13px] text-ink-3 transition-colors duration-150 hover:border-brand hover:text-ink"
+      >
+        + Add a goal inline
+      </button>
+    )
+  }
+
+  const ready = title.trim() !== '' && Number(target) > 0 && deadline !== ''
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (!ready) return
+        onRun(
+          () =>
+            writeGoal({
+              title: title.trim(),
+              target_value: Number(target),
+              deadline,
+            }),
+          `Added. ${title.trim()}`,
+        )
+        setTitle('')
+        setTarget('')
+        setDeadline('')
+        onOpen(false)
+      }}
+      className="grid gap-2.5 border border-dashed border-brand p-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end"
+    >
+      <label className="flex flex-col gap-1.5">
+        <Eyebrow>Goal</Eyebrow>
+        <input
+          value={title}
+          autoFocus
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="e.g. Run a half marathon"
+          className={cn(fieldClass)}
+        />
+      </label>
+      <label className="flex flex-col gap-1.5">
+        <Eyebrow>Target</Eyebrow>
+        <input
+          type="number"
+          step="any"
+          value={target}
+          onChange={(e) => setTarget(e.target.value)}
+          placeholder="21.1"
+          className={cn(fieldClass, 'num')}
+        />
+      </label>
+      <label className="flex flex-col gap-1.5">
+        <Eyebrow>Deadline</Eyebrow>
+        <input
+          type="date"
+          value={deadline}
+          min={todayIso}
+          onChange={(e) => setDeadline(e.target.value)}
+          className={cn(fieldClass, 'num')}
+        />
+      </label>
+      <div className="flex flex-wrap gap-1.5">
+        <ActionButton type="submit" variant="brand" disabled={!ready}>
+          Add
+        </ActionButton>
+        <ActionButton onClick={() => onOpen(false)}>Cancel</ActionButton>
+      </div>
+    </form>
   )
 }
 

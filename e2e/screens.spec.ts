@@ -508,6 +508,28 @@ test('goals, the drawer shows both projections and the metric picker', async ({ 
   await expect(page.getByText('At the last 30 days')).toBeVisible()
 })
 
+test('goals, adding one inline from the page', async ({ page }) => {
+  await page.goto('/goals')
+  await page.waitForLoadState('networkidle')
+
+  // The form is in the URL, which is what lets a half typed goal survive the
+  // reload the theme toggle does.
+  await page.getByRole('link', { name: 'New goal' }).click()
+  await expect(page).toHaveURL(/new=1/)
+
+  // Scoped to the form: "Goal" also names a field in the drawer behind it.
+  const form = page.locator('form').filter({ hasText: 'Deadline' })
+  await form.getByLabel('Goal').fill('Swim 2km without stopping')
+  await form.getByLabel('Target').fill('2')
+  await form.getByLabel('Deadline').fill('2027-03-01')
+  await form.getByRole('button', { name: 'Add', exact: true }).click()
+
+  // The card, not the toast that also names it.
+  await expect(
+    page.getByRole('button', { name: /Swim 2km without stopping/ }).first(),
+  ).toBeVisible()
+})
+
 test('goals, a check-in moves the goal', async ({ page }) => {
   await page.goto('/goals')
   await page.getByRole('button', { name: /Deadlift 405/ }).click()

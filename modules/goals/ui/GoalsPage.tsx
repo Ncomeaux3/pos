@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { PageHeader } from '@/components/pos'
 import { listMetrics } from '@/core/metrics'
 import { ownerToday } from '@/core/today'
@@ -64,9 +65,19 @@ export default async function GoalsPage() {
         title="Goals"
         lede="Progress against a deadline, grouped by life area. A goal with a metric source computes itself nightly; the rest you check in on. Every status says the rule behind it rather than only showing a colour."
         actions={
-          <span className="num text-[11px] text-ink-3">
-            {live.length} active · {cards.length - live.length} archived
-          </span>
+          <>
+            <span className="num text-[11px] text-ink-3">
+              {live.length} active / {cards.length - live.length} archived
+            </span>
+            {/* A link, because the form it opens lives in the URL. That is what
+              * lets a half typed goal survive the theme toggle's reload. */}
+            <Link
+              href="/goals?new=1"
+              className="inline-flex h-11 shrink-0 items-center border border-brand bg-brand px-[22px] text-[14px] text-white transition-[filter] duration-150 hover:brightness-110 sm:h-[46px]"
+            >
+              New goal
+            </Link>
+          </>
         }
       />
 
