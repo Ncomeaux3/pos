@@ -3,8 +3,8 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
-Last updated: 2026-09-09, the cost pass and three real integration clients.
-Branch `skills-module`.
+Last updated: 2026-09-10, the design pass over every screen, the Skill Tree
+rework and the phone pass. Branch `main`.
 
 ## Done
 
@@ -83,10 +83,15 @@ refuses to do and why.
 ## Verification
 
 ```
-pnpm typecheck && pnpm lint && pnpm test    # 653 tests, 64 files
-pnpm test:e2e                               # 139 specs, 1440px and 402px, both themes
+pnpm typecheck && pnpm lint && pnpm test    # 669 tests, 65 files
+pnpm test:e2e                               # 148 specs, 1440px and 402px, both themes
 pnpm setup:demo                             # idempotent bootstrap
 ```
+
+`E2E_BASE_URL` moves the whole suite, the sign-in setup included. It used to
+move everything except that, because `auth.setup.ts` asserted port 3000 by
+hand, so any machine with something already on 3000 had to run with
+`--no-deps` and skip signing in altogether.
 
 The e2e suite runs in about 4 minutes, down from about 9. That is the
 classification change: seeding used to make one blocking Haiku call per entity
@@ -122,8 +127,45 @@ They are built to the handoff's layout, copy, spacing and colour, rendered in
 the ComeauxVerse type and shape system that decisions 15 to 17 established.
 Nothing already built was restyled to the bundle's Space Grotesk and radius 0.
 
-Known gaps on the Skill Tree screen: goal weight shows `--` because Goals does
-not exist, and there is no Notion backfill, so XP starts at zero by decision.
+Goal weight on the Skill Tree is a real number now: `core.skill_links` joined
+to the entities Goals registers, rolled up the way XP is. There is still no
+Notion backfill, so XP starts at zero by decision.
+
+## The design pass, 2026-09-10
+
+Every artboard in the handoff was measured and its screen rebuilt to match, one
+at a time, in the order the owner set: Finance, Tasks, Goals, Skill Tree, Second
+Brain, Insurance, Ideas, Fitness, Health, Meals, Travel, Home, then the shell
+screens. Where an artboard showed something the app could not honestly produce,
+the module contract grew rather than the screen faking it: `review.wins`,
+`ReviewCheck.percent` and `.movement`, `ReviewItem.at`, and a `goalWeight` on
+`SkillStat`. Where an artboard showed something nothing could produce, it was
+left out and said so, which is why there is no semantic search field on Second
+Brain: no embeddings exist for notes yet.
+
+**The Skill Tree took three passes.** The first two approximated from
+screenshots and were wrong in ways the owner could see: the hover card had no
+background because `bg-surface` is not a token in this app, the four digest
+columns were below the fold, and nothing lit up on hover. The third read
+`POS Skill Tree.dc.html` and ported its logic: the `related` set, the edge
+states, the node ratios (14 / 9 / 6 / 3.5 + level, and only a leaf grows),
+nebulae derived from the attribute positions, and a 1200x760 viewBox because a
+square one fitted `xMidYMid meet` inside a landscape panel scales by the height
+and leaves the width empty. The canvas carries `#05080c` in both themes, which
+is what the artboard's section does: its stars and labels are lit for a night
+sky and the whole tree vanished on the light surface.
+
+**The phone pass, against `PosPhone.dc.html`.** The mobile project had always
+run beside the desktop one, so the 402px shots existed and the specs passed,
+but nobody had compared them to the artboard. What that found was chrome: 18px
+body padding rather than 28, a 56px tab row on the home indicator's 26px inset,
+an 18px glyph where the rail prints a two digit code, a 44px search icon where
+the desktop has a field, no page description, KPIs two up at 24px, and tab rows
+that scroll rather than wrap. The four phone tabs are named by the plan (Home,
+Finance, Tasks, Fitness) rather than taken from nav order, and More opens the
+artboard's sheet. Three artboard elements are deliberately not built, each with
+its reasoning in decisions/log.md: the quick add button, the curated six tile
+dashboard, and per-screen reflow for the twenty screens with no phone artboard.
 
 ## Next
 
@@ -354,3 +396,13 @@ wrong in production.
 
 DNS rebinding is closed. What is left is the ordinary residual: a host that is
 public at check time and stays public is fetched, which is the feature.
+- **A hardcoded origin in a test is a bug with a long fuse.** `auth.setup.ts`
+  asserted `localhost:3000` and the theme cookie was set for that host, so a
+  machine with anything else on 3000 could not sign in and every run needed
+  `--no-deps`. The cookie worked anyway, because cookies ignore the port, which
+  is the kind of accident that holds until the suite runs against a host.
+- **`workers: 1` and `fullyParallel: false` are load-bearing here.** Overriding
+  them on the command line races `e2e/seed.mts` against itself; the run reports
+  assertion failures in whatever screen read the half-seeded state, which looks
+  exactly like a regression and is not one.
+

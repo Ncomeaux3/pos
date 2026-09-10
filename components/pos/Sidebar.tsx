@@ -25,7 +25,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useTransition } from 'react'
+import { useRef, useTransition } from 'react'
 import type { NavItem } from '@/core/nav'
 import type { Theme } from '@/core/theme'
 import { cn } from '@/lib/utils'
@@ -240,8 +240,9 @@ export function MobileTabBar({
   reviewCount: number
 }) {
   const pathname = usePathname()
-  const primary = nav.slice(0, 4)
-  const rest = [...nav.slice(4), ...footer]
+  const primary = phoneTabs(nav)
+  const rest = [...nav.filter((n) => !primary.includes(n)), ...footer]
+  const sheet = useRef<HTMLDetailsElement>(null)
 
   return (
     <nav
@@ -268,25 +269,67 @@ export function MobileTabBar({
         </Link>
       ))}
 
-      <details className="group relative flex-1">
-        <summary className="flex min-h-[56px] cursor-pointer list-none flex-col items-center justify-center gap-[5px] px-0.5 py-1.5 text-ink-3">
+      {/* A sheet, as the artboard has it: full width above the bar, a grab
+        * handle, and the rest of the app as numbered cards two across. It was
+        * a 78vw box in the corner with a list of plain links in it.
+        *
+        * Still a `details`, so More opens with no javascript, and the artboard's
+        * scrim is what that costs: nothing can close a sheet it has no way to
+        * toggle. Tapping More again closes it either way. */}
+      <details ref={sheet} className="group flex-1 [&_summary::-webkit-details-marker]:hidden">
+        <summary className="flex min-h-[56px] cursor-pointer list-none flex-col items-center justify-center gap-[5px] px-0.5 py-1.5 text-ink-3 group-open:text-brand">
           <MoreHorizontal size={18} strokeWidth={1.3} aria-hidden />
           <span className="label text-[9px] tracking-[0.08em]">More</span>
         </summary>
-        <div className="absolute bottom-full right-0 mb-px grid w-[78vw] grid-cols-2 border border-rule-2 bg-bg-elev">
-          {rest.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="min-h-[44px] border-b border-rule px-3 py-2.5 text-[12px] text-ink-2"
+
+        <div className="fixed inset-x-0 bottom-[90px] z-50 max-h-[70dvh] overflow-y-auto border-t border-rule-2 bg-bg-elev px-[18px] pb-5 pt-3.5">
+          <span className="mx-auto mb-3.5 block h-1 w-[38px] rounded-full bg-rule-2" aria-hidden />
+          <div className="mb-3 flex items-baseline justify-between gap-3">
+            <span className="eyebrow text-ink-3">All modules</span>
+            <button
+              type="button"
+              onClick={() => sheet.current?.removeAttribute('open')}
+              className="label text-[10px] tracking-[0.12em] text-ink-3 hover:text-ink"
             >
-              {item.label}
-            </Link>
-          ))}
+              Close
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            {rest.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex min-h-[76px] flex-col justify-end gap-1.5 border border-rule-2 bg-bg px-3.5 py-4 hover:border-ink-4"
+              >
+                <span className="label text-[9px] tracking-[0.12em] text-brand">{item.code}</span>
+                <span className="text-[14px] text-ink">{item.label}</span>
+              </Link>
+            ))}
+          </div>
         </div>
       </details>
     </nav>
   )
+}
+
+/**
+ * The four the phone gets, by name rather than by nav order.
+ *
+ * The design plan names them: Home, Finance, Tasks, Fitness. `nav.slice(0, 4)`
+ * gave whatever manifest order produced, which is Dashboard, Finance, Notes and
+ * Skill Tree here, so two of the four thumb-reachable tabs were screens nobody
+ * opens on a phone. Filtered against the nav rather than hardcoded into it, so
+ * a module the owner has disabled drops out and the list tops up in nav order
+ * instead of leaving a hole.
+ */
+const PHONE_TABS = ['/', '/finance', '/tasks', '/fitness']
+
+function phoneTabs(nav: NavItem[]): NavItem[] {
+  const wanted = PHONE_TABS.map((href) => nav.find((n) => n.href === href)).filter(
+    (n): n is NavItem => n !== undefined,
+  )
+  const spare = nav.filter((n) => !wanted.includes(n))
+  return [...wanted, ...spare].slice(0, 4)
 }
 
 /** The tab's glyph, or its code when this repo has no icon for that route. */

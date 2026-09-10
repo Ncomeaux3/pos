@@ -7,6 +7,11 @@ import { expect, test as setup } from '@playwright/test'
 
 const MAILPIT = process.env.E2E_MAILPIT_URL ?? 'http://127.0.0.1:54324'
 const STATE = 'e2e/.auth/owner.json'
+// The same default the config uses. Hardcoding port 3000 here meant the setup
+// project failed on any run pointed elsewhere, which is what forced every run
+// on a machine with something already on 3000 to pass --no-deps and skip
+// signing in at all.
+const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:3000'
 
 type MailpitSummary = { ID: string; Created: string }
 
@@ -51,7 +56,7 @@ setup('sign in as the owner', async ({ page }) => {
   expect(link, 'no magic link arrived in Mailpit within 60s').toBeTruthy()
 
   await page.goto(link!)
-  await expect(page).toHaveURL(/localhost:3000\/$/)
+  await expect(page).toHaveURL(`${BASE_URL}/`)
 
   await page.context().storageState({ path: STATE })
 })

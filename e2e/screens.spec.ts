@@ -19,8 +19,11 @@ test.beforeAll(() => {
 })
 
 async function withTheme(page: Page, theme: 'dark' | 'light') {
+  // The configured origin, not a hardcoded one. Cookies ignore the port, so
+  // this happened to work on any localhost, which is exactly the kind of
+  // accident that stops being one the day the suite runs against a host.
   await page.context().addCookies([
-    { name: 'pos_theme', value: theme, url: 'http://localhost:3000' },
+    { name: 'pos_theme', value: theme, url: process.env.E2E_BASE_URL ?? 'http://localhost:3000' },
   ])
 }
 
@@ -42,22 +45,27 @@ test('dashboard shell', async ({ page }) => {
   // have to be there for the module contract to still be working.
   const nav = page.getByRole('navigation', { name: /modules|sections/i }).first()
   await expect(nav.getByRole('link', { name: 'Dashboard' })).toBeVisible()
-  await expect(nav.getByRole('link', { name: 'Notes' })).toBeVisible()
 
-  // The mobile bar holds four modules and a More sheet, so what is on it
-  // depends on how many modules are installed. Review is always reachable,
-  // which is the thing worth asserting; whether it is a tab or a sheet entry
-  // is a layout decision the design already made.
+  // The phone bar holds four named tabs and a More sheet, so which modules are
+  // on the bar is a layout decision the design already made. What is worth
+  // asserting is that both are reachable, wherever they sit.
   const mobile = (page.viewportSize()?.width ?? 0) < 720
   if (mobile) {
     await page.getByRole('group').getByText('More').click()
   }
+  await expect(nav.getByRole('link', { name: 'Notes' })).toBeVisible()
   // By href: the sidebar prefixes each label with its two character index and
   // appends the pending count, so the accessible name is "RV Review 2", and
   // "Weekly review" would match a loose name filter anyway.
   await expect(nav.locator('a[href="/review"]')).toBeVisible()
 
-  if (mobile) await page.keyboard.press('Escape')
+  // Closed with the summary that opened it. Escape does not close a `details`,
+  // and the sheet is full width now, so leaving it open would be most of the
+  // dashboard shot.
+  if (mobile) {
+    await page.getByRole('group').getByText('More').click()
+    await expect(nav.getByRole('link', { name: 'Notes' })).toBeHidden()
+  }
   await shoot(page, 'dashboard')
 })
 
@@ -210,6 +218,10 @@ test('search falls back to closest matches instead of a dead end', async ({ page
 
 test('command palette opens on cmd k and finds an entity', async ({ page }) => {
   await page.goto('/')
+  // The shortcut is a document listener React attaches on mount, so a press
+  // before hydration lands on nothing and is not retried. This test failed
+  // twice under load for exactly that reason.
+  await page.waitForLoadState('networkidle')
 
   await page.keyboard.press('ControlOrMeta+k')
   const palette = page.getByRole('dialog', { name: /command palette/i })
