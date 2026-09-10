@@ -7,7 +7,6 @@ import {
   Eyebrow,
   HeatStrip,
   PaceBar,
-  PageHeader,
   Radar,
   Row,
   RowList,
@@ -19,6 +18,7 @@ import { getModules } from '@/core/modules'
 import { jobStates, latestSummary } from '@/core/orchestrator'
 import { getDigest } from '@/core/digests'
 import { getSettings } from '@/core/settings'
+import { dayIn } from '@/core/today'
 import { RunNow } from './RunNow'
 
 // The bento. Every tile reads core, never a module's own tables: module numbers
@@ -74,23 +74,43 @@ export default async function DashboardPage() {
   const summary = latest?.summary
   const failed = jobs.filter((j) => j.status === 'failed')
   const spendCents = summary?.spendCents ?? 0
+  // The owner's date, not the server's: on Vercel those differ all evening.
+  const today = dayIn(new Date(), settings.timezone)
   const capCents = summary?.capCents ?? settings.llm_soft_cap_cents
 
   return (
     <div className="space-y-7">
-      <PageHeader
-        eyebrow={latest ? `Nightly run · ${ago(latest.runAt)}` : 'No run yet'}
-        dot={failed.length > 0 ? 'bad' : latest ? 'ok' : 'idle'}
-        title={
-          latest?.headline ?? 'Nothing has run yet.'
-        }
-        lede={
-          latest
-            ? 'Written from module digests only.'
-            : 'Press Run now, or wait for the nightly cron at 09:00 UTC.'
-        }
-        actions={<RunNow />}
-      />
+      {/* Two bands, as the design has it: a thin breadcrumb row with the
+        * actions, then the summary as the page's opening statement. The two
+        * were merged into one PageHeader, which made the headline a title and
+        * shrank it to a title's size. */}
+      <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-rule pb-3">
+        <span className="eyebrow text-ink-3">Dashboard / {today}</span>
+        <RunNow />
+      </header>
+
+      <section className="space-y-2">
+        <span className="eyebrow text-ink-3">
+          <span
+            className="status-dot"
+            data-tone={failed.length > 0 ? 'bad' : latest ? 'ok' : 'idle'}
+            aria-hidden="true"
+          />
+          {latest
+            ? `Nightly summary · last run ${ago(latest.runAt)} · ${failed.length > 0 ? `${failed.length} failed` : 'ok'}`
+            : 'No run yet'}
+        </span>
+        {/* The opening statement, at the size the design gives it. It is the
+          * first thing on the page and reads as a sentence, not a heading. */}
+        <h1 className="max-w-[46ch] text-[clamp(22px,2.6vw,34px)] font-light leading-[1.25] tracking-[-0.02em] text-ink">
+          {latest?.headline ?? 'Nothing has run yet.'}
+        </h1>
+        <p className="t-caption text-ink-3">
+          {latest
+            ? 'Written from module digests only. Raw data is touched when you ask a direct question.'
+            : 'Press Run now, or wait for the nightly cron.'}
+        </p>
+      </section>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         <Card className="space-y-3">

@@ -22,8 +22,11 @@ export function RunNow() {
   return (
     <>
       <PullToSync onPull={run} disabled={pending} />
-      <ActionButton disabled={pending} onClick={run}>
+      {/* Solid, which is the design's treatment: this is the one thing on
+        * the dashboard the owner presses, so it is the one filled control. */}
+      <ActionButton variant="solid" disabled={pending} onClick={run}>
         {pending ? 'Running' : 'Run now'}
+        {!pending && <span aria-hidden="true">&rarr;</span>}
       </ActionButton>
     </>
   )
