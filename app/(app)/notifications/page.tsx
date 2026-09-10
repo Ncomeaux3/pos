@@ -4,6 +4,7 @@ import { getModule } from '@/core/modules'
 import { isLive } from '@/core/notification-rules'
 import { listAlerts, listRules, type Alert } from '@/core/notify'
 import { getSettings } from '@/core/settings'
+import { nightlyRunAt } from '@/core/today'
 import { AlertCentre, type AlertItem } from './AlertCentre'
 import { Notifications } from './Rules'
 import { PauseAll } from './PauseAll'
@@ -36,7 +37,7 @@ export default async function NotificationsPage() {
   const [rules, settings, alerts] = await Promise.all([listRules(), getSettings(), listAlerts()])
 
   const schedule = {
-    morningAt: settings.digest_morning_at,
+    morningAt: nightlyRunAt(settings.timezone),
     morningEnabled: settings.digest_morning_enabled,
     eveningAt: settings.digest_evening_at,
     eveningEnabled: settings.digest_evening_enabled,

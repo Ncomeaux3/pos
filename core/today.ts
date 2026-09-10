@@ -60,3 +60,27 @@ export function dayIn(at: Date, timeZone: string): string {
 export function minutesIn(at: Date, timeZone: string): number {
   return partsIn(at, timeZone).minutes
 }
+
+/**
+ * The hour the nightly cron fires, in UTC.
+ *
+ * Kept here as a constant rather than read from vercel.json at runtime: the
+ * value is needed in a React render and reading a file there is the wrong
+ * shape. today.test.ts asserts the two agree, so drift fails a test rather
+ * than quietly telling the owner the wrong time.
+ */
+export const NIGHTLY_UTC_HOUR = 9
+
+/**
+ * When the nightly run actually happens, in the owner's timezone.
+ *
+ * Built from a real date rather than an offset, so daylight saving is handled:
+ * 09:00 UTC is 03:00 in Chicago in January and 04:00 in July, and this returns
+ * whichever is true today.
+ */
+export function nightlyRunAt(timeZone: string, on: Date = new Date()): string {
+  const utc = new Date(
+    Date.UTC(on.getUTCFullYear(), on.getUTCMonth(), on.getUTCDate(), NIGHTLY_UTC_HOUR, 0, 0),
+  )
+  return clockIn(utc, timeZone)
+}

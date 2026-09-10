@@ -137,13 +137,17 @@ export function Notifications({
             <div className="space-y-2">
               <p className="t-caption text-ink-3">Morning digest</p>
               <div className="flex items-center gap-2.5">
-                <input
-                  type="time"
+                {/* Not an input. The digest goes out when the nightly cron
+                  * fires, and there is one run a day, so no setting here could
+                  * move it. This used to be a time picker whose value nothing
+                  * read: it looked like a control and was a decoration. */}
+                <span
                   aria-label="Morning digest time"
-                  defaultValue={schedule.morningAt}
-                  onBlur={(e) => run(() => updateSchedule('digest_morning_at', e.target.value))}
-                  className={timeField}
-                />
+                  className={cn(timeField, 'inline-flex items-center tabular-nums')}
+                  title="Set by the nightly cron in vercel.json"
+                >
+                  {schedule.morningAt}
+                </span>
                 <Switch
                   label="Morning digest on"
                   checked={schedule.morningEnabled}
@@ -152,7 +156,7 @@ export function Notifications({
               </div>
               <p className="t-caption text-ink-3">
                 {schedule.morningEnabled
-                  ? `${liveCount('morning')} rules batch into it`
+                  ? `When the nightly run fires, your time. ${liveCount('morning')} rules batch into it`
                   : 'Off, so morning rules fall back to in-app only'}
               </p>
             </div>
