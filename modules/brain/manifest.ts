@@ -7,6 +7,7 @@ import { nightlyDigest, resolveLinks } from './jobs/nightly-digest'
 import { pullVault } from './jobs/pull-vault'
 import { ingestUrl } from './ingest'
 import BrainPage from './ui/BrainPage'
+import { BrainTile } from './ui/Tile'
 
 const kind = z.enum(['article', 'book', 'video', 'note', 'project', 'person', 'daily'])
 
@@ -211,6 +212,9 @@ export default defineModule({
       },
     },
   },
+
+  /** See ModuleManifest.tile: the module says how its own numbers read. */
+  tile: BrainTile,
 
   jobs: [
     // First: everything below reads what the vault brought in.

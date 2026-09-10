@@ -4,6 +4,7 @@ import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
 import { completeFinishedTrips, nightlyDigest } from './jobs/nightly-digest'
 import TravelPage from './ui/TravelPage'
+import { TravelTile } from './ui/Tile'
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD')
 const time = z.string().regex(/^\d{2}:\d{2}$/, 'Expected HH:MM')
@@ -219,6 +220,9 @@ export default defineModule({
       },
     },
   },
+
+  /** See ModuleManifest.tile: the module says how its own numbers read. */
+  tile: TravelTile,
 
   jobs: [
     { name: 'complete_trips', run: completeFinishedTrips },

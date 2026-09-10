@@ -4,6 +4,7 @@ import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
 import { nightlyDigest } from './jobs/nightly-digest'
 import HealthPage from './ui/HealthPage'
+import { HealthTile } from './ui/Tile'
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD')
 
@@ -206,6 +207,9 @@ export default defineModule({
       get: async () => (await nightlyDigest()).screeningsDue.length,
     },
   },
+
+  /** See ModuleManifest.tile: the module says how its own numbers read. */
+  tile: HealthTile,
 
   jobs: [{ name: 'nightly_digest', run: nightlyDigest }],
   entityTypes: ['appointment', 'screening'],

@@ -7,6 +7,7 @@ import { nightlyDigest } from './jobs/nightly-digest'
 import InsurancePage from './ui/InsurancePage'
 import { annualCents, type Cadence } from './premium'
 import { listPolicies } from './data'
+import { InsuranceTile } from './ui/Tile'
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD')
 
@@ -184,6 +185,9 @@ export default defineModule({
       },
     },
   },
+
+  /** See ModuleManifest.tile: the module says how its own numbers read. */
+  tile: InsuranceTile,
 
   jobs: [{ name: 'nightly_digest', run: nightlyDigest }],
   entityTypes: ['policy'],

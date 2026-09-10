@@ -5,6 +5,7 @@ import { defineModule, defineTool } from '@/core/module-contract'
 import { findOrCreateProject, patchTask } from './data'
 import { nightlyDigest, rollForward } from './jobs/nightly-digest'
 import TasksPage from './ui/TasksPage'
+import { TasksTile } from './ui/Tile'
 
 const priority = z.enum(['P1', 'P2', 'P3'])
 
@@ -250,6 +251,9 @@ export default defineModule({
       }
     },
   },
+
+  /** See ModuleManifest.tile: the module says how its own numbers read. */
+  tile: TasksTile,
 
   jobs: [
     { name: 'roll_forward', run: rollForward },

@@ -5,6 +5,7 @@ import SkillTreePage from './ui/SkillTreePage'
 import { classify } from './classify'
 import { nightlyDigest } from './jobs/nightly-digest'
 import { reclassify } from './jobs/reclassify'
+import { SkillsTile } from './ui/Tile'
 
 // The Skill Tree. It owns the tree, the XP weights and the level function, and
 // it is the module that supplies core with a classifier: core/entities.ts calls
@@ -108,6 +109,9 @@ export default defineModule({
 
   // reclassify before the digest: it is what turns a parked row into a real
   // skill link, and the digest counts those links.
+  /** See ModuleManifest.tile: the module says how its own numbers read. */
+  tile: SkillsTile,
+
   jobs: [
     { name: 'reclassify', run: reclassify },
     { name: 'nightly_digest', run: nightlyDigest },

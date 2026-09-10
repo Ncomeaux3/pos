@@ -8,6 +8,7 @@ import { nightlyDigest } from './jobs/nightly-digest'
 import { thisWeek } from './data'
 import { load } from './units'
 import FitnessPage from './ui/FitnessPage'
+import { FitnessTile } from './ui/Tile'
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD')
 
@@ -268,6 +269,9 @@ export default defineModule({
       },
     },
   },
+
+  /** See ModuleManifest.tile: the module says how its own numbers read. */
+  tile: FitnessTile,
 
   jobs: [
     // Sync first: the digest and the coach both read what it wrote.

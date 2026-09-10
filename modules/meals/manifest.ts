@@ -4,6 +4,7 @@ import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
 import { nightlyDigest } from './jobs/nightly-digest'
 import MealsPage from './ui/MealsPage'
+import { MealsTile } from './ui/Tile'
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD')
 const slot = z.enum(['breakfast', 'lunch', 'dinner', 'snack'])
@@ -224,6 +225,9 @@ export default defineModule({
       },
     },
   },
+
+  /** See ModuleManifest.tile: the module says how its own numbers read. */
+  tile: MealsTile,
 
   jobs: [{ name: 'nightly_digest', run: nightlyDigest }],
   entityTypes: ['recipe'],

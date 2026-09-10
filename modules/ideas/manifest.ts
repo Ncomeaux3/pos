@@ -5,6 +5,7 @@ import { defineModule, defineTool } from '@/core/module-contract'
 import { nightlyDigest } from './jobs/nightly-digest'
 import { researchIdea } from './jobs/research'
 import IdeasPage from './ui/IdeasPage'
+import { IdeasTile } from './ui/Tile'
 
 const level = z.number().int().min(1).max(3)
 
@@ -133,6 +134,9 @@ export default defineModule({
       },
     },
   },
+
+  /** See ModuleManifest.tile: the module says how its own numbers read. */
+  tile: IdeasTile,
 
   jobs: [{ name: 'nightly_digest', run: nightlyDigest }],
   entityTypes: ['idea'],

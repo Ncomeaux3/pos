@@ -6,6 +6,7 @@ import { listServices, ownerToday, toSchedule } from './data'
 import { nightlyDigest } from './jobs/nightly-digest'
 import HomePage from './ui/HomePage'
 import { dueLabel, dueStatus } from './schedule'
+import { HomeTile } from './ui/Tile'
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD')
 
@@ -251,6 +252,9 @@ export default defineModule({
       }
     },
   },
+
+  /** See ModuleManifest.tile: the module says how its own numbers read. */
+  tile: HomeTile,
 
   jobs: [{ name: 'nightly_digest', run: nightlyDigest }],
   entityTypes: ['asset', 'service_log'],
