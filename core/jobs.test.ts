@@ -101,6 +101,7 @@ describe('notifications', () => {
       title: `Alert ${i}`,
       body: 'detail',
       urgency: 'normal',
+      channel: 'email',
     }))
 
     const body = renderEmail('Two things need you.', items, 482)

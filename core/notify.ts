@@ -21,14 +21,26 @@ export async function queue(args: {
   )
 }
 
-export type Pending = { id: string; title: string; body: string; urgency: string }
+export type Pending = {
+  id: string
+  title: string
+  body: string
+  urgency: string
+  channel: string
+}
 
 /**
  * Quiet hours wrap midnight, so "inside" is a union of two ranges when from is
  * later than to. 22:00 to 06:30 is the overnight window, not an empty one.
+ *
+ * Takes minutes since midnight rather than a Date, and deliberately. It used to
+ * take a Date and read `getHours()`, which is the *server's* clock: on Vercel
+ * that is UTC, so an owner in Chicago had their quiet hours checked against a
+ * window five or six hours out. The caller resolves the timezone through
+ * minutesIn() and this stays pure, which is also what makes it testable
+ * without depending on the machine the test runs on.
  */
-export function inQuietHours(now: Date, from: string, to: string): boolean {
-  const minutes = now.getHours() * 60 + now.getMinutes()
+export function inQuietHours(minutes: number, from: string, to: string): boolean {
   const at = (hhmm: string) => {
     const [h, m] = hhmm.split(':').map(Number)
     return h * 60 + m
@@ -52,7 +64,7 @@ export async function pending(): Promise<Pending[]> {
   if (settings.notifications_paused) return []
 
   const { rows } = await db().query<Pending>(
-    `select n.id, n.title, n.body, n.urgency
+    `select n.id, n.title, n.body, n.urgency, n.channel
        from core.notifications n
        left join core.notification_rules r on r.id = n.rule_id
       where n.sent_at is null
@@ -63,11 +75,23 @@ export async function pending(): Promise<Pending[]> {
       order by (n.urgency = 'urgent') desc, n.due_at`,
   )
 
-  if (!inQuietHours(new Date(), settings.quiet_from, settings.quiet_to)) return rows
+  const { minutesIn } = await import('./today')
+  if (!inQuietHours(minutesIn(new Date(), settings.timezone), settings.quiet_from, settings.quiet_to)) {
+    return rows
+  }
 
-  // Inside quiet hours only urgent gets through, and only if the override is
-  // on. Everything else waits for morning.
-  return settings.quiet_urgent_override ? rows.filter((r) => r.urgency === 'urgent') : []
+  // Inside quiet hours: the daily digest still goes, everything else waits.
+  //
+  // The digest is exempt because it is the thing the owner asked to receive,
+  // not an interruption, and because holding it would mean never sending it.
+  // There is one cron run a day and it fires at 03:00 or 04:00 local, which is
+  // inside any sensible overnight window: a digest held for "later" would find
+  // that later is tomorrow's run, also inside the window, forever.
+  //
+  // Urgent still gets through on the override, as before.
+  return rows.filter(
+    (r) => r.channel === 'digest' || (settings.quiet_urgent_override && r.urgency === 'urgent'),
+  )
 }
 
 /**

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { inQuietHours } from './notify'
+import { clockIn, dayIn, minutesIn } from './today'
 import { isLive, leadLabel, leadOptions, ruleState, type Rule } from './notification-rules'
 
 const rule = (over: Partial<Rule> = {}): Rule => ({
@@ -20,9 +21,12 @@ const rule = (over: Partial<Rule> = {}): Rule => ({
   ...over,
 })
 
+// Minutes since midnight. inQuietHours takes these rather than a Date so it
+// does not read a clock, which is what made it check the server's timezone
+// instead of the owner's.
 const at = (hhmm: string) => {
   const [h, m] = hhmm.split(':').map(Number)
-  return new Date(2026, 8, 8, h, m)
+  return h * 60 + m
 }
 
 describe('inQuietHours', () => {
@@ -85,5 +89,36 @@ describe('lead times', () => {
     expect(leadOptions('travel')).toContain(0.5)
     expect(leadOptions('finance')).toEqual([0, 1, 3, 7, 14])
     expect(leadOptions('anything-else')).toEqual([0, 1, 3, 7, 14])
+  })
+})
+
+// The bug this replaced: inQuietHours read the server clock. On Vercel that is
+// UTC, so an owner in Chicago at 19:34 was measured as 00:34 and held inside a
+// window they were nowhere near.
+describe('the owner clock, not the server clock', () => {
+  const evening = new Date('2026-09-10T00:34:00Z') // 19:34 the previous day in Chicago
+
+  it('reads the hour in the owner timezone', () => {
+    expect(minutesIn(evening, 'America/Chicago')).toBe(19 * 60 + 34)
+    expect(minutesIn(evening, 'UTC')).toBe(34)
+  })
+
+  it('is outside quiet hours in Chicago and inside them in UTC', () => {
+    expect(inQuietHours(minutesIn(evening, 'America/Chicago'), '22:00', '06:30')).toBe(false)
+    expect(inQuietHours(minutesIn(evening, 'UTC'), '22:00', '06:30')).toBe(true)
+  })
+
+  it('renders the owner date, not the server date', () => {
+    expect(dayIn(evening, 'America/Chicago')).toBe('9 SEP')
+    expect(dayIn(evening, 'UTC')).toBe('10 SEP')
+    expect(clockIn(evening, 'America/Chicago')).toBe('19:34')
+  })
+
+  // Daylight saving moves the offset, and an offset table would go stale.
+  it('follows daylight saving without a table', () => {
+    const winter = new Date('2026-01-15T09:00:00Z')
+    const summer = new Date('2026-07-15T09:00:00Z')
+    expect(clockIn(winter, 'America/Chicago')).toBe('03:00')
+    expect(clockIn(summer, 'America/Chicago')).toBe('04:00')
   })
 })

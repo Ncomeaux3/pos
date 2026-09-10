@@ -55,6 +55,15 @@ thing I cannot do: it needs your real keys.
 
 ## Decisions I would like from you
 
+- [ ] **`digest_morning_at` does nothing, and cannot without a second cron.**
+      The setting is stored, shown on Settings > Notifications, and read by
+      nothing that sends. With one Vercel cron a day the digest goes out when
+      that run fires, which is 03:00 or 04:00 your time, and no setting can
+      move it. Three honest options: remove the control, relabel it as a
+      description of when the run happens, or go to a plan with more cron runs
+      and have the sender wait for the hour you picked. My preference is to
+      relabel it, since the current control lies.
+
 - [x] **2026-09-09. Strava and the Obsidian vault have real Test buttons now**,
       and clients behind them. Strava also has a nightly `fitness.sync_strava`
       job. SimpleFIN and Health Auto Export are still stubs, by your choice:
@@ -144,6 +153,15 @@ Test button now, so you get a clear yes or no rather than "not verified".
       sleep and resting heart rate.
 
 ## Decisions I would like from you
+
+- [ ] **`digest_morning_at` does nothing, and cannot without a second cron.**
+      The setting is stored, shown on Settings > Notifications, and read by
+      nothing that sends. With one Vercel cron a day the digest goes out when
+      that run fires, which is 03:00 or 04:00 your time, and no setting can
+      move it. Three honest options: remove the control, relabel it as a
+      description of when the run happens, or go to a plan with more cron runs
+      and have the sender wait for the hour you picked. My preference is to
+      relabel it, since the current control lies.
 
 - [ ] **Three tables were renamed or collapsed without a spec amendment.**
       `finance.budget_lines` folded into `finance.budget`, `travel.bookings`

@@ -1,6 +1,7 @@
 import { Card, CardHead, Chip, Eyebrow, MetricTile, PageHeader, StatusChip } from '@/components/pos'
 import { getModule } from '@/core/modules'
 import { getSetting } from '@/core/settings'
+import { clockIn, dayIn } from '@/core/today'
 import { listRuns, listUndone } from '@/core/writelog'
 import { duration, summarise, type Entry, type Job, type Run } from '@/core/writelog-shape'
 import { AutonomyPicker } from '../settings/agents/AutonomyPicker'
@@ -11,23 +12,19 @@ function label(id: string): string {
   return getModule(id)?.nav.label ?? id[0].toUpperCase() + id.slice(1)
 }
 
-const clock = (at: Date) => new Date(at).toTimeString().slice(0, 5)
-
-// "7 SEP", not the locale's "7 Sept". Three letters, so the column stays the
-// same width whichever month it is.
-const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
-
-const day = (at: Date) => {
-  const d = new Date(at)
-  return `${d.getDate()} ${MONTHS[d.getMonth()]}`
-}
-
 export default async function AgentLogPage() {
-  const [{ runs, entries }, undone, autonomy] = await Promise.all([
+  const [{ runs, entries }, undone, autonomy, timezone] = await Promise.all([
     listRuns(),
     listUndone(),
     getSetting('agent_autonomy'),
+    getSetting('timezone'),
   ])
+
+  // In the owner's timezone, not the server's. On Vercel the server is UTC, so
+  // a run at 19:34 in Chicago rendered as 00:34 the following day and the log
+  // showed tomorrow's date all evening.
+  const clock = (at: Date) => clockIn(new Date(at), timezone)
+  const day = (at: Date) => dayIn(new Date(at), timezone)
 
   const shaped: Run[] = runs.map((r) => {
     const jobs: Job[] = r.log.jobs ?? []
