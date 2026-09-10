@@ -51,3 +51,4 @@ e2e/.results/
 e2e/__screens__/
 test-results/
 playwright-report/
+.worktrees/
