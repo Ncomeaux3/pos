@@ -69,7 +69,7 @@ export default async function SettingsPage() {
   const usedPct = capCents > 0 ? Math.min(100, Math.round((spendCents / capCents) * 100)) : 0
 
   return (
-    <div className="max-w-3xl space-y-7">
+    <div className="space-y-7">
       <PageHeader
         eyebrow="Settings / General"
         dot={connected > 0 ? 'brand' : 'idle'}
@@ -84,7 +84,10 @@ export default async function SettingsPage() {
 
       <TabLinks tabs={settingsTabs(getIntegrations().length)} current="/settings" label="Settings sections" />
 
-      <form action={save} className="space-y-6">
+      {/* Two columns at width, one on a phone. The artboard's settings panes
+        * run the full page rather than sitting in a narrow measure: these are
+        * forms, not prose. */}
+      <form action={save} className="grid items-start gap-4 lg:grid-cols-2">
         <Card className="space-y-4">
           <CardHead label="Owner" meta="core.settings" />
 
@@ -149,7 +152,7 @@ export default async function SettingsPage() {
           </Field>
         </Card>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 lg:col-span-2">
           <ActionButton variant="solid" type="submit">
             Save
           </ActionButton>
