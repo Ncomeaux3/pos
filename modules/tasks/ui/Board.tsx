@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useMemo, useState, useTransition } from 'react'
+import { useMemo, useState, useTransition, useRef } from 'react'
 import {
   ActionButton,
   Chip,
@@ -54,9 +54,6 @@ export function Board({
     router.replace(query ? `?${query}` : '?', { scroll: false })
   }
 
-  const setView = (next: View) => setParams({ view: next === 'today' ? null : next })
-  const setShowCalendar = (on: boolean) => setParams({ month: on ? '1' : null })
-
   const [selected, setSelected] = useState<Task | null>(null)
   const [dragging, setDragging] = useState<string | null>(null)
   const [pending, start] = useTransition()
@@ -102,24 +99,27 @@ export function Board({
 
   return (
     <div className="space-y-5">
-      <TabBar
-        label="Task views"
-        value={view}
-        onChange={(next) => setView(next as View)}
-        tabs={VIEWS.map((v) => ({ value: v.value, label: v.label, count: counts[v.value] }))}
-      />
-
+      {/* The artboard's order: the line you type a task on comes first, the
+        * views under it. Adding is the thing this screen is for. */}
       <QuickAdd projects={projects.map((p) => p.name)} today={today} onSave={run} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Eyebrow>{showCalendar ? 'Month' : VIEWS.find((v) => v.value === view)?.label}</Eyebrow>
-        <ActionButton
-          variant={showCalendar ? 'brand' : 'outline'}
-          onClick={() => setShowCalendar(!showCalendar)}
-        >
-          {showCalendar ? 'Back to the board' : 'Month view'}
-        </ActionButton>
-      </div>
+      <TabBar
+        label="Task views"
+        value={showCalendar ? 'calendar' : view}
+        // One write to the query, not two: each setParams builds from the
+        // current params, so a pair of them would drop the first.
+        onChange={(next) =>
+          setParams(
+            next === 'calendar'
+              ? { month: '1' }
+              : { month: null, view: next === 'today' ? null : next },
+          )
+        }
+        tabs={[
+          ...VIEWS.map((v) => ({ value: v.value, label: v.label, count: counts[v.value] })),
+          { value: 'calendar', label: 'Calendar' },
+        ]}
+      />
 
       {showCalendar ? (
         <Calendar
@@ -321,6 +321,14 @@ function Card({
 }
 
 /** The one line that takes a whole task, and says what it understood first. */
+/**
+ * The line you type a task on, and the button beside it.
+ *
+ * The artboard's shape: one 44px field with a + in front of it, what the
+ * parser understood shown as chips inside the field rather than under it, and
+ * the token hint sitting where the chips will be until you type. Nothing is
+ * saved until Add, so a misread token is caught by the reader first.
+ */
 function QuickAdd({
   projects,
   today,
@@ -331,6 +339,7 @@ function QuickAdd({
   onSave: (action: () => Promise<ActionResult>, ok?: string) => void
 }) {
   const [text, setText] = useState('')
+  const field = useRef<HTMLInputElement>(null)
   const parsed = useMemo(
     () => parseQuickAdd(text, { projects, now: today }),
     [text, projects, today],
@@ -363,45 +372,60 @@ function QuickAdd({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-2">
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              save()
-            }
-          }}
-          aria-label="Add a task"
-          placeholder="Pay the Amex !p1 #Finance @tomorrow 5m"
-          className={cn(fieldClass, 'min-w-0 flex-1 basis-[280px]')}
-        />
-        <ActionButton variant="brand" disabled={!parsed.title} onClick={save}>
-          Add
+      <div className="flex flex-wrap gap-2.5">
+        {/* New task is the same act as typing one, so it puts the cursor
+          * where a task is typed rather than opening a second way to do it. */}
+        <ActionButton size="lg" variant="accent" onClick={() => field.current?.focus()}>
+          New task
         </ActionButton>
-      </div>
 
-      {/* Shown before anything is saved, so a misread token is caught by the
-          reader rather than discovered later in the wrong column. */}
-      {text.trim() !== '' && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          {parsed.title ? (
-            <span className="t-caption text-ink-2">{parsed.title}</span>
-          ) : (
-            <span className="t-caption text-ink-3">Needs a title</span>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            save()
+          }}
+          className={cn(
+            'flex h-11 min-w-0 flex-1 basis-[280px] items-center border bg-bg-elev transition-colors duration-150',
+            parsed.title ? 'border-brand' : 'border-rule-2',
           )}
-          {parsed.parsed.map((p) => (
-            <Chip key={p.field} tone="brand">
-              {p.field} {p.value}
-            </Chip>
-          ))}
-          {parsed.parsed.length === 0 && parsed.title && (
-            <span className="t-caption text-ink-3">
-              No tokens read. Try !p1, #project, @thursday, 30m.
+        >
+          <span className="num pl-4 pr-3 text-[13px] text-ink-4" aria-hidden>
+            +
+          </span>
+          <input
+            ref={field}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            aria-label="Add a task"
+            placeholder="Add a task, e.g. Renew renters policy !p1 #Home @fri 30m"
+            className="min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-ink-4"
+          />
+
+          {text.trim() === '' ? (
+            <span className="label hidden whitespace-nowrap px-4 text-[10px] tracking-[0.08em] text-ink-4 sm:inline">
+              !p1 · #project · @day · 30m
+            </span>
+          ) : (
+            <span className="flex shrink-0 items-center gap-1.5 pr-3">
+              {parsed.parsed.map((p) => (
+                <Chip key={p.field} tone="brand">
+                  {p.value}
+                </Chip>
+              ))}
+              <button
+                type="submit"
+                disabled={!parsed.title}
+                className="label shrink-0 bg-ink px-2.5 py-1.5 text-[10px] tracking-[0.08em] text-bg disabled:bg-rule-2 disabled:text-ink-4"
+              >
+                Add
+              </button>
             </span>
           )}
-        </div>
+        </form>
+      </div>
+
+      {text.trim() !== '' && !parsed.title && (
+        <p className="t-caption text-ink-3">Needs a title. Tokens alone are not a task.</p>
       )}
     </div>
   )

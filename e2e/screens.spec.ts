@@ -419,11 +419,13 @@ test('tasks, the board and the quick add parser', async ({ page }) => {
   // Deliberately not a phrase any seeded task starts with, or the parsed title
   // matches a card on the board behind it as well as the preview.
   await line.fill('Ring the plumber !p1 #Home @tomorrow 15m')
-  await expect(page.getByText('Ring the plumber')).toBeVisible()
-  await expect(page.getByText('Due Tomorrow')).toBeVisible()
-  await expect(page.getByText('Priority P1')).toBeVisible()
-  await expect(page.getByText('Project Home')).toBeVisible()
-  await expect(page.getByText('Estimate 15m')).toBeVisible()
+  // The chips sit inside the field and carry the value alone, as the artboard
+  // has them: the token that produced each one is still on the line beside it.
+  const chips = page.locator('form:has([aria-label="Add a task"])')
+  await expect(chips.getByText('Tomorrow')).toBeVisible()
+  await expect(chips.getByText('P1')).toBeVisible()
+  await expect(chips.getByText('Home')).toBeVisible()
+  await expect(chips.getByText('15m')).toBeVisible()
 
   await shoot(page, 'tasks')
 })
@@ -449,7 +451,9 @@ test('tasks, the six views and the month grid', async ({ page }) => {
   await page.getByRole('tab', { name: /By goal/ }).click()
   await expect(page.getByText('No goal')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Month view' }).click()
+  // The month grid is a view like the others, so it is a tab rather than a
+  // button beside them.
+  await page.getByRole('tab', { name: 'Calendar' }).click()
   await expect(page.getByRole('button', { name: 'Previous month' })).toBeVisible()
   await expect(page).toHaveURL(/month=1/)
   await shoot(page, 'tasks-calendar')
