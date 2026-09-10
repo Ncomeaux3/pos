@@ -7,17 +7,24 @@ export function WeeklyBars({ weeks }: { weeks: number[] }) {
 
   return (
     <div className="space-y-1">
-      <svg viewBox="0 0 100 34" preserveAspectRatio="none" className="h-[34px] w-full" role="img" aria-label="XP by week over 90 days">
-        {weeks.map((value, i) => (
-          <rect
-            key={i}
-            x={i * w + w * 0.15}
-            y={34 - (value / max) * 34}
-            width={w * 0.7}
-            height={Math.max(value > 0 ? 1 : 0, (value / max) * 34)}
-            fill={value > 0 ? 'var(--accent)' : 'var(--rule-2)'}
-          />
-        ))}
+      <svg viewBox="0 0 100 34" preserveAspectRatio="none" className="h-[64px] w-full" role="img" aria-label="XP by week over 90 days">
+        {weeks.map((value, i) => {
+          // Every week draws a bar, a quiet one included. A zero height rect is
+          // nothing at all on screen, which left a 90 day chart showing a
+          // single spike floating in an empty box with no axis under it.
+          const h = Math.max(1, (value / max) * 33)
+          return (
+            <rect
+              key={i}
+              x={i * w + w * 0.15}
+              y={33 - h}
+              width={w * 0.7}
+              height={h}
+              fill={value > 0 ? 'var(--accent)' : 'var(--rule-2)'}
+            />
+          )
+        })}
+        <line x1="0" y1="33.5" x2="100" y2="33.5" stroke="var(--rule-2)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
       </svg>
       <div className="eyebrow flex justify-between text-ink-3">
         <span>&minus;90D</span>

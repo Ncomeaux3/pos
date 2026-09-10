@@ -4,11 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import type { SkillStat } from '../data'
 import type { SkillNode } from '../tree'
-import { layout, nodeRadius, ROOT_ID, type Placed } from './layout'
+import { layout, nodeRadius, ROOT_ID, VIEW_H, VIEW_W, type Placed } from './layout'
 
 // Obsidian style, but placed rather than simulated: see ./layout.ts.
 
-const VIEW = 900
 const ZOOM_MIN = 0.4
 const ZOOM_MAX = 3
 
@@ -22,12 +21,12 @@ const ZOOM_MAX = 3
  */
 function viewPoint(svg: SVGSVGElement, clientX: number, clientY: number) {
   const box = svg.getBoundingClientRect()
-  const scale = Math.min(box.width, box.height) / VIEW
+  const scale = Math.min(box.width / VIEW_W, box.height / VIEW_H)
 
   return {
     scale,
-    x: (clientX - box.left - (box.width - VIEW * scale) / 2) / scale - VIEW / 2,
-    y: (clientY - box.top - (box.height - VIEW * scale) / 2) / scale - VIEW / 2,
+    x: (clientX - box.left - (box.width - VIEW_W * scale) / 2) / scale - VIEW_W / 2,
+    y: (clientY - box.top - (box.height - VIEW_H * scale) / 2) / scale - VIEW_H / 2,
   }
 }
 
@@ -55,6 +54,14 @@ const TONE_FILL: Record<Tone, string> = {
   stagnant: '#5b6b7d',
 }
 
+/** Label sizes by ring, off the artboard. */
+const LABEL_SIZE: Record<string, number> = {
+  root: 13,
+  attribute: 12,
+  category: 10.5,
+  leaf: 9.5,
+}
+
 /** The blurred bloom behind a node. Accent only when it is gaining. */
 const HALO_COLOR: Record<Tone, string> = {
   gaining: 'var(--accent)',
@@ -69,8 +76,8 @@ const HALO_COLOR: Record<Tone, string> = {
  * hover, and the server and client markup have to agree or React complains
  * about the mismatch.
  */
-function starfield(count: number, seed: number, size: number) {
-  const out: { x: number; y: number; r: number; o: number }[] = []
+function starfield(count: number, seed: number) {
+  const out: { x: number; y: number; r: number; delay: number; period: number }[] = []
   let n = seed
   const next = () => {
     // Numerical Recipes LCG. Small, deterministic, and good enough for dust.
@@ -78,7 +85,13 @@ function starfield(count: number, seed: number, size: number) {
     return n / 4294967296
   }
   for (let i = 0; i < count; i++) {
-    out.push({ x: next() * size, y: next() * size, r: 0.4 + next() * 1.1, o: 0.12 + next() * 0.5 })
+    out.push({
+      x: next() * VIEW_W - VIEW_W / 2,
+      y: next() * VIEW_H - VIEW_H / 2,
+      r: 0.4 + next() * 1.1,
+      delay: next() * 3,
+      period: 2 + next() * 4,
+    })
   }
   return out
 }
@@ -192,16 +205,40 @@ export function Constellation({
   const dimmed = (id: string) => hover !== null && !related.has(id)
 
   // Seeded once. A field regenerated per render would flicker on every hover.
-  const stars = useMemo(() => starfield(150, 20260909, VIEW), [])
+  const stars = useMemo(() => starfield(140, 20260909), [])
+
+  /**
+   * One haze per attribute, pushed out past its own star.
+   *
+   * These used to be five circles at random points in the box, which is what
+   * put soft green discs in empty sky with nothing under them. Anchored to the
+   * attributes they are what the artboard draws: a bloom around the tree,
+   * brightest where the tree actually is.
+   */
   const nebulae = useMemo(
-    () => starfield(5, 71, VIEW).map((n) => ({ ...n, r: 90 + n.o * 190 })),
-    [],
+    () =>
+      placed
+        .filter((p) => p.ring === 'attribute')
+        .map((p) => ({ x: p.x * 2.25, y: p.y * 2.25 })),
+    [placed],
   )
+
+  /**
+   * How much bigger a label is drawn as you zoom in.
+   *
+   * Labels live inside the scaled group, so at zoom 2 they would double with
+   * everything else and the tree would read as one word per screen. The
+   * artboard scales text by scale^0.7 against a viewBox, which comes out here
+   * as zoom^-0.7: on screen a label still grows, but by a third of the zoom
+   * rather than all of it.
+   */
+  const ts = Math.min(1.6, Math.max(0.6, Math.pow(1 / zoom, 0.7)))
+  const lift = Math.max(1, ts)
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
       <div className="absolute right-3 top-3 z-10 flex gap-2">
-        <button type="button" onClick={reset} className="eyebrow rounded-[8px] border border-rule px-2 py-1 text-ink-2 hover:text-ink">
+        <button type="button" onClick={reset} className="eyebrow border border-white/14 px-2 py-1 text-[#8fa3b8] hover:text-white">
           Reset view
         </button>
       </div>
@@ -210,7 +247,7 @@ export function Constellation({
         ref={svg}
         role="img"
         aria-label="Skill constellation"
-        viewBox={`${-VIEW / 2} ${-VIEW / 2} ${VIEW} ${VIEW}`}
+        viewBox={`${-VIEW_W / 2} ${-VIEW_H / 2} ${VIEW_W} ${VIEW_H}`}
         className="h-full min-h-[320px] w-full cursor-grab touch-none select-none active:cursor-grabbing"
         onPointerDown={(e) => {
           drag.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y, panning: false }
@@ -285,15 +322,16 @@ export function Constellation({
         {stars.map((s, i) => (
           <circle
             key={i}
-            cx={s.x - VIEW / 2}
-            cy={s.y - VIEW / 2}
+            cx={s.x}
+            cy={s.y}
             r={s.r}
             fill="#cfe6ff"
-            opacity={s.o}
+            className="skill-twinkle"
+            style={{ animationDelay: `${s.delay}s`, animationDuration: `${s.period}s` }}
           />
         ))}
         {nebulae.map((n, i) => (
-          <circle key={i} cx={n.x - VIEW / 2} cy={n.y - VIEW / 2} r={n.r} fill="url(#skill-neb)" />
+          <circle key={i} cx={n.x} cy={n.y} r={210} fill="url(#skill-neb)" />
         ))}
 
         <g transform={`scale(${zoom}) translate(${pan.x} ${pan.y})`}>
@@ -442,17 +480,34 @@ export function Constellation({
                   opacity={dim ? 0.35 : 1}
                   className="transition-[r,opacity] duration-200"
                 />
-                {node.ring !== 'leaf' || zoom > 0.85 ? (
-                  <text
-                    y={r + 13}
-                    textAnchor="middle"
-                    className="pointer-events-none transition-colors duration-200"
-                    fill={dim ? '#3d4b5c' : isRoot || node.ring === 'attribute' ? '#ffffff' : '#cfe6ff'}
-                    style={{ fontSize: node.ring === 'leaf' ? 11 : 13, fontWeight: 500 }}
-                  >
-                    {isRoot ? `Lv ${characterLevel}` : (stat?.name ?? node.id)}
-                  </text>
-                ) : null}
+                {/* Name, then level under it, both in the artboard's sizes.
+                  * The level line is the reason a star means anything at a
+                  * glance: without it the tree is a field of unlabelled dots
+                  * and every reading of it needs a click. */}
+                <text
+                  y={(r + (isRoot ? 18 : 15)) * lift}
+                  textAnchor="middle"
+                  className="pointer-events-none transition-colors duration-200"
+                  fill={dim ? '#3d4b5c' : isRoot || node.ring === 'attribute' ? '#ffffff' : '#cfe6ff'}
+                  style={{ fontSize: LABEL_SIZE[node.ring] * ts }}
+                >
+                  {isRoot ? 'You' : (stat?.name ?? node.id)}
+                </text>
+                <text
+                  y={(r + (isRoot ? 30 : 26)) * lift}
+                  textAnchor="middle"
+                  className="label pointer-events-none"
+                  fill="#8fa3b8"
+                  // Zoomed out far enough that a leaf's own name is already
+                  // crowding its neighbours, the second line comes off.
+                  opacity={node.ring === 'leaf' && zoom < 0.91 ? 0 : dim ? 0.35 : 1}
+                  style={{ fontSize: 8.5 * ts }}
+                >
+                  LV {level}
+                  {!isRoot && (stat?.gained30d ?? 0) > 0
+                    ? ` +${Math.round(stat!.gained30d).toLocaleString()}`
+                    : ''}
+                </text>
               </g>
             )
           })}
@@ -468,18 +523,18 @@ export function Constellation({
         * overlays, and it sits in a corner the tree does not reach. */}
       {hovered && hover && (
         <div
-          className="pointer-events-none absolute z-20 w-[236px] border border-rule-2 bg-bg-elev shadow-[0_12px_32px_rgba(0,0,0,.55)]"
+          className="pointer-events-none absolute z-20 w-[236px] border border-white/18 bg-[#060a10] shadow-[0_12px_32px_rgba(0,0,0,.55)]"
           style={{
             // Beside the star, and flipped to the other side near an edge so
             // the card never hangs off the canvas.
             left: hover.x + 18,
             top: hover.y + 14,
-            transform: `translate(${hover.x > 620 ? '-100%' : '0'}, ${hover.y > 380 ? '-100%' : '0'})`,
+            transform: `translate(${hover.x > 620 ? '-100%' : '0'}, ${hover.y > 300 ? '-100%' : '0'})`,
           }}
         >
-          <div className="flex items-baseline justify-between gap-3 border-b border-rule px-3 py-2">
-            <span className="truncate text-[13px] text-ink">{hovered.name}</span>
-            <span className="num shrink-0 text-[11px] text-ink-3">
+          <div className="flex items-baseline justify-between gap-3 border-b border-white/12 px-3 py-2">
+            <span className="truncate text-[13px] text-white">{hovered.name}</span>
+            <span className="num shrink-0 text-[11px] text-[#8fa3b8]">
               Lv {hovered.level}
               {branches.length > 0 &&
                 ` · ${branches.length} ${branches.length === 1 ? 'branch' : 'branches'}`}
@@ -492,8 +547,8 @@ export function Constellation({
             <div className="px-3 py-1.5">
               {branches.slice(0, 6).map((b) => (
                 <div key={b.id} className="flex items-baseline justify-between gap-3 py-[3px]">
-                  <span className="truncate text-[12px] text-ink-2">{b.name}</span>
-                  <span className="num shrink-0 text-[11px] text-ink-3">
+                  <span className="truncate text-[12px] text-[#cfe6ff]">{b.name}</span>
+                  <span className="num shrink-0 text-[11px] text-[#8fa3b8]">
                     Lv {b.level} ({Math.round(b.xp).toLocaleString()})
                   </span>
                 </div>
@@ -502,15 +557,15 @@ export function Constellation({
           ) : (
             <div className="px-3 py-1.5">
               <div className="flex items-baseline justify-between gap-3 py-[3px]">
-                <span className="text-[12px] text-ink-2">Total</span>
-                <span className="num text-[11px] text-ink-3">
+                <span className="text-[12px] text-[#cfe6ff]">Total</span>
+                <span className="num text-[11px] text-[#8fa3b8]">
                   {Math.round(hovered.xp).toLocaleString()} XP
                 </span>
               </div>
             </div>
           )}
 
-          <div className="label border-t border-rule px-3 py-1.5 text-[10px] tracking-[0.08em] text-ink-3">
+          <div className="label border-t border-white/12 px-3 py-1.5 text-[10px] tracking-[0.08em] text-[#6f8399]">
             {hovered.gained30d > 0
               ? `+${Math.round(hovered.gained30d).toLocaleString()} XP in 30 days`
               : 'Nothing in 30 days'}
@@ -519,8 +574,8 @@ export function Constellation({
       )}
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
-        <span className="eyebrow text-ink-3">Hover: details · Click: inspect</span>
-        <span className="eyebrow text-ink-3">Scroll: zoom · Drag: pan</span>
+        <span className="eyebrow text-[#6f8399]">Hover: details · Click: inspect</span>
+        <span className="eyebrow text-[#6f8399]">Scroll: zoom · Drag: pan</span>
       </div>
     </div>
   )

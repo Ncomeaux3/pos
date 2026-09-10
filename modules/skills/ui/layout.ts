@@ -9,12 +9,33 @@ export type Placed = { id: string; x: number; y: number; ring: Ring; parent?: st
 
 export const ROOT_ID = '__you'
 
+/**
+ * The canvas the tree is placed in, landscape as the artboard has it.
+ *
+ * A square box was the reason the constellation sat in a small island in the
+ * middle of a wide canvas: fitted xMidYMid meet, a square viewBox in a
+ * landscape container scales by the height and leaves the width empty.
+ */
+export const VIEW_W = 1200
+export const VIEW_H = 760
+
 const ATTR_RX = 150
 const ATTR_RY = 120
-const LEAF_R_MIN = 330
-const LEAF_R_MAX = 364
-/** Radians of the wedge left empty between two attributes, so fans do not touch. */
-const WEDGE_GAP = 0.18
+const LEAF_R = 330
+/** Every other leaf pushed out, so adjacent labels do not collide. */
+const LEAF_STAGGER = 34
+/** The ellipse the whole outer ring is drawn on: wide and short, to fill the box. */
+const LEAF_KX = 1.15
+const LEAF_KY = 0.86
+/**
+ * How much of its wedge an attribute's fan uses.
+ *
+ * Under the ellipse an angle near the vertical opens up by about a third, so
+ * the fans of the top attribute would cross into its neighbours at the
+ * artboard's 0.82. This is the widest fan that still lands inside the wedge
+ * after the skew, which is what layout.test.ts checks.
+ */
+const SPREAD = 0.75
 
 const at = (angle: number, rx: number, ry: number) => ({
   x: Math.cos(angle) * rx,
@@ -52,16 +73,15 @@ export function layout(nodes: SkillNode[]): Placed[] {
       (childrenOf.get(id) ?? []).flatMap((c) => [c, ...descendants(c.id)])
     const leaves = descendants(attribute.id).filter((n) => !childrenOf.has(n.id))
 
-    const span = wedge - WEDGE_GAP
+    const span = wedge * SPREAD
     const positions = new Map<string, { x: number; y: number }>()
 
     leaves.forEach((leaf, j) => {
       // One leaf sits on the wedge's centre line rather than at its edge.
-      const t = leaves.length === 1 ? 0.5 : j / (leaves.length - 1)
-      const angle = centre - span / 2 + t * span
-      // Alternate the radius so adjacent labels do not collide.
-      const radius = LEAF_R_MIN + (j % 2) * (LEAF_R_MAX - LEAF_R_MIN)
-      const point = at(angle, radius, radius)
+      const t = leaves.length === 1 ? 0 : j / (leaves.length - 1) - 0.5
+      const angle = centre + t * span
+      const radius = LEAF_R + (j % 2) * LEAF_STAGGER
+      const point = at(angle, radius * LEAF_KX, radius * LEAF_KY)
       positions.set(leaf.id, point)
       placed.push({ id: leaf.id, ...point, ring: 'leaf', parent: leaf.parent })
     })
@@ -91,8 +111,17 @@ export function layout(nodes: SkillNode[]): Placed[] {
   return placed
 }
 
-/** Node radius by level. Sized by level, per SPEC's "nodes sized by level". */
+/**
+ * Node radius, in the artboard's ratios.
+ *
+ * Only a leaf grows with its level, and it stops at Lv 20. The rings above it
+ * are fixed, because their size is what says which ring they are: attributes
+ * that grew past their root read as a flat field of blobs, which is what the
+ * old `base + level * 0.45` on every ring produced.
+ */
 export function nodeRadius(ring: Ring, level: number): number {
-  const base = ring === 'root' ? 26 : ring === 'attribute' ? 15 : ring === 'category' ? 10 : 7
-  return base + Math.min(level, 20) * 0.45
+  if (ring === 'root') return 14
+  if (ring === 'attribute') return 9
+  if (ring === 'category') return 6
+  return 3.5 + Math.min(4, Math.max(0, level) * 0.55)
 }

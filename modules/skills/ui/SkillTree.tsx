@@ -163,35 +163,48 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
     <div className="grid gap-5 lg:h-[calc(100dvh-var(--app-header,120px))] lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className="flex min-h-0 flex-col gap-5 lg:overflow-hidden">
         <Card className="flex min-h-0 flex-1 flex-col">
+          {/* The constellation is a night sky in both themes, which is how the
+            * artboard draws it: its section carries a hardcoded #05080c and
+            * the stars, edges and labels are lit for that ground. Left on the
+            * theme's own surface, the whole tree vanished in light. Everything
+            * inside this panel therefore states its colour rather than
+            * inheriting an ink. */}
+          <div className="-mx-5 -mt-4 flex min-h-0 flex-1 flex-col bg-[#05080c] px-5 pt-4">
           {/* Character sits on the canvas, top left, the way the design has
             * it: the constellation is the page and this is a legend for it,
             * not a separate card underneath. */}
           <div className="mb-3 flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
             <div>
-              <span className="eyebrow text-ink-3">Character</span>
+              <span className="eyebrow text-[#8fa3b8]">Character</span>
               <div className="mt-2 flex items-baseline gap-3">
-                <span className="num text-[34px] font-light leading-none tracking-[-0.02em] text-ink">
+                <span className="num text-[34px] font-light leading-none tracking-[-0.02em] text-white">
                   Lv {data.characterLevel}
                 </span>
-                <span className="text-[15px] text-ink-2">{characterTitle(data.characterLevel)}</span>
+                <span className="text-[15px] text-white">{characterTitle(data.characterLevel)}</span>
               </div>
-              <div className="num mt-1.5 text-[11px] text-ink-3">
+              <div className="num mt-1.5 text-[11px] text-[#8fa3b8]">
                 {round(data.totalXp)} XP · {round(toNext(data.totalXp).needed)} TO LV{' '}
                 {toNext(data.totalXp).next}
               </div>
             </div>
 
-            {/* One tile per attribute, which is the character sheet. */}
-            <div className="flex flex-wrap gap-px bg-rule-2">
+            {/* One tile per attribute, which is the character sheet.
+              * Cells on a hairline grid, the way the artboard has them: the
+              * fill used to be `bg-surface`, which is not a token here, so
+              * every cell was transparent and the strip read as one slab. The
+              * grid colour is `rule`, not `rule-2`: when the pips wrap, the
+              * remainder of the row is this background, and at rule-2 in light
+              * that leftover reads as a solid grey block. */}
+            <div className="flex flex-wrap gap-px border border-white/12 bg-white/12">
               {attributes.map((a) => (
                 <button
                   key={a.id}
                   type="button"
                   onClick={() => setSelected(a.id)}
-                  className="min-w-[72px] bg-surface px-3 py-2 text-left hover:bg-brand-soft"
+                  className="min-w-[72px] bg-[#0a1018] px-3 py-2 text-left hover:bg-brand-soft"
                 >
-                  <span className="eyebrow block truncate text-[9px] text-ink-3">{a.name}</span>
-                  <span className="num text-[17px] text-ink">{a.level}</span>
+                  <span className="eyebrow block truncate text-[9px] text-[#8fa3b8]">{a.name}</span>
+                  <span className="num text-[17px] text-white">{a.level}</span>
                 </button>
               ))}
             </div>
@@ -206,9 +219,9 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
             now={now}
             onReassign={onReassign}
           />
-          <div className="mt-3 flex flex-wrap gap-3 border-t border-rule pt-3">
+          <div className="mt-3 flex flex-wrap gap-3 border-t border-white/10 pb-4 pt-3">
             {(['gaining', 'active', 'stagnant'] as const).map((tone) => (
-              <span key={tone} className="eyebrow flex items-center gap-1.5 text-ink-3">
+              <span key={tone} className="eyebrow flex items-center gap-1.5 text-[#6f8399]">
                 <span
                   className="inline-block h-2 w-2 rounded-full"
                   style={{
@@ -224,10 +237,13 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
               </span>
             ))}
           </div>
-        </Card>
+          </div>
 
-        {/* The four column read of the whole tree, under the canvas. */}
-        <div className="grid shrink-0 gap-px bg-rule-2 sm:grid-cols-2 lg:grid-cols-4">
+          {/* The four column read of the whole tree, bled to the card's own
+            * edges under the canvas: in the artboard this strip is part of the
+            * constellation panel, divided from it and from itself by hairlines,
+            * not a separate block floating under it. */}
+          <div className="-mx-5 -mb-4 grid shrink-0 gap-px border-t border-rule bg-rule sm:grid-cols-2 lg:grid-cols-4">
           <Column label="Gaining fastest">
             {gainingFastest.length === 0 ? (
               <Quiet>Nothing gained XP in 30 days.</Quiet>
@@ -279,162 +295,186 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
               ))
             )}
           </Column>
-        </div>
-      </div>
-
-      <div className="min-h-0 space-y-5 lg:overflow-y-auto lg:pr-1">
-        <Card>
-          <CardHead label="Attributes" />
-          <div className="mt-3 flex justify-center">
-            <Radar axes={attributes.map((a) => ({ label: a.name, value: a.level }))} />
           </div>
         </Card>
+      </div>
 
-        {!stat ? (
-          <Card>
-            <CardHead label="Skill" />
-            <div className="mt-4">
+      {/* One column, the way the artboard has it: the attributes, a rule, then
+        * everything about the selected skill, then the formula pinned to the
+        * bottom. Five bordered cards with gaps between them is what made the
+        * rail read as a stack of unrelated boxes with a chart lost inside one
+        * of them. */}
+      <div className="min-h-0 lg:overflow-y-auto lg:pr-1">
+        <Card className="flex min-h-full flex-col">
+          <CardHead label="Attributes" />
+          <div className="mt-2 flex justify-center">
+            <Radar axes={attributes.map((a) => ({ label: a.name, value: a.level }))} size={200} />
+          </div>
+
+          <div className="mt-4 border-t border-rule pt-4">
+            {!stat ? (
               <EmptyState headline="Nothing selected">
                 Click a skill in the constellation to see its XP, the events behind it, and the
                 keywords that classify to it.
               </EmptyState>
-            </div>
-          </Card>
-        ) : (
-          <>
-            <Card>
-              <CardHead
-                label={stat.name}
-                meta={<Chip tone={toneFor(stat, now) === 'gaining' ? 'brand' : 'quiet'}>Lv {stat.level}</Chip>}
-              />
-              <div className="mt-4 space-y-3">
-                {path && <div className="eyebrow text-ink-3">{path}</div>}
+            ) : (
+              <div className="space-y-5" aria-busy={pending}>
+                <div>
+                  <span className="eyebrow text-ink-3">{path ?? 'Attribute'}</span>
+                  {/* Name and level on one baseline, then the bar: how close
+                    * the next level is should be a length, not a subtraction. */}
+                  <div className="mt-2 flex items-baseline justify-between gap-3">
+                    <h2 className="t-title truncate text-[22px] tracking-[-0.03em]">{stat.name}</h2>
+                    <span className="num shrink-0 text-[22px] font-light">Lv {stat.level}</span>
+                  </div>
+                  <div className="mt-3 h-0.5 bg-rule-2">
+                    <div
+                      className="h-0.5 bg-brand"
+                      style={{ width: `${Math.round(toNext(stat.xp).percent)}%` }}
+                    />
+                  </div>
+                  <div className="mt-1.5 flex items-baseline justify-between gap-3">
+                    <span className="num text-[11px] text-ink-3">{round(stat.xp)} XP</span>
+                    <span className="num text-[11px] text-ink-3">
+                      {round(toNext(stat.xp).needed)} to Lv {toNext(stat.xp).next}
+                    </span>
+                  </div>
+                </div>
 
-                {/* The design puts a bar under the name with the XP on the
-                  * left and what the next level costs on the right, so how
-                  * close you are is a length rather than a subtraction. */}
-                <div className="h-0.5 bg-rule-2">
-                  <div
-                    className="h-0.5 bg-brand"
-                    style={{ width: `${Math.round(toNext(stat.xp).percent)}%` }}
+                {/* Three cells on a hairline grid rather than three loose
+                  * columns, which is what the artboard draws and what makes
+                  * them read as one instrument. */}
+                <dl className="grid grid-cols-3 gap-px border border-rule bg-rule">
+                  <Stat
+                    label="30 days"
+                    value={stat.gained30d > 0 ? `+${round(stat.gained30d)} XP` : 'idle'}
+                    tone={stat.gained30d > 0 ? 'ok' : 'warn'}
                   />
-                </div>
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="num text-[11px] text-ink-3">{round(stat.xp)} XP</span>
-                  <span className="num text-[11px] text-ink-3">
-                    {round(toNext(stat.xp).needed)} to Lv {toNext(stat.xp).next}
-                  </span>
-                </div>
-                <dl className="grid grid-cols-3 gap-3 border-t border-rule pt-3">
-                  <Stat label="30 days" value={stat.gained30d > 0 ? `+${round(stat.gained30d)}` : '0'} />
                   <Stat
                     label="Goal weight"
                     value={stat.goalWeight > 0 ? stat.goalWeight.toFixed(1) : '\u2014'}
                   />
                   <Stat label="Last event" value={since(stat.lastEventAt, now)} />
                 </dl>
-              </div>
-            </Card>
 
-            <Card>
-              <CardHead label="XP · 90 days" meta={<span className="eyebrow text-ink-3">weekly</span>} />
-              <div className="mt-4">
-                <WeeklyBars weeks={weeks} />
-              </div>
-            </Card>
+                <div>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="eyebrow text-ink-3">XP &middot; 90 days</span>
+                    <span className="num text-[11px] text-ink-3">weekly</span>
+                  </div>
+                  <div className="mt-2">
+                    <WeeklyBars weeks={weeks} />
+                  </div>
+                </div>
 
-            {children.length === 0 && (
-            <Card>
-              <CardHead
-                label="Events · 30 days"
-                meta={
-                  <span className="eyebrow text-ink-3">
-                    {recent.length} · drag to reassign
-                  </span>
-                }
-              />
-              <div className="mt-4" aria-busy={pending}>
-                {recent.length === 0 ? (
-                  <EmptyState headline="Nothing in 30 days">
-                    Finish a task, note, or workout that matches a keyword below.
-                  </EmptyState>
+                {children.length > 0 ? (
+                  <div>
+                    <span className="eyebrow text-ink-3">Children</span>
+                    <ul className="mt-1.5">
+                      {children.map((c) => (
+                        <li key={c.id}>
+                          <button
+                            type="button"
+                            onClick={() => setSelected(c.id)}
+                            className="flex w-full items-center justify-between gap-3 border-b border-rule px-1 py-2.5 text-left hover:bg-brand-soft"
+                          >
+                            <span className="text-[13px] text-ink-2">{c.name}</span>
+                            {/* The artboard's two figures: what it gained this
+                              * month, then where it stands. */}
+                            <span className="flex shrink-0 items-baseline gap-3">
+                              <span
+                                className={`num text-[11px] ${c.gained30d > 0 ? 'text-ok' : 'text-warn'}`}
+                              >
+                                {c.gained30d > 0 ? `+${round(c.gained30d)} / 30d` : 'idle'}
+                              </span>
+                              <span className="num text-[12px] text-ink-3">Lv {c.level}</span>
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="t-caption mt-2 text-ink-4">
+                      Drop an event here to reassign it to that skill.
+                    </p>
+                  </div>
                 ) : (
-                  // Capped and scrolled rather than run down the page: the
-                  // artboard's rail is a pane beside the constellation, and a
-                  // month of events under a busy skill is a hundred rows.
-                  <ul className="max-h-[420px] space-y-1 overflow-y-auto pr-1">
-                    {recent.map((e) => (
-                      <EventRow key={`${e.entityRef}-${e.skillId}-${e.occurredAt}`} event={e} />
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </Card>
-
-            )}
-
-            {children.length > 0 && (
-              <Card>
-                <CardHead label="Children" />
-                <ul className="-mx-2 mt-3">
-                  {children.map((c) => (
-                    <li key={c.id}>
-                      <button
-                        type="button"
-                        onClick={() => setSelected(c.id)}
-                        className="flex w-full items-center justify-between gap-3 rounded-[8px] px-2 py-2 text-left hover:bg-rule-2"
-                      >
-                        <span className="text-[13px] text-ink-2">{c.name}</span>
-                        {/* The design's two figures: what it gained this
-                          * month, then where it stands. */}
-                        <span className="flex shrink-0 items-baseline gap-3">
-                          <span className="num text-[11px] text-brand">
-                            {c.gained30d > 0 ? `+${round(c.gained30d)} / 30d` : ''}
-                          </span>
-                          <span className="num text-[11px] text-ink-3">Lv {c.level}</span>
+                  <>
+                    <div>
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="eyebrow text-ink-3">Events &middot; 30 days</span>
+                        <span className="num text-[11px] text-ink-3">
+                          {recent.length} &middot; drag to reassign
                         </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                <p className="t-caption mt-2 text-ink-4">
-                  Drop an event here to reassign it to that skill.
-                </p>
-              </Card>
-            )}
-            <Card>
-              <CardHead label="Keywords" meta={<span className="eyebrow text-ink-3">skills.yaml</span>} />
-              <div className="mt-4 flex flex-wrap gap-1.5">
-                {stat.keywords.length === 0 ? (
-                  <span className="text-[13px] text-ink-3">
-                    None. This skill is only reachable by the model or by hand.
-                  </span>
-                ) : (
-                  stat.keywords.map((k) => (
-                    <Chip key={k} tone="quiet">
-                      {k}
-                    </Chip>
-                  ))
+                      </div>
+                      {recent.length === 0 ? (
+                        <p className="t-caption mt-2 text-ink-3">
+                          No events linked in 30 days. Finish a task, note, or workout that matches
+                          a keyword below.
+                        </p>
+                      ) : (
+                        // Capped and scrolled rather than run down the page: a
+                        // month under a busy skill is a hundred rows.
+                        <ul className="mt-1 max-h-[420px] overflow-y-auto pr-1">
+                          {recent.map((e) => (
+                            <EventRow key={`${e.entityRef}-${e.skillId}-${e.occurredAt}`} event={e} />
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    <div>
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="eyebrow text-ink-3">Keywords</span>
+                        <span className="num text-[11px] text-ink-3">skills.yaml</span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {stat.keywords.length === 0 ? (
+                          <span className="t-caption text-ink-3">
+                            None. This skill is only reachable by the model or by hand.
+                          </span>
+                        ) : (
+                          stat.keywords.map((k) => (
+                            <Chip key={k} tone="quiet">
+                              {k}
+                            </Chip>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
-            </Card>
+            )}
+          </div>
 
-          </>
-        )}
-
-        <p className="text-[12px] text-ink-3">
-          Level = &radic;(XP &divide; 100). Parent XP is the sum of its children.
-        </p>
+          <p className="mt-auto pt-6 text-[12px] text-ink-4">
+            Level = &radic;(XP &divide; 100). Parent XP is the sum of its children.
+          </p>
+        </Card>
       </div>
     </div>
   )
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+/** One cell of the three up grid under the name. Its own fill, so the 1px
+ * grid gaps behind it read as hairlines. */
+function Stat({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: string
+  tone?: 'ok' | 'warn'
+}) {
   return (
-    <div>
+    <div className="bg-bg-elev px-3 py-2.5">
       <dt className="eyebrow text-ink-3">{label}</dt>
-      <dd className="num text-[13px] text-ink">{value}</dd>
+      <dd
+        className={`num mt-1.5 text-[15px] ${tone === 'ok' ? 'text-ok' : tone === 'warn' ? 'text-warn' : 'text-ink'}`}
+      >
+        {value}
+      </dd>
     </div>
   )
 }
@@ -447,7 +487,7 @@ function EventRow({ event }: { event: SkillEvent }) {
         e.dataTransfer.setData('text/plain', `${event.entityRef}|${event.skillId}`)
         e.dataTransfer.effectAllowed = 'move'
       }}
-      className="flex cursor-grab items-center justify-between gap-3 rounded-[8px] px-2 py-1.5 hover:bg-rule-2 active:cursor-grabbing"
+      className="flex cursor-grab items-center justify-between gap-3 border-b border-rule px-1 py-1.5 hover:bg-brand-soft active:cursor-grabbing"
     >
       <div className="min-w-0">
         <div className="truncate text-[13px] text-ink-2">{event.title}</div>
@@ -472,7 +512,7 @@ function characterTitle(level: number): string {
 /** One of the four summary columns under the canvas. */
 function Column({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="bg-surface p-3.5">
+    <div className="bg-bg-elev px-4 py-3">
       <span className="eyebrow block text-ink-3">{label}</span>
       <div className="mt-2.5 space-y-1.5">{children}</div>
     </div>

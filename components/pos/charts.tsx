@@ -107,12 +107,18 @@ export function PaceBar({
 
 export type RadarAxis = { label: string; value: number }
 
-/** Attributes at a glance. One ring per third, one spoke per attribute. */
+/**
+ * Attributes at a glance. One ring per third, one spoke per attribute.
+ *
+ * Polygonal, not circular: the rings join the spokes, which is what makes the
+ * shape inside them readable as a share of each axis rather than as a blob on
+ * a target. The prototype draws it the same way.
+ */
 export function Radar({ axes, size = 132 }: { axes: RadarAxis[]; size?: number }) {
   if (axes.length < 3) return null
 
   const c = size / 2
-  const r = c - 18
+  const r = c - 22
   const max = Math.max(...axes.map((a) => a.value)) || 1
 
   const point = (i: number, scale: number) => {
@@ -121,14 +127,22 @@ export function Radar({ axes, size = 132 }: { axes: RadarAxis[]; size?: number }
     return [c + Math.cos(angle) * r * scale, c + Math.sin(angle) * r * scale] as const
   }
 
+  const ring = (scale: number) =>
+    axes.map((_, i) => point(i, scale).map((n) => n.toFixed(1)).join(',')).join(' ')
+
   const shape = axes
-    .map((a, i) => point(i, Math.max(0.04, a.value / max)).map((n) => n.toFixed(1)).join(','))
+    .map((a, i) => point(i, Math.max(0.12, a.value / max)).map((n) => n.toFixed(1)).join(','))
     .join(' ')
 
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} aria-hidden className="h-[132px] w-[132px]">
-      {[1, 0.66, 0.33].map((ring) => (
-        <circle key={ring} cx={c} cy={c} r={r * ring} fill="none" stroke="var(--rule)" strokeWidth={1} />
+    <svg
+      viewBox={`0 0 ${size} ${size}`}
+      aria-hidden
+      className="overflow-visible"
+      style={{ width: size, height: size }}
+    >
+      {[1, 0.66, 0.33].map((scale) => (
+        <polygon key={scale} points={ring(scale)} fill="none" stroke="var(--rule)" strokeWidth={1} />
       ))}
       {axes.map((a, i) => {
         const [x, y] = point(i, 1)
@@ -136,19 +150,22 @@ export function Radar({ axes, size = 132 }: { axes: RadarAxis[]; size?: number }
       })}
       <polygon points={shape} fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth={1.5} />
       {axes.map((a, i) => {
-        const [x, y] = point(i, 1.18)
+        const [x, y] = point(i, 1.2)
+        // Anchored away from the centre, so a label on the left does not run
+        // back over its own spoke.
+        const anchor = Math.abs(x - c) < r * 0.15 ? 'middle' : x > c ? 'start' : 'end'
         return (
           <text
             key={a.label}
             x={x}
             y={y}
-            textAnchor="middle"
+            textAnchor={anchor}
             dominantBaseline="middle"
             className="label"
-            fontSize={7}
+            fontSize={size < 150 ? 7 : 8}
             fill="var(--ink-3)"
           >
-            {a.label.slice(0, 4).toUpperCase()}
+            {a.label.slice(0, 6).toUpperCase()}
           </text>
         )
       })}

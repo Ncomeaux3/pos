@@ -329,8 +329,25 @@
     }
   }
 
+  /* Dust behind the constellation. Without it the starfield reads as a
+   * scattering of stray dots rather than as depth. */
+  .skill-twinkle {
+    animation: skill-twinkle 4s ease-in-out infinite;
+  }
+
+  @keyframes skill-twinkle {
+    0%,
+    100% {
+      opacity: 0.25;
+    }
+    50% {
+      opacity: 0.9;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .skill-breathe {
+    .skill-breathe,
+    .skill-twinkle {
       animation: none;
     }
   }
