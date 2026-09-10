@@ -60,6 +60,14 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const addDays = (iso: string, n: number) =>
   new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10)
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/** "12 Sep", for the week the stepper is on. */
+const dayLabel = (iso: string) => {
+  const d = new Date(`${iso}T12:00:00`)
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}`
+}
+
 export function Meals({ data }: { data: MealsData }) {
   const router = useRouter()
   const params = useSearchParams()
@@ -87,12 +95,19 @@ export function Meals({ data }: { data: MealsData }) {
       else if (ok) toast(ok)
     })
 
-  const week = Array.from({ length: 7 }, (unused, i) => addDays(data.todayIso, i))
+  // Which week is on screen, as an offset from today. In the URL, so a week
+  // you paged to survives a refresh and can be linked to.
+  const offset = Number(params.get('week') ?? 0) || 0
+  const weekStart = addDays(data.todayIso, offset * 7)
+  const week = Array.from({ length: 7 }, (unused, i) => addDays(weekStart, i))
   const drafts = data.recipes.filter((r) => r.status === 'draft')
   const ready = data.recipes.filter((r) => r.status === 'ready')
 
-  const planned = total(data.plan)
-  const eaten = total(data.plan, true)
+  // The week on screen, not every row the server sent: paging to next week
+  // and reading this week's calories would be worse than showing nothing.
+  const inWeek = data.plan.filter((m) => m.onDate >= week[0] && m.onDate <= week[6])
+  const planned = total(inWeek)
+  const eaten = total(inWeek, true)
   const weekTarget = data.kcalTarget === null ? null : data.kcalTarget * 7
 
   const plannedRecipes = data.plan
@@ -114,17 +129,44 @@ export function Meals({ data }: { data: MealsData }) {
 
   return (
     <div className="space-y-5">
-      <TabBar
-        label="Meals views"
-        value={tab}
-        onChange={(next) => setParams({ tab: next === 'week' ? null : next, recipe: null })}
-        tabs={[
-          { value: 'week', label: 'Week', count: data.plan.length },
-          { value: 'recipes', label: 'Recipes', count: ready.length },
-          { value: 'grocery', label: 'Grocery' },
-          { value: 'inbox', label: 'Inbox', count: drafts.length },
-        ]}
-      />
+      {/* The artboard puts the week stepper on the right of the tab row, so
+        * paging a week is where the week is rather than above it. */}
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+        <TabBar
+          label="Meals views"
+          value={tab}
+          onChange={(next) => setParams({ tab: next === 'week' ? null : next, recipe: null })}
+          tabs={[
+            { value: 'week', label: 'Week', count: data.plan.length },
+            { value: 'recipes', label: 'Recipes', count: ready.length },
+            { value: 'grocery', label: 'Grocery' },
+            { value: 'inbox', label: 'Inbox', count: drafts.length },
+          ]}
+        />
+
+        {tab === 'week' && (
+          <div className="flex shrink-0 items-center gap-1.5 pb-2">
+            <ActionButton
+              aria-label="Previous week"
+              onClick={() => setParams({ week: offset - 1 === 0 ? null : String(offset - 1) })}
+            >
+              ←
+            </ActionButton>
+            <span className="num min-w-[132px] text-center text-[11px] text-ink-3">
+              {offset === 0 ? 'This week' : `${dayLabel(week[0])} to ${dayLabel(week[6])}`}
+            </span>
+            <ActionButton
+              aria-label="Next week"
+              onClick={() => setParams({ week: offset + 1 === 0 ? null : String(offset + 1) })}
+            >
+              →
+            </ActionButton>
+            {offset !== 0 && (
+              <ActionButton onClick={() => setParams({ week: null })}>Today</ActionButton>
+            )}
+          </div>
+        )}
+      </div>
 
       {tab === 'week' && (
         <div className="space-y-4">
@@ -173,14 +215,16 @@ export function Meals({ data }: { data: MealsData }) {
                 ))}
               </div>
 
-              {week.map((iso, i) => {
+              {week.map((iso) => {
                 const dow = new Date(`${iso}T12:00:00`).getDay()
                 return (
                   <div key={iso} className="grid grid-cols-[80px_repeat(4,1fr)] gap-px bg-rule">
                     <div
                       className={cn(
                         'space-y-0.5 px-2 py-2.5',
-                        i === 0 ? 'bg-brand-soft' : 'bg-bg-elev',
+                        // Today, not the first row: on a week you paged to,
+                        // no row is today.
+                        iso === data.todayIso ? 'bg-brand-soft' : 'bg-bg-elev',
                       )}
                     >
                       <p className="label text-[10px] text-ink-3">{DAYS[(dow + 6) % 7]}</p>
