@@ -91,6 +91,16 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
     [leaves],
   )
 
+  /** Goals point here, and nothing has happened. Weight first, then quiet. */
+  const aimed = useMemo(
+    () =>
+      leaves
+        .filter((s) => s.goalWeight > 0 && s.gained30d <= 0)
+        .sort((a, b) => b.goalWeight - a.goalWeight)
+        .slice(0, 4),
+    [leaves],
+  )
+
   const stat = selected ? statById.get(selected) : undefined
   const children = data.stats.filter((s) => s.parent === selected)
 
@@ -231,10 +241,20 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
             )}
           </Column>
 
-          <Column label="Goal weight high, low activity">
-            {/* Nothing stores a goal weight, so this says so rather than
-              * showing a number nobody computed. */}
-            <Quiet>No goal weights are stored yet, so this cannot be worked out.</Quiet>
+          <Column label="Aimed at, not moving">
+            {/* Weight from the goals that link here, against what actually
+              * happened in thirty days. A skill you are aiming at and have not
+              * touched is the one thing this screen can tell you that the
+              * constellation cannot. */}
+            {aimed.length === 0 ? (
+              <Quiet>No goal links to a skill that has been quiet this month.</Quiet>
+            ) : (
+              aimed.map((sk) => (
+                <Line key={sk.id} onClick={() => setSelected(sk.id)} name={sk.name}>
+                  weight {sk.goalWeight.toFixed(1)}
+                </Line>
+              ))
+            )}
           </Column>
 
           <Column label="Level-ups this month">
@@ -283,8 +303,10 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
                 </div>
                 <dl className="grid grid-cols-3 gap-3 border-t border-rule pt-3">
                   <Stat label="30 days" value={stat.gained30d > 0 ? `+${round(stat.gained30d)}` : '0'} />
-                  {/* No source for a goal weight until the Goals module ships. */}
-                  <Stat label="Goal weight" value="--" />
+                  <Stat
+                    label="Goal weight"
+                    value={stat.goalWeight > 0 ? stat.goalWeight.toFixed(1) : '\u2014'}
+                  />
                   <Stat label="Last event" value={since(stat.lastEventAt, now)} />
                 </dl>
               </div>
@@ -312,8 +334,11 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
                     Finish a task, note, or workout that matches a keyword below.
                   </EmptyState>
                 ) : (
-                  <ul className="space-y-1">
-                    {recent.slice(0, 20).map((e) => (
+                  // Capped and scrolled rather than run down the page: the
+                  // artboard's rail is a pane beside the constellation, and a
+                  // month of events under a busy skill is a hundred rows.
+                  <ul className="max-h-[420px] space-y-1 overflow-y-auto pr-1">
+                    {recent.map((e) => (
                       <EventRow key={`${e.entityRef}-${e.skillId}-${e.occurredAt}`} event={e} />
                     ))}
                   </ul>

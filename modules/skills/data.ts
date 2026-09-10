@@ -33,6 +33,14 @@ export type SkillStat = {
   level: number
   gained30d: number
   lastEventAt: string | null
+  /**
+   * How much of what you say you are aiming at runs through this skill.
+   *
+   * The sum of the link weights from live goals, rolled up like XP. A skill
+   * with weight and no recent XP is the one worth knowing about, which is what
+   * the digest column beside it is for.
+   */
+  goalWeight: number
 }
 
 export type SkillTreeData = {
@@ -54,7 +62,7 @@ const DAY = 24 * 60 * 60 * 1000
 export async function loadSkillTree(): Promise<SkillTreeData> {
   const nodes = await loadTree()
 
-  const [{ rows: xpRows }, { rows: eventRows }] = await Promise.all([
+  const [{ rows: xpRows }, { rows: eventRows }, { rows: goalRows }] = await Promise.all([
     db().query<{ skill_id: string; xp: string; last_event_at: string | null }>(
       `select skill_id, xp::text, last_event_at::text from skills.xp`,
     ),
@@ -83,8 +91,19 @@ export async function loadSkillTree(): Promise<SkillTreeData> {
        where e.occurred_at >= now() - interval '90 days'
        order by e.occurred_at desc`,
     ),
+    // What the owner is aiming at, by skill. Through core.entities rather than
+    // the goals schema: this module reads no other module's tables, and a fork
+    // with no Goals gets zero weights rather than a missing relation.
+    db().query<{ skill_id: string; weight: string }>(
+      `select sl.skill_id, sum(sl.weight * sl.confidence)::text as weight
+         from core.skill_links sl
+         join core.entities en on en.id = sl.entity_ref
+        where en.module = 'goals'
+        group by sl.skill_id`,
+    ),
   ])
 
+  const ownWeight = new Map(goalRows.map((r) => [r.skill_id, Number(r.weight)]))
   const ownXp = new Map(xpRows.map((r) => [r.skill_id, Number(r.xp)]))
   const lastEvent = new Map(xpRows.map((r) => [r.skill_id, r.last_event_at]))
 
@@ -114,6 +133,9 @@ export async function loadSkillTree(): Promise<SkillTreeData> {
       .sort()
       .at(-1) ?? null
 
+  const goalWeight = (id: string): number =>
+    (ownWeight.get(id) ?? 0) + (childrenOf.get(id) ?? []).reduce((sum, c) => sum + goalWeight(c), 0)
+
   const stats: SkillStat[] = nodes.map((node) => {
     const xp = rollUp(node.id)
     return {
@@ -127,6 +149,7 @@ export async function loadSkillTree(): Promise<SkillTreeData> {
       level: level(xp),
       gained30d: gained30d(node.id),
       lastEventAt: lastEventOf(node.id),
+      goalWeight: goalWeight(node.id),
     }
   })
 

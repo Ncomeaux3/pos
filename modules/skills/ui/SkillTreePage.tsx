@@ -13,6 +13,10 @@ export default async function SkillTreePage() {
         * the fold and say nothing the breadcrumb does not. Every other module
         * keeps PageHeader. */}
       <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-rule pb-3">
+        {/* Drawn nowhere, present all the same. Measuring the artboard confirms
+          * it carries no title, but a page with no heading is a page a screen
+          * reader cannot announce or jump to. */}
+        <h1 className="sr-only">Skill Tree</h1>
         <span className="eyebrow text-ink-3">
           <span
             className="status-dot"
