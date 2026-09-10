@@ -293,3 +293,28 @@
     animation-iteration-count: 1 !important;
   }
 }
+
+@layer components {
+  /* The slow pulse on a skill that is gaining, from the design bundle. Off
+   * under reduced motion, which the bundle asks for by name: "Reduced motion
+   * should disable the scale-on-tap and the constellation animation." */
+  .skill-breathe {
+    animation: skill-breathe 2.6s ease-in-out infinite;
+  }
+
+  @keyframes skill-breathe {
+    0%,
+    100% {
+      opacity: 0.45;
+    }
+    50% {
+      opacity: 0.85;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skill-breathe {
+      animation: none;
+    }
+  }
+}

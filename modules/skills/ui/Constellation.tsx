@@ -21,10 +21,46 @@ export function toneFor(stat: SkillStat | undefined, now: number): Tone {
   return Date.parse(stat.lastEventAt) > now - 60 * 24 * 60 * 60 * 1000 ? 'active' : 'stagnant'
 }
 
+/**
+ * The node palette, taken from the design bundle rather than invented.
+ *
+ * The important part is what is *not* accent. Every node used to be teal,
+ * which is why the constellation read as one flat colour: accent is reserved
+ * for a skill gaining fast, so it means something when you see it. Everything
+ * else is a pale blue star, and a stagnant one is a dim slate.
+ */
 const TONE_FILL: Record<Tone, string> = {
   gaining: 'var(--accent)',
-  active: 'var(--ink-2)',
-  stagnant: 'var(--ink-3)',
+  active: '#9fd1ff',
+  stagnant: '#5b6b7d',
+}
+
+/** The blurred bloom behind a node. Accent only when it is gaining. */
+const HALO_COLOR: Record<Tone, string> = {
+  gaining: 'var(--accent)',
+  active: '#4aa3ff',
+  stagnant: '#4aa3ff',
+}
+
+/**
+ * A deterministic starfield.
+ *
+ * Seeded rather than random: a new field on every render would flicker on
+ * hover, and the server and client markup have to agree or React complains
+ * about the mismatch.
+ */
+function starfield(count: number, seed: number, size: number) {
+  const out: { x: number; y: number; r: number; o: number }[] = []
+  let n = seed
+  const next = () => {
+    // Numerical Recipes LCG. Small, deterministic, and good enough for dust.
+    n = (n * 1664525 + 1013904223) % 4294967296
+    return n / 4294967296
+  }
+  for (let i = 0; i < count; i++) {
+    out.push({ x: next() * size, y: next() * size, r: 0.4 + next() * 1.1, o: 0.12 + next() * 0.5 })
+  }
+  return out
 }
 
 export function Constellation({
@@ -64,6 +100,13 @@ export function Constellation({
 
   const hovered = hover ? statById.get(hover.id) : undefined
 
+  // Seeded once. A field regenerated per render would flicker on every hover.
+  const stars = useMemo(() => starfield(150, 20260909, VIEW), [])
+  const nebulae = useMemo(
+    () => starfield(5, 71, VIEW).map((n) => ({ ...n, r: 90 + n.o * 190 })),
+    [],
+  )
+
   return (
     <div className="relative">
       <div className="absolute right-3 top-3 z-10 flex gap-2">
@@ -97,6 +140,42 @@ export function Constellation({
         }}
         onDoubleClick={() => setZoom((z) => Math.min(ZOOM_MAX, z * 1.5))}
       >
+        <defs>
+          {/* The bloom on a node itself: blurred copy merged back under the
+            * crisp shape, so the star keeps a hard edge and still glows. */}
+          <filter id="skill-glow" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="6" result="b" />
+            <feMerge>
+              <feMergeNode in="b" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          {/* The wide halo. No merge: this one is only the blur. */}
+          <filter id="skill-glow-big" x="-150%" y="-150%" width="400%" height="400%">
+            <feGaussianBlur stdDeviation="18" />
+          </filter>
+          <radialGradient id="skill-neb">
+            <stop offset="0" stopColor="var(--accent)" stopOpacity="0.18" />
+            <stop offset="1" stopColor="var(--accent)" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+
+        {/* Dust and nebulae, behind the pan and zoom so the field stays put
+          * while the tree moves over it. Depth without parallax. */}
+        {stars.map((s, i) => (
+          <circle
+            key={i}
+            cx={s.x - VIEW / 2}
+            cy={s.y - VIEW / 2}
+            r={s.r}
+            fill="#cfe6ff"
+            opacity={s.o}
+          />
+        ))}
+        {nebulae.map((n, i) => (
+          <circle key={i} cx={n.x - VIEW / 2} cy={n.y - VIEW / 2} r={n.r} fill="url(#skill-neb)" />
+        ))}
+
         <g transform={`scale(${zoom}) translate(${pan.x} ${pan.y})`}>
           {edges.map((node) => {
             const from = positionOf(node.parent ?? ROOT_ID)
@@ -151,16 +230,44 @@ export function Constellation({
                 }}
                 className="cursor-pointer"
               >
-                {(isSelected || isDrop) && (
-                  <circle r={r + 7} fill="none" stroke="var(--accent)" strokeWidth={isDrop ? 2 : 1.2} />
-                )}
+                {/* Four circles, which is what makes a node a star rather
+                  * than a dot: a wide blurred halo, a ring that only appears
+                  * when there is something to say, the body, and a white core.
+                  * Sizes are the design bundle's ratios, not invented. */}
+                <circle
+                  r={r * 3.2}
+                  fill={isRoot ? 'var(--accent)' : HALO_COLOR[tone]}
+                  filter="url(#skill-glow-big)"
+                  opacity={
+                    isRoot || node.ring === 'attribute' || tone === 'gaining' || isSelected
+                      ? 0.7
+                      : 0.22
+                  }
+                  className={tone === 'gaining' || isSelected ? 'skill-breathe' : undefined}
+                />
+                <circle
+                  r={r + 5}
+                  fill="none"
+                  strokeWidth={isDrop ? 2 : 1}
+                  opacity={0.8}
+                  stroke={
+                    isSelected || isDrop
+                      ? 'var(--accent)'
+                      : tone === 'stagnant'
+                        ? 'var(--amber)'
+                        : 'transparent'
+                  }
+                  // A dashed ring is how a stagnant skill says so without
+                  // going grey, which the design forbids: greyed out items
+                  // keep full opacity and change colour instead.
+                  strokeDasharray={tone === 'stagnant' && !isSelected ? '2 3' : undefined}
+                />
                 <circle
                   r={r}
                   fill={isRoot ? 'var(--accent)' : TONE_FILL[tone]}
-                  fillOpacity={tone === 'stagnant' ? 0.45 : 1}
-                  stroke="var(--bg)"
-                  strokeWidth={1.5}
+                  filter="url(#skill-glow)"
                 />
+                <circle r={r * 0.45} fill="#ffffff" />
                 {node.ring !== 'leaf' || zoom > 0.85 ? (
                   <text
                     y={r + 13}
@@ -177,20 +284,26 @@ export function Constellation({
         </g>
       </svg>
 
-      <div className="pointer-events-none absolute bottom-3 left-3 h-16">
-        {hovered ? (
-          <div className="rounded-[8px] border border-rule bg-surface px-3 py-2">
-            <div className="text-[13px] font-medium text-ink">{hovered.name}</div>
-            <div className="num text-[11px] text-ink-3">
-              Lv {hovered.level} · {Math.round(hovered.xp)} XP
-              {hovered.gained30d > 0 ? ` · +${Math.round(hovered.gained30d)} in 30d` : ''}
-            </div>
+      {/* The hover card floats; the legend does not.
+        *
+        * Both used to be absolutely positioned over the graph, which is why
+        * the legend sat on top of Endurance, Strength and Negotiation. The
+        * legend is a normal block under the svg now and cannot collide with
+        * anything. Only the card, which appears on demand and is small,
+        * overlays, and it sits in a corner the tree does not reach. */}
+      {hovered && (
+        <div className="pointer-events-none absolute bottom-3 left-3 border border-rule-2 bg-surface px-3 py-2">
+          <div className="text-[13px] text-ink">{hovered.name}</div>
+          <div className="num text-[11px] text-ink-3">
+            Lv {hovered.level} · {Math.round(hovered.xp)} XP
+            {hovered.gained30d > 0 ? ` · +${Math.round(hovered.gained30d)} in 30d` : ''}
           </div>
-        ) : (
-          <div className="eyebrow text-ink-3">
-            Hover: details · Click: inspect · Scroll: zoom · Drag: pan
-          </div>
-        )}
+        </div>
+      )}
+
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
+        <span className="eyebrow text-ink-3">Hover: details · Click: inspect</span>
+        <span className="eyebrow text-ink-3">Scroll: zoom · Drag: pan</span>
       </div>
     </div>
   )
