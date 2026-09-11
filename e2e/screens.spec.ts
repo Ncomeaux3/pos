@@ -828,42 +828,106 @@ test('finance, net worth and the budget pace marks', async ({ page }) => {
   // making, because it names the range the line actually covers.
   await expect(page.getByRole('img', { name: /Net worth over \d+ days/ })).toBeVisible()
 
+  const mobile = (page.viewportSize()?.width ?? 0) < 720
+  if (!mobile) {
+    // POS Finance.dc.html at 1440: one overview, no tabs; the four KPI cells in
+    // its order; the accounts table's columns; the Budgets head's Edit limits;
+    // 9px rows; the title block's sentence.
+    await expect(page.getByRole('tablist')).toHaveCount(0)
+    await expect(page.getByText('Balances, upcoming charges, and budgets. Synced nightly, amounts in USD.')).toBeVisible()
+    const strip = page.getByTestId('finance-kpis')
+    await expect(strip.locator('.eyebrow')).toHaveText([
+      'Net worth',
+      '30-day change',
+      'Due in 14 days',
+      /Budgets over \d+%/,
+    ])
+    const accounts = page.getByTestId('finance-accounts')
+    await expect(accounts.getByRole('columnheader')).toHaveText(['Account', 'Institution', 'Balance', '30d', 'Share'])
+    const rowPadding = await accounts
+      .getByRole('row')
+      .first()
+      .evaluate((el) => getComputedStyle(el).padding)
+    expect(rowPadding).toBe('9px 0px')
+    await expect(page.getByRole('button', { name: /edit limits/i })).toBeVisible()
+  }
+
   await shoot(page, 'finance')
 
   // Budgets: the tick is the month pace, and a fixed cost at its limit is not
-  // flagged, because rent at 100 percent every month is not news.
-  await page.getByRole('tab', { name: /Budgets/ }).click()
-  await expect(page).toHaveURL(/tab=budgets/)
-  await expect(page.getByText('Fixed', { exact: true })).toBeVisible()
-  await expect(page.getByText(/105% used/)).toBeVisible()
+  // flagged, because rent at 100 percent every month is not news. On the phone
+  // this is a segment; on the desktop it is a card on the one page.
+  if (mobile) {
+    await page.getByRole('tab', { name: /Budgets/ }).click()
+    await expect(page).toHaveURL(/tab=budgets/)
+    await expect(page.getByText(/105% used/)).toBeVisible()
+  } else {
+    await expect(page.getByTestId('finance-budgets').getByText('Fixed', { exact: true })).toBeVisible()
+  }
+  await expect(page.getByText('Fixed', { exact: true }).first()).toBeVisible()
   await shoot(page, 'finance-budgets')
 })
 
 test('finance, the detector found the subscriptions and left the rest alone', async ({ page }) => {
-  await page.goto('/finance?tab=subscriptions')
+  // The phone's Subscriptions segment; on the desktop the fortnight's charges
+  // in the Upcoming card, which the detector also feeds.
+  const mobile = (page.viewportSize()?.width ?? 0) < 720
+  await page.goto(mobile ? '/finance?tab=subscriptions' : '/finance')
+  const scope = mobile ? page : page.getByTestId('finance-upcoming')
 
-  // Five seeded recurring merchants, found by detectRecurring rather than
-  // listed by the fixture.
-  await expect(page.getByText('Anthropic Claude Pro')).toBeVisible()
-  await expect(page.getByText('Neighbourhood Gym')).toBeVisible()
+  // Seeded recurring merchants, found by detectRecurring rather than listed by
+  // the fixture.
+  await expect(scope.getByText('Anthropic Claude Pro')).toBeVisible()
+  await expect(scope.getByText('Neighbourhood Gym')).toBeVisible()
 
   // And nothing that merely repeats: the shops appear in the ledger many times
   // without a rhythm, and payroll is the most regular thing in the data.
-  await expect(page.getByText('Kroger')).toBeHidden()
-  await expect(page.getByText('Payroll')).toBeHidden()
+  await expect(scope.getByText('Kroger')).toBeHidden()
+  await expect(scope.getByText('Payroll')).toBeHidden()
 
   await shoot(page, 'finance-subscriptions')
 })
 
 test('finance, filing a transaction teaches the rule', async ({ page }) => {
-  await page.goto('/finance?tab=transactions')
+  const mobile = (page.viewportSize()?.width ?? 0) < 720
+  if (mobile) {
+    await page.goto('/finance?tab=transactions')
+  } else {
+    // The desktop files from a drawer: the category under the merchant is the
+    // control, as the artboard's row leaves no room for a button.
+    await page.goto('/finance')
+    await page.getByTestId('finance-accounts').getByRole('row', { name: /Credit card/ }).click()
+    await expect(page).toHaveURL(/account=/)
+  }
 
   const row = page.getByText('Coffee bar').first()
   await expect(row).toBeVisible()
 
-  await page.getByRole('button', { name: 'File' }).first().click()
+  await page.getByRole('button', { name: /^File Coffee bar/ }).first().click()
   await page.getByRole('button', { name: 'Dining', exact: true }).first().click()
   await expect(page.getByText(/the rule learned it/)).toBeVisible()
+  await shoot(page, 'finance-account')
+})
+
+test('finance, the limits drawer holds edits until Done', async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 0) < 720, 'desktop drawer')
+  await page.goto('/finance')
+  await page.getByRole('button', { name: /edit limits/i }).click()
+  await expect(page).toHaveURL(/limits=1/)
+  await expect(page.getByRole('heading', { name: 'Budget limits' })).toBeVisible()
+  await expect(page.getByText('No changes')).toBeVisible()
+
+  // Move the threshold: nothing is written until Done, and the hint says so.
+  const slider = page.getByRole('slider', { name: /alert threshold/i })
+  await slider.focus()
+  await page.keyboard.press('ArrowRight')
+  await expect(page.getByText('1 unsaved change')).toBeVisible()
+  await shoot(page, 'finance-limits')
+
+  await page.getByRole('button', { name: 'Reset' }).click()
+  await expect(page.getByText('No changes')).toBeVisible()
+  await page.getByRole('button', { name: 'Done' }).click()
+  await expect(page).not.toHaveURL(/limits=1/)
 })
 
 test('onboarding, six steps that write as they go', async ({ page }) => {

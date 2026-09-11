@@ -175,3 +175,23 @@ export async function setBudget(categoryId: string, limitCents: number): Promise
     [categoryId, limitCents],
   )
 }
+
+/**
+ * The budget alert threshold, a Finance setting with one row. Categories past
+ * this share of their limit are flagged on the screen, in the digest and in
+ * the dashboard headline. 80 until the owner moves the slider.
+ */
+export async function getAlertThreshold(): Promise<number> {
+  const { rows } = await db().query<{ alert_threshold: number }>(
+    `select alert_threshold from finance.settings where id`,
+  )
+  return rows[0]?.alert_threshold ?? 80
+}
+
+export async function setAlertThreshold(percent: number): Promise<void> {
+  await db().query(
+    `insert into finance.settings (id, alert_threshold) values (true, $1)
+     on conflict (id) do update set alert_threshold = excluded.alert_threshold`,
+    [percent],
+  )
+}

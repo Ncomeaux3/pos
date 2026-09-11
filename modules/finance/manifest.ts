@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
-import { listAccounts, setBudget } from './data'
+import { listAccounts, setAlertThreshold, setBudget } from './data'
 import {
   categoriseNew,
   detectSubscriptions,
@@ -72,6 +72,16 @@ export default defineModule({
       run: async ({ category_id, limit_cents }) => {
         await setBudget(category_id, limit_cents)
         return { category_id, limit_cents }
+      },
+    }),
+
+    set_alert_threshold: defineTool({
+      description:
+        'Set the share of a budget, 50 to 100 percent, past which a category is flagged.',
+      input: z.object({ percent: z.number().int().min(50).max(100) }),
+      run: async ({ percent }) => {
+        await setAlertThreshold(percent)
+        return { percent }
       },
     }),
 
@@ -153,7 +163,7 @@ export default defineModule({
    * itself, and putting hundreds of rows a month through the Review inbox would
    * make the inbox useless, which is the failure mode a guard has to avoid.
    */
-  guarded: ['set_budget', 'write_subscription'],
+  guarded: ['set_budget', 'set_alert_threshold', 'write_subscription'],
   requires: ['simplefin'],
 
   /** The module says how its own numbers read. See ModuleManifest.tile. */

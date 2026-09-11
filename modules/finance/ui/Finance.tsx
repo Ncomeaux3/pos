@@ -39,6 +39,8 @@ import { recategorise, saveBudget, setSubscriptionStatus, type ActionResult } fr
 
 export type FinanceData = {
   todayIso: string
+  /** The Finance setting: a category past this share of its limit is flagged. */
+  alertThreshold: number
   monthPace: number
   netWorthCents: number
   changeCents: number
@@ -105,7 +107,6 @@ const shortDate = (iso: string) => {
 }
 
 /** Past this share of a limit, a budget is worth flagging. SPEC's number. */
-const ALERT = 80
 
 export function Finance({ data }: { data: FinanceData }) {
   const router = useRouter()
@@ -137,7 +138,7 @@ export function Finance({ data }: { data: FinanceData }) {
 
   const upcomingTotal = data.upcoming.reduce((sum, u) => sum + u.amountCents, 0)
   const hot = data.budgets.filter(
-    (b) => !b.isFixed && b.limitCents && percent(b.spentCents, b.limitCents) >= ALERT,
+    (b) => !b.isFixed && b.limitCents && percent(b.spentCents, b.limitCents) >= data.alertThreshold,
   )
 
   return (
@@ -193,7 +194,7 @@ export function Finance({ data }: { data: FinanceData }) {
             />
             <MetricTile
               size="lg"
-              label={`Budgets over ${ALERT} percent`}
+              label={`Budgets over ${data.alertThreshold}%`}
               value={hot.length}
               delta={hot.length > 0 ? hot.map((b) => b.name).join(' / ') : 'all within limits'}
               deltaTone={hot.length > 0 ? 'warn' : 'quiet'}
@@ -302,7 +303,7 @@ export function Finance({ data }: { data: FinanceData }) {
             <Card className="space-y-3">
               <CardHead
                 label="Budgets"
-                meta={`${hot.length} over ${ALERT} percent`}
+                meta={`${hot.length} over ${data.alertThreshold}%`}
               />
               {data.budgets.length === 0 ? (
                 <EmptyState headline="No budgets" className="border-0">
@@ -320,8 +321,8 @@ export function Finance({ data }: { data: FinanceData }) {
                         <span className="flex min-w-0 flex-wrap items-center gap-2">
                           <span className="truncate text-[13px] text-ink">{b.name}</span>
                           {b.isFixed && <Chip tone="quiet">fixed</Chip>}
-                          {used !== null && used >= ALERT && (
-                            <Chip tone="warn">over {ALERT}%</Chip>
+                          {used !== null && used >= data.alertThreshold && (
+                            <Chip tone="warn">over {data.alertThreshold}%</Chip>
                           )}
                         </span>
                         <span className="min-w-0 space-y-1.5">
@@ -329,7 +330,7 @@ export function Finance({ data }: { data: FinanceData }) {
                             {money(b.spentCents)}
                             {b.limitCents ? ` / ${money(b.limitCents)}` : ' / no limit'}
                           </span>
-                          <BudgetBar budget={b} pace={data.monthPace} />
+                          <BudgetBar budget={b} pace={data.monthPace} threshold={data.alertThreshold} />
                         </span>
                         <span
                           className={cn(
@@ -338,7 +339,7 @@ export function Finance({ data }: { data: FinanceData }) {
                               ? 'text-ink-3'
                               : used >= 100
                                 ? 'text-bad'
-                                : used >= ALERT
+                                : used >= data.alertThreshold
                                   ? 'text-warn'
                                   : 'text-ink-3',
                           )}
@@ -423,7 +424,7 @@ export function Finance({ data }: { data: FinanceData }) {
                   </span>
                 </div>
               </div>
-              <BudgetBar budget={b} pace={data.monthPace} />
+              <BudgetBar budget={b} pace={data.monthPace} threshold={data.alertThreshold} />
               <p className="t-caption text-ink-3">{b.description}</p>
             </Card>
           ))}
@@ -510,7 +511,7 @@ export function Finance({ data }: { data: FinanceData }) {
         >
           <div className="space-y-4">
             <p className="t-caption text-ink-3">{openBudget.description}</p>
-            <BudgetBar budget={openBudget} pace={data.monthPace} />
+            <BudgetBar budget={openBudget} pace={data.monthPace} threshold={data.alertThreshold} />
 
             <label className="block space-y-1.5">
               <Eyebrow>Limit for this month, dollars</Eyebrow>
@@ -550,9 +551,11 @@ export function Finance({ data }: { data: FinanceData }) {
 function BudgetBar({
   budget,
   pace,
+  threshold,
 }: {
   budget: FinanceData['budgets'][number]
   pace: number
+  threshold: number
 }) {
   if (!budget.limitCents) {
     return (
@@ -565,7 +568,7 @@ function BudgetBar({
   const pct = percent(budget.spentCents, budget.limitCents)
   // A fixed cost at its limit is not over budget, it is rent. Flagging it every
   // month would train the reader to ignore the flag.
-  const over = !budget.isFixed && pct >= ALERT
+  const over = !budget.isFixed && pct >= threshold
 
   return (
     <div className="space-y-1.5">

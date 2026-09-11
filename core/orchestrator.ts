@@ -208,8 +208,9 @@ function digestSentence(summary: Summary, today?: string): HeadlineSegment[] {
       over.length === 1 ? over[0] : `${over.slice(0, -1).join(', ')} and ${over[over.length - 1]}`
     const last = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0))
     const daysLeft = Math.round((last.getTime() - now.getTime()) / 86_400_000)
+    const threshold = num(finance, 'alertThreshold') ?? 80
     rest.push([
-      { text: `${names} ${over.length === 1 ? 'is' : 'are'} past 80%`, href: '/finance' },
+      { text: `${names} ${over.length === 1 ? 'is' : 'are'} past ${threshold}%`, href: '/finance' },
       { text: ` of budget with ${plural(daysLeft, 'day')} left` },
     ])
   }

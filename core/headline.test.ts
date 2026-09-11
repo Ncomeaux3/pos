@@ -139,6 +139,13 @@ describe('headlineSegments from digests', () => {
     )
   })
 
+  it('names the threshold the digest was flagged at', () => {
+    const f = { module: 'finance', payload: { alertThreshold: 90, overBudget: [{ name: 'Dining', percent: 91 }] } }
+    expect(text(headlineSegments(summary({ modules: [f] }), today))).toBe(
+      'Dining is past 90% of budget with 19 days left.',
+    )
+  })
+
   it('falls back to the alerts sentence when no digest has a clause', () => {
     const s = summary({ pendingProposals: 2, modules: [{ module: 'finance', payload: { overBudget: [] } }] })
     expect(text(headlineSegments(s, today))).toBe('2 proposals waiting.')

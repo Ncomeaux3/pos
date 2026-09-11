@@ -57,6 +57,19 @@ export async function saveBudget(categoryId: string, limitDollars: number): Prom
   }
 }
 
+export async function saveThreshold(percent: number): Promise<ActionResult> {
+  await requireOwner()
+  if (!Number.isInteger(percent) || percent < 50 || percent > 100) {
+    return { ok: false, error: 'The threshold is a whole percentage from 50 to 100' }
+  }
+  try {
+    await callTool('finance', 'set_alert_threshold', { percent }, { source: 'ui' })
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}
+
 export async function setSubscriptionStatus(
   id: string,
   status: 'active' | 'paused' | 'cancelled',

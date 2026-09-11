@@ -3,6 +3,7 @@ import { syncState } from '@/core/sync'
 import { ownerToday } from '@/core/today'
 import {
   categorySpend,
+  getAlertThreshold,
   listAccounts,
   listTransactions,
   netWorthSeries,
@@ -21,15 +22,17 @@ function shortDate(iso: string): string {
 }
 
 export default async function FinancePage() {
-  const [accounts, series, spend, upcoming, transactions, todayIso, sync] = await Promise.all([
-    listAccounts(),
-    netWorthSeries(30),
-    categorySpend(),
-    upcomingCharges(14),
-    listTransactions({ limit: 60 }),
-    ownerToday(),
-    syncState('finance'),
-  ])
+  const [accounts, series, spend, upcoming, transactions, todayIso, sync, alertThreshold] =
+    await Promise.all([
+      listAccounts(),
+      netWorthSeries(30),
+      categorySpend(),
+      upcomingCharges(14),
+      listTransactions({ limit: 60 }),
+      ownerToday(),
+      syncState('finance'),
+      getAlertThreshold(),
+    ])
 
   const netWorth = accounts.reduce((sum, a) => sum + Number(a.balance_cents), 0)
   const assets = accounts
@@ -43,6 +46,7 @@ export default async function FinancePage() {
 
   const data: FinanceData = {
     todayIso,
+    alertThreshold,
     monthPace: monthPace(todayIso),
     netWorthCents: netWorth,
     changeCents: change,
@@ -99,7 +103,7 @@ export default async function FinancePage() {
   }
 
   const hot = data.budgets.filter(
-    (b) => !b.isFixed && b.limitCents && b.spentCents / b.limitCents >= 0.8,
+    (b) => !b.isFixed && b.limitCents && (b.spentCents / b.limitCents) * 100 >= alertThreshold,
   ).length
 
   return (

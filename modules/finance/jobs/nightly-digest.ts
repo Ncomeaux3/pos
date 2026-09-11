@@ -2,7 +2,14 @@ import { db } from '@/core/db'
 import { ownerToday } from '@/core/today'
 import { categorise, learnFrom, type Rule } from '../categorise'
 import { detectRecurring, isStale, type Charge } from '../recurring'
-import { categorySpend, listAccounts, loadRules, netWorthSeries, upcomingCharges } from '../data'
+import {
+  categorySpend,
+  getAlertThreshold,
+  listAccounts,
+  loadRules,
+  netWorthSeries,
+  upcomingCharges,
+} from '../data'
 import { percent } from '../money'
 
 export type FinanceDigest = {
@@ -16,27 +23,27 @@ export type FinanceDigest = {
   nextCharge: { name: string; inDays: number } | null
   /** Net worth over the last 30 days, in dollars, for the tile's sparkline. */
   netWorthSeries: number[]
-  /** Categories past the alert threshold. */
+  /** Categories past the alert threshold, and the threshold they were judged by. */
   overBudget: { name: string; percent: number }[]
+  alertThreshold: number
   /** Month to date, summed over the categories that have a budget this month. */
   spendCents: number
   budgetCents: number
   unusual: { descriptor: string; amountCents: number; occurredOn: string }[]
 }
 
-/** SPEC's threshold: a category past this share of its limit is worth saying. */
-const BUDGET_ALERT = 80
-
 /** A single charge above this is worth a line in the digest whatever it was. */
 const LARGE_CHARGE_CENTS = 50_000
 
 export async function nightlyDigest(): Promise<FinanceDigest> {
-  const [accounts, series, spend, upcoming, today] = await Promise.all([
+  const [accounts, series, spend, upcoming, today, alertThreshold] = await Promise.all([
     listAccounts(),
     netWorthSeries(30),
     categorySpend(),
     upcomingCharges(14),
     ownerToday(),
+    // SPEC's 80 by default; the owner's own number once the slider has moved.
+    getAlertThreshold(),
   ])
 
   const netWorth = accounts.reduce((sum, a) => sum + Number(a.balance_cents), 0)
@@ -93,7 +100,8 @@ export async function nightlyDigest(): Promise<FinanceDigest> {
         name: c.name,
         percent: percent(Number(c.spent_cents), Number(c.limit_cents)),
       }))
-      .filter((c) => c.percent >= BUDGET_ALERT),
+      .filter((c) => c.percent >= alertThreshold),
+    alertThreshold,
     unusual: unusual.map((u) => ({
       descriptor: u.descriptor,
       amountCents: Number(u.amount_cents),
