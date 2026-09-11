@@ -157,11 +157,11 @@ function Kpi({
   children: ReactNode
 }) {
   return (
-    <div className="bg-bg px-5 py-4">
+    <div className="min-w-0 bg-bg px-4 py-3.5 sm:px-5 sm:py-4">
       <Eyebrow>{label}</Eyebrow>
       <div
         className={cn(
-          'num mt-2.5 text-[34px] font-light leading-none tracking-[-0.02em]',
+          'num mt-2.5 text-[24px] font-light leading-none tracking-[-0.02em] sm:text-[34px]',
           tone === 'ok' ? 'text-ok' : tone === 'bad' ? 'text-bad' : tone === 'warn' ? 'text-warn' : 'text-ink',
         )}
       >
@@ -249,7 +249,7 @@ export function Finance({ data }: { data: FinanceData }) {
             * through its segments; the desktop through the drawers. */}
           <div
             data-testid="finance-kpis"
-            className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))] gap-px border border-rule bg-rule"
+            className="grid grid-cols-2 gap-px border border-rule bg-rule sm:grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))]"
           >
             <Kpi label="Net worth" value={balance(data.netWorthCents)}>
               assets {money(data.assetsCents)} · debt {money(data.debtCents)}
@@ -280,7 +280,7 @@ export function Finance({ data }: { data: FinanceData }) {
           </div>
 
           <div className="grid items-start gap-3.5 lg:grid-cols-2">
-            <div className="flex flex-col gap-3.5 self-stretch">
+            <div className="flex min-w-0 flex-col gap-3.5 self-stretch">
               <Card data-testid="finance-accounts" className={overviewCard}>
                 <CardHead label="Accounts" meta="share of assets" className="mb-1" />
                 <DataTable
@@ -340,7 +340,7 @@ export function Finance({ data }: { data: FinanceData }) {
               </Card>
             </div>
 
-            <div className="flex flex-col gap-3.5">
+            <div className="flex min-w-0 flex-col gap-3.5">
               <Card data-testid="finance-upcoming" className={overviewCard}>
                 <CardHead
                   label="Upcoming · 14 days"
