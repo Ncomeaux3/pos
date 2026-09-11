@@ -3,8 +3,8 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
-Last updated: 2026-09-11, the Weekly Review and Dashboard fidelity passes and
-the rail to PosSidebar. Branch `main`.
+Last updated: 2026-09-11, the Weekly Review, Dashboard and Finance fidelity
+passes and the rail to PosSidebar. Branch `main`.
 
 ## Done
 
@@ -24,6 +24,18 @@ bundle landed 2026-09-07 and steps 0, 7.5 and 8 to 14 followed.
 | 13 | `pnpm setup` and `pnpm setup:demo`, both idempotent |
 | 14 | CI and backup workflows, restore drilled |
 | 16 | Docs squared up: README quickstart, connections registry, the notes module README |
+
+**The fidelity pass, screen three: Finance.** docs/plans/finance-fidelity.md.
+One overview on the desktop (the tab row is the phone's, for PosPhone's
+segments): the KPI strip on the page ground, accounts over the curve beside
+what is due over the budgets, every row at the artboard's 9px with its lines.
+Three drawers at the artboard's 520px, which is now the app's `Overlay`:
+an account's transactions, a budget's with its limit, and Budget limits with
+the alert threshold, a new Finance setting in `finance.settings` (migration
+`20260911222506_finance_settings`) read by the flags, the KPI, the digest and
+the headline clause. Limits are held until Done. A due subscription can be
+cancelled from its Upcoming row. The table key (`DataTable`) is 11px on
+rule-2 everywhere and the band search is scoped on module screens.
 
 **The fidelity pass, screen two: Dashboard.** docs/plans/dashboard-fidelity.md.
 The artboard's nine tiles first in its order, then every other module's tile
