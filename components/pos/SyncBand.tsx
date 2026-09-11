@@ -7,7 +7,7 @@ import { Eyebrow } from './text'
 import { useToast } from './Toast'
 
 /**
- * "SimpleFIN Bridge / synced 2h ago" and a Sync now button, for a module
+ * "SimpleFIN Bridge · synced 04:02" and a Sync now button, for a module
  * header's first band.
  *
  * What it says is a fact from core.jobs: the same row the nightly run writes,
@@ -49,27 +49,38 @@ export function SyncBand({
     <>
       <Eyebrow dot={!connected ? 'idle' : status === 'failed' ? 'bad' : at ? 'ok' : 'idle'}>
         {provider ?? 'Manual entry'}
-        {' / '}
+        {' · '}
         {!connected
           ? 'not connected'
           : status === 'failed'
             ? 'last sync failed'
             : at
-              ? `synced ${ago(at)}`
+              ? `synced ${clock(at)}`
               : 'never synced'}
       </Eyebrow>
-      <ActionButton variant="outline" onClick={sync} disabled={pending}>
+      {/* The DS button at 51px on the desktop band, the 44px control on a phone. */}
+      <ActionButton
+        variant="solid"
+        size="xl"
+        className="h-11 gap-2 px-3 text-[12px] md:h-[51px] md:px-[22px] md:text-[15px]"
+        onClick={sync}
+        disabled={pending}
+      >
         <span className={cn(pending && 'animate-pulse')}>{pending ? 'Syncing' : 'Sync now'}</span>
+        {!pending && <span aria-hidden="true">&rarr;</span>}
       </ActionButton>
     </>
   )
 }
 
-/** "just now", "12m ago", "3h ago", "2d ago". */
-function ago(iso: string): string {
-  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60_000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
-  const hours = Math.round(mins / 60)
-  return hours < 24 ? `${hours}h ago` : `${Math.round(hours / 24)}d ago`
+/**
+ * "04:02", the run's clock as the artboard prints it, in the device's zone:
+ * this is a client component and the device is the owner's. A run older than
+ * today says its date too, so "04:02" never means last week's.
+ */
+function clock(iso: string): string {
+  const at = new Date(iso)
+  const time = at.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
+  const sameDay = at.toDateString() === new Date().toDateString()
+  return sameDay ? time : `${at.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} ${time}`
 }

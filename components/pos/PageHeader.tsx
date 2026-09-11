@@ -38,17 +38,20 @@ export function PageHeader({
   className?: string
 }) {
   return (
-    <div className={cn('space-y-6', className)}>
+    <div className={cn('space-y-5', className)}>
       {/* The negative margins cancel `main`'s padding, which is 18px on a
         * phone and 28 from md up. */}
-      <div className="-mx-[18px] -mt-[18px] flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-rule px-[18px] py-3.5 md:-mx-7 md:-mt-7 md:px-7">
+      <div className="-mx-[18px] -mt-[18px] flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-rule px-[18px] py-3.5 md:-mx-7 md:-mt-7 md:h-14 md:flex-nowrap md:px-7 md:py-0">
         <Eyebrow dot={dot}>{eyebrow}</Eyebrow>
         {/* A full width search field is a desktop affordance: on the phone
           * artboard search is a 44px button in this band that opens a sheet.
           * The button asks the palette for itself through the same event the
           * field does, so there is still one query in one place. */}
         <SearchButton className="ml-auto md:hidden" />
-        <BandSearch className="order-last hidden w-full md:order-none md:ml-auto md:block" />
+        <BandSearch
+          className="order-last hidden w-full md:order-none md:ml-auto md:flex"
+          placeholder={typeof title === 'string' ? `Search ${title.toLowerCase()}` : undefined}
+        />
         {status && <div className="flex items-center gap-3 md:order-last">{status}</div>}
       </div>
 

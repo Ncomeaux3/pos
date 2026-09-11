@@ -8,7 +8,14 @@ import { cn } from '@/lib/utils'
  * half typed search exist in two places at once. Clicking it opens the palette,
  * which is the same thing Cmd K does.
  */
-export function BandSearch({ className }: { className?: string }) {
+export function BandSearch({
+  className,
+  placeholder = 'What are you looking for?',
+}: {
+  className?: string
+  /** PosSearch's scoped placeholder on a module screen: "Search finance". */
+  placeholder?: string
+}) {
   return (
     <button
       type="button"
@@ -21,7 +28,7 @@ export function BandSearch({ className }: { className?: string }) {
       {/* PosSearch compact: a chevron in ink-4, then the placeholder at 12px.
           No shortcut hint; the artboard's bar carries none. */}
       <span aria-hidden className="label shrink-0 text-[12px]">›</span>
-      <span className="truncate text-[12px]">What are you looking for?</span>
+      <span className="truncate text-[12px]">{placeholder}</span>
     </button>
   )
 }

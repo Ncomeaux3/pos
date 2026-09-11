@@ -843,9 +843,9 @@ test('finance, net worth and the budget pace marks', async ({ page }) => {
       /Budgets over \d+%/,
     ])
     const accounts = page.getByTestId('finance-accounts')
-    await expect(accounts.getByRole('columnheader')).toHaveText(['Account', 'Institution', 'Balance', '30d', 'Share'])
+    await expect(accounts.locator('[data-table-head] span')).toHaveText(['Account', 'Institution', 'Balance', '30d', 'Share'])
     const rowPadding = await accounts
-      .getByRole('row')
+      .getByRole('button')
       .first()
       .evaluate((el) => getComputedStyle(el).padding)
     expect(rowPadding).toBe('9px 0px')
@@ -896,7 +896,7 @@ test('finance, filing a transaction teaches the rule', async ({ page }) => {
     // The desktop files from a drawer: the category under the merchant is the
     // control, as the artboard's row leaves no room for a button.
     await page.goto('/finance')
-    await page.getByTestId('finance-accounts').getByRole('row', { name: /Credit card/ }).click()
+    await page.getByTestId('finance-accounts').getByRole('button', { name: /Credit card/ }).click()
     await expect(page).toHaveURL(/account=/)
   }
 

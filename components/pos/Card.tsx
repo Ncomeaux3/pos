@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { Eyebrow, type DotTone } from './text'
 
@@ -10,14 +10,16 @@ export function Card({
   children,
   className,
   selected,
-}: {
+  ...rest
+}: ComponentProps<'div'> & {
   children: ReactNode
   className?: string
   /** 1px accent border plus soft fill. Never opacity. */
   selected?: boolean
-  }) {
+}) {
   return (
     <div
+      {...rest}
       className={cn(
         'border bg-bg-elev px-5 py-4',
         selected ? 'border-brand bg-brand-soft' : 'border-rule-2',

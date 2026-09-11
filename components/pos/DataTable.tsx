@@ -35,12 +35,14 @@ export function DataTable({
           real table role, and half a table's ARIA is worse than none. The
           header is a visual key, and each row below is a button when it opens
           something, which is the thing a reader actually needs to operate. */}
+      {/* The artboards' column key: 11px at 0.08em on a 7px row over rule-2. */}
       <div
         aria-hidden
-        className="hidden border-b border-rule pb-2.5 md:grid md:grid-cols-[var(--cols)] md:gap-x-4"
+        data-table-head
+        className="hidden border-b border-rule-2 py-[7px] md:grid md:grid-cols-[var(--cols)] md:gap-x-4"
       >
         {head.map((h, i) => (
-          <span key={i} className="label text-[10px] tracking-[0.12em] text-ink-3">
+          <span key={i} className="label text-[11px] tracking-[0.08em] text-ink-3">
             {h}
           </span>
         ))}

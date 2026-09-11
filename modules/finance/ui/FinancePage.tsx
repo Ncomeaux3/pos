@@ -15,10 +15,10 @@ import { syncFinance } from './sync'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-/** "10 Sep 2026", the date the band states the numbers are as of. */
-function shortDate(iso: string): string {
+/** "Fri Sep 11", the artboard's band date. */
+function bandDate(iso: string): string {
   const d = new Date(`${iso}T12:00:00`)
-  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`
+  return `${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()]} ${MONTHS[d.getMonth()]} ${d.getDate()}`
 }
 
 export default async function FinancePage() {
@@ -110,7 +110,6 @@ export default async function FinancePage() {
     <div className="space-y-7">
       <PageHeader
         eyebrow="Finance / Overview"
-        dot={hot > 0 ? 'warn' : 'brand'}
         // The artboard puts the provider and the last pull in the first band,
         // beside the search, with the button that does it now.
         status={
@@ -123,11 +122,10 @@ export default async function FinancePage() {
           />
         }
         title="Finance"
-        lede="Net worth from nightly balance snapshots, spending against this month's limits, and what is due in the next fortnight. Transactions are categorised by rules first; every one shows which rule decided it."
+        lede="Balances, upcoming charges, and budgets. Synced nightly, amounts in USD."
         actions={
-          <span className="num text-[11px] text-ink-3">
-            {shortDate(todayIso)} / {data.accounts.length} accounts / {hot}{' '}
-            {hot === 1 ? 'flag' : 'flags'}
+          <span className="label text-[11px] tracking-[0.08em] text-ink-3">
+            {bandDate(todayIso)} · {data.accounts.length} accounts · {hot} {hot === 1 ? 'flag' : 'flags'}
           </span>
         }
       />
