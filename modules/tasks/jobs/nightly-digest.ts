@@ -10,6 +10,8 @@ export type TasksDigest = {
   completedThisWeek: number
   /** Agent-proposed, waiting for approval. */
   awaitingReview: number
+  /** Overdue tasks the nightly roll has already moved at least twice. */
+  rolledTwice: number
   /** The next five, so the dashboard timeline has something to union. */
   upcoming: { id: string; title: string; dueOn: string; priority: string }[]
 }
@@ -43,6 +45,11 @@ export async function nightlyDigest(): Promise<TasksDigest> {
      from tasks.task`,
   )
   const counts = rows[0]
+  const rolls = await rollCounts()
+  const { rows: overdueIds } = await db().query<{ id: string }>(
+    `select id from tasks.task where status = 'open' and due_on < core.today()`,
+  )
+  const rolledTwice = overdueIds.filter((r) => (rolls.get(r.id) ?? 0) >= 2).length
 
   const { rows: upcoming } = await db().query<{
     id: string
@@ -64,8 +71,25 @@ export async function nightlyDigest(): Promise<TasksDigest> {
     completedToday: Number(counts.completed_today),
     completedThisWeek: Number(counts.completed_week),
     awaitingReview: Number(counts.awaiting_review),
+    rolledTwice,
     upcoming,
   }
+}
+
+/**
+ * How many times the nightly roll has moved each task, read back from the
+ * entries rollForward writes to core.write_log. Tasks keeps no counter of its
+ * own: the log already has one row per move, with the task id in the payload
+ * that would put the move back.
+ */
+export async function rollCounts(): Promise<Map<string, number>> {
+  const { rows } = await db().query<{ id: string; rolls: string }>(
+    `select apply_payload->>'id' as id, count(*)::text as rolls
+       from core.write_log
+      where module = 'tasks' and kind = 'rescheduled' and apply_payload ? 'id'
+      group by apply_payload->>'id'`,
+  )
+  return new Map(rows.map((r) => [r.id, Number(r.rolls)]))
 }
 
 /**

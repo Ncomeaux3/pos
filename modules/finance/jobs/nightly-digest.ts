@@ -16,6 +16,9 @@ export type FinanceDigest = {
   netWorthSeries: number[]
   /** Categories past the alert threshold. */
   overBudget: { name: string; percent: number }[]
+  /** Month to date, summed over the categories that have a budget this month. */
+  spendCents: number
+  budgetCents: number
   unusual: { descriptor: string; amountCents: number; occurredOn: string }[]
 }
 
@@ -34,6 +37,9 @@ export async function nightlyDigest(): Promise<FinanceDigest> {
   ])
 
   const netWorth = accounts.reduce((sum, a) => sum + Number(a.balance_cents), 0)
+  // Spend against budget is only meaningful where a budget exists; a category
+  // with no limit this month is neither under nor over anything.
+  const budgeted = spend.filter((c) => c.limit_cents)
   const assets = accounts
     .filter((a) => Number(a.balance_cents) > 0)
     .reduce((sum, a) => sum + Number(a.balance_cents), 0)
@@ -67,6 +73,8 @@ export async function nightlyDigest(): Promise<FinanceDigest> {
     netWorthSeries: series.map((p) => Math.round(p.cents / 100)),
     upcomingCents: upcoming.reduce((sum, c) => sum + Number(c.amount_cents), 0),
     upcomingCount: upcoming.length,
+    spendCents: budgeted.reduce((sum, c) => sum + Number(c.spent_cents), 0),
+    budgetCents: budgeted.reduce((sum, c) => sum + Number(c.limit_cents), 0),
     overBudget: spend
       .filter((c) => !c.is_fixed && c.limit_cents)
       .map((c) => ({

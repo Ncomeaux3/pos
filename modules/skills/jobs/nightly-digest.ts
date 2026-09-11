@@ -9,6 +9,9 @@ export type SkillsDigest = {
   characterLevel: number
   /** Most XP gained in the last 30 days. */
   gaining: { skillId: string; name: string; gained: number }[]
+  /** XP from this week's events, and the three skills that took most of it. */
+  xpThisWeek: number
+  gainedThisWeek: { skillId: string; name: string; gained: number }[]
   /** Linked at some point, nothing in 60 days. */
   stagnant: { skillId: string; name: string; lastEventAt: string | null }[]
   /**
@@ -23,6 +26,7 @@ type Row = {
   skill_id: string
   xp: string
   gained_30d: string
+  gained_7d: string
   last_event_at: string | null
 }
 
@@ -43,7 +47,9 @@ export async function nightlyDigest(): Promise<SkillsDigest> {
        x.xp::text,
        x.last_event_at::text,
        coalesce(sum(w.weight * sl.weight * sl.confidence)
-         filter (where e.occurred_at >= now() - interval '30 days'), 0)::text as gained_30d
+         filter (where e.occurred_at >= now() - interval '30 days'), 0)::text as gained_30d,
+       coalesce(sum(w.weight * sl.weight * sl.confidence)
+         filter (where e.occurred_at >= now() - interval '7 days'), 0)::text as gained_7d
      from skills.xp x
      join core.skill_links sl on sl.skill_id = x.skill_id
      join core.events e on e.entity_ref = sl.entity_ref
@@ -77,6 +83,12 @@ export async function nightlyDigest(): Promise<SkillsDigest> {
     attributes,
     totalXp,
     characterLevel: level(totalXp),
+    xpThisWeek: Math.round(rows.reduce((sum, r) => sum + Number(r.gained_7d), 0)),
+    gainedThisWeek: rows
+      .filter((r) => Number(r.gained_7d) > 0)
+      .sort((a, b) => Number(b.gained_7d) - Number(a.gained_7d))
+      .slice(0, 3)
+      .map((r) => ({ skillId: r.skill_id, name: nameOf(r.skill_id), gained: Math.round(Number(r.gained_7d)) })),
     gaining: rows
       .filter((r) => Number(r.gained_30d) > 0)
       .sort((a, b) => Number(b.gained_30d) - Number(a.gained_30d))

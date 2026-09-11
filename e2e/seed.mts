@@ -217,5 +217,31 @@ await db().query(
   ],
 )
 
+// The review's first step reads digests, and its delta lines read last week's.
+// Written from the seeded rows rather than listed here, so the tiles show what
+// the modules actually compute; then copied back a week with a few numbers
+// moved, so every kind of delta line the artboard draws has something to draw.
+const { writeDigests } = await import('@/core/digests')
+await db().query(`delete from core.digests`)
+await writeDigests()
+const { rows: fresh } = await db().query<{ module: string; payload: Record<string, unknown> }>(
+  `select distinct on (module) module, payload from core.digests order by module, run_at desc`,
+)
+const lastWeekOf = (module: string, payload: Record<string, unknown>): Record<string, unknown> => {
+  const n = (key: string) => (typeof payload[key] === 'number' ? (payload[key] as number) : 0)
+  if (module === 'tasks') return { ...payload, completedThisWeek: Math.max(0, n('completedThisWeek') - 4), overdue: n('overdue') + 1 }
+  if (module === 'skills') {
+    const attributes = (payload.attributes as { level: number }[] | undefined) ?? []
+    return { ...payload, attributes: attributes.map((a, i) => (i === 0 ? { ...a, level: a.level - 1 } : a)) }
+  }
+  return payload
+}
+for (const d of fresh) {
+  await db().query(
+    `insert into core.digests (module, run_at, payload) values ($1, now() - interval '8 days', $2::jsonb)`,
+    [d.module, JSON.stringify(lastWeekOf(d.module, d.payload))],
+  )
+}
+
 console.log(`seeded ${notes} notes, indexed ${index.indexed}, embedded ${index.embedded}, 2 proposals, 7 alerts, 2 runs, ${taskCount} tasks, ${goalCount} goals, ${txCount} transactions, ${detected.found} subscriptions detected, ${brainCount} notes, ${travelCount} travel rows, ${fitCount} workouts, ${healthCount} health rows, ${mealCount} meal rows, ${ideaCount} ideas, ${homeCount} home rows, ${policyCount} policies, ${coached.proposed} coach proposal`)
 process.exit(0)

@@ -14,6 +14,7 @@ import {
   reviewField,
   useToast,
 } from '@/components/pos'
+import type { GlanceTile } from '@/core/review-glance'
 import {
   EMPTY_ANSWERS,
   noteBlocks,
@@ -52,13 +53,9 @@ export type WeekData = {
   weekLabel: string
   /** "7 Sep 2026", for the note's title. */
   noteLabel: string
-  glance: {
-    label: string
-    value: string
-    module: string
-    delta: string | null
-    tone: 'brand' | 'warn' | 'quiet'
-  }[]
+  glance: GlanceTile[]
+  /** Labels of the modules whose digests the glance drew from, in tile order. */
+  glanceFrom: string[]
   wins: Win[]
   misses: Item[]
   backlog: Item[]
