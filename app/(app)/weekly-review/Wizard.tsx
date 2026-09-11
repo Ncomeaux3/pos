@@ -16,7 +16,11 @@ import {
 } from '@/components/pos'
 import type { GlanceTile } from '@/core/review-glance'
 import {
+  closeHelper,
   EMPTY_ANSWERS,
+  glanceHelper,
+  glanceSentence,
+  missesHelper,
   noteBlocks,
   outstanding,
   STEPS,
@@ -121,6 +125,17 @@ export function Wizard({ data }: { data: WeekData }) {
 
   const index = STEPS.findIndex((s) => s.key === step)
   const stage = STEPS[index]
+  // The artboard's sentences carry the week's own numbers, so three of them
+  // are built here rather than read off the step.
+  const question = step === 'close' ? `Ready to close week ${data.weekNumber}?` : stage.question
+  const helper =
+    step === 'glance'
+      ? glanceHelper(data.glanceFrom)
+      : step === 'misses'
+        ? missesHelper(data.misses.length)
+        : step === 'close'
+          ? closeHelper(answers.picks.length)
+          : stage.helper
 
   // Every change is saved, so the answers survive a closed tab. Fire and
   // forget: a failed save shows a toast and the state is still in the browser.
@@ -167,7 +182,7 @@ export function Wizard({ data }: { data: WeekData }) {
       text:
         carried.length === 0
           ? 'Nothing carried, so nothing moves.'
-          : `${carried.length} item${carried.length === 1 ? '' : 's'} move${carried.length === 1 ? 's' : ''} to next Monday, rescheduled by the module that owns it.`,
+          : `${carried.length} item${carried.length === 1 ? '' : 's'} move${carried.length === 1 ? 's' : ''} to next week with ${carried.length === 1 ? 'its' : 'their'} original context.`,
     },
     {
       tag: 'Priorities',
@@ -242,8 +257,8 @@ export function Wizard({ data }: { data: WeekData }) {
       current={step}
       onStep={(key) => setStep(key as StepKey)}
       kicker={stage.kicker}
-      title={stage.question}
-      helper={stage.helper}
+      title={question}
+      helper={helper}
       onBack={index > 0 ? () => setStep(STEPS[index - 1].key) : undefined}
       onNext={index === STEPS.length - 1 ? finish : () => setStep(STEPS[index + 1].key)}
       nextLabel={
@@ -284,9 +299,10 @@ export function Wizard({ data }: { data: WeekData }) {
             </div>
           )}
           <ReviewNote>
-            Every number here comes from a module digest, never from a module&apos;s own tables. A
-            module that is not installed contributes no line, and a delta needs a digest from last
-            week to compare against.
+            {glanceSentence(
+              data.glance,
+              data.checks.filter((c) => c.status === 'stalled').length,
+            )}
           </ReviewNote>
         </div>
       )}

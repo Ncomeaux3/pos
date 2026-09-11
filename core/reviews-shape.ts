@@ -38,8 +38,8 @@ export const STEPS: { key: StepKey; name: string; kicker: string; question: stri
     name: 'The week',
     kicker: 'Step one · what happened',
     question: 'Here is the week, measured',
-    helper:
-      'Pulled from the module digests. Nothing here needs your input; read it, then move on.',
+    // Rebuilt at render by glanceHelper() with the modules that contributed.
+    helper: 'Pulled from the module digests. Nothing here needs your input; read it, then move on.',
   },
   {
     key: 'wins',
@@ -54,14 +54,15 @@ export const STEPS: { key: StepKey; name: string; kicker: string; question: stri
     name: 'Misses',
     kicker: 'Step three · what slipped',
     question: 'What slipped, and what happens to it?',
-    helper: 'Each one needs a decision: carry it, shrink it, or drop it.',
+    // Rebuilt at render by missesHelper() with the count.
+    helper: 'Each one needs a decision: carry it, drop it, or shrink it.',
   },
   {
     key: 'goals',
     name: 'Goals',
     kicker: 'Step four · check in',
     question: 'Where do the goals stand?',
-    helper: 'Computed goals updated themselves. The rest need a number from you.',
+    helper: 'Computed goals updated themselves. The manual ones need a number from you.',
   },
   {
     key: 'plan',
@@ -74,9 +75,9 @@ export const STEPS: { key: StepKey; name: string; kicker: string; question: stri
     key: 'close',
     name: 'Close',
     kicker: 'Step six · close the week',
+    // The week number goes in at render; closeHelper() counts the picks.
     question: 'Ready to close the week?',
-    helper:
-      'This writes one note, reschedules what you carried, and records the three priorities.',
+    helper: 'This writes one note, reschedules what you carried, and sets the three priorities.',
   },
 ]
 
@@ -129,13 +130,13 @@ export function noteBlocks(answers: ReviewAnswers, context: NoteContext): NoteBl
   const picks = answers.picks.map((id, i) => `${i + 1}. ${context.pickTitles[id] ?? id}`)
 
   return [
-    { head: 'Wins', lines: wins, empty: 'Nothing ticked.' },
-    { head: 'Slipped', lines: slipped, empty: 'Nothing slipped.' },
-    { head: 'Goals', lines: context.goalLines, empty: 'No goals yet.' },
+    { head: 'Wins', lines: wins, empty: 'Nothing recorded.' },
+    { head: 'Slipped', lines: slipped, empty: 'Nothing recorded.' },
+    { head: 'Goals', lines: context.goalLines, empty: 'Nothing recorded.' },
     {
       head: 'Next week',
       lines: answers.intent ? [...picks, `Intent: ${answers.intent}`] : picks,
-      empty: 'Nothing picked.',
+      empty: 'Nothing recorded.',
     },
   ]
 }
@@ -153,4 +154,78 @@ export function renderNote(answers: ReviewAnswers, context: NoteContext): string
   }
 
   return lines.join('\n').trimEnd()
+}
+
+// The artboard's sentences, with its invented numbers replaced by the week's.
+// Counts under thirteen are words, as the artboard writes them.
+
+const WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve']
+const words = (n: number) => WORDS[n] ?? String(n)
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+
+/** "Finance, Tasks, Fitness and Skill Tree", or the digests when nothing named itself. */
+export function glanceHelper(from: string[]): string {
+  const source =
+    from.length === 0
+      ? 'the module digests'
+      : from.length === 1
+        ? from[0]
+        : `${from.slice(0, -1).join(', ')} and ${from[from.length - 1]}`
+  return `Pulled from ${source}. Nothing here needs your input; read it, then move on.`
+}
+
+type Tile = { label: string; value: string }
+
+/**
+ * The paragraph under the tiles. One sentence, read off the tiles that are
+ * there, so it never mentions a number the screen does not show. The goal
+ * clause is the count of goals whose module calls them stalled.
+ */
+export function glanceSentence(tiles: Tile[], stalledGoals: number): string {
+  const by = (label: string) => tiles.find((t) => t.label === label)?.value
+  const clauses: string[] = []
+
+  const closed = by('Tasks closed')
+  const slipped = by('Slipped')
+  const work = [
+    closed !== undefined ? `${closed} task${closed === '1' ? '' : 's'} closed` : null,
+    slipped !== undefined ? `${slipped} slipped` : null,
+  ].filter((c): c is string => c !== null)
+  if (work.length > 0) clauses.push(work.join(' and '))
+
+  const spend = by('Spend vs budget')
+  if (spend !== undefined) clauses.push(`spend at ${spend} of budget`)
+
+  const workouts = by('Workouts')
+  if (workouts !== undefined) clauses.push(`${workouts} workout${workouts === '1' ? '' : 's'}`)
+
+  if (stalledGoals > 0) {
+    clauses.push(
+      stalledGoals === 1
+        ? 'one goal that has not moved'
+        : `${words(stalledGoals)} goals that have not moved`,
+    )
+  }
+
+  if (clauses.length === 0) return 'No numbers yet this week.'
+  const list =
+    clauses.length === 1
+      ? clauses[0]
+      : clauses.length === 2
+        ? clauses.join(' and ')
+        : `${clauses.slice(0, -1).join(', ')}, and ${clauses[clauses.length - 1]}`
+  return `The shape of the week: ${list}.`
+}
+
+/** "Four items missed their date. Each one needs a decision: carry it, drop it, or shrink it." */
+export function missesHelper(count: number): string {
+  if (count === 0) return 'Nothing missed its date.'
+  if (count === 1) return 'One item missed its date. It needs a decision: carry it, drop it, or shrink it.'
+  return `${cap(words(count))} items missed their date. Each one needs a decision: carry it, drop it, or shrink it.`
+}
+
+/** What pressing Close does, counting the picks it will set. */
+export function closeHelper(picks: number): string {
+  if (picks === 0) return 'This writes one note and reschedules what you carried.'
+  return `This writes one note, reschedules what you carried, and sets the ${words(picks)} priorit${picks === 1 ? 'y' : 'ies'}.`
 }

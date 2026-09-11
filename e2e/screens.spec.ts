@@ -680,8 +680,23 @@ test('weekly review, six steps and a note built from the answers', async ({ page
   await page.goto('/weekly-review')
   await expect(page.getByRole('heading', { name: 'Weekly review' })).toBeVisible()
 
-  // Step one reads digests only, which is the cross-module rule on screen.
-  await expect(page.getByText(/comes from a module digest/)).toBeVisible()
+  // Step one is the artboard's six tiles, in its order, each from a module's
+  // digest. POS Weekly Review.dc.html at 1440x900.
+  const tiles = page.locator('main').getByText(
+    /^(Tasks closed|Slipped|Spend vs budget|Net worth|Workouts|XP earned)$/,
+  )
+  await expect(tiles).toHaveText([
+    'Tasks closed',
+    'Slipped',
+    'Spend vs budget',
+    'Net worth',
+    'Workouts',
+    'XP earned',
+  ])
+  // The sentence under them is read off the tiles, so it names the modules that
+  // wrote them rather than a fixed list.
+  await expect(page.getByText(/^Pulled from .*Tasks.*\. Nothing here needs your input/)).toBeVisible()
+  await expect(page.getByText(/^The shape of the week:/)).toBeVisible()
   await shoot(page, 'weekly-review')
 
   // Every click below needs a hydrated page: a click that lands before React

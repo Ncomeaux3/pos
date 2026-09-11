@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { weekNumber, weekOf } from './reviews'
-import { EMPTY_ANSWERS, outstanding, renderNote, type ReviewAnswers } from './reviews-shape'
+import {
+  closeHelper,
+  EMPTY_ANSWERS,
+  glanceHelper,
+  glanceSentence,
+  missesHelper,
+  outstanding,
+  renderNote,
+  type ReviewAnswers,
+} from './reviews-shape'
 
 describe('weekOf', () => {
   it('returns the Monday that starts the week', () => {
@@ -91,9 +100,62 @@ describe('renderNote', () => {
 
   it('says a section was empty rather than leaving a bare heading', () => {
     const note = renderNote(EMPTY_ANSWERS, { ...context, goalLines: [] })
-    expect(note).toContain('- Nothing ticked.')
-    expect(note).toContain('- Nothing slipped.')
-    expect(note).toContain('- No goals yet.')
-    expect(note).toContain('- Nothing picked.')
+    expect(note).toContain('- Nothing recorded.')
+    expect(note).toContain('- Nothing recorded.')
+    expect(note).toContain('- Nothing recorded.')
+    expect(note).toContain('- Nothing recorded.')
+  })
+})
+
+// The artboard's copy, built from the numbers rather than typed, so it is
+// true on a week that is not the one the designer invented.
+describe('the sentences the review says about the week', () => {
+  const tile = (label: string, value: string) => ({ module: 'x', label, value, delta: null, tone: 'quiet' as const })
+
+  it('glanceSentence reads the tiles into one sentence, dropping what is not there', () => {
+    expect(
+      glanceSentence(
+        [tile('Tasks closed', '23'), tile('Slipped', '4'), tile('Spend vs budget', '84%'), tile('Workouts', '4')],
+        1,
+      ),
+    ).toBe(
+      'The shape of the week: 23 tasks closed and 4 slipped, spend at 84% of budget, 4 workouts, and one goal that has not moved.',
+    )
+    expect(glanceSentence([tile('Tasks closed', '1'), tile('Workouts', '1')], 0)).toBe(
+      'The shape of the week: 1 task closed and 1 workout.',
+    )
+    expect(glanceSentence([tile('Slipped', '2')], 2)).toBe(
+      'The shape of the week: 2 slipped and two goals that have not moved.',
+    )
+    expect(glanceSentence([], 0)).toBe('No numbers yet this week.')
+  })
+
+  it('glanceHelper names the modules that contributed', () => {
+    expect(glanceHelper(['Finance', 'Tasks', 'Fitness', 'Skill Tree'])).toBe(
+      'Pulled from Finance, Tasks, Fitness and Skill Tree. Nothing here needs your input; read it, then move on.',
+    )
+    expect(glanceHelper(['Tasks'])).toBe(
+      'Pulled from Tasks. Nothing here needs your input; read it, then move on.',
+    )
+    expect(glanceHelper([])).toBe(
+      'Pulled from the module digests. Nothing here needs your input; read it, then move on.',
+    )
+  })
+
+  it('missesHelper counts in words', () => {
+    expect(missesHelper(4)).toBe(
+      'Four items missed their date. Each one needs a decision: carry it, drop it, or shrink it.',
+    )
+    expect(missesHelper(1)).toBe('One item missed its date. It needs a decision: carry it, drop it, or shrink it.')
+    expect(missesHelper(0)).toBe('Nothing missed its date.')
+    expect(missesHelper(14)).toMatch(/^14 items missed their date\./)
+  })
+
+  it('closeHelper promises only what the close does', () => {
+    expect(closeHelper(3)).toBe(
+      'This writes one note, reschedules what you carried, and sets the three priorities.',
+    )
+    expect(closeHelper(1)).toBe('This writes one note, reschedules what you carried, and sets the one priority.')
+    expect(closeHelper(0)).toBe('This writes one note and reschedules what you carried.')
   })
 })
