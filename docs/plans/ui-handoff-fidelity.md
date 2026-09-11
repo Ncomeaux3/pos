@@ -197,6 +197,8 @@
 
 ## Task 5: Restore the Skill Tree desktop split
 
+> Done 2026-09-11 in docs/plans/skill-tree-fidelity.md: two flush halves split by one rule, no outer cards.
+
 **Files:**
 - Modify: `modules/skills/ui/SkillTree.tsx:154-311`
 - Modify: `e2e/screens.spec.ts:100-177`
