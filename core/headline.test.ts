@@ -97,3 +97,51 @@ describe('headlineSegments', () => {
     expect(segments.find((x) => x.href === '/settings')?.text).toBe('10.00 cap')
   })
 })
+
+// POS Dashboard.dc.html's sentence, from digests: the net worth move, the
+// budgets past the line with the days left in the month, the skill that has
+// gone longest without an event. Still a template; every number is a digest's.
+describe('headlineSegments from digests', () => {
+  const today = '2026-09-11'
+  const finance = { module: 'finance', payload: { netWorthCents: 24720000, changeCents: 418000, overBudget: [{ name: 'Dining', percent: 88 }, { name: 'Fitness', percent: 90 }] } }
+  const skills = { module: 'skills', payload: { stagnant: [{ skillId: 'negotiation', name: 'Negotiation', lastEventAt: '2026-06-29T12:00:00Z' }] } }
+  const text = (s: ReturnType<typeof headlineSegments>) => s.map((x) => x.text).join('')
+  const links = (s: ReturnType<typeof headlineSegments>) => s.filter((x) => x.href).map((x) => [x.text, x.href])
+
+  it('reads the three clauses as the artboard writes them', () => {
+    const s = headlineSegments(summary({ modules: [finance, skills] }), today)
+    expect(text(s)).toBe(
+      'Net worth climbed $4,180 in 30 days. Dining and Fitness are past 80% of budget with 19 days left, and Negotiation has gone 74 days without a linked event.',
+    )
+    expect(links(s)).toEqual([
+      ['$4,180 in 30 days', '/finance'],
+      ['Dining and Fitness are past 80%', '/finance'],
+      ['Negotiation has gone 74 days', '/skills'],
+    ])
+  })
+
+  it('says fell and held, and one budget on its own', () => {
+    const fell = { module: 'finance', payload: { netWorthCents: 1, changeCents: -120000, overBudget: [{ name: 'Dining', percent: 91 }] } }
+    expect(text(headlineSegments(summary({ modules: [fell] }), today))).toBe(
+      'Net worth fell $1,200 in 30 days. Dining is past 80% of budget with 19 days left.',
+    )
+    const held = { module: 'finance', payload: { netWorthCents: 1, changeCents: 0, overBudget: [] } }
+    expect(text(headlineSegments(summary({ modules: [held] }), today))).toBe('Net worth held over 30 days.')
+  })
+
+  it('drops a clause whose digest is missing and keeps the sentence whole', () => {
+    expect(text(headlineSegments(summary({ modules: [skills] }), today))).toBe(
+      'Negotiation has gone 74 days without a linked event.',
+    )
+    const budgetsOnly = { module: 'finance', payload: { overBudget: [{ name: 'Dining', percent: 91 }, { name: 'Fitness', percent: 90 }, { name: 'Travel', percent: 85 }] } }
+    expect(text(headlineSegments(summary({ modules: [budgetsOnly, skills] }), today))).toBe(
+      'Dining, Fitness and Travel are past 80% of budget with 19 days left, and Negotiation has gone 74 days without a linked event.',
+    )
+  })
+
+  it('falls back to the alerts sentence when no digest has a clause', () => {
+    const s = summary({ pendingProposals: 2, modules: [{ module: 'finance', payload: { overBudget: [] } }] })
+    expect(text(headlineSegments(s, today))).toBe('2 proposals waiting.')
+    expect(writeHeadline(summary(), today)).toBeNull()
+  })
+})

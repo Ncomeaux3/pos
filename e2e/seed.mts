@@ -242,6 +242,27 @@ for (const [i, task] of overdueDemo.entries()) {
   }
 }
 
+// One skill that has gone quiet: the headline's third clause and the Skill
+// Tree tile's idle row both need a skill whose last linked event is over sixty
+// days old, and a seed that writes everything tonight has none. The skill with
+// the fewest linked entities has its events moved back 74 days.
+const { rows: quiet } = await db().query<{ skill_id: string; entity_ref: string }>(
+  `select sl.skill_id, min(sl.entity_ref::text) as entity_ref
+     from core.skill_links sl
+     join core.events e on e.entity_ref = sl.entity_ref
+     join skills.xp_weight w on w.event_type = e.event_type
+    group by sl.skill_id
+   having count(distinct sl.entity_ref) = 1
+    order by sl.skill_id
+    limit 1`,
+)
+if (quiet[0]) {
+  await db().query(
+    `update core.events set occurred_at = now() - interval '74 days' where entity_ref = $1`,
+    [quiet[0].entity_ref],
+  )
+}
+
 // The review's first step reads digests, and its delta lines read last week's.
 // Written from the seeded rows rather than listed here, so the tiles show what
 // the modules actually compute; then copied back a week with a few numbers

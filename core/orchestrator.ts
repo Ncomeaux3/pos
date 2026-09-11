@@ -109,8 +109,8 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
  * Returns null when there is nothing worth a sentence. A dashboard with no
  * headline is a quiet night, which is the correct output.
  */
-export function writeHeadline(summary: Summary): string | null {
-  const segments = headlineSegments(summary)
+export function writeHeadline(summary: Summary, today?: string): string | null {
+  const segments = headlineSegments(summary, today)
   return segments.length === 0 ? null : segments.map((s) => s.text).join('')
 }
 
@@ -126,7 +126,10 @@ export type HeadlineSegment = { text: string; href?: string }
  * something the caller has to reconstruct. `writeHeadline` joins them back
  * into the plain string that goes in the database and the email.
  */
-export function headlineSegments(summary: Summary): HeadlineSegment[] {
+export function headlineSegments(summary: Summary, today?: string): HeadlineSegment[] {
+  const digested = digestSentence(summary, today)
+  if (digested.length > 0) return [...digested, ...capSentence(summary)]
+
   const parts: HeadlineSegment[] = []
 
   const bad = summary.alerts.filter((a) => a.tone === 'bad').length
@@ -151,16 +154,87 @@ export function headlineSegments(summary: Summary): HeadlineSegment[] {
   })
   out.push({ text: '.' })
 
-  // The cap is the one number worth naming unprompted: it is the only thing
-  // here that stops working when it is reached.
-  if (summary.capCents > 0 && summary.spendCents >= summary.capCents) {
-    out.push(
-      { text: ' Model spend has reached the ' },
-      { text: `${(summary.capCents / 100).toFixed(2)} cap`, href: '/settings' },
-      { text: ', so research is paused.' },
+  return [...out, ...capSentence(summary)]
+}
+
+/**
+ * The cap is the one number worth naming unprompted: it is the only thing
+ * here that stops working when it is reached.
+ */
+function capSentence(summary: Summary): HeadlineSegment[] {
+  if (!(summary.capCents > 0 && summary.spendCents >= summary.capCents)) return []
+  return [
+    { text: ' Model spend has reached the ' },
+    { text: `${(summary.capCents / 100).toFixed(2)} cap`, href: '/settings' },
+    { text: ', so research is paused.' },
+  ]
+}
+
+/**
+ * The artboard's sentence, from digests: "Net worth climbed $4,180 in 30
+ * days. Dining and Fitness are past 80% of budget with 19 days left, and
+ * Negotiation has gone 74 days without a linked event."
+ *
+ * Each clause is there only when its digest carries the number, and the
+ * period is the one the digest measures: Finance's change is over thirty
+ * days, so the sentence says so rather than borrowing the artboard's "this
+ * month". Nothing here attributes the move to an account, because no digest
+ * does. Empty when no clause has a number, and the alerts sentence stands in.
+ */
+function digestSentence(summary: Summary, today?: string): HeadlineSegment[] {
+  const payload = (id: string) => summary.modules.find((m) => m.module === id)?.payload
+  const num = (p: Record<string, unknown> | undefined, key: string) =>
+    typeof p?.[key] === 'number' ? (p[key] as number) : null
+  const finance = payload('finance')
+  const skills = payload('skills')
+  const now = today ? new Date(`${today}T12:00:00Z`) : new Date()
+
+  const first: HeadlineSegment[] = []
+  const change = num(finance, 'changeCents')
+  if (change !== null) {
+    const dollars = `$${Math.round(Math.abs(change) / 100).toLocaleString('en-US')}`
+    first.push(
+      change === 0
+        ? { text: 'Net worth held over 30 days' }
+        : { text: `Net worth ${change > 0 ? 'climbed' : 'fell'} ` },
     )
+    if (change !== 0) first.push({ text: `${dollars} in 30 days`, href: '/finance' })
   }
 
+  const rest: HeadlineSegment[][] = []
+  const over = ((finance?.overBudget as { name: string }[] | undefined) ?? []).map((b) => b.name)
+  if (over.length > 0) {
+    const names =
+      over.length === 1 ? over[0] : `${over.slice(0, -1).join(', ')} and ${over[over.length - 1]}`
+    const last = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0))
+    const daysLeft = Math.round((last.getTime() - now.getTime()) / 86_400_000)
+    rest.push([
+      { text: `${names} ${over.length === 1 ? 'is' : 'are'} past 80%`, href: '/finance' },
+      { text: ` of budget with ${plural(daysLeft, 'day')} left` },
+    ])
+  }
+
+  const idle = ((skills?.stagnant as { name: string; lastEventAt: string | null }[] | undefined) ?? [])
+    .find((s) => s.lastEventAt)
+  if (idle?.lastEventAt) {
+    const days = Math.round((now.getTime() - Date.parse(idle.lastEventAt)) / 86_400_000)
+    rest.push([
+      { text: `${idle.name} has gone ${plural(days, 'day')}`, href: '/skills' },
+      { text: ' without a linked event' },
+    ])
+  }
+
+  if (first.length === 0 && rest.length === 0) return []
+
+  const out: HeadlineSegment[] = []
+  if (first.length > 0) out.push(...first, { text: '.' })
+  rest.forEach((clause, i) => {
+    if (i === 0 && first.length > 0) out.push({ text: ' ' })
+    if (i > 0) out.push({ text: ', and ' })
+    const [head, ...tail] = clause
+    out.push(i === 0 ? { ...head, text: capitalise(head.text) } : head, ...tail)
+  })
+  if (rest.length > 0) out.push({ text: '.' })
   return out
 }
 
@@ -177,7 +251,8 @@ const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
  */
 export async function assembleSummary(): Promise<{ headline: string | null; queued: boolean }> {
   const summary = await buildSummary()
-  const headline = writeHeadline(summary)
+  const { ownerToday } = await import('./today')
+  const headline = writeHeadline(summary, await ownerToday())
 
   await db().query(
     `insert into core.dashboard_summary (summary, headline) values ($1::jsonb, $2)`,

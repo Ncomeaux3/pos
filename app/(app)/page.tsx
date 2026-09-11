@@ -121,7 +121,7 @@ export default async function DashboardPage() {
   const rail = [...nav, ...offRail].map((n) => n.href.slice(1))
 
   const summary = latest?.summary
-  const segments = summary ? headlineSegments(summary) : []
+  const segments = summary ? headlineSegments(summary, todayIso) : []
   const failed = jobs.filter((j) => j.status === 'failed')
   const spendCents = summary?.spendCents ?? 0
   const capCents = summary?.capCents ?? settings.llm_soft_cap_cents
