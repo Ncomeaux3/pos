@@ -12,23 +12,62 @@ export type NavItem = {
 }
 
 /**
- * Dashboard, then every enabled module in manifest order, then Review. The
- * index is positional rather than stored, so removing a module renumbers the
- * list instead of leaving a hole.
+ * The rail's order, from PosSidebar.dc.html. Module ids, not labels: the label
+ * and the route still come from the manifest, this only says where a module
+ * sits. An enabled module that is not named here is not on the rail at all,
+ * because the artboard draws exactly these thirteen and the numbering is what
+ * the eye reads. It keeps its route and its place in the command palette.
+ */
+const RAIL = [
+  'finance',
+  'skills',
+  'tasks',
+  'goals',
+  'brain',
+  'insurance',
+  'ideas',
+  'fitness',
+  'health',
+  'home',
+  'meals',
+  'travel',
+]
+
+async function enabledModules() {
+  const enabled = await getSetting('modules_enabled')
+  return getModules().filter((m) => enabled === null || enabled.includes(m.id))
+}
+
+/**
+ * Dashboard, then every enabled module in the artboard's order, then Review.
+ * The index is positional rather than stored, so disabling a module renumbers
+ * the list instead of leaving a hole.
  */
 export async function getNav(): Promise<NavItem[]> {
-  const enabled = await getSetting('modules_enabled')
-  const modules = getModules().filter((m) => enabled === null || enabled.includes(m.id))
+  const modules = await enabledModules()
+  const onRail = RAIL.flatMap((id) => modules.filter((m) => m.id === id))
 
   const main: Omit<NavItem, 'code'>[] = [
     { href: '/', label: 'Dashboard' },
-    ...modules.map((m) => ({ href: `/${m.id}`, label: m.nav.label })),
+    ...onRail.map((m) => ({ href: `/${m.id}`, label: m.nav.label })),
   ]
 
   return [
     ...main.map((item, i) => ({ ...item, code: String(i + 1).padStart(2, '0') })),
     { href: '/review', label: 'Review', code: 'RV' },
   ]
+}
+
+/**
+ * Enabled modules with no row on the rail. The command palette lists these
+ * after the rail and the footer, so nothing enabled is more than a keystroke
+ * away even when the artboard has no place for it.
+ */
+export async function getOffRailNav(): Promise<NavItem[]> {
+  const modules = await enabledModules()
+  return modules
+    .filter((m) => !RAIL.includes(m.id))
+    .map((m) => ({ href: `/${m.id}`, label: m.nav.label, code: '··' }))
 }
 
 /** The sidebar footer, and the source of the mobile More sheet's second half. */

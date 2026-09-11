@@ -68,6 +68,8 @@
 
 ## Task 2: Restore source navigation order without removing routes
 
+> Done 2026-09-11 in docs/plans/weekly-review-fidelity.md, Task 1, with one difference: Notes is not appended after the artboard's sequence, it leaves the rail and stays in the command palette.
+
 **Files:**
 - Modify: `core/nav.ts:16-36`
 - Modify: `components/pos/Sidebar.tsx:98-142`

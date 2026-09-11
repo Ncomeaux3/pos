@@ -41,8 +41,8 @@ async function shoot(page: Page, name: string) {
 test('dashboard shell', async ({ page }) => {
   await page.goto('/')
 
-  // The nav is built from manifests, so Dashboard and the stub module both
-  // have to be there for the module contract to still be working.
+  // The nav is built from manifests, so Dashboard has to be there for the
+  // module contract to still be working.
   const nav = page.getByRole('navigation', { name: /modules|sections/i }).first()
   await expect(nav.getByRole('link', { name: 'Dashboard' })).toBeVisible()
 
@@ -53,18 +53,81 @@ test('dashboard shell', async ({ page }) => {
   if (mobile) {
     await page.getByRole('group').getByText('More').click()
   }
-  await expect(nav.getByRole('link', { name: 'Notes' })).toBeVisible()
   // By href: the sidebar prefixes each label with its two character index and
   // appends the pending count, so the accessible name is "RV Review 2", and
   // "Weekly review" would match a loose name filter anyway.
   await expect(nav.locator('a[href="/review"]')).toBeVisible()
+  // PosSidebar.dc.html lists thirteen modules and Review. Notes is not one of
+  // them, so the stub leaves the numbered rail and every index after it lines
+  // up with the artboard. The route itself stays; the palette test proves it.
+  await expect(nav.locator('a[href="/notes"]')).toHaveCount(0)
+
+  if (!mobile) {
+    // PosSidebar.dc.html at 1440x900: the order of the rail, top to bottom.
+    const labels = await nav.locator('a').evaluateAll((links) =>
+      links.map((a) => a.querySelector('.truncate')?.textContent?.trim()),
+    )
+    expect(labels).toEqual([
+      'Dashboard',
+      'Finance',
+      'Skill Tree',
+      'Tasks',
+      'Goals',
+      'Second Brain',
+      'Insurance',
+      'Ideas',
+      'Fitness',
+      'Health',
+      'Home & Assets',
+      'Meals',
+      'Travel',
+      'Review',
+    ])
+
+    // PosSidebar.dc.html: a row is 36px tall at least, its index is 11px mono,
+    // and the Review badge is drawn in the accent, not the green.
+    const row = nav.locator('a[href="/finance"]')
+    const geometry = await row.evaluate((a) => {
+      const index = a.querySelector('.label')!
+      return {
+        minHeight: getComputedStyle(a).minHeight,
+        indexSize: getComputedStyle(index).fontSize,
+      }
+    })
+    expect(geometry).toEqual({ minHeight: '36px', indexSize: '11px' })
+
+    const badge = nav.locator('a[href="/review"] span').last()
+    const accent = await page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
+    )
+    const badgeColor = await badge.evaluate((el) => getComputedStyle(el).color)
+    const accentRgb = await page.evaluate((hex) => {
+      const probe = document.createElement('span')
+      probe.style.color = hex
+      document.body.append(probe)
+      const rgb = getComputedStyle(probe).color
+      probe.remove()
+      return rgb
+    }, accent)
+    expect(badgeColor).toBe(accentRgb)
+
+    // The footer is a list too: Dark (or Light) and Collapse are rows in it
+    // with 13px labels, not a bar under it.
+    const footer = page.getByRole('navigation', { name: /sections/i })
+    await expect(footer.getByRole('button', { name: /^(Dark|Light)$/ })).toBeVisible()
+    await expect(footer.getByRole('button', { name: 'Collapse' })).toBeVisible()
+    const labelSize = await footer
+      .getByRole('button', { name: 'Collapse' })
+      .evaluate((b) => getComputedStyle(b).fontSize)
+    expect(labelSize).toBe('13px')
+  }
 
   // Closed with the summary that opened it. Escape does not close a `details`,
   // and the sheet is full width now, so leaving it open would be most of the
   // dashboard shot.
   if (mobile) {
     await page.getByRole('group').getByText('More').click()
-    await expect(nav.getByRole('link', { name: 'Notes' })).toBeHidden()
+    await expect(nav.locator('a[href="/review"]')).toBeHidden()
   }
   await shoot(page, 'dashboard')
 })
@@ -230,6 +293,9 @@ test('command palette opens on cmd k and finds an entity', async ({ page }) => {
   // The Go to list is the same nav the sidebar builds, so it is there before
   // anything is typed.
   await expect(palette.getByRole('button', { name: /Settings/ })).toBeVisible()
+  // Notes left the numbered rail to match the artboard; the palette is where
+  // an enabled module with no row on the rail is still one keystroke away.
+  await expect(palette.getByRole('button', { name: /^Notes/ })).toBeVisible()
 
   await page.getByLabel(/command palette search/i).fill('deadlift')
   await expect(palette.getByRole('button', { name: /Deadlift form check/ })).toBeVisible()

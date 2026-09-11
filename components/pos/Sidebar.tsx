@@ -40,44 +40,49 @@ function isActive(pathname: string, href: string) {
   return href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`)
 }
 
+/**
+ * One row of the rail, measured off PosSidebar.dc.html: 36px at least,
+ * `padding 9px 18px 9px 0`, a 2px bar down the left that is the accent on the
+ * active row and nothing otherwise, 12px to an 11px index in a 20px slot, then
+ * the 13px label. The index takes the row's own colour; the artboard gives it
+ * no colour of its own. Footer rows have no bar and start 20px in instead.
+ */
 function NavRow({
   item,
   collapsed,
   active,
   badge,
+  rail = true,
 }: {
   item: NavItem
   collapsed: boolean
   active: boolean
   badge?: number
+  rail?: boolean
 }) {
   return (
     <Link
       href={item.href}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'group flex items-center gap-3 border-l-2 py-2.5 pl-3 pr-2.5 transition-colors duration-150',
-        active
-          ? 'border-brand bg-brand-soft text-ink'
-          : 'border-transparent text-ink-3 hover:bg-bg-elev hover:text-ink-2',
+        rowClass,
+        rail ? 'pl-0' : 'pl-5',
+        active ? 'bg-brand-soft text-ink' : 'text-ink-3 hover:text-ink',
       )}
     >
-      <span className={cn('label w-5 shrink-0 text-[10px] tracking-[0.1em]', active ? 'text-ok' : 'text-ink-4')}>
-        {item.code}
-      </span>
-      <span
-        className={cn(
-          'min-w-0 flex-1 truncate text-[13px] transition-opacity duration-200',
-          collapsed && 'pointer-events-none opacity-0',
-        )}
-      >
-        {item.label}
-      </span>
+      {rail && (
+        <span
+          aria-hidden
+          className={cn('w-[2px] shrink-0 self-stretch', active ? 'bg-brand' : 'bg-transparent')}
+        />
+      )}
+      <span className="label w-5 shrink-0 text-[11px] tracking-[0.12em]">{item.code}</span>
+      <span className={cn('min-w-0 flex-1 truncate text-[13px]', fadeClass(collapsed))}>{item.label}</span>
       {badge !== undefined && badge > 0 && (
         <span
           className={cn(
-            'num shrink-0 rounded-md border border-brand px-1.5 py-0.5 text-[10px] leading-none text-ok transition-opacity duration-200',
-            collapsed && 'opacity-0',
+            'label num shrink-0 rounded-md border border-brand px-[7px] py-0.5 text-[10px] leading-none text-brand',
+            fadeClass(collapsed),
           )}
         >
           {badge}
@@ -85,6 +90,12 @@ function NavRow({
       )}
     </Link>
   )
+}
+
+const rowClass = 'flex min-h-9 w-full items-center gap-3 py-[9px] pr-[18px] text-left transition-colors duration-150'
+
+function fadeClass(collapsed: boolean) {
+  return cn('transition-opacity duration-200', collapsed && 'pointer-events-none opacity-0')
 }
 
 export function Sidebar({
@@ -115,13 +126,13 @@ export function Sidebar({
       style={{ width: collapsed ? 64 : 232, transition: `width .25s ${EASE}` }}
       className="fixed inset-y-0 left-0 z-40 hidden shrink-0 flex-col border-r border-rule bg-bg-elev md:flex"
     >
-      <div className="flex h-14 items-center border-b border-rule px-3">
+      <div className="flex h-14 items-center border-b border-rule px-[18px]">
         {/* Mark only at 28px with the owner's name beside it, which is what the
             design bundle asks for by name: "The sidebar renders it at 28px
             square, mark only, with the owner name beside it in Manrope 600
             13px. Do not use a wordmark lockup." The name is a setting, never a
             literal, because this repo holds nothing personal. */}
-        <Link href="/" aria-label="Dashboard" className="flex min-w-0 items-center gap-2.5">
+        <Link href="/" aria-label="Dashboard" className="flex min-w-0 items-center gap-3">
           <ComeauxverseMark size={28} />
           <span
             className={cn(
@@ -134,7 +145,7 @@ export function Sidebar({
         </Link>
       </div>
 
-      <nav aria-label="Modules" className="min-h-0 flex-1 overflow-y-auto py-2">
+      <nav aria-label="Modules" className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto py-3">
         {nav.map((item) => (
           <NavRow
             key={item.href}
@@ -146,46 +157,53 @@ export function Sidebar({
         ))}
       </nav>
 
-      <div className="border-t border-rule py-2">
+      {/* The footer is a second list, not a bar: five links, then the theme and
+          the collapse control as rows of the same height and type, which is how
+          the artboard draws them. The theme row names the theme you are on. */}
+      <nav aria-label="Sections" className="flex flex-col gap-0.5 border-t border-rule py-2.5">
         {footer.map((item) => (
-          <NavRow key={item.href} item={item} collapsed={collapsed} active={isActive(pathname, item.href)} />
+          <NavRow
+            key={item.href}
+            item={item}
+            collapsed={collapsed}
+            active={isActive(pathname, item.href)}
+            rail={false}
+          />
         ))}
 
-        <div className="mt-1 flex items-center gap-1 border-t border-rule px-3 pt-2">
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => start(() => void onToggleTheme(theme))}
-            className="flex min-w-0 flex-1 items-center gap-2.5 py-2 text-left text-ink-3 transition-colors duration-150 hover:text-ink"
-          >
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => start(() => void onToggleTheme(theme))}
+          className={cn(rowClass, 'pl-5 text-[13px] text-ink-3 hover:text-ink')}
+        >
+          <span className="flex w-5 shrink-0">
             <span
               aria-hidden
               className={cn(
-                'size-3 shrink-0 rounded-full border',
-                theme === 'dark' ? 'border-ink-3' : 'border-ink-3 bg-ink-3',
+                'size-2.5 rounded-full border border-current',
+                theme === 'light' && 'bg-current',
               )}
             />
-            <span
-              className={cn(
-                'label truncate text-[10px] tracking-[0.1em] transition-opacity duration-200',
-                collapsed && 'opacity-0',
-              )}
-            >
-              {theme === 'dark' ? 'Light' : 'Dark'}
-            </span>
-          </button>
+          </span>
+          <span className={cn('min-w-0 flex-1 truncate', fadeClass(collapsed))}>
+            {theme === 'dark' ? 'Dark' : 'Light'}
+          </span>
+        </button>
 
-          <button
-            type="button"
-            disabled={pending}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            onClick={() => start(() => void onToggleCollapse(!collapsed))}
-            className="label shrink-0 px-1.5 py-2 text-[11px] text-ink-3 transition-colors duration-150 hover:text-ink"
-          >
+        <button
+          type="button"
+          disabled={pending}
+          aria-expanded={!collapsed}
+          onClick={() => start(() => void onToggleCollapse(!collapsed))}
+          className={cn(rowClass, 'pl-5 text-[13px] text-ink-3 hover:text-ink')}
+        >
+          <span aria-hidden className="label w-5 shrink-0 text-[11px]">
             {collapsed ? '›' : '‹'}
-          </button>
-        </div>
-      </div>
+          </span>
+          <span className={cn('min-w-0 flex-1 truncate', fadeClass(collapsed))}>Collapse</span>
+        </button>
+      </nav>
     </aside>
   )
 }

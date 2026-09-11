@@ -1,6 +1,6 @@
 import { requireOwner } from '@/core/auth'
 import { db } from '@/core/db'
-import { getNav, NAV_FOOTER } from '@/core/nav'
+import { getNav, getOffRailNav, NAV_FOOTER } from '@/core/nav'
 import { getSettings } from '@/core/settings'
 import { getSidebarCollapsed, getTheme } from '@/core/theme'
 import { CommandPalette } from '@/components/pos/CommandPalette'
@@ -18,8 +18,9 @@ async function pendingProposals(): Promise<number> {
 export default async function AppLayout({ children }: LayoutProps<'/'>) {
   await requireOwner()
 
-  const [nav, collapsed, theme, reviewCount, settings] = await Promise.all([
+  const [nav, offRail, collapsed, theme, reviewCount, settings] = await Promise.all([
     getNav(),
+    getOffRailNav(),
     getSidebarCollapsed(),
     getTheme(),
     pendingProposals(),
@@ -39,7 +40,7 @@ export default async function AppLayout({ children }: LayoutProps<'/'>) {
         onToggleTheme={toggleTheme}
       />
       <MobileTabBar nav={nav} footer={NAV_FOOTER} reviewCount={reviewCount} />
-      <CommandPalette nav={[...nav, ...NAV_FOOTER]} />
+      <CommandPalette nav={[...nav, ...NAV_FOOTER, ...offRail]} />
 
       <main
         // The sidebar is fixed so the rail never scrolls with the page; this
