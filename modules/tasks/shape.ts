@@ -235,5 +235,40 @@ export function columnsFor(
   ]
 }
 
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/**
+ * The line under a slipped item on the weekly review: when it was due, how
+ * many times the nightly roll has moved it, and the project it belongs to.
+ * A weekday for anything inside the week, the date past that, because "Due
+ * Tue" three weeks on says less than it seems to.
+ */
+export function slipMeta({
+  dueOn,
+  today,
+  rolls,
+  project,
+}: {
+  dueOn: string
+  today: string
+  rolls: number
+  project: string | null
+}): string {
+  const due = new Date(`${dueOn}T12:00:00`)
+  const now = new Date(`${today}T12:00:00`)
+  const daysAgo = Math.round((now.getTime() - due.getTime()) / 86_400_000)
+  const when =
+    daysAgo <= 0
+      ? 'today'
+      : daysAgo <= 6
+        ? DAYS[due.getDay()]
+        : `${due.getDate()} ${MONTHS[due.getMonth()]}`
+  const rolled =
+    rolls <= 0 ? null : rolls === 1 ? 'rolled once' : rolls === 2 ? 'rolled twice' : `rolled ${rolls} times`
+
+  return [`Due ${when}`, rolled, project].filter(Boolean).join(' · ')
+}
+
 export { dueLabel, estimateLabel }
 export type { Priority }

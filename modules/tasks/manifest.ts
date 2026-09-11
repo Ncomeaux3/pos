@@ -1,10 +1,11 @@
 import { z } from 'zod'
 import { db } from '@/core/db'
+import { ownerToday } from '@/core/today'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
 import { findOrCreateProject, patchTask } from './data'
-import { nightlyDigest, rollForward } from './jobs/nightly-digest'
-import { loadLabel } from './shape'
+import { nightlyDigest, rollCounts, rollForward } from './jobs/nightly-digest'
+import { loadLabel, slipMeta } from './shape'
 import TasksPage from './ui/TasksPage'
 import { TasksTile } from './ui/Tile'
 
@@ -239,10 +240,13 @@ export default defineModule({
           order by t.due_on
           limit 12`,
       )
+      // How often each one has rolled comes from this module's own entries in
+      // the write log, not from a counter; see rollCounts.
+      const [rolls, today] = await Promise.all([rollCounts(), ownerToday()])
       return rows.map((r) => ({
         id: r.id,
         title: r.title,
-        meta: `Due ${r.due_on}${r.project ? `, ${r.project}` : ''}`,
+        meta: slipMeta({ dueOn: r.due_on, today, rolls: rolls.get(r.id) ?? 0, project: r.project }),
         estimateMinutes: r.est,
       }))
     },

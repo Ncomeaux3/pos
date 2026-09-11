@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bucket, columnsFor, loadLabel, type Task } from './shape'
+import { bucket, columnsFor, loadLabel, slipMeta, type Task } from './shape'
 
 const task = (over: Partial<Task> = {}): Task => ({
   id: Math.random().toString(36).slice(2),
@@ -132,5 +132,33 @@ describe('columnsFor', () => {
     expect(columnsFor('done', [], context).every((c) => c.drop === null)).toBe(true)
     expect(columnsFor('review', [], context).every((c) => c.drop === null)).toBe(true)
     expect(columnsFor('week', [], context).every((c) => c.drop !== null)).toBe(true)
+  })
+})
+
+// The grey line under a slipped item on the weekly review, as POS Weekly
+// Review.dc.html writes it: "Due Tue · rolled 3 times · Finance". The estimate
+// is not here; the review appends it.
+describe('slipMeta', () => {
+  const today = '2026-09-11' // a Friday
+
+  it('names the weekday when the date is inside the last six days', () => {
+    expect(slipMeta({ dueOn: '2026-09-08', today, rolls: 3, project: 'Finance' })).toBe(
+      'Due Tue · rolled 3 times · Finance',
+    )
+  })
+
+  it('names the date when it is older than that', () => {
+    expect(slipMeta({ dueOn: '2026-09-02', today, rolls: 1, project: 'Finance' })).toBe(
+      'Due 2 Sep · rolled once · Finance',
+    )
+  })
+
+  it('says twice for two, and nothing about rolling for none', () => {
+    expect(slipMeta({ dueOn: '2026-09-10', today, rolls: 2, project: null })).toBe('Due Thu · rolled twice')
+    expect(slipMeta({ dueOn: '2026-09-10', today, rolls: 0, project: 'Home' })).toBe('Due Thu · Home')
+  })
+
+  it('a task due today has not slipped by the weekday, so it says today', () => {
+    expect(slipMeta({ dueOn: today, today, rolls: 0, project: null })).toBe('Due today')
   })
 })

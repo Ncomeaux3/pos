@@ -217,6 +217,31 @@ await db().query(
   ],
 )
 
+// The nightly roll logs every move it makes, and the review counts those
+// entries to say "rolled twice". Cleared and two put back for the one overdue
+// demo task, so the number is the fixture's and not the count of nightly runs
+// this database has seen.
+await db().query(`delete from core.write_log where module = 'tasks' and kind = 'rescheduled'`)
+const { rows: overdueDemo } = await db().query<{ id: string; title: string }>(
+  `select id, title from tasks.task where external_id = 'demo-1'`,
+)
+for (const [i, task] of overdueDemo.entries()) {
+  for (const daysAgo of [2, 1]) {
+    await db().query(
+      `insert into core.write_log
+         (module, tool, kind, title, reason, diff, actor, apply_payload, created_at)
+       values ('tasks', 'write', 'rescheduled', $1, $2, '[]'::jsonb, 'agent', $3::jsonb,
+               now() - make_interval(days => $4))`,
+      [
+        `Rolled "${task.title}" to today`,
+        'It was open past its due date, unstarted, and had no time of day.',
+        JSON.stringify({ id: task.id }),
+        daysAgo + i,
+      ],
+    )
+  }
+}
+
 // The review's first step reads digests, and its delta lines read last week's.
 // Written from the seeded rows rather than listed here, so the tiles show what
 // the modules actually compute; then copied back a week with a few numbers
