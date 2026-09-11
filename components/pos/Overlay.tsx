@@ -12,6 +12,10 @@ const subscribeToNothing = () => () => {}
  * The right drawer and the mobile bottom sheet are the same object with a
  * different transform, so they are one component. There is no modal anywhere in
  * the design; this is the only overlay.
+ *
+ * Measured off the Finance and Insurance artboards, which draw the same drawer:
+ * 520px on a 45% dim with a long soft shadow; a 56px band holding the crumb
+ * and ESC · CLOSE; then the title at 26px with its lede, 22px under the band.
  */
 export function Overlay({
   open,
@@ -19,14 +23,18 @@ export function Overlay({
   side = 'right',
   eyebrow,
   title,
+  lede,
   footer,
   children,
 }: {
   open: boolean
   onClose: () => void
   side?: 'right' | 'bottom'
+  /** The crumb in the band: "Finance / Accounts / Checking". */
   eyebrow?: ReactNode
   title: ReactNode
+  /** One line under the title, 13px ink-3. */
+  lede?: ReactNode
   /** Sticky action bar at the bottom of the panel. */
   footer?: ReactNode
   children: ReactNode
@@ -73,7 +81,7 @@ export function Overlay({
         type="button"
         aria-label="Close"
         onClick={onClose}
-        className="absolute inset-0 bg-black/50 duration-200 animate-in fade-in"
+        className="absolute inset-0 bg-black/45 duration-200 animate-in fade-in"
       />
       <div
         ref={panel}
@@ -85,7 +93,7 @@ export function Overlay({
           'absolute flex flex-col bg-bg-elev outline-none',
           'duration-[260ms] ease-[cubic-bezier(.2,.8,.2,1)] animate-in',
           side === 'right'
-            ? 'right-0 top-0 h-full w-[min(440px,92vw)] border-l border-rule-2 slide-in-from-right'
+            ? 'right-0 top-0 h-full w-[min(520px,100%)] border-l border-rule-2 shadow-[-24px_0_48px_rgba(0,0,0,.35)] slide-in-from-right'
             : 'bottom-0 left-0 max-h-[74vh] w-full rounded-t-xl border-t border-rule-2 slide-in-from-bottom',
         )}
       >
@@ -93,24 +101,26 @@ export function Overlay({
           <div aria-hidden className="mx-auto mt-2 h-1 w-9 rounded-full bg-ink-4" />
         )}
 
-        <div className="flex items-start justify-between gap-4 border-b border-rule px-5 py-4">
-          <div className="min-w-0 space-y-1.5">
-            {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
-            <p className="t-title text-ink">{title}</p>
-          </div>
+        <div className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-rule px-6">
+          <div className="min-w-0 truncate">{eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}</div>
           <button
             type="button"
             onClick={onClose}
-            className="label shrink-0 text-[10px] tracking-[0.1em] text-ink-3 hover:text-ink"
+            className="label shrink-0 border border-rule-2 px-[9px] py-[5px] text-[11px] tracking-[0.08em] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink"
           >
-            Close esc
+            Esc · close
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        <div className="shrink-0 px-6 pt-[22px]">
+          <p className="text-[26px] font-normal leading-none tracking-[-0.03em] text-ink">{title}</p>
+          {lede && <p className="mt-2 text-[13px] leading-[1.5] text-ink-3">{lede}</p>}
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6 pt-[18px]">{children}</div>
 
         {footer && (
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-rule px-5 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-rule px-6 py-4">
             {footer}
           </div>
         )}
