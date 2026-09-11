@@ -1,7 +1,9 @@
 import { z } from 'zod'
 import { db } from '@/core/db'
 import { register } from '@/core/entities'
+import { listMetrics } from '@/core/metrics'
 import { defineModule, defineTool } from '@/core/module-contract'
+import { getModule } from '@/core/modules'
 import { checkIn, measuredGoals, patchGoal } from './data'
 import { nightlyDigest, pullMetrics } from './jobs/nightly-digest'
 import GoalsPage from './ui/GoalsPage'
@@ -9,6 +11,12 @@ import { GoalsTile } from './ui/Tile'
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD')
 const kind = z.enum(['number', 'count', 'streak', 'milestone'])
+
+function sourceLabel(metricId: string): string {
+  const metric = listMetrics().find((m) => m.id === metricId)
+  if (!metric) return `Computed from ${metricId}`
+  return `${getModule(metric.module)?.nav.label ?? metric.module} · ${metric.label}`
+}
 
 export default defineModule({
   id: 'goals',
@@ -142,9 +150,9 @@ export default defineModule({
         title: row.title,
         unit: row.unit,
         computed: row.metric_source !== null,
-        source: row.metric_source
-          ? `Computed from ${row.metric_source}`
-          : 'Manual check-in',
+        // "Finance · liquid runway", the module and the metric it publishes;
+        // the raw key only when the metric has gone from the registry.
+        source: row.metric_source ? sourceLabel(row.metric_source) : 'Manual check-in',
         percent: Math.round(progress.percent),
         movement,
         status: progress.status,

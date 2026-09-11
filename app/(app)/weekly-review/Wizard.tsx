@@ -37,7 +37,15 @@ import { close, save } from './actions'
 // the object is saved as you go, so a review interrupted at step four resumes
 // where it was rather than starting again.
 
-type Item = { id: string; title: string; meta: string; estimateMinutes?: number | null; module: string }
+type Item = {
+  id: string
+  title: string
+  meta: string
+  estimateMinutes?: number | null
+  module: string
+  /** The owning module's name, for the line under a carried item. */
+  moduleLabel?: string
+}
 type Win = { id: string; title: string; meta: string; tag?: string; module: string }
 type Check = {
   id: string
@@ -86,7 +94,8 @@ const MAX_PICKS = 3
 
 const STATUS_LABELS = {
   done: 'Done',
-  on_track: 'On track',
+  // The review artboard's word for it; the Goals screen keeps its own.
+  on_track: 'On pace',
   at_risk: 'At risk',
   stalled: 'Stalled',
 } as const
@@ -152,10 +161,21 @@ export function Wizard({ data }: { data: WeekData }) {
     })
   }
 
+  // A carried item joins the backlog under its module's name and what was
+  // decided; a shrunk one is renamed to its first step, as the artboard does.
   const carried = Object.entries(answers.missActions)
     .filter(([, a]) => a !== 'drop')
-    .map(([id]) => data.misses.find((m) => m.id === id))
-    .filter((m): m is Item => Boolean(m))
+    .flatMap(([id, action]) => {
+      const miss = data.misses.find((m) => m.id === id)
+      if (!miss) return []
+      return [
+        {
+          ...miss,
+          title: action === 'shrink' ? `First step: ${miss.title.charAt(0).toLowerCase()}${miss.title.slice(1)}` : miss.title,
+          meta: `${miss.moduleLabel ?? miss.module} · ${action === 'shrink' ? 'Shrunk' : 'Carried'}`,
+        },
+      ]
+    })
 
   const candidates = [...carried, ...data.backlog]
 
@@ -164,9 +184,17 @@ export function Wizard({ data }: { data: WeekData }) {
     winTitles: Object.fromEntries(data.wins.map((w) => [w.id, w.title])),
     missTitles: Object.fromEntries(data.misses.map((m) => [m.id, m.title])),
     goalLines: data.checks.map((c) => {
+      // "Ship POS v1, 58% (+6 pts)", as the artboard writes a computed goal;
+      // the status when the module gave no percent to write.
       if (c.computed) {
-        const percent = c.percent === undefined ? 'computed' : `${c.percent} percent`
-        return `${c.title}, ${percent}${c.status ? `, ${STATUS_LABELS[c.status].toLowerCase()}` : ''}`
+        if (c.percent === undefined) {
+          return `${c.title}${c.status ? `, ${STATUS_LABELS[c.status].toLowerCase()}` : ', computed'}`
+        }
+        const moved =
+          c.movement === null || c.movement === undefined
+            ? ''
+            : ` (${c.movement > 0 ? '+' : ''}${c.movement} pts)`
+        return `${c.title}, ${c.percent}%${moved}`
       }
       const value = answers.checkins[c.id]
       // The unit belongs to the number, not to its absence: "no check-in lb"

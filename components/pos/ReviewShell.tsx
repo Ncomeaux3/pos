@@ -254,7 +254,7 @@ export function ReviewRow({
       <span className="min-w-0 flex-[1_1_200px]">
         <span className="block text-[15px] text-ink">{title}</span>
         {meta && (
-          <span className="mt-1 block text-[11px] tracking-[0.06em] text-ink-3">{meta}</span>
+          <span className="mt-1 block text-[11px] uppercase tracking-[0.06em] text-ink-3">{meta}</span>
         )}
       </span>
       {right}

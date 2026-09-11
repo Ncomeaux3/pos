@@ -724,6 +724,7 @@ test('weekly review, six steps and a note built from the answers', async ({ page
   await page.getByLabel('Add a win').fill('Shipped the notifications screen')
   await page.getByRole('button', { name: 'Add' }).click()
   await expect(page.getByText('Shipped the notifications screen')).toBeVisible()
+  await shoot(page, 'weekly-review-wins')
 
   // Step three: every slipped item needs a decision, and the wizard says how
   // many are still owed rather than letting you walk past silently.
@@ -735,6 +736,16 @@ test('weekly review, six steps and a note built from the answers', async ({ page
   await expect(page.getByText(/1 of \d+ decided/)).toBeVisible()
 
   await shoot(page, 'weekly-review-misses')
+
+  // Steps four and five, for the shots: the goals hand over their own bars and
+  // sentences, and the backlog lists what was carried before what is new.
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await expect(page).toHaveURL(/step=goals/)
+  await shoot(page, 'weekly-review-goals')
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await expect(page).toHaveURL(/step=plan/)
+  await expect(page.getByText(/of 3 picked/)).toBeVisible()
+  await shoot(page, 'weekly-review-plan')
 })
 
 test('weekly review, the close shows the note before it writes it', async ({ page }) => {

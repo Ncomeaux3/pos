@@ -235,7 +235,7 @@ export default defineModule({
         {
           id: 'brain-week',
           title: `${total} note${total === 1 ? '' : 's'} filed`,
-          meta: `Second Brain, ${rows.map((r) => `${r.n} ${r.kind}`).join(', ')}`,
+          meta: `Second Brain · ${rows.map((r) => `${r.n} ${r.kind}`).join(' · ')}`,
           tag: books > 0 ? `${books} book${books === 1 ? '' : 's'}` : undefined,
         },
       ]

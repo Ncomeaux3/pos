@@ -313,7 +313,7 @@ export default defineModule({
         {
           id: 'fitness-week',
           title: `${count} workout${count === 1 ? '' : 's'}`,
-          meta: `Fitness, ${parts.join(', ')}`,
+          meta: `Fitness · ${parts.join(' · ')}`,
           tag: streak > 1 ? `streak ${streak}w` : undefined,
         },
       ]

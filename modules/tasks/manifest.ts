@@ -216,7 +216,7 @@ export default defineModule({
         return {
           id: `tasks-${r.project ?? 'none'}`,
           title: `${done} task${done === 1 ? '' : 's'} closed${r.project ? ` on ${r.project}` : ''}`,
-          meta: `Tasks${r.project ? '' : ', no project'}${spent ? `, ${spent}` : ''}`,
+          meta: `Tasks${r.project ? '' : ' · no project'}${spent ? ` · ${spent}` : ''}`,
           // Only when it is actually the biggest. Two groups of one are not a
           // ranking, and marking either would be a claim the data does not
           // support.

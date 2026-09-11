@@ -76,7 +76,9 @@ export default async function WeeklyReviewPage() {
     // Flattened with the module kept on each item, so the close can hand each
     // decision back to whichever module owns the row.
     wins: winsBy.flatMap((c) => c.items.map((i) => ({ ...i, module: c.module }))),
-    misses: slippedBy.flatMap((c) => c.items.map((i) => ({ ...i, module: c.module }))),
+    misses: slippedBy.flatMap((c) =>
+      c.items.map((i) => ({ ...i, module: c.module, moduleLabel: getModule(c.module)?.nav.label ?? c.module })),
+    ),
     backlog: upcomingBy.flatMap((c) => c.items.map((i) => ({ ...i, module: c.module }))),
     checks: pendingBy.flatMap((c) => c.items.map((i) => ({ ...i, module: c.module }))),
 
