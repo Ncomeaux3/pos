@@ -207,30 +207,54 @@ test('skill tree, constellation and the selected skill panel', async ({ page }) 
   await expect(page.getByRole('heading', { name: 'Skill Tree' })).toBeVisible()
   await expect(page.getByRole('img', { name: 'Skill constellation' })).toBeVisible()
 
-  // Nothing selected: the right rail explains what a click does rather than
-  // showing an empty panel.
-  await expect(page.getByText(/nothing selected/i)).toBeVisible()
+  // POS Skill Tree.dc.html opens on a skill (the top gainer), so the right
+  // pane is never the empty explanation: the panel says how far the next
+  // level is straight away.
+  const detailPane = page.getByTestId('skill-tree-detail-pane')
+  await expect(detailPane.getByText(/to Lv \d/)).toBeVisible()
+
+  const mobile = (page.viewportSize()?.width ?? 0) < 720
+  if (!mobile) {
+    // Two flush halves under a 56px band, split by one rule; Reset view sits
+    // in the band; the pips carry the artboard's six letter cuts; the hints
+    // include the double click.
+    const canvas = page.getByTestId('skill-tree-canvas-pane')
+    const detail = page.getByTestId('skill-tree-detail-pane')
+    const [cw, dw] = await Promise.all([
+      canvas.evaluate((el) => el.getBoundingClientRect().width),
+      detail.evaluate((el) => el.getBoundingClientRect().width),
+    ])
+    expect(Math.abs(cw - dw) / Math.max(cw, dw)).toBeLessThan(0.08)
+    await expect(page.locator('header').getByRole('button', { name: 'Reset view' })).toBeVisible()
+    await expect(page.getByText(/skills active/)).toHaveCount(0)
+    const pips = await canvas.getByTestId('skill-pip-label').allTextContents()
+    expect(pips.length).toBeGreaterThan(2)
+    for (const label of pips) expect(label.trim().length).toBeLessThanOrEqual(6)
+    await expect(canvas.getByText('Double-click: zoom')).toBeVisible()
+  }
   await shoot(page, 'skills')
 
   // The demo seed classifies notes through the keyword rules, so Engineering
   // has real XP and real events without anything being staged for the shot.
-  await page.getByRole('button', { name: 'Engineering' }).click()
-  // Unique to the selected panel: the constellation and the character list both
-  // say "Engineering", but only the panel says how far the next level is.
-  await expect(page.getByText(/to Lv \d/)).toBeVisible()
+  await page.getByRole('button', { name: /^Engineering$|^ENGINE$/i }).first().click()
+  await expect(detailPane.getByText(/to Lv \d/)).toBeVisible()
   // Goals does not exist, so the goal weight is a dash rather than a number.
   // Exact: the digest column beside it is "Goal weight high, low activity",
   // which is the artboard's own wording for a different thing.
   await expect(page.getByText('Goal weight', { exact: true })).toBeVisible()
 
   // The selection is in the URL, which is what lets it survive the reload that
-  // shoot() does to switch themes. Without this the shot would show the empty
-  // panel and the test would still pass.
+  // shoot() does to switch themes.
   await expect(page).toHaveURL(/skill=engineering/)
-  await shoot(page, 'skills-selected')
-  // Exact: the digest column beside it is "Goal weight high, low activity",
-  // which is the artboard's own wording for a different thing.
-  await expect(page.getByText('Goal weight', { exact: true })).toBeVisible()
+  await expect(page.getByText('Children', { exact: true })).toBeVisible()
+  await shoot(page, 'skills-branch')
+
+  // A leaf: the events behind it, each one a thing that can be dragged to
+  // another skill, and the keywords that classify to it.
+  await page.goto('/skills?skill=typescript')
+  await expect(page.getByText(/Events · 30 days/)).toBeVisible()
+  await expect(page.getByText(/Keywords · skills\.yaml/)).toBeVisible()
+  await shoot(page, 'skills-leaf')
 })
 
 test('skill tree, the constellation hovers, selects, pans and zooms', async ({ page }) => {

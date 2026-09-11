@@ -104,6 +104,7 @@ export function Constellation({
   characterLevel,
   now,
   onReassign,
+  resetToken,
 }: {
   nodes: SkillNode[]
   stats: SkillStat[]
@@ -113,6 +114,8 @@ export function Constellation({
   /** From the server. A clock read during render is impure and unstable. */
   now: number
   onReassign?: (entityRef: string, fromSkillId: string, toSkillId: string) => void
+  /** Bumped by the band's Reset view; pan and zoom go back to the start. */
+  resetToken?: number
 }) {
   const placed = useMemo(() => layout(nodes), [nodes])
   const statById = useMemo(() => new Map(stats.map((s) => [s.id, s])), [stats])
@@ -175,7 +178,12 @@ export function Constellation({
   const edges = placed.filter((p) => p.id !== ROOT_ID)
   const positionOf = (id: string) => placed.find((p) => p.id === id)
 
-  const reset = () => {
+  // The band owns the Reset view button, as the artboard has it, so the reset
+  // arrives as a changed token rather than a click in here. Tracked as state
+  // so the comparison happens in render without touching a ref there.
+  const [seenReset, setSeenReset] = useState(resetToken)
+  if (seenReset !== resetToken) {
+    setSeenReset(resetToken)
     setZoom(1)
     setPan({ x: 0, y: 0 })
   }
@@ -237,12 +245,6 @@ export function Constellation({
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
-      <div className="absolute right-3 top-3 z-10 flex gap-2">
-        <button type="button" onClick={reset} className="eyebrow border border-white/14 px-2 py-1 text-[#8fa3b8] hover:text-white">
-          Reset view
-        </button>
-      </div>
-
       <svg
         ref={svg}
         role="img"
@@ -573,10 +575,6 @@ export function Constellation({
         </div>
       )}
 
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
-        <span className="eyebrow text-[#6f8399]">Hover: details · Click: inspect</span>
-        <span className="eyebrow text-[#6f8399]">Scroll: zoom · Drag: pan</span>
-      </div>
     </div>
   )
 }
