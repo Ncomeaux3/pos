@@ -54,7 +54,7 @@ export function WarningList({
       {shown.map((w) => (
         <div
           key={w.id}
-          className="flex items-start justify-between gap-3 border-b border-rule py-2 hover:bg-brand-soft"
+          className="flex items-center justify-between gap-2.5 border-b border-rule px-1 py-2 hover:bg-brand-soft"
         >
           <span className="grid min-w-0 grid-cols-[8px_1fr] items-start gap-2.5">
             <span
@@ -144,7 +144,7 @@ export function ProposalList({
   return (
     <div className="flex flex-col">
       {shown.map((p) => (
-        <div key={p.id} className="border-b border-rule py-2.5">
+        <div key={p.id} className="border-b border-rule px-1 py-2.5">
           <div className="flex items-baseline justify-between gap-2.5">
             <span className="truncate text-[11px] text-ink-3">{p.from}</span>
             <span className="label text-[10px] tracking-[0.06em] text-warn">pending</span>
@@ -185,7 +185,7 @@ export function ProposalList({
                   ),
                 )
               }
-              className="h-11 shrink-0 border border-brand px-2.5 text-[11px] text-brand transition-colors duration-150 hover:bg-brand hover:text-white sm:h-[23px]"
+              className="h-11 shrink-0 border border-brand px-2 text-[11px] text-ink transition-colors duration-150 hover:bg-brand hover:text-white sm:h-[23px]"
             >
               {editing === p.id ? 'Save and approve' : 'Approve'}
             </button>

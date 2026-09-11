@@ -321,14 +321,18 @@ export async function latestSummary(): Promise<LatestSummary> {
 
 /** Every job the system knows about, for the dashboard's system tile. */
 export async function jobStates(): Promise<
-  { module: string; name: string; status: string | null; lastRun: Date | null }[]
+  { module: string; name: string; status: string | null; lastRun: Date | null; tookMs: number | null }[]
 > {
   const { rows } = await db().query<{
     module: string
     name: string
     last_status: string | null
     last_run: Date | null
-  }>(`select module, name, last_status, last_run from core.jobs order by module, name`)
+    took_ms: string | null
+  }>(
+    `select module, name, last_status, last_run, log->>'durationMs' as took_ms
+       from core.jobs order by module, name`,
+  )
 
   // A module whose jobs have never run still belongs on the tile, greyed.
   const known = new Set(rows.map((r) => `${r.module}.${r.name}`))
@@ -342,9 +346,10 @@ export async function jobStates(): Promise<
       name: r.name,
       status: r.last_status,
       lastRun: r.last_run,
+      tookMs: r.took_ms === null ? null : Number(r.took_ms),
     })),
     ...expected
       .filter((e) => !known.has(`${e.module}.${e.name}`))
-      .map((e) => ({ ...e, status: null, lastRun: null })),
+      .map((e) => ({ ...e, status: null, lastRun: null, tookMs: null })),
   ]
 }

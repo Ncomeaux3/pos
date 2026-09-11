@@ -45,9 +45,12 @@ export function Sparkline({
 export function HeatStrip({
   cells,
   className,
+  cellClassName,
 }: {
   cells: { label: string; status: string | null }[]
   className?: string
+  /** The dashboard draws the strip as an 11 column grid of wide cells. */
+  cellClassName?: string
 }) {
   const colour = (status: string | null) =>
     status === 'ok'
@@ -66,7 +69,7 @@ export function HeatStrip({
         <span
           key={cell.label}
           title={`${cell.label}: ${cell.status ?? 'never run'}`}
-          className={cn('h-2.5 w-2.5 rounded-[2px]', colour(cell.status))}
+          className={cn(cellClassName ?? 'h-2.5 w-2.5 rounded-[2px]', colour(cell.status))}
         />
       ))}
     </div>

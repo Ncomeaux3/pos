@@ -22,7 +22,7 @@ import { getNav, getOffRailNav } from '@/core/nav'
 import { upcoming } from '@/core/review-registry'
 import { headlineSegments, jobStates, latestSummary } from '@/core/orchestrator'
 import { getSettings } from '@/core/settings'
-import { clockIn, ownerToday } from '@/core/today'
+import { clockIn, ownerToday, zoneAbbrIn } from '@/core/today'
 import { RunNow } from './RunNow'
 
 // The bento. Every tile reads core, never a module's own tables: module numbers
@@ -67,17 +67,32 @@ async function pendingProposals() {
   return rows
 }
 
-/** This month's model spend, by what it was spent on. */
-async function spendByPurpose(): Promise<{ purpose: string; calls: number; cents: number }[]> {
-  const { rows } = await db().query<{ purpose: string; calls: string; cents: string }>(
-    `select purpose, count(*)::text as calls, sum(cost_cents)::text as cents
+/** This month's model spend, by what it was spent on and which model did it. */
+async function spendByPurpose(): Promise<
+  { purpose: string; model: string; calls: number; cents: number }[]
+> {
+  const { rows } = await db().query<{ purpose: string; model: string; calls: string; cents: string }>(
+    `select purpose, model, count(*)::text as calls, sum(cost_cents)::text as cents
        from core.llm_calls
       where occurred_at >= date_trunc('month', now())
-      group by purpose
+      group by purpose, model
       order by sum(cost_cents) desc
       limit 4`,
   )
-  return rows.map((r) => ({ purpose: r.purpose, calls: Number(r.calls), cents: Number(r.cents) }))
+  return rows.map((r) => ({
+    purpose: r.purpose,
+    model: r.model,
+    calls: Number(r.calls),
+    cents: Number(r.cents),
+  }))
+}
+
+const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+
+/** "claude-haiku-4-5-20251001" reads as "Haiku" on a tile, as the artboard has it. */
+function modelName(model: string): string {
+  const family = model.match(/haiku|sonnet|opus|fable/i)?.[0]
+  return family ? capitalise(family.toLowerCase()) : model
 }
 
 const money = (cents: number) => `$${(cents / 100).toFixed(2)}`
@@ -132,9 +147,10 @@ export default async function DashboardPage() {
       id: 'warnings',
       node: (
         <Card className={tileClass}>
+          {/* The eyebrow itself turns amber while there is something open;
+            * the artboard draws no dot on this tile. */}
           <CardHead
-            label="Warnings"
-            dot={warnings.length > 0 ? 'warn' : 'ok'}
+            label={<span className={warnings.length > 0 ? 'text-warn' : undefined}>Warnings</span>}
             meta={`${warnings.length} open`}
             plainMeta
           />
@@ -159,7 +175,19 @@ export default async function DashboardPage() {
       id: 'review',
       node: (
         <Card className={tileClass}>
-          <CardHead label="Review · agent proposals" meta={`${proposals.length} pending →`} plainMeta />
+          <CardHead
+            label={
+              <Link href="/review" aria-label="Open Review" className="hover:text-ink">
+                Review · agent proposals
+              </Link>
+            }
+            meta={
+              <Link href="/review" className="hover:text-ink">
+                {proposals.length} pending →
+              </Link>
+            }
+            plainMeta
+          />
           {proposals.length === 0 ? (
             <p className="grid flex-1 place-items-center text-[26px] font-light text-ink-3">
               inbox clear
@@ -173,12 +201,6 @@ export default async function DashboardPage() {
               }))}
             />
           )}
-          <Link
-            href="/review"
-            className="label mt-auto text-[10px] tracking-[0.1em] text-ink-3 hover:text-ink"
-          >
-            Open review
-          </Link>
         </Card>
       ),
     },
@@ -186,7 +208,7 @@ export default async function DashboardPage() {
       id: 'timeline',
       node: (
         <Card className={tileClass}>
-          <CardHead label="Next 7 days" meta={`${diary.length} scheduled`} plainMeta />
+          <CardHead label="Next 7 days" meta={`${diary.length} item${diary.length === 1 ? '' : 's'}`} plainMeta />
           <SevenDays
             today={todayIso}
             items={diary.map((d) => ({
@@ -253,16 +275,20 @@ export default async function DashboardPage() {
         <Card className={tileClass}>
           <CardHead
             label="System"
-            dot={failed.length > 0 ? 'bad' : 'ok'}
-            meta={`${jobs.length} jobs`}
+            meta={`${jobs.filter((j) => j.status === 'ok').length} ok${failed.length > 0 ? ` · ${failed.length} failed` : ''}`}
             plainMeta
           />
-          <HeatStrip cells={jobs.map((j) => ({ label: `${j.module}.${j.name}`, status: j.status }))} />
+          <HeatStrip
+            cells={jobs.map((j) => ({ label: `${j.module}.${j.name}`, status: j.status }))}
+            className="grid grid-cols-11 gap-[3px]"
+            cellClassName="h-3.5"
+          />
           <JobRows
             jobs={jobs.map((j) => ({
               name: `${j.module}.${j.name}`,
               status: j.status,
               at: j.lastRun ? new Date(j.lastRun).toISOString() : null,
+              tookMs: j.tookMs,
             }))}
             timezone={settings.timezone}
           />
@@ -273,8 +299,16 @@ export default async function DashboardPage() {
       id: 'llm',
       node: (
         <Card className={tileClass}>
-          <CardHead label="Model spend · month" meta={`cap ${money(capCents)} →`} plainMeta />
-          <div className="flex items-baseline gap-2.5">
+          <CardHead
+            label="Model spend · month"
+            meta={
+              <Link href="/settings" className="hover:text-ink">
+                cap {money(capCents)} →
+              </Link>
+            }
+            plainMeta
+          />
+          <div className="mt-0.5 flex items-baseline gap-2.5">
             <span className="num text-[30px] font-light leading-none text-ink">
               {money(spendCents)}
             </span>
@@ -286,6 +320,7 @@ export default async function DashboardPage() {
             value={spendCents}
             max={capCents}
             tone={spendCents >= capCents ? 'bad' : spendCents > capCents * 0.8 ? 'warn' : 'brand'}
+            className="h-0.5 rounded-none [&>div]:rounded-none"
           />
           {spend.length === 0 ? (
             <p className="t-caption text-ink-3">
@@ -295,11 +330,15 @@ export default async function DashboardPage() {
             <div className="flex flex-col">
               {spend.map((row) => (
                 <div
-                  key={row.purpose}
+                  key={`${row.purpose}.${row.model}`}
                   className="grid grid-cols-[1fr_auto_auto] gap-3 border-b border-rule py-[7px] text-[12px]"
                 >
-                  <span className="truncate text-ink-2">{row.purpose}</span>
-                  <span className="num text-[11px] text-ink-3">{row.calls}</span>
+                  <span className="truncate text-ink">
+                    {capitalise(row.purpose)} · {modelName(row.model)}
+                  </span>
+                  <span className="num text-[11px] text-ink-3">
+                    {row.calls.toLocaleString('en-US')} {row.calls === 1 ? 'call' : 'calls'}
+                  </span>
                   <span className="num text-[11px] text-ink">{money(row.cents)}</span>
                 </div>
               ))}
@@ -355,7 +394,7 @@ export default async function DashboardPage() {
           {/* The run's own clock, in the owner's zone, as the artboard writes
             * it: "Last run 04:02 CDT · ok". */}
           {latest
-            ? `Nightly summary · Last run ${clockIn(new Date(latest.runAt), settings.timezone)} ${zoneAbbr(settings.timezone)} · ${failed.length > 0 ? `${failed.length} failed` : 'ok'}`
+            ? `Nightly summary · Last run ${clockIn(new Date(latest.runAt), settings.timezone)} ${zoneAbbrIn(settings.timezone)} · ${failed.length > 0 ? `${failed.length} failed` : 'ok'}`
             : 'No run yet'}
         </span>
         {/* The opening statement, at the size the design gives it. It is the
@@ -468,10 +507,3 @@ function readableValue(key: string, value: number | string): string {
   return typeof value === 'number' ? value.toLocaleString() : String(value)
 }
 
-/** "CDT" for America/Chicago today; what the artboard prints after the clock. */
-function zoneAbbr(timeZone: string): string {
-  const part = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'short' })
-    .formatToParts(new Date())
-    .find((p) => p.type === 'timeZoneName')
-  return part?.value ?? ''
-}

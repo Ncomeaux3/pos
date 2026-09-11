@@ -61,6 +61,14 @@ export function minutesIn(at: Date, timeZone: string): number {
   return partsIn(at, timeZone).minutes
 }
 
+/** "CDT" for America/Chicago today, "CST" in winter: what a clock is printed with. */
+export function zoneAbbrIn(timeZone: string, at: Date = new Date()): string {
+  const part = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'short' })
+    .formatToParts(at)
+    .find((p) => p.type === 'timeZoneName')
+  return part?.value ?? ''
+}
+
 /**
  * The hour the nightly cron fires, in UTC.
  *
