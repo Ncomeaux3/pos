@@ -1,4 +1,5 @@
 import { db } from '@/core/db'
+import { ownerToday } from '@/core/today'
 import { categorise, learnFrom, type Rule } from '../categorise'
 import { detectRecurring, isStale, type Charge } from '../recurring'
 import { categorySpend, listAccounts, loadRules, netWorthSeries, upcomingCharges } from '../data'
@@ -9,9 +10,10 @@ export type FinanceDigest = {
   changeCents: number
   assetsCents: number
   debtCents: number
-  /** Due in the next fortnight. */
+  /** Due in the next fortnight, and the first of them by name. */
   upcomingCents: number
   upcomingCount: number
+  nextCharge: { name: string; inDays: number } | null
   /** Net worth over the last 30 days, in dollars, for the tile's sparkline. */
   netWorthSeries: number[]
   /** Categories past the alert threshold. */
@@ -29,11 +31,12 @@ const BUDGET_ALERT = 80
 const LARGE_CHARGE_CENTS = 50_000
 
 export async function nightlyDigest(): Promise<FinanceDigest> {
-  const [accounts, series, spend, upcoming] = await Promise.all([
+  const [accounts, series, spend, upcoming, today] = await Promise.all([
     listAccounts(),
     netWorthSeries(30),
     categorySpend(),
     upcomingCharges(14),
+    ownerToday(),
   ])
 
   const netWorth = accounts.reduce((sum, a) => sum + Number(a.balance_cents), 0)
@@ -73,6 +76,15 @@ export async function nightlyDigest(): Promise<FinanceDigest> {
     netWorthSeries: series.map((p) => Math.round(p.cents / 100)),
     upcomingCents: upcoming.reduce((sum, c) => sum + Number(c.amount_cents), 0),
     upcomingCount: upcoming.length,
+    nextCharge: upcoming[0]
+      ? {
+          name: upcoming[0].name,
+          inDays: Math.round(
+            (Date.parse(`${upcoming[0].next_charge_on}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`)) /
+              86_400_000,
+          ),
+        }
+      : null,
     spendCents: budgeted.reduce((sum, c) => sum + Number(c.spent_cents), 0),
     budgetCents: budgeted.reduce((sum, c) => sum + Number(c.limit_cents), 0),
     overBudget: spend

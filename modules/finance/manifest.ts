@@ -186,6 +186,10 @@ export default defineModule({
   },
 
   tile: FinanceTile,
+  tileHead: (payload) => {
+    const over = Array.isArray(payload.overBudget) ? payload.overBudget.length : 0
+    return { meta: `${over} budget${over === 1 ? '' : 's'} flagged` }
+  },
 
   metrics: {
     net_worth: {

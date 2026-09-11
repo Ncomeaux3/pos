@@ -111,6 +111,9 @@ export default defineModule({
   // skill link, and the digest counts those links.
   /** See ModuleManifest.tile: the module says how its own numbers read. */
   tile: SkillsTile,
+  tileHead: (payload) => ({
+    meta: `level ${typeof payload.characterLevel === 'number' ? payload.characterLevel : 0}`,
+  }),
 
   jobs: [
     { name: 'reclassify', run: reclassify },

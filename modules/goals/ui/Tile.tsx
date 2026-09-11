@@ -1,73 +1,67 @@
 import { cn } from '@/lib/utils'
 import type { GoalsDigest } from '../jobs/nightly-digest'
 
-// The Goals dashboard tile. The design shows the goals that need a look, with
-// a bar and the status word, rather than four counters: "3 at risk" tells you
-// there is a problem and nothing about which one.
+// The Goals dashboard tile, as POS Dashboard.dc.html draws it: three goals,
+// worst first, each a 13px title with its status on the right, then a 2px bar
+// in the status colour and the figure beside it ("340 / 405 lb"). The sentence
+// behind each status lives on the Goals screen; the head's "1 at risk" is the
+// count.
 
-const TONE: Record<string, string> = {
-  on_track: 'text-ok',
-  at_risk: 'text-warn',
-  stalled: 'text-bad',
-  done: 'text-ink-3',
+const TONE: Record<string, { text: string; bar: string }> = {
+  on_track: { text: 'text-ok', bar: 'bg-ok' },
+  at_risk: { text: 'text-warn', bar: 'bg-warn' },
+  stalled: { text: 'text-bad', bar: 'bg-bad' },
+  done: { text: 'text-ink-3', bar: 'bg-ink-3' },
 }
 
 const LABEL: Record<string, string> = {
-  on_track: 'ON TRACK',
-  at_risk: 'AT RISK',
-  stalled: 'STALLED',
-  done: 'DONE',
+  on_track: 'On track',
+  at_risk: 'At risk',
+  stalled: 'Stalled',
+  done: 'Done',
+}
+
+/** "$247k / $300k", "340 / 405 lb", "7 / 12". */
+function figure(g: { current: number; target: number; unit: string }): string {
+  const n = (v: number) =>
+    g.unit === '$'
+      ? `$${Math.abs(v) >= 10_000 ? `${Math.round(v / 1000)}k` : Math.round(v).toLocaleString('en-US')}`
+      : Number.isInteger(v) ? v.toLocaleString('en-US') : v.toFixed(1)
+  const unit = g.unit && g.unit !== '$' ? ` ${g.unit}` : ''
+  return `${n(g.current)} / ${n(g.target)}${unit}`
 }
 
 export function GoalsTile({ payload }: { payload: Record<string, unknown> }) {
   const d = payload as Partial<GoalsDigest>
-  const attention = d.attention ?? []
-  const counts = [
-    { label: 'on track', n: d.onTrack ?? 0 },
-    { label: 'at risk', n: d.atRisk ?? 0 },
-    { label: 'stalled', n: d.stalled ?? 0 },
-  ].filter((c) => c.n > 0)
+  const goals = d.attention ?? []
 
-  if (attention.length === 0 && counts.length === 0) {
+  if (goals.length === 0) {
     return <p className="t-caption text-ink-3">No goals are being tracked yet.</p>
   }
 
   return (
-    <div className="space-y-3">
-      {attention.slice(0, 3).map((g) => (
-        <div key={g.id} className="space-y-1">
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="truncate text-[14px] text-ink">{g.title}</span>
-            <span className={`eyebrow shrink-0 ${TONE[g.status] ?? 'text-ink-3'}`}>
-              {LABEL[g.status] ?? g.status}
-            </span>
-          </div>
-          {/* The bar and the number the artboard puts under the title, then
-            * the sentence that produced the status. Goals never shows a status
-            * without showing why. */}
-          <div className="flex items-center gap-2.5">
-            <div className="h-0.5 flex-1 bg-rule-2">
-              <div
-                className={cn(
-                  'h-0.5',
-                  g.status === 'at_risk' ? 'bg-warn' : g.status === 'stalled' ? 'bg-bad' : 'bg-ok',
-                )}
-                style={{ width: `${g.percent ?? 0}%` }}
-              />
+    <div className="mt-2 flex flex-col gap-0.5">
+      {goals.slice(0, 3).map((g) => {
+        const tone = TONE[g.status] ?? TONE.done
+        return (
+          <div key={g.id} className="border-b border-rule py-[9px]">
+            <div className="flex justify-between gap-2.5 text-[13px]">
+              <span className="truncate text-ink">{g.title}</span>
+              <span className={cn('label shrink-0 text-[10px] tracking-[0.06em]', tone.text)}>
+                {LABEL[g.status] ?? g.status}
+              </span>
             </div>
-            <span className="num w-8 shrink-0 text-right text-[11px] text-ink-3">
-              {g.percent ?? 0}%
-            </span>
+            <div className="mt-1.5 flex items-center gap-2.5">
+              <div className="h-0.5 flex-1 bg-rule-2">
+                <div className={cn('h-0.5', tone.bar)} style={{ width: `${g.percent}%` }} />
+              </div>
+              <span className="num w-[88px] shrink-0 text-right text-[11px] text-ink-3">
+                {g.current !== undefined && g.target !== undefined ? figure(g) : `${g.percent}%`}
+              </span>
+            </div>
           </div>
-          <p className="t-caption text-ink-3">{g.rule}</p>
-        </div>
-      ))}
-
-      {counts.length > 0 && (
-        <p className="num text-[11px] text-ink-3">
-          {counts.map((c) => `${c.n} ${c.label}`).join(' · ')}
-        </p>
-      )}
+        )
+      })}
     </div>
   )
 }

@@ -2,13 +2,28 @@ import { readMetric } from '@/core/metrics'
 import { checkIn, historyByGoal, listGoals } from '../data'
 import { progress, type Status } from '../progress'
 
+const RANK: Record<Status, number> = { stalled: 0, at_risk: 1, on_track: 2, done: 3 }
+
 export type GoalsDigest = {
   onTrack: number
   atRisk: number
   stalled: number
   done: number
-  /** The ones worth a sentence in the morning, worst first. */
-  attention: { id: string; title: string; status: Status; rule: string; percent: number }[]
+  /**
+   * Live goals, worst first: stalled, then at risk, then on track. The rule is
+   * the sentence behind the status; current, target and unit are the figure
+   * the dashboard tile prints beside the bar ("340 / 405 lb").
+   */
+  attention: {
+    id: string
+    title: string
+    status: Status
+    rule: string
+    percent: number
+    current: number
+    target: number
+    unit: string
+  }[]
 }
 
 /**
@@ -69,13 +84,16 @@ export async function nightlyDigest(): Promise<GoalsDigest> {
     const p = progress(shape)
     counts[p.status]++
 
-    if (p.status === 'at_risk' || p.status === 'stalled') {
+    if (p.status !== 'done') {
       attention.push({
         id: row.id,
         title: row.title,
         status: p.status,
         rule: rule(shape, p, row.unit),
         percent: Math.round(p.percent),
+        current: p.current,
+        target: shape.targetValue,
+        unit: row.unit,
       })
     }
   }
@@ -85,9 +103,8 @@ export async function nightlyDigest(): Promise<GoalsDigest> {
     atRisk: counts.at_risk,
     stalled: counts.stalled,
     done: counts.done,
-    // Stalled before at risk: a goal that has stopped moving is the worse news.
-    attention: attention
-      .sort((a, b) => Number(b.status === 'stalled') - Number(a.status === 'stalled'))
-      .slice(0, 5),
+    // Stalled before at risk before on track: a goal that has stopped moving
+    // is the worse news, and the tile shows three.
+    attention: attention.sort((a, b) => RANK[a.status] - RANK[b.status]).slice(0, 5),
   }
 }

@@ -1,12 +1,14 @@
 import { Sparkline } from '@/components/pos'
 import type { FinanceDigest } from '../jobs/nightly-digest'
 
-// The Finance dashboard tile. The module says how its own numbers read,
-// because core cannot: it has no idea what `netWorthCents` is, and printing
-// the payload generically is what put "debt cents 231000" on the dashboard.
+// The Finance dashboard tile, as POS Dashboard.dc.html draws it: two figures
+// side by side, net worth with its thirty day move and the fortnight's charges
+// with the next one named, then thirty days of net worth as a line. The module
+// says how its own numbers read, because core cannot: it has no idea what
+// `netWorthCents` is.
 
 const money = (cents: number) =>
-  `$${Math.round(cents / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+  `$${Math.round(cents / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}`
 
 /** Signed, because a net worth change reads wrong without its direction. */
 const delta = (cents: number) => `${cents >= 0 ? '+' : '-'}${money(Math.abs(cents))}`
@@ -16,29 +18,31 @@ export function FinanceTile({ payload }: { payload: Record<string, unknown> }) {
   const netWorth = d.netWorthCents ?? 0
   const change = d.changeCents ?? 0
   const upcoming = d.upcomingCents ?? 0
-  const overBudget = d.overBudget ?? []
   const series = d.netWorthSeries ?? []
+  const next = d.nextCharge ?? null
 
   return (
-    <div className="flex flex-1 flex-col gap-3">
-      <div className="flex flex-wrap gap-x-8 gap-y-3">
+    <div className="flex flex-1 flex-col">
+      <div className="mt-0.5 grid grid-cols-2 gap-[18px]">
         <div>
-          <span className="eyebrow block text-ink-3">Net worth</span>
-          <span className="num block text-[26px] font-light leading-tight text-ink">
+          <span className="block text-[11px] text-ink-3">Net worth</span>
+          <span className="num mt-1.5 block text-[30px] font-light leading-none tracking-[-0.02em] text-ink">
             {money(netWorth)}
           </span>
-          <span className={`num text-[11px] ${change >= 0 ? 'text-brand' : 'text-bad'}`}>
+          <span className={`num mt-1.5 block text-[11px] ${change >= 0 ? 'text-ok' : 'text-bad'}`}>
             {delta(change)} · 30d
           </span>
         </div>
 
         <div>
-          <span className="eyebrow block text-ink-3">Due in 14 days</span>
-          <span className="num block text-[26px] font-light leading-tight text-ink">
+          <span className="block text-[11px] text-ink-3">Due in 14 days</span>
+          <span className="num mt-1.5 block text-[30px] font-light leading-none tracking-[-0.02em] text-ink">
             {money(upcoming)}
           </span>
-          <span className="num text-[11px] text-ink-3">
-            {d.upcomingCount ?? 0} {d.upcomingCount === 1 ? 'charge' : 'charges'}
+          <span className="num mt-1.5 block truncate text-[11px] text-ink-3">
+            {next
+              ? `next: ${next.name} · ${next.inDays === 0 ? 'today' : `in ${next.inDays}d`}`
+              : `${d.upcomingCount ?? 0} ${d.upcomingCount === 1 ? 'charge' : 'charges'}`}
           </span>
         </div>
       </div>
@@ -46,17 +50,7 @@ export function FinanceTile({ payload }: { payload: Record<string, unknown> }) {
       {/* The artboard's line under the two numbers: thirty days of net worth,
         * unlabelled, because the number above it is the one that matters and
         * this is only its direction. */}
-      {series.length > 1 && <Sparkline points={series} height={56} className="mt-auto" />}
-
-      {overBudget.length > 0 && (
-        <p className="t-caption text-amber">
-          {overBudget
-            .slice(0, 2)
-            .map((b) => `${b.name} at ${Math.round(b.percent)}%`)
-            .join(', ')}
-          {overBudget.length > 2 ? ` and ${overBudget.length - 2} more` : ''}
-        </p>
-      )}
+      {series.length > 1 && <Sparkline points={series} height={56} className="mt-3.5 flex-1" />}
     </div>
   )
 }

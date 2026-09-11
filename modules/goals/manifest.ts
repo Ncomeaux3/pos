@@ -167,6 +167,11 @@ export default defineModule({
   },
 
   tile: GoalsTile,
+  tileHead: (payload) => {
+    const n = typeof payload.atRisk === 'number' ? payload.atRisk : 0
+    const s = typeof payload.stalled === 'number' ? payload.stalled : 0
+    return { meta: s > 0 ? `${s} stalled` : `${n} at risk` }
+  },
 
   jobs: [
     { name: 'pull_metrics', run: pullMetrics },

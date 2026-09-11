@@ -12,8 +12,8 @@ export type SkillsDigest = {
   /** XP from this week's events, and the three skills that took most of it. */
   xpThisWeek: number
   gainedThisWeek: { skillId: string; name: string; gained: number }[]
-  /** Linked at some point, nothing in 60 days. */
-  stagnant: { skillId: string; name: string; lastEventAt: string | null }[]
+  /** Linked at some point, nothing in 60 days; idleDays as of the run. */
+  stagnant: { skillId: string; name: string; lastEventAt: string | null; idleDays: number }[]
   /**
    * SPEC also asks for skills with high goal weight and low activity. Goals
    * does not exist yet and nothing else supplies a goal weight, so this stays
@@ -98,7 +98,12 @@ export async function nightlyDigest(): Promise<SkillsDigest> {
       .filter((r) => r.last_event_at !== null && Date.parse(r.last_event_at) < stagnantBefore)
       .sort((a, b) => Date.parse(a.last_event_at!) - Date.parse(b.last_event_at!))
       .slice(0, 5)
-      .map((r) => ({ skillId: r.skill_id, name: nameOf(r.skill_id), lastEventAt: r.last_event_at })),
+      .map((r) => ({
+        skillId: r.skill_id,
+        name: nameOf(r.skill_id),
+        lastEventAt: r.last_event_at,
+        idleDays: Math.round((Date.now() - Date.parse(r.last_event_at!)) / DAY),
+      })),
     underGoalPressure: [],
   }
 }

@@ -12,8 +12,16 @@ export type TasksDigest = {
   awaitingReview: number
   /** Overdue tasks the nightly roll has already moved at least twice. */
   rolledTwice: number
-  /** The next five, so the dashboard timeline has something to union. */
-  upcoming: { id: string; title: string; dueOn: string; priority: string }[]
+  /** The next five, with what the tile prints beside each: project, estimate, review state. */
+  upcoming: {
+    id: string
+    title: string
+    dueOn: string
+    priority: string
+    project: string | null
+    estimateMinutes: number | null
+    status: string
+  }[]
 }
 
 type Counts = {
@@ -51,16 +59,13 @@ export async function nightlyDigest(): Promise<TasksDigest> {
   )
   const rolledTwice = overdueIds.filter((r) => (rolls.get(r.id) ?? 0) >= 2).length
 
-  const { rows: upcoming } = await db().query<{
-    id: string
-    title: string
-    dueOn: string
-    priority: string
-  }>(
-    `select id, title, due_on::text as "dueOn", priority
-       from tasks.task
-      where status = 'open' and due_on is not null and due_on >= core.today()
-      order by due_on, priority
+  const { rows: upcoming } = await db().query<TasksDigest['upcoming'][number]>(
+    `select t.id, t.title, t.due_on::text as "dueOn", t.priority, p.name as project,
+            t.estimated_minutes as "estimateMinutes", t.status
+       from tasks.task t
+       left join tasks.project p on p.id = t.project_id
+      where t.status in ('open', 'review') and t.due_on is not null and t.due_on >= core.today()
+      order by t.due_on, t.priority
       limit 5`,
   )
 
