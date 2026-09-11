@@ -298,6 +298,14 @@ export default defineModule({
 
   /** See ModuleManifest.tile: the module says how its own numbers read. */
   tile: TasksTile,
+  // "Tasks · today" over "0 of 4 done", the artboard's head for this tile.
+  tileHead: (payload) => {
+    const n = (key: string) => (typeof payload[key] === 'number' ? (payload[key] as number) : 0)
+    return {
+      label: 'Tasks · today',
+      meta: `${n('completedToday')} of ${n('dueToday') + n('completedToday')} done`,
+    }
+  },
 
   jobs: [
     { name: 'roll_forward', run: rollForward },

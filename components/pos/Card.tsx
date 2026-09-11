@@ -34,17 +34,25 @@ export function CardHead({
   label,
   dot,
   meta,
+  plainMeta = false,
   className,
 }: {
   label: ReactNode
   dot?: DotTone
   meta?: ReactNode
+  /** 11px ink-3 in sentence case, as the dashboard artboard's tile heads read
+   * ("5 open", "2 budgets flagged →"), instead of the tracked label. */
+  plainMeta?: boolean
   className?: string
 }) {
   return (
     <div className={cn('flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1', className)}>
       <Eyebrow dot={dot}>{label}</Eyebrow>
-      {meta && <span className="label text-[11px] tracking-[0.1em] text-ink-3">{meta}</span>}
+      {meta && (
+        <span className={cn('text-[11px] text-ink-3', !plainMeta && 'label tracking-[0.1em]')}>
+          {meta}
+        </span>
+      )}
     </div>
   )
 }

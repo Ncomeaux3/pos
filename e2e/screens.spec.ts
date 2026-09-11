@@ -111,6 +111,49 @@ test('dashboard shell', async ({ page }) => {
     }, accent)
     expect(badgeColor).toBe(accentRgb)
 
+    // POS Dashboard.dc.html at 1440x900: the artboard's nine tiles first, in
+    // its default order, then every other module's tile in rail order. The
+    // tile is 16px 20px inside a 1px --rule border, and the band's search is
+    // the compact one with its placeholder.
+    const bento = page.getByTestId('dashboard-bento')
+    const eyebrows = await bento
+      .locator(':scope > div')
+      .evaluateAll((tiles) => tiles.map((t) => t.querySelector('.eyebrow')?.textContent?.trim()))
+    expect(eyebrows.slice(0, 9)).toEqual([
+      'Warnings',
+      'Finance',
+      'Tasks · today',
+      'Review · agent proposals',
+      'Goals',
+      'Skill Tree',
+      'System',
+      'Model spend · month',
+      'Next 7 days',
+    ])
+    expect(eyebrows.slice(9)).toEqual([
+      'Second Brain',
+      'Insurance',
+      'Ideas',
+      'Fitness',
+      'Health',
+      'Home & Assets',
+      'Meals',
+      'Travel',
+      'Notes',
+    ])
+    const tile = await bento.locator(':scope > div > div').first().evaluate((el) => {
+      const cs = getComputedStyle(el)
+      const rule = getComputedStyle(document.documentElement).getPropertyValue('--rule').trim()
+      const probe = document.createElement('span')
+      probe.style.color = rule
+      document.body.append(probe)
+      const ruleRgb = getComputedStyle(probe).color
+      probe.remove()
+      return { padding: cs.padding, border: cs.borderTopColor === ruleRgb }
+    })
+    expect(tile).toEqual({ padding: '16px 20px', border: true })
+    await expect(page.locator('header').getByText('What are you looking for?')).toBeVisible()
+
     // The footer is a list too: Dark (or Light) and Collapse are rows in it
     // with 13px labels, not a bar under it.
     const footer = page.getByRole('navigation', { name: /sections/i })
@@ -149,7 +192,7 @@ test('dashboard, the week ahead and arranging the tiles', async ({ page }) => {
   await expect(page).toHaveURL(/arrange=1/)
   await expect(page.getByText(/Arrange mode/)).toBeVisible()
 
-  await page.getByRole('link', { name: 'Done' }).click()
+  await page.getByRole('link', { name: 'Done', exact: true }).click()
   await expect(page.getByText(/Arrange mode/)).toBeHidden()
 })
 
@@ -430,7 +473,7 @@ test('dashboard renders the nightly run', async ({ page }) => {
   await expect(main.getByText('System')).toBeVisible()
   await expect(main.getByText('Model spend')).toBeVisible()
   // One tile per module that wrote a digest, so the page needs no knowledge of
-  // any module to show its numbers.
+  // any module to show its numbers. The tile's head is the link in, as drawn.
   await expect(main.getByRole('link', { name: /open notes/i })).toBeVisible()
 
   await shoot(page, 'dashboard-live')

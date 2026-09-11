@@ -105,11 +105,13 @@ export function Bento({ tiles }: { tiles: Tile[] }) {
   }
 
   return (
-    <div className="space-y-4">
+    // The artboard: the grid sits 22px under the headline block, and in
+    // arrange mode the banner takes 18px of that and the grid 22px more.
+    <div className="mt-[22px]">
       {arranging && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border border-dashed border-brand px-3.5 py-2.5 text-[12px] text-ink-2">
+        <div className="-mt-1 mb-[22px] flex flex-wrap items-center justify-between gap-3 border border-dashed border-brand px-3.5 py-2.5 text-[12px] text-ink-2">
           <span>
-            Arrange mode: drag tiles, or use the arrows on each. Order is saved on this device.
+            Arrange mode: drag tiles, or use ‹ › on each. Order is saved on this device.
           </span>
           <button
             type="button"
@@ -121,7 +123,10 @@ export function Bento({ tiles }: { tiles: Tile[] }) {
         </div>
       )}
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] gap-3.5 [grid-auto-rows:minmax(200px,auto)]">
+      <div
+        data-testid="dashboard-bento"
+        className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] content-start gap-3.5 [grid-auto-rows:minmax(200px,auto)]"
+      >
         {sorted.map((id) => {
           const tile = tiles.find((t) => t.id === id)
           if (!tile) return null
@@ -177,8 +182,11 @@ export function ArrangeToggle() {
     <Link
       href={arranging ? '/' : '/?arrange=1'}
       className={cn(
-        'inline-flex h-11 shrink-0 items-center border px-3 text-[12px] transition-colors duration-150 sm:h-[35px]',
-        arranging ? 'border-brand bg-brand-soft text-ink' : 'border-rule-2 text-ink-2 hover:text-ink',
+        // 12px in 8px 12px, and filled accent while arranging, as drawn.
+        'inline-flex h-11 shrink-0 items-center border px-3 text-[12px] transition-colors duration-150 sm:h-[33px]',
+        arranging
+          ? 'border-brand bg-brand text-bg'
+          : 'border-rule-2 text-ink-2 hover:border-ink hover:text-ink',
       )}
     >
       {arranging ? 'Done' : 'Arrange'}

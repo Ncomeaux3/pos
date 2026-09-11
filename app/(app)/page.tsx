@@ -1,5 +1,7 @@
 import Link from 'next/link'
+import { cn } from '@/lib/utils'
 import {
+  BandSearch,
   Card,
   CardHead,
   Chip,
@@ -16,10 +18,11 @@ import { Bento, ArrangeToggle, type Tile } from './Bento'
 import { JobRows, SevenDays } from './DashboardTiles'
 import { ProposalList, WarningList } from './Inbox'
 import { getModules } from '@/core/modules'
+import { getNav, getOffRailNav } from '@/core/nav'
 import { upcoming } from '@/core/review-registry'
 import { headlineSegments, jobStates, latestSummary } from '@/core/orchestrator'
 import { getSettings } from '@/core/settings'
-import { dayIn, ownerToday } from '@/core/today'
+import { clockIn, ownerToday } from '@/core/today'
 import { RunNow } from './RunNow'
 
 // The bento. Every tile reads core, never a module's own tables: module numbers
@@ -78,12 +81,16 @@ async function spendByPurpose(): Promise<{ purpose: string; calls: number; cents
 }
 
 const money = (cents: number) => `$${(cents / 100).toFixed(2)}`
-const ago = (at: Date) => {
-  const mins = Math.round((Date.now() - new Date(at).getTime()) / 60_000)
-  if (mins < 60) return `${mins}m ago`
-  const hours = Math.round(mins / 60)
-  return hours < 24 ? `${hours}h ago` : `${Math.round(hours / 24)}d ago`
-}
+
+/**
+ * The artboard's default order, POS Dashboard.dc.html line 194. Everything
+ * else that wrote a digest follows in rail order; a device's own arrangement
+ * still wins over both once it has one.
+ */
+const ORDER = ['warnings', 'finance', 'tasks', 'review', 'goals', 'skills', 'jobs', 'llm', 'timeline']
+
+/** The tile's border is the quiet rule, not rule-2; module tiles lift on hover. */
+const tileClass = 'flex h-full flex-col gap-3 border-rule'
 
 export default async function DashboardPage() {
   // The owner's date, not the server's: on Vercel those differ all evening.
@@ -91,16 +98,27 @@ export default async function DashboardPage() {
   // dates are compared against; `today` is the label in the band.
   const settings = await getSettings()
   const todayIso = await ownerToday()
-  const today = dayIn(new Date(), settings.timezone)
+  // "Fri Sep 11", the artboard's band date, in the owner's zone.
+  const today = new Intl.DateTimeFormat('en-US', {
+    timeZone: settings.timezone,
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+    .format(new Date())
+    .replace(',', '')
 
-  const [latest, jobs, diary, warnings, proposals, spend] = await Promise.all([
+  const [latest, jobs, diary, warnings, proposals, spend, nav, offRail] = await Promise.all([
     latestSummary(),
     jobStates(),
     nextSevenDays(todayIso),
     unreadWarnings(),
     pendingProposals(),
     spendByPurpose(),
+    getNav(),
+    getOffRailNav(),
   ])
+  const rail = [...nav, ...offRail].map((n) => n.href.slice(1))
 
   const summary = latest?.summary
   const segments = summary ? headlineSegments(summary) : []
@@ -109,18 +127,16 @@ export default async function DashboardPage() {
   const capCents = summary?.capCents ?? settings.llm_soft_cap_cents
 
 
-  // The artboard's order: what needs you, what is proposed, what is coming,
-  // then the modules, then the machine. Everything after that is whatever this
-  // device was dragged into.
-  const tiles: Tile[] = [
+  const unsorted: Tile[] = [
     {
       id: 'warnings',
       node: (
-        <Card className="flex h-full flex-col gap-3">
+        <Card className={tileClass}>
           <CardHead
             label="Warnings"
             dot={warnings.length > 0 ? 'warn' : 'ok'}
-            meta={`${warnings.length} unread`}
+            meta={`${warnings.length} open`}
+            plainMeta
           />
           {warnings.length === 0 ? (
             <p className="grid flex-1 place-items-center text-[26px] font-light text-ink-3">
@@ -142,8 +158,8 @@ export default async function DashboardPage() {
     {
       id: 'review',
       node: (
-        <Card className="flex h-full flex-col gap-3">
-          <CardHead label="Review · agent proposals" meta={`${proposals.length} pending`} />
+        <Card className={tileClass}>
+          <CardHead label="Review · agent proposals" meta={`${proposals.length} pending →`} plainMeta />
           {proposals.length === 0 ? (
             <p className="grid flex-1 place-items-center text-[26px] font-light text-ink-3">
               inbox clear
@@ -169,8 +185,8 @@ export default async function DashboardPage() {
     {
       id: 'timeline',
       node: (
-        <Card className="flex h-full flex-col gap-3">
-          <CardHead label="Next 7 days" meta={`${diary.length} scheduled`} />
+        <Card className={tileClass}>
+          <CardHead label="Next 7 days" meta={`${diary.length} scheduled`} plainMeta />
           <SevenDays
             today={todayIso}
             items={diary.map((d) => ({
@@ -189,14 +205,34 @@ export default async function DashboardPage() {
     // own numbers; this page only lays them out.
     ...(summary?.modules ?? []).map((m) => {
       const manifest = getModules().find((x) => x.id === m.module)
-      const label = manifest?.nav.label ?? m.module
+      const name = manifest?.nav.label ?? m.module
       const ModuleTile = manifest?.tile
+      const head = manifest?.tileHead?.(m.payload) ?? {}
+      const href = `/${m.module}`
 
       return {
         id: m.module,
         node: (
-          <Card className="flex h-full flex-col gap-3">
-            <CardHead label={label} meta={ModuleTile ? undefined : 'digest'} />
+          <Card className={cn(tileClass, 'transition-colors duration-150 hover:border-rule-2')}>
+            {/* The head is the way in, as the artboard has it: the name and
+              * the line on the right both open the module. No footer link. */}
+            <CardHead
+              label={
+                <Link href={href} aria-label={`Open ${name}`} className="hover:text-ink">
+                  {head.label ?? name}
+                </Link>
+              }
+              meta={
+                head.meta ? (
+                  <Link href={href} className="hover:text-ink">
+                    {head.meta} →
+                  </Link>
+                ) : ModuleTile ? undefined : (
+                  'digest'
+                )
+              }
+              plainMeta
+            />
             {/* The module says how its own numbers read. Core only places the
               * result: it has no way to know what a finance payload holds, and
               * walking the object generically is what put "debt cents 231000"
@@ -206,12 +242,6 @@ export default async function DashboardPage() {
             ) : (
               <GenericDigest payload={m.payload} />
             )}
-            <Link
-              href={`/${m.module}`}
-              className="label mt-auto text-[10px] tracking-[0.1em] text-ink-3 hover:text-ink"
-            >
-              Open {label}
-            </Link>
           </Card>
         ),
       }
@@ -220,11 +250,12 @@ export default async function DashboardPage() {
     {
       id: 'jobs',
       node: (
-        <Card className="flex h-full flex-col gap-3">
+        <Card className={tileClass}>
           <CardHead
             label="System"
             dot={failed.length > 0 ? 'bad' : 'ok'}
             meta={`${jobs.length} jobs`}
+            plainMeta
           />
           <HeatStrip cells={jobs.map((j) => ({ label: `${j.module}.${j.name}`, status: j.status }))} />
           <JobRows
@@ -241,8 +272,8 @@ export default async function DashboardPage() {
     {
       id: 'llm',
       node: (
-        <Card className="flex h-full flex-col gap-3">
-          <CardHead label="Model spend · month" meta={`cap ${money(capCents)}`} />
+        <Card className={tileClass}>
+          <CardHead label="Model spend · month" meta={`cap ${money(capCents)} →`} plainMeta />
           <div className="flex items-baseline gap-2.5">
             <span className="num text-[30px] font-light leading-none text-ink">
               {money(spendCents)}
@@ -279,52 +310,59 @@ export default async function DashboardPage() {
     },
   ]
 
+  // The artboard's nine first, in its order, then the rest of the modules in
+  // rail order. `unsorted` above is grouped by kind because that is how the
+  // tiles are built, not how they are laid out.
+  const position = (id: string) => {
+    const fixed = ORDER.indexOf(id)
+    if (fixed >= 0) return fixed
+    const onRail = rail.indexOf(id)
+    return ORDER.length + (onRail >= 0 ? onRail : rail.length)
+  }
+  const tiles = [...unsorted].sort((a, b) => position(a.id) - position(b.id))
+
   return (
-    <div className="space-y-7">
+    <div>
       {/* Two bands, as the design has it: a thin breadcrumb row with the
         * actions, then the summary as the page's opening statement. The two
         * were merged into one PageHeader, which made the headline a title and
         * shrank it to a title's size. */}
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-rule pb-3">
+      {/* The band is 56px, full bleed, with the actions on the right: the
+        * page's 28px padding is cancelled so the band's rule runs edge to edge
+        * and its contents sit on the artboard's centre line. On a phone the
+        * band wraps, so the height is a minimum there. */}
+      <header className="-mx-[18px] -mt-[14px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 md:-mx-7 md:-mt-7 md:h-14 md:flex-nowrap md:px-7 md:py-0">
         <span className="eyebrow shrink-0 whitespace-nowrap text-ink-3">
           Dashboard <span className="text-ink-4">/</span> {today}
         </span>
-        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-4">
-          {/* A GET form, so search from the dashboard needs no javascript and
-              lands on the same screen the palette does. */}
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-4 md:flex-nowrap">
           {/* On a phone the artboard carries a 44px search icon in this band,
-              not a field. Same destination, and still no javascript. */}
+              not a field. Same destination either way: the palette. */}
           <SearchButton href="/search" className="md:hidden" />
-          <form action="/search" className="hidden min-w-[220px] max-w-[320px] flex-1 md:block">
-            <input
-              type="search"
-              name="q"
-              aria-label="Search everything"
-              placeholder="Search everything"
-              className="h-[34px] w-full border border-rule-2 bg-transparent px-3 text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand"
-            />
-          </form>
+          <BandSearch className="hidden min-w-[220px] flex-1 md:flex" />
           <ArrangeToggle />
           <RunNow />
         </div>
       </header>
 
-      <section className="space-y-2">
+      <section className="mt-[26px]">
         <span className="eyebrow text-ink-3">
           <span
             className="status-dot"
             data-tone={failed.length > 0 ? 'bad' : latest ? 'ok' : 'idle'}
             aria-hidden="true"
           />
+          {/* The run's own clock, in the owner's zone, as the artboard writes
+            * it: "Last run 04:02 CDT · ok". */}
           {latest
-            ? `Nightly summary · last run ${ago(latest.runAt)} · ${failed.length > 0 ? `${failed.length} failed` : 'ok'}`
+            ? `Nightly summary · Last run ${clockIn(new Date(latest.runAt), settings.timezone)} ${zoneAbbr(settings.timezone)} · ${failed.length > 0 ? `${failed.length} failed` : 'ok'}`
             : 'No run yet'}
         </span>
         {/* The opening statement, at the size the design gives it. It is the
           * first thing on the page and reads as a sentence, not a heading, and
           * the parts of it that name something you can open are links, which
           * is the artboard's one piece of colour in the sentence. */}
-        <h1 className="max-w-[920px] text-pretty text-[clamp(22px,2.2vw,30px)] font-normal leading-[1.25] tracking-[-0.03em] text-ink">
+        <h1 className="mt-3 max-w-[920px] text-pretty text-[clamp(22px,2.2vw,30px)] font-normal leading-[1.25] tracking-[-0.03em] text-ink">
           {segments.length > 0
             ? segments.map((s, i) =>
                 s.href ? (
@@ -343,7 +381,7 @@ export default async function DashboardPage() {
         </h1>
         {/* Hidden on a phone, as everywhere else: none of the four phone
           * artboards puts a paragraph under its opening line. */}
-        <p className="t-caption hidden text-ink-3 md:block">
+        <p className="mt-2 hidden text-[13px] text-ink-3 md:block">
           {latest
             ? 'Written from module digests only. Raw data is touched when you ask a direct question.'
             : 'Press Run now, or wait for the nightly cron.'}
@@ -353,13 +391,13 @@ export default async function DashboardPage() {
       <Bento tiles={tiles} />
 
       {!latest && (
-        <EmptyState headline="No run yet">
+        <EmptyState headline="No run yet" className="mt-7">
           The orchestrator writes core.dashboard_summary on the nightly run. Press Run now to do it
           straight away.
         </EmptyState>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="mt-7 flex flex-wrap items-center gap-2">
         <Eyebrow>Alerts</Eyebrow>
         {(summary?.alerts ?? []).length === 0 ? (
           <Chip tone="ok">Nothing outstanding</Chip>
@@ -428,4 +466,12 @@ function readableValue(key: string, value: number | string): string {
     return `$${(value / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
   }
   return typeof value === 'number' ? value.toLocaleString() : String(value)
+}
+
+/** "CDT" for America/Chicago today; what the artboard prints after the clock. */
+function zoneAbbr(timeZone: string): string {
+  const part = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'short' })
+    .formatToParts(new Date())
+    .find((p) => p.type === 'timeZoneName')
+  return part?.value ?? ''
 }

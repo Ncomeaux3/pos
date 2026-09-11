@@ -14,12 +14,14 @@ export function BandSearch({ className }: { className?: string }) {
       type="button"
       onClick={() => window.dispatchEvent(new Event('pos:search'))}
       className={cn(
-        'flex h-[34px] w-full max-w-[320px] items-center justify-between gap-3 border border-rule-2 bg-bg-deep px-3 text-left text-ink-3 transition-colors duration-150 hover:border-ink-4 hover:text-ink-2',
+        'flex h-[34px] w-full max-w-[320px] items-center gap-2.5 border border-rule-2 bg-bg pl-3 pr-3 text-left text-ink-4 transition-colors duration-150 hover:border-ink-4 hover:text-ink-3',
         className,
       )}
     >
-      <span className="truncate text-[12px]">Search</span>
-      <span className="label shrink-0 text-[10px] tracking-[0.1em] text-ink-4">⌘K</span>
+      {/* PosSearch compact: a chevron in ink-4, then the placeholder at 12px.
+          No shortcut hint; the artboard's bar carries none. */}
+      <span aria-hidden className="label shrink-0 text-[12px]">›</span>
+      <span className="truncate text-[12px]">What are you looking for?</span>
     </button>
   )
 }

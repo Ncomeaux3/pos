@@ -99,6 +99,13 @@ export type ModuleManifest = {
    */
   tile?: ComponentType<{ payload: Record<string, unknown> }>
   /**
+   * The tile's head, when the module has something to say there: a label
+   * other than its name ("Tasks · today") and the short line on the right
+   * ("2 budgets flagged", "0 of 4 done"), both read off its own digest. Core
+   * draws the name and nothing on the right when this is absent.
+   */
+  tileHead?: (payload: Record<string, unknown>) => { label?: string; meta?: string }
+  /**
    * What this module contributes to the Weekly Review.
    *
    * The review is a core screen and core does not read module schemas, so a
