@@ -52,3 +52,7 @@ e2e/__screens__/
 test-results/
 playwright-report/
 .worktrees/
+
+# Local agent tooling. .codex/config.toml carries the pos MCP bearer token.
+.codex/
+.agents/
