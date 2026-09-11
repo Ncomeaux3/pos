@@ -916,13 +916,16 @@ test('finance, the limits drawer holds edits until Done', async ({ page }) => {
   await expect(page).toHaveURL(/limits=1/)
   await expect(page.getByRole('heading', { name: 'Budget limits' })).toBeVisible()
   await expect(page.getByText('No changes')).toBeVisible()
+  // The shot first: shoot() reloads for its two themes, and a held edit is
+  // exactly the kind of state that does not survive a reload.
+  await shoot(page, 'finance-limits')
+  await page.waitForLoadState('networkidle')
 
   // Move the threshold: nothing is written until Done, and the hint says so.
   const slider = page.getByRole('slider', { name: /alert threshold/i })
   await slider.focus()
   await page.keyboard.press('ArrowRight')
   await expect(page.getByText('1 unsaved change')).toBeVisible()
-  await shoot(page, 'finance-limits')
 
   await page.getByRole('button', { name: 'Reset' }).click()
   await expect(page.getByText('No changes')).toBeVisible()

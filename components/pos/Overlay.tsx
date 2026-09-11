@@ -113,7 +113,7 @@ export function Overlay({
         </div>
 
         <div className="shrink-0 px-6 pt-[22px]">
-          <p className="text-[26px] font-normal leading-none tracking-[-0.03em] text-ink">{title}</p>
+          <h2 className="text-[26px] font-normal leading-none tracking-[-0.03em] text-ink">{title}</h2>
           {lede && <p className="mt-2 text-[13px] leading-[1.5] text-ink-3">{lede}</p>}
         </div>
 

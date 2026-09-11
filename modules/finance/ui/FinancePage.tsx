@@ -47,6 +47,7 @@ export default async function FinancePage() {
   const data: FinanceData = {
     todayIso,
     alertThreshold,
+    provider: sync.provider,
     monthPace: monthPace(todayIso),
     netWorthCents: netWorth,
     changeCents: change,
