@@ -112,6 +112,8 @@
 
 ## Task 3: Rebuild the Dashboard to the six-tile source composition
 
+> Superseded 2026-09-11 by docs/plans/dashboard-fidelity.md: the artboard has nine tiles, not six, and the decision is nine first then the rest, not a fixed six.
+
 **Files:**
 - Modify: `app/(app)/page.tsx:104-281`
 - Modify: `app/(app)/Bento.tsx:65-142`
