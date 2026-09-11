@@ -461,11 +461,14 @@ test('dashboard renders the nightly run', async ({ page }) => {
   await page.goto('/')
 
   // Run now is a server action behind requireOwner, not a call to the cron
-  // route, so it needs no secret.
-  await page.getByRole('button', { name: /^run now$/i }).click()
-  await expect(page.getByText(/^Run clean$|jobs? failed/i)).toBeVisible({ timeout: 20_000 })
-
-  await page.reload()
+  // route, so it needs no secret. The phone band has no button for it, as
+  // its artboard has none (pull to sync is the gesture), so the phone reads
+  // whatever the last run wrote.
+  if ((page.viewportSize()?.width ?? 0) >= 720) {
+    await page.getByRole('button', { name: /^run now$/i }).click()
+    await expect(page.getByText(/^Run clean$|jobs? failed/i)).toBeVisible({ timeout: 20_000 })
+    await page.reload()
+  }
 
   // Tile labels are uppercased by CSS, so the DOM still says "Warnings".
   const main = page.getByRole('main')

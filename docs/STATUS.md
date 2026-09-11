@@ -3,8 +3,8 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
-Last updated: 2026-09-11, the Weekly Review fidelity pass and the rail to
-PosSidebar. Branch `main`.
+Last updated: 2026-09-11, the Weekly Review and Dashboard fidelity passes and
+the rail to PosSidebar. Branch `main`.
 
 ## Done
 
@@ -24,6 +24,16 @@ bundle landed 2026-09-07 and steps 0, 7.5 and 8 to 14 followed.
 | 13 | `pnpm setup` and `pnpm setup:demo`, both idempotent |
 | 14 | CI and backup workflows, restore drilled |
 | 16 | Docs squared up: README quickstart, connections registry, the notes module README |
+
+**The fidelity pass, screen two: Dashboard.** docs/plans/dashboard-fidelity.md.
+The artboard's nine tiles first in its order, then every other module's tile
+in rail order; the band is 56px full bleed with the compact search and the
+DS-sized Run now (desktop only, the phone's way is pull to sync); the headline
+reads the artboard's three clauses from digests through the same template
+(`digestSentence` in core/orchestrator.ts, tested), falling back to the alerts
+sentence; every tile is measured to the artboard, with the manifest's new
+`tileHead(payload)` letting a module name its head and its right-hand line.
+Finance, Tasks, Goals and Skills digests gained the keys their tiles print.
 
 **The fidelity pass, screen one of 27: Weekly Review.** The prototypes are
 matched one screen at a time now, in the app, against the artboard captured

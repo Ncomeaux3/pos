@@ -24,7 +24,16 @@ export function RunNow() {
       <PullToSync onPull={run} disabled={pending} />
       {/* Solid, which is the design's treatment: this is the one thing on
         * the dashboard the owner presses, so it is the one filled control. */}
-      <ActionButton variant="solid" size="xl" className="gap-2" disabled={pending} onClick={run}>
+      {/* The DS button at 51px on the desktop band. Not on the phone: the
+        * phone artboard's band has no run button, pull to sync is how the
+        * nightly is run there. */}
+      <ActionButton
+        variant="solid"
+        size="xl"
+        className="hidden gap-2 md:inline-flex"
+        disabled={pending}
+        onClick={run}
+      >
         {pending ? 'Running' : 'Run now'}
         {!pending && <span aria-hidden="true">&rarr;</span>}
       </ActionButton>
