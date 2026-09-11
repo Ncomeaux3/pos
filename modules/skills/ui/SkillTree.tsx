@@ -209,18 +209,9 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
             * The character, the pips, the hints and the legend sit in its four
             * corners, over the sky. */}
           <div className="relative flex min-h-[420px] flex-1 flex-col overflow-hidden">
-            <Constellation
-              nodes={data.nodes}
-              stats={data.stats}
-              selected={selected}
-              onSelect={setSelected}
-              characterLevel={data.characterLevel}
-              now={now}
-              onReassign={onReassign}
-              resetToken={resetToken}
-            />
-
-            <div className="pointer-events-none absolute left-5 top-[18px]">
+            {/* On a phone the character and the pips sit above the sky in
+              * flow; from md they float in its top corners as drawn. */}
+            <div className="z-10 px-5 pt-[18px] md:pointer-events-none md:absolute md:left-5 md:top-[18px] md:p-0">
               <span className="eyebrow text-[#8fa3b8]">Character</span>
               <div className="mt-2 flex items-baseline gap-3">
                 <span className="num text-[34px] font-light leading-none tracking-[-0.02em] text-white">
@@ -236,7 +227,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
 
             {/* One pip per attribute, the character sheet, six letters each as
               * the artboard cuts them. Cells on a hairline grid. */}
-            <div className="absolute right-5 top-[118px] flex max-w-[calc(100%-40px)] flex-wrap justify-end gap-px border border-white/12 bg-white/12 md:top-[18px] md:max-w-[calc(100%-320px)]">
+            <div className="z-10 mx-5 mt-3 flex flex-wrap justify-end gap-px border border-white/12 bg-white/12 md:absolute md:right-5 md:top-[18px] md:mx-0 md:mt-0 md:max-w-[calc(100%-320px)]">
               {attributes.map((a) => (
                 <button
                   key={a.id}
@@ -253,13 +244,24 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
               ))}
             </div>
 
-            <div className="pointer-events-none absolute bottom-3.5 left-5 flex max-w-[55%] flex-wrap gap-3.5 text-[11px] text-[#6f8399]">
+            <Constellation
+              nodes={data.nodes}
+              stats={data.stats}
+              selected={selected}
+              onSelect={setSelected}
+              characterLevel={data.characterLevel}
+              now={now}
+              onReassign={onReassign}
+              resetToken={resetToken}
+            />
+
+            <div className="pointer-events-none absolute bottom-3.5 left-5 z-10 flex max-w-[55%] flex-wrap gap-3.5 text-[11px] text-[#6f8399]">
               <span>Hover: details</span>
               <span>Click: inspect</span>
               <span>Double-click: zoom</span>
               <span>Scroll: zoom · Drag: pan</span>
             </div>
-            <div className="pointer-events-none absolute bottom-3.5 right-5 flex max-w-[40%] flex-wrap items-center justify-end gap-3 text-[11px] text-[#6f8399]">
+            <div className="pointer-events-none absolute bottom-3.5 right-5 z-10 flex max-w-[40%] flex-wrap items-center justify-end gap-3 text-[11px] text-[#6f8399]">
               <span className="inline-flex items-center gap-1.5">
                 <span className="size-2 rounded-full bg-brand shadow-[0_0_8px_var(--accent)]" />
                 gaining

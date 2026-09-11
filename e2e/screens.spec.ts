@@ -203,6 +203,8 @@ test('notes, the stub module page', async ({ page }) => {
 })
 
 test('skill tree, constellation and the selected skill panel', async ({ page }) => {
+  // Three shots of the heaviest page in the app, each in two themes.
+  test.slow()
   await page.goto('/skills')
   await expect(page.getByRole('heading', { name: 'Skill Tree' })).toBeVisible()
   await expect(page.getByRole('img', { name: 'Skill constellation' })).toBeVisible()
