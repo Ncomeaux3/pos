@@ -4,6 +4,7 @@ import { glanceTiles, type DigestMap } from '@/core/review-glance'
 import { pending, slipped, upcoming, wins } from '@/core/review-registry'
 import { getReview, listReviews, noteWriter, weekNumber, weekOf } from '@/core/reviews'
 import { EMPTY_ANSWERS } from '@/core/reviews-shape'
+import { getTheme } from '@/core/theme'
 import { ownerToday } from '@/core/today'
 import { Wizard, type WeekData } from './Wizard'
 
@@ -50,7 +51,7 @@ export default async function WeeklyReviewPage() {
   const todayIso = await ownerToday()
   const week = weekOf(todayIso)
 
-  const [review, past, glanced, winsBy, slippedBy, upcomingBy, pendingBy, writer] =
+  const [review, past, glanced, winsBy, slippedBy, upcomingBy, pendingBy, writer, theme] =
     await Promise.all([
       getReview(week),
       listReviews(),
@@ -60,6 +61,7 @@ export default async function WeeklyReviewPage() {
       upcoming(),
       pending(),
       noteWriter(),
+      getTheme(),
     ])
 
   const data: WeekData = {
@@ -67,6 +69,7 @@ export default async function WeeklyReviewPage() {
     weekNumber: weekNumber(week),
     weekLabel: range(week),
     noteLabel: label(week),
+    theme,
     glance: glanced.tiles,
     glanceFrom: glanced.from,
 

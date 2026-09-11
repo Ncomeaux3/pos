@@ -704,6 +704,21 @@ test('weekly review, six steps and a note built from the answers', async ({ page
   // whatever the server rendered rather than on what the click did.
   await page.waitForLoadState('networkidle')
 
+  // The band's theme button, as the artboard draws it beside the duration. It
+  // names the theme you are on and shares the setting with the sidebar row,
+  // so one click moves both. Desktop only: the sidebar is not on a phone.
+  if ((page.viewportSize()?.width ?? 0) >= 720) {
+    // shoot() leaves the cookie on dark but the page on its last shot, light.
+    await page.reload()
+    await page.waitForLoadState('networkidle')
+    const band = page.locator('header').getByRole('button', { name: /^dark$/i })
+    await band.click()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+    await expect(page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Light', exact: true })).toBeVisible()
+    await page.locator('header').getByRole('button', { name: /^light$/i }).click()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  }
+
   // The first step's primary is named for what it starts, not for advancing.
   await page.getByRole('button', { name: 'Start the review' }).click()
   await page.getByLabel('Add a win').fill('Shipped the notifications screen')

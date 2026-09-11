@@ -15,6 +15,7 @@ import {
   useToast,
 } from '@/components/pos'
 import type { GlanceTile } from '@/core/review-glance'
+import type { Theme } from '@/core/theme'
 import {
   closeHelper,
   EMPTY_ANSWERS,
@@ -29,6 +30,7 @@ import {
   type StepKey,
 } from '@/core/reviews-shape'
 import { cn } from '@/lib/utils'
+import { toggleTheme } from '../shell-actions'
 import { close, save } from './actions'
 
 // Six steps over one set of answers. Every step writes into the same object and
@@ -57,6 +59,8 @@ export type WeekData = {
   weekLabel: string
   /** "7 Sep 2026", for the note's title. */
   noteLabel: string
+  /** For the band's theme button, which names the theme you are on. */
+  theme: Theme
   glance: GlanceTile[]
   /** Labels of the modules whose digests the glance drew from, in tile order. */
   glanceFrom: string[]
@@ -259,6 +263,18 @@ export function Wizard({ data }: { data: WeekData }) {
       kicker={stage.kicker}
       title={question}
       helper={helper}
+      // The artboard's band has the theme button beside the duration, and
+      // the sidebar has its own row; both go through the same setting.
+      // 38px, the artboard's control height on desktop; 44 on a phone.
+      themeToggle={
+        <button
+          type="button"
+          onClick={() => start(() => toggleTheme(data.theme))}
+          className="label min-h-11 border border-rule-2 px-3.5 text-[11px] uppercase tracking-[0.12em] text-ink-2 transition-colors duration-150 hover:text-ink md:min-h-[38px]"
+        >
+          {data.theme === 'dark' ? 'Dark' : 'Light'}
+        </button>
+      }
       onBack={index > 0 ? () => setStep(STEPS[index - 1].key) : undefined}
       onNext={index === STEPS.length - 1 ? finish : () => setStep(STEPS[index + 1].key)}
       nextLabel={
