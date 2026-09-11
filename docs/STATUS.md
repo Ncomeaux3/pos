@@ -3,8 +3,8 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
-Last updated: 2026-09-10, the design pass over every screen, the Skill Tree
-rework and the phone pass. Branch `main`.
+Last updated: 2026-09-11, the Weekly Review fidelity pass and the rail to
+PosSidebar. Branch `main`.
 
 ## Done
 
@@ -24,6 +24,23 @@ bundle landed 2026-09-07 and steps 0, 7.5 and 8 to 14 followed.
 | 13 | `pnpm setup` and `pnpm setup:demo`, both idempotent |
 | 14 | CI and backup workflows, restore drilled |
 | 16 | Docs squared up: README quickstart, connections registry, the notes module README |
+
+**The fidelity pass, screen one of 27: Weekly Review.** The prototypes are
+matched one screen at a time now, in the app, against the artboard captured
+in a browser: prototype and app side by side at 1440x900 in both themes,
+structural asserts in e2e for what a screenshot cannot pin, no prototype
+markup and no visual-diff dependency. The plan and the method are
+docs/plans/weekly-review-fidelity.md; the next screen starts from its Task 0.
+
+What changed for it: the rail is `PosSidebar.dc.html` on every screen (its
+thirteen modules and Review in its order, Notes off the rail and in the
+palette, 36px rows, the badge in the accent, Dark and Collapse as rows); the
+review's first step draws the six tiles the artboard names, from digests,
+with deltas against last week's digest (`core/review-glance.ts`, pure and
+tested; Finance, Tasks and Skills gained the keys); the sentences that carry
+numbers are built from the week's own; Tasks says how often an item rolled,
+counted from its own `rescheduled` rows in `core.write_log`; the band has the
+theme button. Twenty-four shots under `e2e/__screens__/weekly-review*`.
 
 **Phase 1C: the platform screens are done.** Notifications, Agent Log and the
 Settings Notifications tab, which was the last greyed one. Two migrations:
