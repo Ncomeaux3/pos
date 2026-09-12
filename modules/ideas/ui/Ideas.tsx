@@ -2,31 +2,11 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useTransition } from 'react'
-import {
-  ActionButton,
-  Card,
-  CardHead,
-  Chip,
-  EmptyState,
-  Eyebrow,
-  PillGroup,
-  Row,
-  RowList,
-  StatusChip,
-  TabBar,
-  fieldClass,
-  useToast,
-} from '@/components/pos'
+import { useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
-import {
-  boardOrder,
-  LEVEL_LABELS,
-  QUADRANT_ADVICE,
-  QUADRANT_LABELS,
-  quadrant,
-  type Level,
-} from '../quadrant'
-import { captureIdea, moveIdea, researchIdea, scoreIdea, type ActionResult } from './actions'
+import { boardScore, parseCapture, quadrant, type Level, type Quadrant } from '../quadrant'
+import { mergeIdeas, saveIdea, type ActionResult } from './actions'
+import { IdeaDrawer } from './IdeaDrawer'
 
 export type Research = {
   ideaId: string
@@ -42,33 +22,100 @@ export type Research = {
   ranOn: string
 }
 
-export type IdeasData = {
-  research: Research[]
-  ideas: {
-    id: string
-    title: string
-    pitch: string
-    notes: string
-    stage: string
-    effort: Level
-    impact: Level
-    killedReason: string
-    goalTitle: string | null
-    daysSinceTouched: number
-  }[]
+export type Idea = {
+  id: string
+  title: string
+  pitch: string
+  notes: string
+  stage: string
+  effort: Level
+  impact: Level
+  killedReason: string
+  tags: string[]
+  goalRef: string | null
+  goalTitle: string | null
+  draftTitle: string | null
+  daysInStage: number
+  stale: boolean
+  skills: { id: string; name: string }[]
+  related: { title: string; similarity: number }[]
 }
 
-const STAGES = ['exploring', 'validated', 'building', 'killed'] as const
+export type IdeasData = {
+  research: Research[]
+  ideas: Idea[]
+  goals: { id: string; title: string }[]
+  pair: { a_id: string; b_id: string; similarity: number } | null
+}
 
-/** Untouched this long and it is not really being explored. */
-const STALE_DAYS = 60
+export type Stage = 'exploring' | 'validated' | 'building' | 'killed'
+export const STAGES: { key: Stage; label: string; className: string }[] = [
+  { key: 'exploring', label: 'Exploring', className: 'text-ink' },
+  { key: 'validated', label: 'Validated', className: 'text-brand' },
+  { key: 'building', label: 'Building', className: 'text-ok' },
+  { key: 'killed', label: 'Killed', className: 'text-ink-4' },
+]
 
-export function Ideas({ data }: { data: IdeasData }) {
+export const QUADRANT_TEXT: Record<Quadrant, string> = {
+  'quick-win': 'QUICK WIN',
+  'big-bet': 'BIG BET',
+  filler: 'FILL-IN',
+  'money-pit': 'MONEY PIT',
+}
+export const QUADRANT_CLASS: Record<Quadrant, string> = {
+  'quick-win': 'text-ok border-ok',
+  'big-bet': 'text-brand border-brand',
+  filler: 'text-ink-3 border-ink-3',
+  'money-pit': 'text-bad border-bad',
+}
+export const QUADRANT_BG: Record<Quadrant, string> = {
+  'quick-win': 'bg-ok',
+  'big-bet': 'bg-brand',
+  filler: 'bg-ink-4',
+  'money-pit': 'bg-bad',
+}
+export const LEVEL_TEXT: Record<Level, string> = { 1: 'Low', 2: 'Med', 3: 'High' }
+
+export const ghost =
+  'shrink-0 whitespace-nowrap border border-rule-2 px-3 py-2 text-[12px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink'
+export const ghostAccent =
+  'shrink-0 whitespace-nowrap border border-brand px-3 py-2 text-[12px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg'
+export const mini =
+  'shrink-0 whitespace-nowrap border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink'
+export const miniAccent =
+  'shrink-0 whitespace-nowrap border border-brand px-[9px] py-1 text-[11px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg'
+export const field =
+  'w-full min-w-0 border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand'
+
+/** The artboard's 30 by 6 three-segment bar, filled to the level. */
+export function LevelBar({ level, tone }: { level: Level; tone: 'brand' | 'ink' }) {
+  return (
+    <span className="inline-flex h-1.5 w-[30px] shrink-0 gap-[1.5px]" aria-hidden>
+      {[1, 2, 3].map((n) => (
+        <span
+          key={n}
+          className={cn(
+            'flex-1',
+            n <= level ? (tone === 'brand' ? 'bg-brand' : 'bg-ink-3') : 'bg-rule-2',
+          )}
+        />
+      ))}
+    </span>
+  )
+}
+
+/** The outlined quadrant mark. */
+export function QuadrantPill({ q, className }: { q: Quadrant; className?: string }) {
+  return (
+    <span className={cn('num shrink-0 whitespace-nowrap border px-1.5 py-0.5 text-[9px] tracking-[0.08em]', QUADRANT_CLASS[q], className)}>
+      {QUADRANT_TEXT[q]}
+    </span>
+  )
+}
+
+function useParams() {
   const router = useRouter()
   const params = useSearchParams()
-  const stage = params.get('stage') ?? 'exploring'
-  const open = data.ideas.find((i) => i.id === params.get('idea')) ?? null
-
   const setParams = (next: Record<string, string | null>) => {
     const search = new URLSearchParams(params.toString())
     for (const [key, value] of Object.entries(next)) {
@@ -78,8 +125,54 @@ export function Ideas({ data }: { data: IdeasData }) {
     const query = search.toString()
     router.replace(query ? `?${query}` : '?', { scroll: false })
   }
+  return { params, setParams }
+}
+
+/** "Ideas / Board", the band's crumb. */
+export function IdeasCrumb() {
+  const { params } = useParams()
+  return (
+    <>
+      Ideas <span className="text-ink-4">/</span> {params.get('view') === 'matrix' ? 'Matrix' : 'Board'}
+    </>
+  )
+}
+
+/** Board | Effort × impact, the ink-filled segment beside the title. */
+export function ViewSwitch() {
+  const { params, setParams } = useParams()
+  const view = params.get('view') === 'matrix' ? 'matrix' : 'board'
+  return (
+    <div className="flex shrink-0 border border-rule-2">
+      {(['board', 'matrix'] as const).map((v) => (
+        <button
+          key={v}
+          type="button"
+          aria-pressed={view === v}
+          onClick={() => setParams({ view: v === 'board' ? null : v })}
+          className={cn(
+            'px-3.5 py-2 text-[12px] transition-colors duration-150',
+            view === v ? 'bg-ink text-bg' : 'text-ink-3 hover:text-ink',
+          )}
+        >
+          {v === 'board' ? 'Board' : 'Effort × impact'}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+export function Ideas({ data }: { data: IdeasData }) {
+  // View, open idea and its mode live in the URL, so a screenshot survives the
+  // reload the theme switch does and an idea can be linked to.
+  const { params, setParams } = useParams()
+  const view = params.get('view') === 'matrix' ? 'matrix' : 'board'
+  const drawer = params.get('idea')
+  const open = data.ideas.find((i) => i.id === drawer) ?? null
 
   const [draft, setDraft] = useState('')
+  const [dragging, setDragging] = useState<string | null>(null)
+  const [dismissed, setDismissed] = useState(false)
   const [, start] = useTransition()
   const toast = useToast()
 
@@ -90,366 +183,209 @@ export function Ideas({ data }: { data: IdeasData }) {
       else if (ok) toast(ok)
     })
 
-  const view = params.get('view') === 'matrix' ? 'matrix' : 'board'
-  const shown = boardOrder(data.ideas.filter((i) => i.stage === stage))
-  const stale = data.ideas.filter(
-    (i) => i.stage === 'exploring' && i.daysSinceTouched >= STALE_DAYS,
-  )
+  const capture = () => {
+    const parsed = parseCapture(draft)
+    if (!parsed.title) return
+    run(() => saveIdea(parsed), `Captured. ${parsed.title}`)
+    setDraft('')
+  }
+
+  const pairA = data.pair ? data.ideas.find((i) => i.id === data.pair!.a_id) : null
+  const pairB = data.pair ? data.ideas.find((i) => i.id === data.pair!.b_id) : null
+  const openIdea = (id: string) => setParams({ idea: id, edit: null })
 
   return (
-    <div className="space-y-5">
-      {/* Stages on the left, the two views on the right. The artboard puts
-        * the view switch beside the title; it sits with the stages here so a
-        * screen with one band above it does not grow a second. */}
-      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-        <TabBar
-          label="Idea stages"
-          value={stage}
-          onChange={(next) => setParams({ stage: next === 'exploring' ? null : next, idea: null })}
-          tabs={STAGES.map((s) => ({
-            value: s,
-            label: s[0].toUpperCase() + s.slice(1),
-            count: data.ideas.filter((i) => i.stage === s).length,
-          }))}
-        />
-        <div className="flex shrink-0 border border-rule-2">
-          {(['board', 'matrix'] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              aria-pressed={view === v}
-              onClick={() => setParams({ view: v === 'board' ? null : v })}
-              className={cn(
-                'h-11 px-3 text-[12px] transition-colors duration-150 sm:h-[30px]',
-                view === v ? 'bg-brand-soft text-ink' : 'text-ink-3 hover:text-ink',
-              )}
-            >
-              {v === 'board' ? 'Board' : 'Effort × impact'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
+    <div>
+      <form
+        className="flex flex-wrap items-center gap-2"
+        onSubmit={(e) => {
+          e.preventDefault()
+          capture()
+        }}
+      >
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && draft.trim()) {
-              e.preventDefault()
-              run(() => captureIdea(draft), 'Captured')
-              setDraft('')
-            }
-          }}
           aria-label="Capture an idea"
-          placeholder="A title, then Enter"
-          className={cn(fieldClass, 'min-w-0 flex-1 basis-[260px]')}
+          placeholder="Capture an idea… add #tags, effort:low impact:high"
+          className="min-w-0 flex-1 basis-[240px] border border-rule-2 bg-bg-elev px-3.5 py-[11px] text-[14px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand"
         />
-        <ActionButton
-          variant="brand"
-          disabled={!draft.trim()}
+        <button type="submit" className={ghostAccent}>
+          Add
+        </button>
+        <button
+          type="button"
+          className={ghost}
           onClick={() => {
-            run(() => captureIdea(draft), 'Captured')
+            const parsed = parseCapture(draft)
+            setParams({ idea: 'new', edit: null, title: parsed.title || null })
             setDraft('')
           }}
         >
-          Capture
-        </ActionButton>
-      </div>
+          Full form
+        </button>
+      </form>
 
-      <div className="flex flex-wrap items-start gap-x-6 gap-y-5">
-        <div className="min-w-0 flex-[1_1_380px] space-y-4">
-          {view === 'matrix' ? (
-            <Matrix
-              ideas={data.ideas.filter((i) => i.stage !== 'killed')}
-              openId={open?.id ?? null}
-              onOpen={(id) => setParams({ idea: id })}
-            />
-          ) : shown.length === 0 ? (
-            <EmptyState headline={stage === 'killed' ? 'Nothing killed' : 'Nothing here'}>
-              {stage === 'killed'
-                ? 'A killed idea is kept rather than deleted. The reason you dropped it is what stops the same idea arriving again in six months.'
-                : 'Capture one above. Score it for effort and impact and the board sorts itself.'}
-            </EmptyState>
-          ) : (
-            <RowList>
-              {shown.map((idea) => {
-                const q = quadrant(idea.effort, idea.impact)
-                return (
-                  <Row
-                    key={idea.id}
-                    title={idea.title}
-                    meta={
-                      idea.stage === 'killed' && idea.killedReason
-                        ? `killed: ${idea.killedReason}`
-                        : [
-                            idea.pitch,
-                            `${LEVEL_LABELS[idea.effort]} effort`,
-                            `${LEVEL_LABELS[idea.impact]} impact`,
-                            idea.goalTitle ? `toward ${idea.goalTitle}` : '',
-                          ]
-                            .filter(Boolean)
-                            .join(' / ')
-                    }
-                    selected={open?.id === idea.id}
-                    muted={idea.stage === 'killed'}
-                    onClick={() => setParams({ idea: idea.id })}
-                    right={
-                      <Chip tone={q === 'quick-win' ? 'brand' : q === 'money-pit' ? 'bad' : 'quiet'}>
-                        {QUADRANT_LABELS[q]}
-                      </Chip>
-                    }
-                  />
-                )
-              })}
-            </RowList>
-          )}
-
-          {stage === 'exploring' && stale.length > 0 && (
-            <Card className="space-y-2.5">
-              <CardHead label="Not moving" meta={`${stale.length}`} />
-              <p className="t-caption text-ink-3">
-                Untouched for {STALE_DAYS} days or more. Naming that is not the same as killing it,
-                so nothing here has been decided for you.
-              </p>
-              <RowList>
-                {stale.map((idea) => (
-                  <Row
-                    key={idea.id}
-                    title={idea.title}
-                    meta={`${idea.daysSinceTouched} days`}
-                    right={
-                      <ActionButton
-                        onClick={() =>
-                          run(
-                            () => moveIdea(idea.id, 'killed', 'Went nowhere for two months.'),
-                            'Killed, and kept',
-                          )
-                        }
-                      >
-                        Kill it
-                      </ActionButton>
-                    }
-                  />
-                ))}
-              </RowList>
-            </Card>
-          )}
+      {pairA && pairB && !dismissed && (
+        <div className="mt-3.5 flex flex-wrap items-center justify-between gap-3.5 border border-brand px-3.5 py-2.5 duration-300 animate-in fade-in">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="num shrink-0 text-[9px] tracking-[0.08em] text-brand">AGENT</span>
+            <span className="min-w-0 text-[13px] text-ink-2">
+              Similar ideas: <span className="text-ink">{pairA.title}</span> and{' '}
+              <span className="text-ink">{pairB.title}</span> · {Math.round(data.pair!.similarity * 100)}% overlap
+            </span>
+          </div>
+          <div className="flex shrink-0 gap-1.5">
+            <button
+              type="button"
+              className={miniAccent}
+              onClick={() => run(() => mergeIdeas(pairA.id, pairB.id), `Merged into ${pairA.title}`)}
+            >
+              Merge
+            </button>
+            <button type="button" className={mini} onClick={() => setDismissed(true)}>
+              Keep separate
+            </button>
+          </div>
         </div>
+      )}
 
-        {open && (
-          <aside className="min-w-0 flex-[1_1_300px] space-y-4 md:max-w-[400px]">
-            <Card className="space-y-3">
-              <CardHead
-                label={QUADRANT_LABELS[quadrant(open.effort, open.impact)]}
-                meta={open.stage}
-              />
-              <h2 className="t-title text-ink">{open.title}</h2>
-              {open.pitch && <p className="t-caption text-ink-2">{open.pitch}</p>}
-
-              <p className="t-caption rounded-md border border-rule-2 px-3 py-2 text-ink-3">
-                {QUADRANT_ADVICE[quadrant(open.effort, open.impact)]}
-              </p>
-
-              <div className="space-y-1.5">
-                <Eyebrow>Effort</Eyebrow>
-                <PillGroup
-                  label={`Effort for ${open.title}`}
-                  value={String(open.effort)}
-                  options={([1, 2, 3] as Level[]).map((l) => ({
-                    value: String(l),
-                    label: LEVEL_LABELS[l],
-                  }))}
-                  onChange={(v) => run(() => scoreIdea(open.id, Number(v), open.impact))}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Eyebrow>Impact</Eyebrow>
-                <PillGroup
-                  label={`Impact for ${open.title}`}
-                  value={String(open.impact)}
-                  options={([1, 2, 3] as Level[]).map((l) => ({
-                    value: String(l),
-                    label: LEVEL_LABELS[l],
-                  }))}
-                  onChange={(v) => run(() => scoreIdea(open.id, open.effort, Number(v)))}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Eyebrow>Stage</Eyebrow>
-                <div className="flex flex-wrap gap-1.5">
-                  {STAGES.map((s) => (
-                    <ActionButton
-                      key={s}
-                      variant={open.stage === s ? 'brand' : 'outline'}
-                      onClick={() => run(() => moveIdea(open.id, s), `Moved to ${s}`)}
-                    >
-                      {s}
-                    </ActionButton>
-                  ))}
-                </div>
-              </div>
-
-              {open.stage === 'killed' && (
-                <div className="space-y-1.5">
-                  <Eyebrow>Why</Eyebrow>
-                  <input
-                    defaultValue={open.killedReason}
-                    aria-label={`Why ${open.title} was killed`}
-                    placeholder="The reason, so it does not come back"
-                    onBlur={(e) =>
-                      e.target.value !== open.killedReason &&
-                      run(() => moveIdea(open.id, 'killed', e.target.value), 'Noted')
-                    }
-                    className={cn(fieldClass, 'w-full')}
-                  />
-                </div>
-              )}
-
-              {open.stage === 'building' && (
-                <StatusChip tone="brand">This is the one being built</StatusChip>
-              )}
-            </Card>
-
-            <ResearchPanel
-              idea={open}
-              run={data.research.find((r) => r.ideaId === open.id) ?? null}
-              onRun={(depth) =>
-                run(
-                  () => researchIdea(open.id, depth),
-                  'Researched. The panel says what it found and what it cost.',
-                )
-              }
-            />
-          </aside>
+      <div className="pt-[18px]">
+        {view === 'matrix' ? (
+          <Matrix ideas={data.ideas.filter((i) => i.stage !== 'killed')} openId={open?.id ?? null} onOpen={openIdea} />
+        ) : (
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,200px),1fr))] gap-3.5">
+            {STAGES.map((stage) => {
+              const list = data.ideas
+                .filter((i) => i.stage === stage.key)
+                .sort((a, b) => boardScore(b) - boardScore(a) || a.daysInStage - b.daysInStage)
+              return (
+                <section
+                  key={stage.key}
+                  aria-label={stage.label}
+                  className="flex min-w-0 flex-col"
+                  onDragOver={(e) => {
+                    if (dragging) e.preventDefault()
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    const id = e.dataTransfer.getData('text/plain')
+                    setDragging(null)
+                    if (!id) return
+                    run(() => saveIdea({ id, stage: stage.key }), `Moved to ${stage.label}`)
+                  }}
+                >
+                  <div className="flex items-baseline justify-between border-b border-rule-2 px-1 pb-2.5">
+                    <span className={cn('text-[14px]', stage.className)}>{stage.label}</span>
+                    <span className="num text-[11px] text-ink-3">{list.length}</span>
+                  </div>
+                  <div className="flex flex-col gap-2 pt-2.5">
+                    {list.map((idea) => (
+                      <Card
+                        key={idea.id}
+                        idea={idea}
+                        onOpen={() => openIdea(idea.id)}
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('text/plain', idea.id)
+                          setDragging(idea.id)
+                        }}
+                        onDragEnd={() => setDragging(null)}
+                      />
+                    ))}
+                    {list.length === 0 && (
+                      <div className={cn('border border-dashed p-[18px] text-center text-[12px] text-ink-4', dragging ? 'border-brand' : 'border-rule')}>
+                        Drop here
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )
+            })}
+          </div>
         )}
       </div>
+
+      {drawer !== null && (
+        <IdeaDrawer
+          idea={open}
+          isNew={drawer === 'new'}
+          editing={params.get('edit') === '1'}
+          draftTitle={params.get('title') ?? ''}
+          goals={data.goals}
+          research={open ? (data.research.find((r) => r.ideaId === open.id) ?? null) : null}
+          onClose={() => setParams({ idea: null, edit: null, title: null })}
+          onEdit={(on) => setParams({ edit: on ? '1' : null })}
+          onRun={run}
+        />
+      )}
     </div>
   )
 }
 
-
-const VERDICT_TONE: Record<string, 'brand' | 'quiet' | 'warn' | 'bad'> = {
-  build: 'brand',
-  park: 'warn',
-  drop: 'bad',
-  unclear: 'quiet',
-}
-
-/**
- * The rubric's answer, its sources, and what it cost.
- *
- * The cost is on the screen because the run spends real money: a cent a search
- * plus tokens, and an idea board is exactly the place where it is tempting to
- * press the button forty times.
- */
-function ResearchPanel({
+function Card({
   idea,
-  run,
-  onRun,
+  onOpen,
+  onDragStart,
+  onDragEnd,
 }: {
-  idea: IdeasData['ideas'][number]
-  run: Research | null
-  onRun: (depth: 'quick' | 'deep') => void
+  idea: Idea
+  onOpen: () => void
+  onDragStart: (e: React.DragEvent) => void
+  onDragEnd: () => void
 }) {
+  const q = quadrant(idea.effort, idea.impact)
+  const killed = idea.stage === 'killed'
   return (
-    <Card className="space-y-3">
-      <CardHead
-        label="Research"
-        meta={run === null ? 'never run' : `${run.depth}, ${run.ranOn}`}
-      />
-
-      {run === null && (
-        <p className="t-caption text-ink-3">
-          A fixed rubric with web search: problem, market, competitors, differentiation, and what
-          one person nights and weekends would have to build. Every number comes with the page it
-          came from, and a number without one is deleted before you see it.
+    <article
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onClick={onOpen}
+      className="min-w-0 cursor-grab border border-rule bg-bg-elev px-3.5 py-3 transition-[border-color,transform] duration-150 hover:-translate-y-px hover:border-rule-2 active:cursor-grabbing"
+    >
+      <button type="button" className={cn('block text-left text-[13.5px] leading-[1.35] tracking-[-0.01em]', killed ? 'text-ink-3' : 'text-ink')}>
+        {idea.title}
+      </button>
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <QuadrantPill q={q} />
+        <span className="num inline-flex items-center gap-1 text-[9px] tracking-[0.06em] text-ink-3" title="Impact">
+          IMPACT <LevelBar level={idea.impact} tone="brand" />
+        </span>
+        <span className="num inline-flex items-center gap-1 text-[9px] tracking-[0.06em] text-ink-3" title="Effort">
+          EFFORT <LevelBar level={idea.effort} tone="ink" />
+        </span>
+      </div>
+      {(idea.pitch || (killed && idea.killedReason)) && (
+        <p className="mt-1.5 line-clamp-2 text-[11.5px] leading-[1.45] text-ink-3">
+          {killed && idea.killedReason ? `Killed: ${idea.killedReason}` : idea.pitch}
         </p>
       )}
-
-      {run?.status === 'failed' && (
-        <p className="t-caption text-bad">{run.detail}</p>
-      )}
-
-      {run?.status === 'ok' && (
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusChip tone={VERDICT_TONE[run.verdict] ?? 'quiet'}>{run.verdict}</StatusChip>
-            <span className="num text-[11px] text-ink-3">
-              {run.confidence === null
-                ? 'no confidence given'
-                : `${Math.round(run.confidence * 100)}% confident`}
+      {(idea.tags.length > 0 || idea.skills.length > 0) && (
+        <div className="mt-2.5 flex flex-wrap items-center gap-1">
+          {idea.tags.map((t) => (
+            <span key={t} className="num border border-rule px-[5px] py-px text-[9.5px] text-ink-3">
+              #{t}
             </span>
-            <span className="num text-[11px] text-ink-3">
-              {run.searches} searches, {(run.costCents / 100).toFixed(2)} dollars
-            </span>
-          </div>
-
-          {run.sections.map((section) => (
-            <div key={section.key} className="space-y-1">
-              <Eyebrow>{section.label}</Eyebrow>
-              {section.summary && <p className="t-caption text-ink-2">{section.summary}</p>}
-              {section.claims.length === 0 && !section.summary ? (
-                <p className="t-caption text-ink-4">Nothing it could source.</p>
-              ) : (
-                section.claims.map((claim) => (
-                  <p key={claim.text} className="t-caption text-ink-2">
-                    {claim.text}{' '}
-                    {claim.source && (
-                      <a
-                        className="text-brand"
-                        href={claim.source}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        source
-                      </a>
-                    )}
-                  </p>
-                ))
-              )}
-            </div>
           ))}
-
-          {run.sources.length > 0 && (
-            <div className="space-y-1 border-t border-rule pt-2">
-              <Eyebrow>Pages it read</Eyebrow>
-              {run.sources.map((source) => (
-                <a
-                  key={source.url}
-                  href={source.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="t-caption block truncate text-ink-3 hover:text-brand"
-                >
-                  {source.title}
-                </a>
-              ))}
-            </div>
-          )}
+          {idea.skills.map((s) => (
+            <span key={s.id} className="num border border-brand-soft px-[5px] py-px text-[9.5px] text-brand">
+              {s.name}
+            </span>
+          ))}
         </div>
       )}
-
-      <div className="flex flex-wrap gap-1.5">
-        <ActionButton variant="brand" onClick={() => onRun('quick')}>
-          {run === null ? 'Research it' : 'Run again'}
-        </ActionButton>
-        <ActionButton onClick={() => onRun('deep')}>Deep run</ActionButton>
+      <div className={cn('mt-2.5 flex justify-between text-[10.5px]', idea.stale ? 'text-warn' : 'text-ink-4')}>
+        <span>
+          {idea.stale ? 'STALE · ' : ''}
+          {idea.daysInStage}d in stage
+        </span>
+        {idea.related.length > 0 && (
+          <span className="text-ink-4">
+            {idea.related.length} {idea.related.length === 1 ? 'note' : 'notes'}
+          </span>
+        )}
       </div>
-      <p className="t-caption text-ink-3">
-        Quick is up to four searches, deep is twelve. Searches are a cent each and the pages they
-        return are read as tokens, which is the larger half of the bill: a quick run has come to
-        about twenty cents. Counted against the monthly cap in Settings, which stops research
-        first when it runs out.
-      </p>
-      {idea.stage === 'killed' && (
-        <p className="t-caption text-ink-3">
-          Researching something you killed is allowed. Sometimes that is how it comes back.
-        </p>
-      )}
-    </Card>
+    </article>
   )
 }
 
@@ -457,30 +393,18 @@ function ResearchPanel({
  * The two by two, with every live idea placed on it.
  *
  * Effort left to right, impact bottom to top, and the four corners named for
- * what they mean. The same quadrant() the chips use decides the label, so a
- * dot in the top left and a chip saying quick win can never disagree.
+ * what they mean. The same quadrant() the pills use decides the colour, so a
+ * dot in the top left and a pill saying quick win can never disagree.
  */
 function Matrix({
   ideas,
   openId,
   onOpen,
 }: {
-  ideas: IdeasData['ideas']
+  ideas: Idea[]
   openId: string | null
   onOpen: (id: string) => void
 }) {
-  if (ideas.length === 0) {
-    return (
-      <EmptyState headline="Nothing to place">
-        An idea needs an effort and an impact before it can sit anywhere on this.
-      </EmptyState>
-    )
-  }
-
-  // Three points per axis, so a dot sits at 20, 50 or 80 percent rather than on
-  // the dividing line where it would read as either side.
-  const at = (level: Level) => [20, 50, 80][level - 1]
-
   return (
     <div className="grid grid-cols-[28px_1fr] grid-rows-[1fr_24px] gap-1.5">
       <div className="eyebrow flex items-center justify-center text-ink-3 [writing-mode:vertical-rl] [transform:rotate(180deg)]">
@@ -496,34 +420,34 @@ function Matrix({
         <span className="eyebrow absolute bottom-2.5 left-3 text-ink-4">Fill-ins</span>
         <span className="eyebrow absolute bottom-2.5 right-3 text-bad">Money pits</span>
 
-        {ideas.map((idea) => {
+        {ideas.length === 0 && (
+          <p className="absolute inset-0 flex items-center justify-center text-[12px] text-ink-4">
+            An idea needs an effort and an impact before it can sit here.
+          </p>
+        )}
+
+        {ideas.map((idea, i) => {
           const q = quadrant(idea.effort, idea.impact)
+          // A little scatter by position in the list, so two ideas with the
+          // same scores do not sit exactly on top of each other.
+          const jitter = ((i % 3) - 1) * 7
           return (
             <button
               key={idea.id}
               type="button"
               onClick={() => onOpen(idea.id)}
-              title={`${idea.title}. ${QUADRANT_ADVICE[q]}`}
-              style={{ left: `${at(idea.effort)}%`, bottom: `${at(idea.impact)}%` }}
+              title={idea.title}
+              style={{
+                left: `calc(${(idea.effort - 1) * 33 + 17}% + ${jitter}px)`,
+                top: `calc(${(3 - idea.impact) * 33 + 17}% + ${jitter * 0.6}px)`,
+              }}
               className={cn(
-                'absolute flex max-w-[190px] -translate-x-1/2 translate-y-1/2 items-center gap-2 border bg-bg px-2 py-1.5 text-left transition-colors duration-150',
-                openId === idea.id ? 'z-2 border-brand' : 'border-rule-2 hover:border-ink',
+                'absolute flex max-w-[220px] -translate-x-1/2 -translate-y-1/2 items-center gap-2 border bg-bg-elev px-2.5 py-1.5 text-left transition-colors duration-150',
+                openId === idea.id ? 'z-[2] border-brand' : 'border-rule-2 hover:z-[3] hover:border-ink',
               )}
             >
-              <span
-                aria-hidden
-                className={cn(
-                  'size-1.5 shrink-0',
-                  q === 'quick-win'
-                    ? 'bg-ok'
-                    : q === 'big-bet'
-                      ? 'bg-brand'
-                      : q === 'money-pit'
-                        ? 'bg-bad'
-                        : 'bg-ink-4',
-                )}
-              />
-              <span className="truncate text-[11px] text-ink">{idea.title}</span>
+              <span aria-hidden className={cn('size-2 shrink-0', QUADRANT_BG[q])} />
+              <span className="max-w-[180px] truncate text-[11px] text-ink">{idea.title}</span>
             </button>
           )
         })}

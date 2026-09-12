@@ -1,30 +1,21 @@
-import { PageHeader } from '@/components/pos'
+import { Eyebrow, PageHeader } from '@/components/pos'
 import { db } from '@/core/db'
-import { Ideas, type IdeasData } from './Ideas'
-import type { Level } from '../quadrant'
+import { getSkillNames } from '@/core/modules'
+import { listGoals, listIdeas, listSkillLinks, relatedNotes, similarPair } from '../data'
+import { Ideas, IdeasCrumb, ViewSwitch, type IdeasData } from './Ideas'
+
+/** Sitting in Exploring this long and it is not really being explored. */
+export const STALE_DAYS = 60
 
 export default async function IdeasPage() {
-  const { rows } = await db().query<{
-    id: string
-    title: string
-    pitch: string
-    notes: string
-    stage: string
-    effort: number
-    impact: number
-    killed_reason: string
-    goal_title: string | null
-    days: number
-  }>(
-    `select i.id, i.title, i.pitch, i.notes, i.stage, i.effort, i.impact, i.killed_reason,
-            g.title as goal_title,
-            (core.today() - i.updated_at::date)::int as days
-       from ideas.idea i
-       -- The goal's title comes from the core registry, so this works before
-       -- the goals module exists and needs no change when it lands.
-       left join core.entities g on g.id = i.goal_ref
-      order by i.updated_at desc`,
-  )
+  const [rows, goals, links, names, notes, pair] = await Promise.all([
+    listIdeas(),
+    listGoals(),
+    listSkillLinks(),
+    getSkillNames(),
+    relatedNotes(),
+    similarPair(),
+  ])
 
   // The latest run per idea. distinct on rather than a join with a max
   // subquery: one statement, and the screen only ever shows the newest.
@@ -49,6 +40,8 @@ export default async function IdeasPage() {
   )
 
   const data: IdeasData = {
+    goals,
+    pair,
     research: research.map((r) => ({
       ideaId: r.idea_id,
       depth: r.depth,
@@ -68,25 +61,39 @@ export default async function IdeasPage() {
       pitch: r.pitch,
       notes: r.notes,
       stage: r.stage,
-      effort: r.effort as Level,
-      impact: r.impact as Level,
+      effort: r.effort,
+      impact: r.impact,
       killedReason: r.killed_reason,
+      tags: r.tags,
+      goalRef: r.goal_ref,
       goalTitle: r.goal_title,
-      daysSinceTouched: r.days,
+      draftTitle: r.draft_title,
+      daysInStage: r.days_in_stage,
+      stale: r.stage === 'exploring' && r.days_in_stage >= STALE_DAYS,
+      skills: links
+        .filter((l) => l.idea_id === r.id)
+        .map((l) => ({ id: l.skill_id, name: names[l.skill_id] ?? l.skill_id })),
+      related: notes
+        .filter((n) => n.idea_id === r.id)
+        .map((n) => ({ title: n.title, similarity: n.similarity })),
     })),
   }
 
-  const building = data.ideas.filter((i) => i.stage === 'building').length
-  const exploring = data.ideas.filter((i) => i.stage === 'exploring').length
+  const live = data.ideas.filter((i) => i.stage !== 'killed').length
+  const stale = data.ideas.filter((i) => i.stale).length
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-[18px]">
       <PageHeader
-        eyebrow={`Ideas / ${exploring} exploring / ${building} building`}
-        dot={building > 0 ? 'brand' : 'idle'}
+        eyebrow={<IdeasCrumb />}
+        status={
+          <Eyebrow dot={stale > 0 ? 'warn' : 'ok'} className="whitespace-nowrap">
+            {live} ideas · {stale} stale
+          </Eyebrow>
+        }
         title="Ideas"
-        lede="Effort against impact, on a three point scale because the difference between a six and a seven is not a judgement anyone makes twice the same way. A killed idea is kept: the reason you dropped it is the most useful note about it."
-        actions={<span className="num text-[11px] text-ink-3">{data.ideas.length} total</span>}
+        lede="Product and business ideas, scored on effort and impact. Columns are stages; ideas sit still for 60 days before they count as stale."
+        actions={<ViewSwitch />}
       />
       <Ideas data={data} />
     </div>

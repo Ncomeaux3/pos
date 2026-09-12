@@ -1503,21 +1503,48 @@ test('meals, a slot is picked, swapped and cleared from the drawer', async ({ pa
   await expect(drawer).toHaveCount(0)
 })
 
-test('ideas, the board sorts by quadrant and keeps what was killed', async ({ page }) => {
+test('ideas, four stage columns with the scores on every card', async ({ page }) => {
   await page.goto('/ideas')
   await expect(page.getByRole('heading', { name: 'Ideas' })).toBeVisible()
+  await expect(page.getByText(/\d+ ideas · \d+ stale/)).toBeVisible()
 
-  // Quick wins first. Voice capture is cheap and high impact; per module themes
-  // are expensive and low.
-  await expect(page.getByText('Voice capture for tasks')).toBeVisible()
-  await expect(page.getByText('Quick win').first()).toBeVisible()
+  // Every stage is a column at once, as the artboard draws it.
+  for (const stage of ['Exploring', 'Validated', 'Building', 'Killed']) {
+    await expect(page.getByRole('region', { name: stage })).toBeVisible()
+  }
 
-  // Untouched for two months is named, not decided: the card offers the choice
-  // rather than making it.
-  await expect(page.getByText('Not moving')).toBeVisible()
-  await expect(page.getByText(/Naming that is not the same as killing it/)).toBeVisible()
+  // Quick wins first. Voice capture is cheap and high impact; the card carries
+  // the quadrant, both scores and how long it has sat in its stage.
+  const voice = page.locator('article').filter({ hasText: 'Voice capture for tasks' })
+  await expect(voice.getByText('QUICK WIN')).toBeVisible()
+  await expect(voice.getByText('IMPACT')).toBeVisible()
+  await expect(voice.getByText('EFFORT')).toBeVisible()
+  await expect(voice.getByText(/\d+d in stage/)).toBeVisible()
+  await expect(voice.getByText('#voice')).toBeVisible()
+
+  // Sitting still for two months is named on the card, not decided for you.
+  await expect(page.getByText(/STALE · \d+d in stage/)).toBeVisible()
 
   await shoot(page, 'ideas')
+})
+
+test('ideas, the capture line reads tags and scores', async ({ page }) => {
+  await page.goto('/ideas')
+  const line = page.getByLabel('Capture an idea')
+  await line.fill('Pocket receipt scanner #capture effort:low impact:high')
+  await line.press('Enter')
+  await expect(page.getByText('Captured. Pocket receipt scanner')).toBeVisible()
+
+  const card = page.locator('article').filter({ hasText: 'Pocket receipt scanner' })
+  await expect(card.getByText('QUICK WIN')).toBeVisible()
+  await expect(card.getByText('#capture')).toBeVisible()
+
+  // And Delete takes a capture that was never an idea away again.
+  await card.click()
+  page.once('dialog', (d) => d.accept())
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
+  await expect(page.getByText('Deleted')).toBeVisible()
+  await expect(page.locator('article').filter({ hasText: 'Pocket receipt scanner' })).toHaveCount(0)
 })
 
 test('ideas, the effort and impact matrix places every live idea', async ({ page }) => {
@@ -1528,21 +1555,33 @@ test('ideas, the effort and impact matrix places every live idea', async ({ page
   await expect(page).toHaveURL(/view=matrix/)
 
   // The corners are named for what they mean, and an idea sits in the corner
-  // its chip on the board claims.
+  // its pill on the board claims.
   await expect(page.getByText('Quick wins')).toBeVisible()
   await expect(page.getByText('Money pits')).toBeVisible()
   await expect(page.getByRole('button', { name: /Voice capture for tasks/ })).toBeVisible()
+  await shoot(page, 'ideas-matrix')
 })
 
-test('ideas, a killed idea keeps its reason', async ({ page }) => {
-  await page.goto('/ideas?stage=killed')
+test('ideas, the drawer shows the stage, the moves and the Agent card', async ({ page }) => {
+  await page.goto('/ideas')
+  await page.locator('article').filter({ hasText: 'Automatic crypto tax lots' }).click()
 
   // Kept rather than deleted, because the reason is what stops the same idea
   // arriving again in six months.
-  await expect(page.getByText('Automatic crypto tax lots')).toBeVisible()
-  await expect(page.getByText(/none of it reconciles/)).toBeVisible()
+  const drawer = page.getByRole('dialog')
+  await expect(drawer.getByText(/none of it reconciles/)).toBeVisible()
+  await expect(drawer.getByText('Move to')).toBeVisible()
+  await expect(drawer.getByText('Agent', { exact: true })).toBeVisible()
+  await expect(drawer.getByText('Linked skills')).toBeVisible()
+  await expect(page).toHaveURL(/idea=/)
+  await shoot(page, 'ideas-drawer')
 
-  await shoot(page, 'ideas-killed')
+  // Edit is a form that holds until Save.
+  await page.getByRole('dialog').getByRole('button', { name: 'Edit', exact: true }).click()
+  await expect(page).toHaveURL(/edit=1/)
+  await expect(page.getByRole('dialog').getByText('One-line pitch')).toBeVisible()
+  await expect(page.getByRole('dialog').getByRole('button', { name: /^Save/ })).toBeVisible()
+  await shoot(page, 'ideas-edit')
 })
 
 test('home, the calendar is worked out from the history', async ({ page }) => {
@@ -1764,7 +1803,7 @@ test('fitness, the coach proposes and cannot change the plan itself', async ({ p
 
 test('ideas, research shows its sources and what it cost', async ({ page }) => {
   await page.goto('/ideas')
-  await page.getByRole('button', { name: /Share a read only dashboard link/ }).click()
+  await page.locator('article').filter({ hasText: 'Share a read only dashboard link' }).click()
 
   // The verdict, how sure it says it is, and the bill, because a run spends
   // real money and an idea board is where it is tempting to press it forty
