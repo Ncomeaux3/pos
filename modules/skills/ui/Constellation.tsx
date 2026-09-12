@@ -226,8 +226,28 @@ export function Constellation({
     apply()
   }, [resetToken, apply])
 
-  const hovered = hover ? statById.get(hover.node.id) : undefined
-  const branches = hover ? stats.filter((s) => s.parent === hover.node.id) : []
+  // The root is not a stat row: its children are the attributes, and its card
+  // is the character, summed from them.
+  const childrenOf = useCallback(
+    (id: string) => stats.filter((s) => (id === ROOT_ID ? !s.parent : s.parent === id)),
+    [stats],
+  )
+  const you = useMemo<SkillStat>(() => {
+    const attributes = stats.filter((s) => !s.parent)
+    return {
+      id: ROOT_ID,
+      name: 'You',
+      keywords: [],
+      ownXp: 0,
+      xp: attributes.reduce((sum, a) => sum + a.xp, 0),
+      level: characterLevel,
+      gained30d: attributes.reduce((sum, a) => sum + a.gained30d, 0),
+      lastEventAt: null,
+      goalWeight: 0,
+    }
+  }, [stats, characterLevel])
+  const hovered = hover ? (hover.node.id === ROOT_ID ? you : statById.get(hover.node.id)) : undefined
+  const branches = hover ? childrenOf(hover.node.id) : []
 
   /**
    * What lights up while a star is hovered: the path back to the root, its own
@@ -241,12 +261,15 @@ export function Constellation({
     for (let id: string | undefined = hover.node.id; id; id = statById.get(id)?.parent) {
       out.add(id)
     }
-    for (const child of stats.filter((s) => s.parent === hover.node.id)) {
+    // An attribute has no parent row, so the walk stops one short of the
+    // centre: without this the last edge never lit and You dimmed.
+    out.add(ROOT_ID)
+    for (const child of childrenOf(hover.node.id)) {
       out.add(child.id)
-      for (const leaf of stats.filter((s) => s.parent === child.id)) out.add(leaf.id)
+      for (const leaf of childrenOf(child.id)) out.add(leaf.id)
     }
     return out
-  }, [hover, stats, statById])
+  }, [hover, childrenOf, statById])
 
   const dimmed = (id: string) => hover !== null && !related.has(id)
 
@@ -377,6 +400,7 @@ export function Constellation({
             return (
               <line
                 key={`edge-${node.id}`}
+                data-edge={node.id}
                 x1={from.x}
                 y1={from.y}
                 x2={node.x}
