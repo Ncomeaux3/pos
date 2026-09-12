@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireOwner } from '@/core/auth'
+import { runNightly } from '@/core/jobs'
 import { redoWrite, undoWrite } from '@/core/writelog'
 
 // Server actions are standalone POST endpoints addressed by id, so the (app)
@@ -62,4 +63,21 @@ export async function undoRun(ids: string[]): Promise<ActionResult & { undone?: 
   done()
   if (undone === 0 && refused.length > 0) return { ok: false, error: refused[0] }
   return { ok: true, undone }
+}
+
+/**
+ * Retry now, for one module's failed job. Runs every job that module
+ * registers, immediately, in this request, not a queued rerun tonight: the
+ * button on the screen calls it, and the owner pressing that is the
+ * authorisation, the same reasoning `RunNow` uses on the dashboard.
+ */
+export async function retryModule(module: string): Promise<ActionResult & { failedJobs?: number }> {
+  await requireOwner()
+  try {
+    const summary = await runNightly({ trigger: 'manual', module })
+    done()
+    return { ok: true, failedJobs: summary.jobs.filter((j) => j.status === 'failed').length }
+  } catch (error) {
+    return failed(error)
+  }
 }
