@@ -145,6 +145,7 @@ export async function listSkillLinks(): Promise<SkillLinkRow[]> {
        from core.skill_links sl
        join core.entities en on en.id = sl.entity_ref
       where en.module = 'brain' and en.entity_type = 'note'
+        and sl.classified_by <> 'unclassified'
       order by sl.confidence desc, sl.skill_id`,
   )
   return rows
