@@ -4,7 +4,9 @@ Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
 Last updated: 2026-09-11, the Weekly Review, Dashboard, Finance, Skill Tree,
-Travel and Tasks fidelity passes and the rail to PosSidebar. Branch `main`.
+Travel, Tasks and Goals fidelity passes and the rail to PosSidebar. Branch
+`main`. Insurance, Meals and Second Brain are in flight in another session
+(`.worktrees/insurance`, `meals`, `brain`, branched from `6f5dd33`).
 
 ## Done
 
@@ -24,6 +26,23 @@ bundle landed 2026-09-07 and steps 0, 7.5 and 8 to 14 followed.
 | 13 | `pnpm setup` and `pnpm setup:demo`, both idempotent |
 | 14 | CI and backup workflows, restore drilled |
 | 16 | Docs squared up: README quickstart, connections registry, the notes module README |
+
+**The fidelity pass, screen seven: Goals.** docs/plans/goals-fidelity.md.
+The band's "{active} active · {n} at risk · {n} stalled" with the worst
+status as the dot, the artboard's lede, New goal as the DS small button
+opening the drawer, Active / Archive at 14px padding, the inline add whose
+More options carries its values into the drawer, area groups in the
+artboard's order with "{n} goals · {k} on track", and cards with the 26px
+"current / target", the 3px pace bar, the rule and deadline lines with the
+projected finish, the sparkline in the status colour, the next linked task
+and a check-in field. The drawer: Now / Target / Days left, the Status rule
+written out with both projections, the history chart with the target and
+needed-pace lines, linked tasks (Tasks answers through a new `linked`
+contract seam; nothing reads another schema), linked skills, pending
+proposals matched by payload id, Edit / Archive / Delete; edit mode is a
+form that holds until Save. New guarded tool `delete`. The rule sentence
+now reads as the artboard's ("Pace X/mo vs Y/mo needed (N%)."). Nothing on
+this screen was left undrawn for want of a source.
 
 **The fidelity pass, screen six: Tasks.** docs/plans/tasks-fidelity.md.
 The artboard's page with no title block: the band carries "Tasks / {view}"
