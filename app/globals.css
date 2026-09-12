@@ -312,6 +312,19 @@
 }
 
 @layer components {
+  /* Zoomed out past 0.91 the constellation sets data-far on its group and a
+   * leaf's level line comes off: its name is already crowding its neighbours. */
+  .skill-view[data-far] .skill-far-hide {
+    opacity: 0;
+  }
+
+  /* While the view is in motion the constellation sets data-moving and the
+   * star glows come off: the blur filters cost 25ms a frame at Retina scale
+   * against 8ms without, which is the difference between 40fps and 120. */
+  .skill-view[data-moving] [filter] {
+    filter: none;
+  }
+
   /* The slow pulse on a skill that is gaining, from the design bundle. Off
    * under reduced motion, which the bundle asks for by name: "Reduced motion
    * should disable the scale-on-tap and the constellation animation." */

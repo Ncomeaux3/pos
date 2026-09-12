@@ -259,6 +259,74 @@ test('skill tree, constellation and the selected skill panel', async ({ page }) 
   await shoot(page, 'skills-leaf')
 })
 
+test('skill tree, a trackpad burst zooms smoothly and the main stars are blue', async ({ page }) => {
+  await page.goto('/skills')
+  await page.waitForLoadState('networkidle')
+
+  const svg = page.getByRole('img', { name: 'Skill constellation' })
+  const box = (await svg.boundingBox())!
+  const at = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+  const group = svg.locator('> g').last()
+  const scaleOf = async () =>
+    Number(/scale\(([\d.]+)\)/.exec((await group.getAttribute('transform')) ?? '')?.[1])
+  const burst = (el: SVGSVGElement, at: { x: number; y: number; n: number }) => {
+    for (let i = 0; i < at.n; i++) {
+      el.dispatchEvent(
+        new WheelEvent('wheel', {
+          deltaY: -8,
+          deltaMode: 0,
+          clientX: at.x,
+          clientY: at.y,
+          bubbles: true,
+          cancelable: true,
+        }),
+      )
+    }
+  }
+
+  // The listener is attached by the client component after hydration, which
+  // is later than networkidle. One event at a time until the canvas answers.
+  await page.mouse.move(at.x, at.y)
+  await expect
+    .poll(async () => {
+      await svg.evaluate(burst, { ...at, n: 1 })
+      return scaleOf()
+    })
+    .toBeGreaterThan(1)
+  const base = await scaleOf()
+
+  // A trackpad sends many small deltas inside one frame. Thirty of them,
+  // dispatched back to back with no chance for React to commit in between,
+  // must land where the sum of the deltas says: base * exp(240 * 0.003). A
+  // handler that reads a stale zoom applies every one of them to the same
+  // base and lands one step up instead, which is the jump you feel.
+  await svg.evaluate(burst, { ...at, n: 30 })
+  await expect.poll(scaleOf).toBeGreaterThan(base)
+  // While the view moves the group carries data-moving and the glow filters
+  // are off: 25ms a frame with them at Retina scale, 8ms without. It clears
+  // once the view has been still.
+  await expect(group).toHaveAttribute('data-moving', '')
+  await expect(group).not.toHaveAttribute('data-moving', '')
+
+  const ratio = (await scaleOf()) / base
+  expect(ratio).toBeGreaterThan(Math.exp(240 * 0.003) * 0.98)
+  expect(ratio).toBeLessThan(Math.exp(240 * 0.003) * 1.02)
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+
+  // The svg is absolutely positioned, as the artboard's is. In flow with a
+  // percentage height, every transform write dirtied layout up to the page
+  // and each zoom frame laid out the whole app: 55 long tasks in a one
+  // second gesture on a Retina 120Hz screen, none once it was absolute.
+  expect(await svg.evaluate((el) => getComputedStyle(el).position)).toBe('absolute')
+
+  // The artboard paints the centre and the five attributes pale blue; accent
+  // is a leaf gaining fast, nothing else.
+  for (const id of ['__you', 'engineering']) {
+    const body = page.locator(`g[data-skill="${id}"] > circle`).nth(2)
+    await expect(body).toHaveAttribute('fill', '#9fd1ff')
+  }
+})
+
 test('skill tree, the constellation hovers, selects, pans and zooms', async ({ page }) => {
   await page.goto('/skills')
   await page.waitForLoadState('networkidle')
@@ -280,6 +348,20 @@ test('skill tree, the constellation hovers, selects, pans and zooms', async ({ p
   await star.click({ force: true })
   await expect(page).toHaveURL(/skill=coding/)
 
+  // The centre star opens too: the character, its five attributes with their
+  // levels, and the month's events across every skill. It used to be inert.
+  const pane = page.getByTestId('skill-tree-detail-pane')
+  await page.locator('g[data-skill="__you"]').click({ force: true })
+  await expect(page).toHaveURL(/skill=__you/)
+  await expect(pane.getByText('Character', { exact: true })).toBeVisible()
+  await expect(pane.getByRole('heading', { name: 'You' })).toBeVisible()
+  await expect(pane.getByText('Attributes', { exact: true })).toHaveCount(2)
+  await expect(pane.getByRole('button', { name: /Engineering/ })).toBeVisible()
+  await expect(pane.getByText(/Events · 30 days/)).toBeVisible()
+  await expect(pane.getByText(/Keywords/)).toHaveCount(0)
+  await star.click({ force: true })
+  await expect(page).toHaveURL(/skill=coding/)
+
   // Zoom anchors on the cursor, and a step is symmetric: in then out puts the
   // node back exactly where it was, at the size it was.
   const before = (await star.boundingBox())!
@@ -294,6 +376,27 @@ test('skill tree, the constellation hovers, selects, pans and zooms', async ({ p
   await page.mouse.wheel(0, 240)
   const back = (await star.boundingBox())!
   expect(Math.abs(back.x - before.x)).toBeLessThan(2)
+
+  // Double-click flies to the star over 250ms rather than cutting: the view
+  // is somewhere between the two a frame later, and centred on the star once
+  // it has landed.
+  const svg = page.getByRole('img', { name: 'Skill constellation' })
+  const group = svg.locator('> g').last()
+  const scaleOf = async () =>
+    Number(/scale\(([\d.]+)\)/.exec((await group.getAttribute('transform')) ?? '')?.[1])
+  const z0 = await scaleOf()
+  await star.dblclick({ force: true })
+  await page.waitForTimeout(60)
+  const mid = await scaleOf()
+  expect(mid).toBeGreaterThan(z0)
+  expect(mid).toBeLessThan(Math.max(1.6, z0 * 1.5) * 0.99)
+  await expect.poll(scaleOf).toBeCloseTo(Math.max(1.6, z0 * 1.5), 6)
+  // The body circle, not the group: the group's box takes in the label
+  // under the star and sits low of it.
+  const svgBox = (await svg.boundingBox())!
+  const landed = (await star.locator('circle').nth(2).boundingBox())!
+  expect(Math.abs(landed.x + landed.width / 2 - (svgBox.x + svgBox.width / 2))).toBeLessThan(4)
+  expect(Math.abs(landed.y + landed.height / 2 - (svgBox.y + svgBox.height / 2))).toBeLessThan(4)
   expect(Math.abs(back.y - before.y)).toBeLessThan(2)
 
   // Dragging pans and does not select: a pan that ends on a star is not a
@@ -1629,6 +1732,22 @@ test('travel, the globe is drawn from real coordinates', async ({ page }) => {
   // place names itself and its country.
   await expect(globe.locator('[data-pin="past"] title').first()).toHaveText(/\w+, \w+/)
   await shoot(page, 'travel-map')
+
+  // A hand on the globe: drag right and the land under it goes right. It used
+  // to go left, while a vertical drag already followed the hand, so the two
+  // axes disagreed.
+  const svg = page.getByTestId('travel-globe').locator('svg')
+  const sbox = (await svg.boundingBox())!
+  // The same pin before and after: which pins are on the near side changes
+  // as the globe turns, so `first()` alone could name a different one.
+  const pinName = (await globe.locator('[data-pin="past"] title').first().textContent()) ?? ''
+  const pin = globe.locator('[data-pin="past"]').filter({ hasText: pinName })
+  const before = (await pin.boundingBox())!.x
+  await page.mouse.move(sbox.x + sbox.width / 2, sbox.y + sbox.height * 0.7)
+  await page.mouse.down()
+  await page.mouse.move(sbox.x + sbox.width / 2 + 40, sbox.y + sbox.height * 0.7, { steps: 4 })
+  await page.mouse.up()
+  await expect.poll(async () => (await pin.boundingBox())!.x).toBeGreaterThan(before)
 
   // Past 2x every pin names itself; two presses of + is 2.25x. The wheel
   // handler is a native non-passive listener, so the page under the globe

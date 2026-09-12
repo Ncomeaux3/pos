@@ -29,9 +29,11 @@ jobs:
 
       # The suites talk to Postgres, so the same Docker stack the owner runs
       # locally comes up here. supabase start is what CI and a laptop share.
-      - uses: supabase/setup-cli@v1
+      # v3 installs from npm. v1 asked the GitHub API for the latest release,
+      # which is rate limited on an unauthenticated runner and failed runs.
+      - uses: supabase/setup-cli@v3
         with:
-          version: latest
+          version: 2.117.0
 
       - name: Start Supabase
         run: supabase start
@@ -49,6 +51,8 @@ jobs:
             echo "ENCRYPTION_KEY=$(openssl rand -base64 32)"
             echo "CRON_SECRET=$(openssl rand -hex 16)"
             echo "MCP_TOKEN=$(openssl rand -hex 16)"
+            node -e "const k=require('web-push').generateVAPIDKeys();console.log('VAPID_PUBLIC_KEY='+k.publicKey);console.log('VAPID_PRIVATE_KEY='+k.privateKey)"
+            echo "VAPID_SUBJECT=mailto:ci@example.com"
             echo "STRAVA_CLIENT_ID="
             echo "STRAVA_CLIENT_SECRET="
           } > .env
@@ -76,9 +80,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
 
-      - uses: supabase/setup-cli@v1
+      # v3 installs from npm. v1 asked the GitHub API for the latest release,
+      # which is rate limited on an unauthenticated runner and failed runs.
+      - uses: supabase/setup-cli@v3
         with:
-          version: latest
+          version: 2.117.0
       - name: Start Supabase
         run: supabase start
 
@@ -93,6 +99,8 @@ jobs:
             echo "ENCRYPTION_KEY=$(openssl rand -base64 32)"
             echo "CRON_SECRET=$(openssl rand -hex 16)"
             echo "MCP_TOKEN=$(openssl rand -hex 16)"
+            node -e "const k=require('web-push').generateVAPIDKeys();console.log('VAPID_PUBLIC_KEY='+k.publicKey);console.log('VAPID_PRIVATE_KEY='+k.privateKey)"
+            echo "VAPID_SUBJECT=mailto:ci@example.com"
             echo "STRAVA_CLIENT_ID="
             echo "STRAVA_CLIENT_SECRET="
           } > .env

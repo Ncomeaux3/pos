@@ -16,6 +16,8 @@
     "predev": "node scripts/gen-index.mts",
     "pretest": "node scripts/gen-index.mts",
     "pretypecheck": "node scripts/gen-index.mts",
+    "presetup": "node scripts/gen-index.mts",
+    "presetup:demo": "node scripts/gen-index.mts",
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
