@@ -1115,8 +1115,9 @@ test('travel, the globe is drawn from real coordinates', async ({ page }) => {
   const dashes = await globe.locator('[data-land]').getAttribute('d')
   expect((dashes?.match(/M/g) ?? []).length).toBeGreaterThan(500)
 
-  // The pin's own tooltip is what makes a dot identifiable at all.
-  await expect(page.getByText('Cape Town, South Africa')).toBeAttached()
+  // The pin's own tooltip is what makes a dot identifiable at all: a visited
+  // place names itself and its country.
+  await expect(globe.locator('[data-pin="past"] title').first()).toHaveText(/\w+, \w+/)
   await shoot(page, 'travel-map')
 })
 
@@ -1124,6 +1125,8 @@ test('travel, a parsed booking waits in the trip inbox', async ({ page }) => {
   await page.goto('/travel')
   await page.waitForLoadState('networkidle')
   await page.getByRole('button', { name: /Tokyo/ }).first().click()
+  // The drawer's state lives past the navigation that opens it; act after it.
+  await expect(page).toHaveURL(/trip=/)
   await page.getByRole('tab', { name: /Inbox/ }).click()
 
   await expect(page.getByText('Check in, Kyoto')).toBeVisible()
@@ -1138,6 +1141,7 @@ test('travel, packing and budget lines are edited in the drawer', async ({ page 
   await page.goto('/travel')
   await page.waitForLoadState('networkidle')
   await page.getByRole('button', { name: /Tokyo/ }).first().click()
+  await expect(page).toHaveURL(/trip=/)
 
   await page.getByRole('tab', { name: 'Packing' }).click()
   const packed = page.getByText(/\d+ \/ \d+ packed/)

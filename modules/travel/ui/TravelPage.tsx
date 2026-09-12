@@ -1,17 +1,44 @@
-import { PageHeader } from '@/components/pos'
+import { db } from '@/core/db'
 import { ownerToday } from '@/core/today'
-import { listItinerary, listLoyalty, listPacking, listPlaces, listTrips } from '../data'
+import { listBudgetLines, listItinerary, listLoyalty, listPacking, listPlaces, listTrips } from '../data'
 import { Travel, type TravelData } from './Travel'
 
+/** The unread travel alerts, for the band on the globe. */
+async function travelAlerts(): Promise<{ id: string; title: string; body: string }[]> {
+  const { rows } = await db().query<{ id: string; title: string; body: string }>(
+    `select n.id, n.title, n.body
+       from core.notifications n
+       join core.notification_rules r on r.id = n.rule_id
+      where r.module = 'travel' and n.read_at is null
+      order by n.due_at desc
+      limit 1`,
+  )
+  return rows
+}
+
+/** Whether the flight check-in rule is live, so the drawer's footer can say so truthfully. */
+async function checkinRule(): Promise<{ trigger: string } | null> {
+  const { rows } = await db().query<{ trigger_text: string; muted: boolean }>(
+    `select trigger_text, muted from core.notification_rules
+      where module = 'travel' and key = 'flight_checkin' limit 1`,
+  )
+  const rule = rows[0]
+  return rule && !rule.muted ? { trigger: rule.trigger_text } : null
+}
+
 export default async function TravelPage() {
-  const [trips, itinerary, packing, places, loyalty, todayIso] = await Promise.all([
-    listTrips(),
-    listItinerary(),
-    listPacking(),
-    listPlaces(),
-    listLoyalty(),
-    ownerToday(),
-  ])
+  const [trips, itinerary, packing, places, loyalty, lines, alerts, checkin, todayIso] =
+    await Promise.all([
+      listTrips(),
+      listItinerary(),
+      listPacking(),
+      listPlaces(),
+      listLoyalty(),
+      listBudgetLines(),
+      travelAlerts(),
+      checkinRule(),
+      ownerToday(),
+    ])
 
   const data: TravelData = {
     todayIso,
@@ -19,6 +46,8 @@ export default async function TravelPage() {
       id: t.id,
       name: t.name,
       destination: t.destination,
+      lat: t.lat === null ? null : Number(t.lat),
+      lon: t.lon === null ? null : Number(t.lon),
       startsOn: t.starts_on,
       endsOn: t.ends_on,
       budgetCents: Number(t.budget_cents),
@@ -44,11 +73,13 @@ export default async function TravelPage() {
       status: i.status,
       confidence: i.confidence === null ? null : Number(i.confidence),
     })),
-    packing: packing.map((p) => ({
-      id: p.id,
-      tripId: p.trip_id,
-      label: p.label,
-      packed: p.packed,
+    packing: packing.map((p) => ({ id: p.id, tripId: p.trip_id, label: p.label, packed: p.packed })),
+    budgetLines: lines.map((l) => ({
+      id: l.id,
+      tripId: l.trip_id,
+      category: l.category,
+      plannedCents: l.planned_cents,
+      actualOverrideCents: l.actual_override_cents,
     })),
     places: places.map((p) => ({
       id: p.id,
@@ -63,29 +94,13 @@ export default async function TravelPage() {
       name: l.name,
       kind: l.kind,
       balance: l.balance,
+      previousBalance: l.previous_balance,
       statusTier: l.status_tier,
       updatedAt: new Date(l.updated_at).toISOString(),
     })),
+    alert: alerts[0] ?? null,
+    checkinTrigger: checkin?.trigger ?? null,
   }
 
-  const upcoming = data.trips.filter((t) => t.status === 'planned' || t.status === 'booked').length
-  const waiting = data.trips.reduce((sum, t) => sum + t.pendingCount, 0)
-  const countries = new Set(data.places.map((p) => p.country).filter(Boolean)).size
-
-  return (
-    <div className="space-y-7">
-      <PageHeader
-        eyebrow={`Travel / ${upcoming} upcoming / ${countries} countries`}
-        dot={waiting > 0 ? 'warn' : 'brand'}
-        title="Travel"
-        lede="Trips, what they cost, and where you have been. A booking parsed from an email waits to be accepted; loyalty balances are numbers you type, because no loyalty site is scraped."
-        actions={
-          <span className="num text-[11px] text-ink-3">
-            {data.places.length} place{data.places.length === 1 ? '' : 's'}
-          </span>
-        }
-      />
-      <Travel data={data} />
-    </div>
-  )
+  return <Travel data={data} />
 }

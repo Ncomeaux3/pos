@@ -33,13 +33,13 @@ export function Globe({
   alert?: ReactNode
   className?: string
 }) {
-  // Start looking at the middle of where the pins are, so a globe of European
-  // trips does not open on the Pacific.
+  // Open on the next trip when there is one, else on the artboard's view of
+  // the Americas. The mean of every pin was the middle of an ocean.
   const home = (): Rotation => {
-    if (pins.length === 0) return { lambda: 98, phi: -25 }
-    const meanLon = pins.reduce((sum, p) => sum + p.lon, 0) / pins.length
-    const meanLat = pins.reduce((sum, p) => sum + p.lat, 0) / pins.length
-    return { lambda: -meanLon, phi: -meanLat }
+    const next = pins.find((p) => p.kind === 'upcoming') ?? pins[0]
+    if (!next) return { lambda: 98, phi: -25 }
+    // project() centres a point when phi equals its latitude.
+    return { lambda: -next.lon, phi: next.lat }
   }
   const [rotation, setRotation] = useState<Rotation>(home)
   const [zoom, setZoom] = useState(1)
@@ -63,7 +63,7 @@ export function Globe({
     setZoom(1)
   }
   const flyTo = (pin: Pin) => {
-    setRotation({ lambda: -pin.lon, phi: mode === 'globe' ? -pin.lat : 0 })
+    setRotation({ lambda: -pin.lon, phi: mode === 'globe' ? pin.lat : 0 })
     setZoom(2)
   }
 
@@ -105,9 +105,9 @@ export function Globe({
             transform={`scale(${mode === 'globe' ? R : R * 2})`}
             d={landPath(DOTS, rotation, mode)}
             fill="none"
-            stroke="var(--ink-4)"
-            strokeOpacity={0.9}
-            strokeWidth={1.4}
+            stroke="var(--ink-3)"
+            strokeOpacity={0.7}
+            strokeWidth={1.6}
             strokeLinecap="round"
             vectorEffect="non-scaling-stroke"
           />
@@ -133,7 +133,7 @@ export function Globe({
                   <circle cx={cx} cy={cy} r={(pin.kind === 'upcoming' ? 4 : 3.5) / zoom} fill={pin.kind === 'upcoming' ? 'var(--accent)' : 'var(--ink-3)'} />
                 )}
                 {pin.kind === 'upcoming' && (
-                  <text x={cx + 7 / zoom} y={cy - 6 / zoom} fontSize={9 / zoom} letterSpacing={0.08 * (9 / zoom)} fill="var(--ink-2)" className="uppercase">
+                  <text x={cx + 6 / zoom} y={cy - 5 / zoom} fontSize={4.6 / zoom} letterSpacing={0.4 / zoom} fill="var(--ink-2)" className="uppercase">
                     {pin.name}
                   </text>
                 )}

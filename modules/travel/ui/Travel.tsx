@@ -1,28 +1,18 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState, useTransition } from 'react'
-import {
-  ActionButton,
-  Card,
-  CardHead,
-  Chip,
-  EmptyState,
-  Eyebrow,
-  MetricTile,
-  PaceBar,
-  Row,
-  RowList,
-  StatusChip,
-  Switch,
-  TabBar,
-  fieldClass,
-  useToast,
-} from '@/components/pos'
+import { useTransition } from 'react'
+import { ActionButton, BandSearch, SearchButton, useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
-import { centsPerPoint } from '../globe'
-import { decideItem, saveLoyalty, setTripStatus, togglePacked, type ActionResult } from './actions'
-import { Globe } from './Globe'
+import { deleteTrip, setTripStatus, type ActionResult } from './actions'
+import { Globe, type Pin } from './Globe'
+import { LoyaltyDrawer } from './LoyaltyDrawer'
+import { TripDrawer } from './TripDrawer'
+
+// The Travel screen, as POS Travel.dc.html draws it: the band, the loyalty
+// strip, the title with its two buttons, the globe, then Upcoming as cards
+// and Past beside Wishlist. A trip opens as a drawer; a wish is a trip whose
+// status is idea.
 
 export type TravelData = {
   todayIso: string
@@ -30,6 +20,8 @@ export type TravelData = {
     id: string
     name: string
     destination: string
+    lat: number | null
+    lon: number | null
     startsOn: string | null
     endsOn: string | null
     budgetCents: number
@@ -56,27 +48,69 @@ export type TravelData = {
     confidence: number | null
   }[]
   packing: { id: string; tripId: string; label: string; packed: boolean }[]
+  budgetLines: {
+    id: string
+    tripId: string
+    category: string
+    plannedCents: number
+    actualOverrideCents: number | null
+  }[]
   places: { id: string; name: string; country: string; lat: number; lon: number; visitedOn: string | null }[]
-  loyalty: { id: string; name: string; kind: string; balance: number; statusTier: string; updatedAt: string }[]
+  loyalty: {
+    id: string
+    name: string
+    kind: string
+    balance: number
+    previousBalance: number | null
+    statusTier: string
+    updatedAt: string
+  }[]
+  /** The unread travel notification for the band on the globe, if any. */
+  alert: { id: string; title: string; body: string } | null
+  /** The live flight check-in rule's trigger text, for the drawer's footer. */
+  checkinTrigger: string | null
 }
 
-type Tab = 'trips' | 'map' | 'inbox' | 'loyalty'
+export type Trip = TravelData['trips'][number]
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const DAY = 86_400_000
 
-const shortDate = (iso: string | null) => {
-  if (!iso) return 'no date'
-  const d = new Date(`${iso}T12:00:00`)
-  return `${d.getDate()} ${MONTHS[d.getMonth()]}`
+const at = (iso: string) => new Date(`${iso}T12:00:00`)
+export const money = (cents: number) =>
+  `$${Math.round(cents / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+
+/** "Nov 5 – Nov 14", with the year when it is not this one. */
+export function dateRange(trip: Trip, todayIso: string): string {
+  if (!trip.startsOn) return 'no date'
+  const s = at(trip.startsOn)
+  const e = trip.endsOn ? at(trip.endsOn) : null
+  const year = e && e.getFullYear() !== at(todayIso).getFullYear() ? ` ${e.getFullYear()}` : ''
+  const one = (d: Date) => `${MONTHS[d.getMonth()]} ${d.getDate()}`
+  return e ? `${one(s)} – ${one(e)}${year}` : `${one(s)}${year}`
 }
 
-const money = (cents: number) => `$${(cents / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+export function nights(trip: Trip): number {
+  if (!trip.startsOn || !trip.endsOn) return 0
+  return Math.max(0, Math.round((at(trip.endsOn).getTime() - at(trip.startsOn).getTime()) / DAY))
+}
+
+const daysUntil = (iso: string, todayIso: string) =>
+  Math.max(0, Math.round((at(iso).getTime() - at(todayIso).getTime()) / DAY))
+
+const KINDS = ['flight', 'lodging', 'transit', 'activity'] as const
+const KIND_COLOUR: Record<(typeof KINDS)[number], string> = {
+  flight: 'bg-brand',
+  lodging: 'bg-ink-2',
+  transit: 'bg-ink-3',
+  activity: 'bg-warn',
+}
 
 export function Travel({ data }: { data: TravelData }) {
   const router = useRouter()
   const params = useSearchParams()
-  const tab = (params.get('tab') ?? 'trips') as Tab
-  const openTrip = data.trips.find((t) => t.id === params.get('trip')) ?? null
+  const [, start] = useTransition()
+  const toast = useToast()
 
   const setParams = (next: Record<string, string | null>) => {
     const search = new URLSearchParams(params.toString())
@@ -87,10 +121,6 @@ export function Travel({ data }: { data: TravelData }) {
     const query = search.toString()
     router.replace(query ? `?${query}` : '?', { scroll: false })
   }
-
-  const [, start] = useTransition()
-  const toast = useToast()
-
   const run = (action: () => Promise<ActionResult>, ok?: string) =>
     start(async () => {
       const result = await action()
@@ -98,346 +128,274 @@ export function Travel({ data }: { data: TravelData }) {
       else if (ok) toast(ok)
     })
 
-  const pending = data.itinerary.filter((i) => i.status === 'pending')
+  const today = data.todayIso
+  const isPast = (t: Trip) => t.status === 'done' || (t.endsOn !== null && t.endsOn < today)
+  const upcoming = data.trips
+    .filter((t) => (t.status === 'planned' || t.status === 'booked') && !isPast(t))
+    .sort((a, b) => (a.startsOn ?? '').localeCompare(b.startsOn ?? ''))
+  const past = data.trips.filter(isPast).sort((a, b) => (b.startsOn ?? '').localeCompare(a.startsOn ?? ''))
+  const wishlist = data.trips.filter((t) => t.status === 'idea')
+
+  const nightsAway = upcoming.reduce((sum, t) => sum + nights(t), 0)
+  const pastSpend = past.reduce((sum, t) => sum + t.spentCents, 0)
+
+  // Pins: upcoming trips in the accent with a label, places visited in grey,
+  // wishes as dashed rings. A trip with no coordinates draws nothing.
+  const pins: Pin[] = [
+    ...upcoming
+      .filter((t) => t.lat !== null && t.lon !== null)
+      .map((t) => ({ id: `trip-${t.id}`, name: t.destination || t.name, country: '', lat: t.lat!, lon: t.lon!, kind: 'upcoming' as const })),
+    ...data.places.map((p) => ({ id: `place-${p.id}`, name: p.name, country: p.country, lat: p.lat, lon: p.lon, kind: 'past' as const })),
+    ...wishlist
+      .filter((t) => t.lat !== null && t.lon !== null)
+      .map((t) => ({ id: `wish-${t.id}`, name: t.destination || t.name, country: '', lat: t.lat!, lon: t.lon!, kind: 'wishlist' as const })),
+  ]
+
+  const openTrip = data.trips.find((t) => t.id === params.get('trip')) ?? null
+  const form = params.get('new') // 'trip' | 'wish' | null
+  const loyaltyOpen = params.get('loyalty') === '1'
 
   return (
-    <div className="space-y-5">
-      {/* The globe sits above the views rather than inside one, which is what
-        * the artboard does: this screen is a map of where you have been, and
-        * the lists under it are the detail. */}
-      {data.places.length > 0 && (
-        <div className="grid h-[clamp(240px,38vh,420px)] place-items-center border border-rule bg-bg-elev p-3">
-          <Globe pins={data.places.map((p) => ({ ...p, kind: 'past' as const }))} className="h-full" />
+    <>
+      <header className="-mx-[18px] -mt-[18px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 md:-mx-7 md:-mt-7 md:h-14 md:flex-nowrap md:px-7 md:py-0">
+        <span className="eyebrow shrink-0 whitespace-nowrap text-ink-3">
+          Travel <span className="text-ink-4">/</span> Trips
+        </span>
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-4">
+          <SearchButton className="md:hidden" />
+          <BandSearch className="hidden min-w-[160px] flex-1 md:flex" placeholder="Search travel" />
+          <span className="eyebrow hidden shrink-0 whitespace-nowrap text-ink-3 md:inline-flex">
+            <span className="status-dot" data-tone={upcoming.length > 0 ? 'brand' : 'idle'} aria-hidden />
+            {upcoming.length} upcoming · {nightsAway} nights away
+          </span>
         </div>
-      )}
+      </header>
 
-      <TabBar
-        label="Travel views"
-        value={tab}
-        onChange={(next) => setParams({ tab: next === 'trips' ? null : next, trip: null })}
-        tabs={[
-          { value: 'trips', label: 'Trips', count: data.trips.length },
-          { value: 'map', label: 'Map', count: data.places.length },
-          { value: 'inbox', label: 'Inbox', count: pending.length },
-          { value: 'loyalty', label: 'Loyalty', count: data.loyalty.length },
-        ]}
-      />
-
-      {tab === 'trips' && (
-        <div className="flex flex-wrap items-start gap-x-6 gap-y-5">
-          <div className="min-w-0 flex-[1_1_420px] space-y-2.5">
-            {data.trips.length === 0 ? (
-              <EmptyState headline="Nothing booked">
-                A trip starts as an idea with no dates, and becomes planned, then booked. Only a
-                booked one counts against a budget.
-              </EmptyState>
-            ) : (
-              data.trips.map((trip) => (
-                <Card key={trip.id} className="space-y-2.5" selected={openTrip?.id === trip.id}>
-                  <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+      {/* The loyalty strip: one cell per program, the balance with its move
+        * since the last entry, and Manage on the last cell. */}
+      {data.loyalty.length > 0 && (
+        <div
+          data-testid="travel-loyalty"
+          className="-mx-[18px] grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-px border-b border-rule bg-rule md:-mx-7"
+        >
+          {data.loyalty.map((l, i) => {
+            const delta = l.previousBalance === null ? null : l.balance - l.previousBalance
+            return (
+              <div key={l.id} className="flex min-w-0 flex-col gap-0.5 bg-bg px-5 py-2.5">
+                <span className="flex justify-between gap-2 truncate text-[11px] text-ink-3">
+                  <span className="truncate">{l.name}</span>
+                  {i === data.loyalty.length - 1 && (
                     <button
                       type="button"
-                      onClick={() => setParams({ trip: trip.id })}
-                      className="min-w-0 flex-1 basis-[200px] text-left"
+                      onClick={() => setParams({ loyalty: '1' })}
+                      className="shrink-0 text-ink-4 hover:text-ink"
                     >
-                      <p className="t-body text-ink">{trip.name}</p>
-                      <p className="t-caption mt-1 text-ink-3">
-                        {trip.destination || 'Somewhere'} / {shortDate(trip.startsOn)}
-                        {trip.endsOn ? ` to ${shortDate(trip.endsOn)}` : ''} /{' '}
-                        {trip.travellers} travelling
-                      </p>
+                      Manage →
                     </button>
-                    <div className="flex items-center gap-2">
-                      {trip.pendingCount > 0 && (
-                        <StatusChip tone="warn">{trip.pendingCount} waiting</StatusChip>
-                      )}
-                      <StatusChip tone={trip.status === 'booked' ? 'brand' : 'quiet'}>
-                        {trip.status}
-                      </StatusChip>
-                    </div>
-                  </div>
+                  )}
+                </span>
+                <span className="num whitespace-nowrap text-[14px] text-ink">
+                  {l.balance.toLocaleString('en-US')}
+                  {delta !== null && delta !== 0 && (
+                    <span className={cn('ml-1 text-[10px]', delta > 0 ? 'text-ok' : 'text-bad')}>
+                      {delta > 0 ? '+' : ''}
+                      {delta.toLocaleString('en-US')}
+                    </span>
+                  )}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
-                  {trip.budgetCents > 0 && (
-                    <div className="space-y-1.5">
-                      <PaceBar
-                        value={trip.spentCents}
-                        max={trip.budgetCents}
-                        tone={trip.spentCents > trip.budgetCents ? 'bad' : 'brand'}
-                      />
-                      <div className="flex flex-wrap items-baseline justify-between gap-2">
-                        <span className="label text-[10px] text-ink-3">
-                          {money(trip.spentCents)} of {money(trip.budgetCents)}
-                        </span>
-                        <span className="label text-[10px] text-ink-3">
-                          {/* Only confirmed spend. A pending booking is a guess
-                              about an email, and a budget moved by a guess is a
-                              number that stops being trusted. */}
-                          confirmed only
+      <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-[28px] font-normal leading-none tracking-[-0.03em] text-ink">Travel</h1>
+          <p className="mt-2 hidden text-[13px] text-ink-3 md:block">
+            Upcoming trips in green, past in grey, wishlist dotted. Drag to rotate, scroll to zoom,
+            double-click to fly in. Hover a pin for details.
+          </p>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <button
+            type="button"
+            onClick={() => setParams({ new: 'wish', trip: null })}
+            className="whitespace-nowrap border border-rule-2 px-3 py-2 text-[12px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink"
+          >
+            Add to wishlist
+          </button>
+          <ActionButton variant="solid" size="xl" className="h-11 gap-2 px-3.5 text-[13px] md:h-[51px] md:px-[22px] md:text-[15px]" onClick={() => setParams({ new: 'trip', trip: null })}>
+            New trip <span aria-hidden="true">&rarr;</span>
+          </ActionButton>
+        </div>
+      </div>
+
+      <div data-testid="travel-globe" className="relative mt-[18px] h-[clamp(240px,38vh,420px)] border border-rule bg-bg-elev">
+        <Globe
+          pins={pins}
+          onPick={(id) => {
+            const trip = id.startsWith('trip-') ? id.slice(5) : id.startsWith('wish-') ? id.slice(5) : null
+            if (trip) setParams({ trip, new: null })
+          }}
+          alert={
+            data.alert && (
+              <div className="flex items-center gap-2.5 border border-warn bg-bg px-3 py-2">
+                <span className="label shrink-0 text-[9px] tracking-[0.08em] text-warn">Alert</span>
+                <span className="min-w-0 text-[12px] text-ink">{data.alert.title}</span>
+              </div>
+            )
+          }
+        />
+      </div>
+
+      <div data-testid="travel-sections" className="mt-[18px] flex flex-col gap-5 pb-7">
+        <section>
+          <SectionHead title="Upcoming" meta={upcoming.length === 0 ? 'nothing booked' : `${upcoming.length} ${upcoming.length === 1 ? 'trip' : 'trips'} · next in ${daysUntil(upcoming[0].startsOn ?? today, today)} days`} className="mb-3" />
+          {upcoming.length === 0 ? (
+            <p className="text-[12px] text-ink-4">No trip is planned. New trip starts one.</p>
+          ) : (
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))] gap-3.5">
+              {upcoming.map((t) => {
+                const items = data.itinerary.filter((i) => i.tripId === t.id && i.status === 'confirmed')
+                const booked = KINDS.filter((k) => items.some((i) => i.kind === k))
+                const toPack = t.toPack - t.packed
+                const next =
+                  t.pendingCount > 0
+                    ? `Approve ${t.pendingCount} parsed ${t.pendingCount === 1 ? 'booking' : 'bookings'}`
+                    : !items.some((i) => i.kind === 'lodging')
+                      ? 'Book lodging'
+                      : toPack > 0
+                        ? `Pack · ${toPack} ${toPack === 1 ? 'item' : 'items'} left`
+                        : ''
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setParams({ trip: t.id, new: null })}
+                    className="border border-rule bg-bg-elev px-[18px] py-4 text-left transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-rule-2"
+                  >
+                    <div className="flex items-start justify-between gap-2.5">
+                      <div className="min-w-0">
+                        <span className="block text-[16px] leading-[1.3] tracking-[-0.01em] text-ink">{t.name}</span>
+                        <span className="mt-1 block text-[12px] text-ink-3">
+                          {dateRange(t, today)} · {nights(t)} nights
                         </span>
                       </div>
+                      {t.startsOn && (
+                        <span className="num shrink-0 text-[18px] font-light leading-none text-brand">
+                          {daysUntil(t.startsOn, today)}
+                          <span className="text-[10px] text-ink-3"> d</span>
+                        </span>
+                      )}
                     </div>
-                  )}
-
-                  {trip.toPack > 0 && (
-                    <p className="t-caption text-ink-3">
-                      Packed {trip.packed} of {trip.toPack}.
-                    </p>
-                  )}
-                </Card>
-              ))
-            )}
-          </div>
-
-          {openTrip && (
-            <aside className="min-w-0 flex-[1_1_340px] space-y-4 md:max-w-[440px]">
-              <Card className="space-y-3">
-                <CardHead label="Itinerary" meta={`${openTrip.itemCount} confirmed`} />
-                {data.itinerary.filter((i) => i.tripId === openTrip.id && i.status === 'confirmed')
-                  .length === 0 ? (
-                  <EmptyState headline="Nothing planned" className="border-0">
-                    No confirmed items yet.
-                  </EmptyState>
-                ) : (
-                  <RowList>
-                    {data.itinerary
-                      .filter((i) => i.tripId === openTrip.id && i.status === 'confirmed')
-                      .map((item) => (
-                        <Row
-                          key={item.id}
-                          title={item.title}
-                          meta={`${shortDate(item.occursOn)}${item.occursAt ? ` ${item.occursAt}` : ''} / ${item.kind}${item.detail ? ` / ${item.detail}` : ''}`}
-                          right={
-                            item.amountCents > 0 ? (
-                              <span className="num text-[12px] text-ink-2">
-                                {money(item.amountCents)}
-                              </span>
-                            ) : undefined
-                          }
+                    <div className="mt-3.5 flex gap-px bg-rule">
+                      {KINDS.map((k) => (
+                        <span
+                          key={k}
+                          title={`${k} · ${booked.includes(k) ? 'booked' : 'open'}`}
+                          className={cn('h-[3px] flex-1', booked.includes(k) ? KIND_COLOUR[k] : 'bg-bg-elev')}
                         />
                       ))}
-                  </RowList>
-                )}
-              </Card>
-
-              <Card className="space-y-3">
-                <CardHead
-                  label="Packing"
-                  meta={`${openTrip.packed} of ${openTrip.toPack}`}
-                />
-                {data.packing.filter((p) => p.tripId === openTrip.id).length === 0 ? (
-                  <p className="t-caption text-ink-3">Nothing on the list yet.</p>
-                ) : (
-                  <RowList>
-                    {data.packing
-                      .filter((p) => p.tripId === openTrip.id)
-                      .map((item) => (
-                        <Row
-                          key={item.id}
-                          title={item.label}
-                          muted={item.packed}
-                          right={
-                            <Switch
-                              label={`Packed ${item.label}`}
-                              checked={item.packed}
-                              onChange={(next) => run(() => togglePacked(item.id, next))}
-                            />
-                          }
-                        />
-                      ))}
-                  </RowList>
-                )}
-              </Card>
-
-              <div className="flex flex-wrap gap-1.5">
-                {(['idea', 'planned', 'booked', 'done'] as const).map((s) => (
-                  <ActionButton
-                    key={s}
-                    variant={openTrip.status === s ? 'brand' : 'outline'}
-                    onClick={() => run(() => setTripStatus(openTrip.id, s), `Marked ${s}`)}
-                  >
-                    {s}
-                  </ActionButton>
-                ))}
-              </div>
-            </aside>
-          )}
-        </div>
-      )}
-
-      {tab === 'map' && (
-        <div className="flex flex-wrap items-start gap-x-6 gap-y-5">
-          {data.places.length === 0 && (
-            <div className="min-w-0 flex-[1_1_360px]">
-              <EmptyState headline="Nowhere yet">
-                A place lands here when a booked trip ends, and stays even if the trip is archived:
-                the map is a record of where you have been, not of what is still on the list.
-              </EmptyState>
+                    </div>
+                    <div className="mt-2 flex justify-between gap-2.5 text-[11px] text-ink-3">
+                      <span>
+                        {booked.length}/4 booked{t.pendingCount > 0 ? ` · ${t.pendingCount} in inbox` : ''}
+                      </span>
+                      <span>
+                        {money(t.spentCents)} / {money(t.budgetCents)}
+                      </span>
+                    </div>
+                    {next && (
+                      <div className="mt-2.5 truncate border-t border-rule pt-2.5 text-[12px] text-ink-2">
+                        <span className="text-ink-4">Next · </span>
+                        {next}
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
             </div>
           )}
+        </section>
 
-          <div className="min-w-0 flex-[1_1_280px]">
-            <RowList>
-              {data.places.map((p) => (
-                <Row
-                  key={p.id}
-                  title={p.name}
-                  meta={`${p.country || 'unknown'} / ${shortDate(p.visitedOn)}`}
-                  right={
-                    <span className="num text-[10px] text-ink-3">
-                      {p.lat.toFixed(1)}, {p.lon.toFixed(1)}
-                    </span>
-                  }
-                />
-              ))}
-            </RowList>
-          </div>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,320px),1fr))] gap-5">
+          <section>
+            <SectionHead title="Past" meta={`${past.length} ${past.length === 1 ? 'trip' : 'trips'} · ${money(pastSpend)} total`} className="mb-1.5" />
+            {past.length === 0 && <p className="py-2.5 text-[12px] text-ink-4">Nothing yet.</p>}
+            {past.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setParams({ trip: t.id, new: null })}
+                className="grid w-full grid-cols-[1fr_auto] gap-2.5 border-b border-rule py-2.5 text-left text-ink transition-colors duration-150 hover:text-brand"
+              >
+                <span className="min-w-0 text-[13px]">
+                  <span className="block">{t.name}</span>
+                  <span className="mt-0.5 block text-[11px] text-ink-3">
+                    {dateRange(t, today)} · {nights(t)} nights
+                  </span>
+                </span>
+                <span className="num whitespace-nowrap text-[12px] text-ink-3">{money(t.spentCents)}</span>
+              </button>
+            ))}
+          </section>
+
+          <section>
+            <SectionHead title="Wishlist" meta={`${wishlist.length} ${wishlist.length === 1 ? 'place' : 'places'}`} className="mb-1.5" />
+            {wishlist.length === 0 && <p className="py-2.5 text-[12px] text-ink-4">Nothing yet. Add to wishlist keeps a place for later.</p>}
+            {wishlist.map((w) => (
+              <div key={w.id} className="grid grid-cols-[1fr_auto] items-center gap-2.5 border-b border-rule py-2.5">
+                <button type="button" onClick={() => setParams({ trip: w.id, new: null })} className="min-w-0 text-left text-[13px] text-ink hover:text-brand">
+                  <span className="block">{w.name}</span>
+                  {w.notes && <span className="mt-0.5 block text-[11px] text-ink-3">{w.notes}</span>}
+                </button>
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => run(() => setTripStatus(w.id, 'planned'), `${w.name} is planned`)}
+                    className="border border-brand px-[9px] py-1 text-[11px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg"
+                  >
+                    Plan
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${w.name}`}
+                    onClick={() => {
+                      if (window.confirm(`Remove ${w.name} from the wishlist?`)) run(() => deleteTrip(w.id), 'Removed')
+                    }}
+                    className="border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+          </section>
         </div>
-      )}
+      </div>
 
-      {tab === 'inbox' && (
-        <div className="space-y-3">
-          {pending.length === 0 ? (
-            <EmptyState headline="Inbox zero">
-              A booking parsed from an email lands here first. A machine reading a confirmation is
-              proposing, not deciding, so nothing joins an itinerary until you accept it.
-            </EmptyState>
-          ) : (
-            <RowList>
-              {pending.map((item) => (
-                <Row
-                  key={item.id}
-                  title={item.title}
-                  meta={`${item.kind} / ${shortDate(item.occursOn)}${item.detail ? ` / ${item.detail}` : ''}`}
-                  right={
-                    <>
-                      {item.confidence !== null && (
-                        <Chip tone="warn">{Math.round(item.confidence * 100)}%</Chip>
-                      )}
-                      <ActionButton
-                        variant="brand"
-                        onClick={() => run(() => decideItem(item.id, true), 'Added to the trip')}
-                      >
-                        Accept
-                      </ActionButton>
-                      <ActionButton onClick={() => run(() => decideItem(item.id, false), 'Discarded')}>
-                        Reject
-                      </ActionButton>
-                    </>
-                  }
-                />
-              ))}
-            </RowList>
-          )}
-        </div>
+      {(openTrip || form) && (
+        <TripDrawer
+          key={openTrip?.id ?? form}
+          trip={openTrip}
+          mode={form === 'wish' ? 'wish' : form === 'trip' ? 'trip' : null}
+          data={data}
+          tab={params.get('tab')}
+          onTab={(tab) => setParams({ tab: tab === 'itin' ? null : tab })}
+          onClose={() => setParams({ trip: null, new: null, tab: null })}
+        />
       )}
-
-      {tab === 'loyalty' && <Loyalty programs={data.loyalty} onRun={run} />}
-    </div>
+      {loyaltyOpen && <LoyaltyDrawer loyalty={data.loyalty} onClose={() => setParams({ loyalty: null })} />}
+    </>
   )
 }
 
-/**
- * Balances, and the one calculation SPEC asks for.
- *
- * Both numbers come from the owner. Nothing here knows what a point is worth,
- * because nothing can: SPEC says loyalty sites are not scraped, and a made up
- * valuation would be worse than none.
- */
-function Loyalty({
-  programs,
-  onRun,
-}: {
-  programs: TravelData['loyalty']
-  onRun: (action: () => Promise<ActionResult>, ok?: string) => void
-}) {
-  const [cash, setCash] = useState('')
-  const [points, setPoints] = useState('')
-
-  const cpp = centsPerPoint(Math.round(Number(cash) * 100) || 0, Number(points) || 0)
-
+function SectionHead({ title, meta, className }: { title: string; meta: string; className?: string }) {
   return (
-    <div className="flex flex-wrap items-start gap-x-6 gap-y-5">
-      <div className="min-w-0 flex-[1_1_320px] space-y-3">
-        {programs.length === 0 ? (
-          <EmptyState headline="No balances">
-            Add one and keep it current by hand. No loyalty programme publishes an API worth
-            using, so this app does not pretend to read them.
-          </EmptyState>
-        ) : (
-          <RowList>
-            {programs.map((p) => (
-              <Row
-                key={p.id}
-                title={p.name}
-                meta={`${p.kind}${p.statusTier ? ` / ${p.statusTier}` : ''} / you updated this ${new Date(p.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`}
-                right={
-                  <input
-                    type="number"
-                    min={0}
-                    defaultValue={p.balance}
-                    aria-label={`Balance for ${p.name}`}
-                    onBlur={(e) =>
-                      Number(e.target.value) !== p.balance &&
-                      onRun(
-                        () =>
-                          saveLoyalty(
-                            p.name,
-                            Number(e.target.value),
-                            p.kind as 'airline' | 'hotel' | 'card' | 'rail',
-                          ),
-                        'Saved',
-                      )
-                    }
-                    className={cn(fieldClass, 'w-32')}
-                  />
-                }
-              />
-            ))}
-          </RowList>
-        )}
-      </div>
-
-      <Card className="min-w-0 flex-[1_1_280px] space-y-3 md:max-w-[380px]">
-        <CardHead label="Cents per point" meta="both numbers yours" />
-        <p className="t-caption text-ink-3">
-          What the cash fare would have been, against the points it would cost. Above about 1.5
-          cents a point is usually worth spending them; below it, pay cash and keep the points.
-        </p>
-
-        <div className="grid grid-cols-2 gap-2.5">
-          <label className="space-y-1.5">
-            <Eyebrow className="text-[10px]">Cash fare</Eyebrow>
-            <input
-              type="number"
-              min={0}
-              value={cash}
-              onChange={(e) => setCash(e.target.value)}
-              aria-label="Cash fare in dollars"
-              placeholder="640"
-              className={cn(fieldClass, 'w-full')}
-            />
-          </label>
-          <label className="space-y-1.5">
-            <Eyebrow className="text-[10px]">Points</Eyebrow>
-            <input
-              type="number"
-              min={0}
-              value={points}
-              onChange={(e) => setPoints(e.target.value)}
-              aria-label="Points required"
-              placeholder="35000"
-              className={cn(fieldClass, 'w-full')}
-            />
-          </label>
-        </div>
-
-        <MetricTile
-          label="Value"
-          value={cpp === null ? '--' : `${cpp.toFixed(2)}c`}
-          delta={cpp === null ? 'enter both' : cpp >= 1.5 ? 'worth using points' : 'pay cash'}
-          deltaTone={cpp === null ? 'quiet' : cpp >= 1.5 ? 'ok' : 'warn'}
-        />
-      </Card>
+    <div className={cn('flex items-baseline justify-between border-b border-rule-2 pb-2', className)}>
+      <span className="text-[15px] text-ink">{title}</span>
+      <span className="num text-[11px] text-ink-3">{meta}</span>
     </div>
   )
 }

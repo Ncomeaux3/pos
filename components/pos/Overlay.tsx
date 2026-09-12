@@ -21,6 +21,7 @@ export function Overlay({
   open,
   onClose,
   side = 'right',
+  wide = false,
   eyebrow,
   title,
   lede,
@@ -30,6 +31,8 @@ export function Overlay({
   open: boolean
   onClose: () => void
   side?: 'right' | 'bottom'
+  /** 560px instead of 520: the Travel artboard's trip drawer. */
+  wide?: boolean
   /** The crumb in the band: "Finance / Accounts / Checking". */
   eyebrow?: ReactNode
   title: ReactNode
@@ -93,7 +96,10 @@ export function Overlay({
           'absolute flex flex-col bg-bg-elev outline-none',
           'duration-[260ms] ease-[cubic-bezier(.2,.8,.2,1)] animate-in',
           side === 'right'
-            ? 'right-0 top-0 h-full w-[min(520px,100%)] border-l border-rule-2 shadow-[-24px_0_48px_rgba(0,0,0,.35)] slide-in-from-right'
+            ? cn(
+                'right-0 top-0 h-full border-l border-rule-2 shadow-[-24px_0_48px_rgba(0,0,0,.35)] slide-in-from-right',
+                wide ? 'w-[min(560px,100%)]' : 'w-[min(520px,100%)]',
+              )
             : 'bottom-0 left-0 max-h-[74vh] w-full rounded-t-xl border-t border-rule-2 slide-in-from-bottom',
         )}
       >
