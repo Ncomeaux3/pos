@@ -259,7 +259,7 @@ function PolicyView({
               {paymentSchedule(policy.expiresOn, policy.cadence, data.todayIso).map((p, i) => {
                 const tone = p.label === 'Last' ? 'text-ink-3' : p.label === 'Next' ? 'text-ink' : 'text-ink-2'
                 return (
-                  <div key={i} className={cn('flex justify-between border-b border-rule py-[7px] text-[12px]', tone)}>
+                  <div key={i} className={cn('flex justify-between border-b border-rule py-[7px] text-[12px] leading-[1.4]', tone)}>
                     <span>{p.label}</span>
                     <span className="num">
                       {shortDate(p.on, data.todayIso)} · {money(policy.premiumCents)}
@@ -337,7 +337,7 @@ function PolicyView({
                   <span className="num shrink-0 text-[10px] text-ink-4">{d.meta}</span>
                 </>
               )
-              const row = 'flex justify-between gap-2.5 border-b border-rule py-2 text-[12px]'
+              const row = 'flex justify-between gap-2.5 border-b border-rule py-2 text-[12px] leading-[1.4]'
               return d.hasFile ? (
                 <button
                   key={d.id}
