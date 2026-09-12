@@ -53,6 +53,13 @@ await db().query(
       and entity_id in (select id::text from health.record where title = 'Ferritin')`,
 )
 await db().query(`delete from health.record where title = 'Ferritin'`)
+// The ideas capture test deletes its own capture at the end, but a run killed
+// midway leaves it, and the next run then finds two cards with its title.
+await db().query(
+  `delete from core.entities where module = 'ideas'
+      and entity_id in (select id::text from ideas.idea where title = 'Pocket receipt scanner')`,
+)
+await db().query(`delete from ideas.idea where title = 'Pocket receipt scanner'`)
 // Tasks seed before goals exist, so the links between them are drawn here:
 // the Goals drawer lists a goal's tasks and the card names the next one.
 for (const [task, goal] of [
