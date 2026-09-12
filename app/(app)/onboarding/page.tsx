@@ -1,10 +1,32 @@
-import { categoriesForModules, supportedProviders } from '@/core/connectors'
+import { loadCategories, supportedProviders } from '@/core/connectors'
 import { db } from '@/core/db'
 import { getModules } from '@/core/modules'
 import { listMetrics } from '@/core/metrics'
 import { getSettings } from '@/core/settings'
-import { ownerToday } from '@/core/today'
+import { nightlyRunAt, ownerToday } from '@/core/today'
 import { Onboarding, type SetupData } from './Onboarding'
+
+/**
+ * One true line per module, the artboard's own style ("Accounts, budgets,
+ * subscriptions"). Trimmed from each module's README first line or its
+ * get_digest description, never invented. A module this map has not heard of
+ * (a fork's own addition) falls back to its nav label rather than a guess.
+ */
+const MODULE_NOTES: Record<string, string> = {
+  finance: 'Net worth, budgets, subscriptions',
+  tasks: 'Six views over one list, plus a month grid',
+  goals: 'Progress against a deadline, by life area',
+  skills: 'XP from every event, across the tree',
+  brain: 'Notes, links and drafts, with search',
+  fitness: 'Workouts, sets, and body metrics',
+  insurance: 'What is covered, what it costs, when it runs out',
+  travel: 'Trips, what they cost, where you have been',
+  meals: 'A week of slots, and the list to shop from',
+  ideas: 'Effort against impact, four stages',
+  health: 'Appointments, prescriptions, screenings',
+  home: 'The house, the vehicles, the equipment',
+  notes: 'Note counts and the most recent titles',
+}
 
 export default async function OnboardingPage() {
   const [settings, todayIso] = await Promise.all([getSettings(), ownerToday()])
@@ -24,12 +46,13 @@ export default async function OnboardingPage() {
     modules: modules.map((m) => ({
       id: m.id,
       label: m.nav.label,
-      // The one line the toggle is decided on. Falls back to the id rather than
-      // inventing a description for a module this screen has never heard of.
-      note: m.nav.icon ? `${m.nav.label} module` : m.id,
+      note: MODULE_NOTES[m.id] ?? `${m.nav.label} module`,
       enabled: enabled.includes(m.id),
     })),
-    categories: categoriesForModules(enabled),
+    // Every category, not only the enabled ones: a category whose module is
+    // off still renders, greyed, with an inline way to turn that module on
+    // (the artboard's own shape), rather than disappearing.
+    categories: loadCategories(),
     supported: [...supportedProviders()],
     requested: requested.map((r) => r.integration_id),
     // Enumerated from the manifests, so a seeded goal can point at something
@@ -37,6 +60,10 @@ export default async function OnboardingPage() {
     metrics: listMetrics(),
     hasGoals: modules.some((m) => m.id === 'goals'),
     todayIso,
+    // The real hour, not a hardcoded "04:00": the cron fires at a fixed UTC
+    // hour, which lands at a different local time in Chicago's summer and
+    // winter, same as the Review pass computes it.
+    nightlyAt: nightlyRunAt(settings.timezone),
     schedule: {
       morningAt: settings.digest_morning_at,
       morningEnabled: settings.digest_morning_enabled,

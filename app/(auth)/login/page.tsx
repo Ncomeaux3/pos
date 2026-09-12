@@ -55,7 +55,7 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
       {/* The artboard's top band: the lockup, and what this install is. */}
       <header className="flex h-14 shrink-0 flex-wrap items-center justify-between gap-3 px-7">
         <ComeauxverseLockup className="h-5 text-ink" />
-        <Eyebrow dot="brand">POS / single owner / v0.1</Eyebrow>
+        <Eyebrow dot="brand">POS · single owner · v0.1</Eyebrow>
       </header>
 
       <main className="grid flex-1 place-items-center p-6">
@@ -132,6 +132,7 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
                     inputMode="email"
                     autoComplete="email"
                     required
+                    placeholder="you@yourdomain.com"
                     defaultValue={error === 'invalid' ? raw : ''}
                     className={`${fieldClass} border-0 bg-transparent px-0`}
                   />

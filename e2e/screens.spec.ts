@@ -428,7 +428,13 @@ test('login, signed out', async ({ page, context }) => {
   await context.clearCookies()
   await page.goto('/login')
   await expect(page.getByLabel(/owner email/i)).toBeVisible()
+  await expect(page.getByLabel(/owner email/i)).toHaveAttribute('placeholder', /.+/)
   await expect(page.getByText(/link expires in 15 min/i)).toBeVisible()
+  // The install band uses middots, matching the artboard; a page crumb like
+  // "Review / Pending" is the only place this app uses a plain slash.
+  await expect(page.getByText(/POS · single owner · v0\.1/i)).toBeVisible()
+  // The arrow glyph is aria-hidden, so the accessible name stays plain.
+  await expect(page.getByRole('button', { name: /^send sign-in link$/i })).toBeVisible()
   await shoot(page, 'login')
 })
 
@@ -439,7 +445,23 @@ test('login, link sent', async ({ page, context }) => {
   await page.goto('/login?sent=1&email=owner%40example.com')
   await expect(page.getByRole('heading', { name: /check your inbox/i })).toBeVisible()
   await expect(page.getByText(/expires/i)).toBeVisible()
+  // No "Sent via Resend" cell: the magic link goes out through Supabase
+  // Auth's own mailer, not the Resend integration digests use.
+  await expect(page.getByText(/resend ·/i)).toHaveCount(0)
+  await expect(page.getByText('noreply@cmxlogic.com')).toHaveCount(0)
   await shoot(page, 'login-sent')
+})
+
+test('login, resend restarts the countdown', async ({ page, context }) => {
+  await context.clearCookies()
+  await page.goto('/login?sent=1&email=owner%40example.com')
+
+  // Let the countdown tick down from 15:00 before asking for it again.
+  await page.waitForTimeout(1200)
+  await expect(page.getByText('14:5', { exact: false })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Resend' }).click()
+  await expect(page.getByText('15:00')).toBeVisible()
 })
 
 test('login rejects a malformed address without clearing it', async ({ page, context }) => {
@@ -1302,22 +1324,66 @@ test('finance, the limits drawer holds edits until Done', async ({ page }) => {
 
 test('onboarding, six steps that write as they go', async ({ page }) => {
   await page.goto('/onboarding')
-  await expect(page.getByRole('heading', { name: 'First run' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Start with the basics' })).toBeVisible()
 
   await page.getByLabel('Your name').fill('Owner')
   await page.getByLabel('Timezone').click()
   await shoot(page, 'onboarding')
 
-  // Modules is a visibility switch, not a delete: the copy has to say so,
-  // because turning one off looks destructive.
+  // Modules is a visibility switch, not a delete. The artboard draws it as a
+  // grid of numbered, clickable cards with an ON/OFF state word, not a
+  // switch row, so the switch role is gone from this step.
   await page.getByRole('button', { name: '02 Modules' }).click()
-  await expect(page.getByRole('switch', { name: 'Show Finance' })).toBeVisible()
-  await expect(page.getByText(/keeps its data and its tools/)).toBeVisible()
+  await expect(page.getByText(/every module can be added later/i)).toBeVisible()
+  await expect(page.getByRole('switch', { name: 'Show Finance' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /01[\s\S]*ON[\s\S]*Finance/ })).toBeVisible()
+  await expect(page.getByText(/connector categories unlock/)).toBeVisible()
+
+  // Turn a module off here so its categories render greyed on the next step,
+  // rather than disappearing.
+  await page.getByRole('button', { name: /Travel/ }).click()
 
   // Connections records intent. A provider with a real integration is starred;
   // everything else is honestly a request.
   await page.getByRole('button', { name: '03 Connections' }).click()
   await expect(page.getByText(/nothing pretends to be connected/)).toBeVisible()
+
+  // A category whose module is off stays visible, greyed, with a way to turn
+  // the module back on, rather than disappearing.
+  const airlineCategory = page.getByText('Airline loyalty').locator('..')
+  await expect(airlineCategory).toContainText('Travel module off')
+  await shoot(page, 'onboarding-connections-module-off')
+  await airlineCategory.getByRole('button', { name: 'Add Travel module' }).click()
+  await expect(page.getByText('Travel module off')).toHaveCount(0)
+
+  // A category that carries Finance and Goals' real numbers says so until
+  // something in it is requested.
+  await expect(page.getByRole('button', { name: /Banks & credit unions/ })).toContainText('Needed')
+
+  // The global search narrows every category's providers by name.
+  await page.getByLabel('Search every connector').fill('wells fargo')
+  await expect(page.getByText('Matches · 1')).toBeVisible()
+  await page.getByLabel('Search every connector').fill('')
+
+  // Requesting a listed provider clears the Needed flag and lists it as
+  // Requested; a name with no integration is recorded the same way, through
+  // the manual add.
+  await page.getByRole('button', { name: /Banks & credit unions/ }).click()
+  await page.getByRole('button', { name: 'Chase', exact: true }).click()
+  await expect(page.getByText('Requested · 1')).toBeVisible()
+  await expect(page.getByRole('button', { name: /Banks & credit unions/ })).not.toContainText('Needed')
+
+  await page.getByRole('button', { name: 'Add manually' }).click()
+  await page.getByLabel('Name of the institution').fill('Local Credit Union')
+  await page.getByRole('button', { name: 'Add', exact: true }).click()
+  await expect(page.getByText('Local Credit Union noted')).toBeVisible()
+  await expect(page.getByText('Requested · 2')).toBeVisible()
+
+  // Clean up: leave connections as this test found them for whatever runs next.
+  await page.getByRole('button', { name: 'Local Credit Union', exact: true }).click()
+  await page.getByRole('button', { name: 'Chase', exact: true }).first().click()
+  await expect(page.getByText(/Requested ·/)).toHaveCount(0)
+
   await shoot(page, 'onboarding-connections')
 })
 
@@ -1330,19 +1396,73 @@ test('onboarding, a starter goal only points at a metric that exists', async ({ 
   await expect(page.getByText('computed').first()).toBeVisible()
   await expect(page.getByText('Read twelve books this year')).toBeVisible()
 
+  // No check-in cadence control anywhere: nothing in goals.write stores one.
+  await expect(page.getByRole('button', { name: 'Weekly', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Quarterly', exact: true })).toHaveCount(0)
+
   await shoot(page, 'onboarding-goals')
+})
+
+test("onboarding, a goal's target and deadline are editable", async ({ page }) => {
+  await page.goto('/onboarding?step=goals')
+
+  // Picking a goal reveals its own Target and By when inputs, holding what
+  // is typed. "Read twelve books this year" is the third and last of the
+  // three starter goals.
+  //
+  // The round trip through Finish is not exercised here: finish() marks
+  // core.settings.onboarding_completed_at permanently, and nothing in this
+  // screen's scope (no core/settings.ts, no e2e/seed.mts) can clear it back
+  // for the tests that run after, including this file's own next one, which
+  // needs the wizard rather than the "you are set up" screen. Reported as a
+  // Blocked item rather than left silently short of the plan.
+  await page.getByRole('button', { name: 'Add', exact: true }).nth(2).click()
+  const targetInput = page.getByLabel('Read twelve books this year target')
+  await targetInput.fill('7')
+  await expect(targetInput).toHaveValue('7')
+
+  const dateInput = page.getByLabel('Read twelve books this year deadline')
+  await dateInput.fill('2030-03-01')
+  await expect(dateInput).toHaveValue('2030-03-01')
 })
 
 test('onboarding, requesting a provider records it without pretending', async ({ page }) => {
   await page.goto('/onboarding?step=connect')
 
-  await page.getByRole('button', { name: /Banks and credit unions/ }).click()
+  await page.getByRole('button', { name: /Banks & credit unions/ }).click()
   await page.getByRole('button', { name: 'Ally', exact: true }).click()
   await expect(page.getByText('Ally noted')).toBeVisible()
 
   // It lands in Settings as requested, which is the honest half of the claim.
   await page.goto('/settings/connections')
   await expect(page.getByText('Ally')).toBeVisible()
+})
+
+test('onboarding, first run copy names no source count', async ({ page }) => {
+  await page.goto('/onboarding?step=ready')
+
+  // The step's own lede, above the h2.
+  const lede = page.getByText(/write its first digest for the morning/i)
+  await expect(lede).toBeVisible()
+  // A real, computed hour (HH:MM), not a hardcoded one.
+  await expect(lede).toContainText(/tonight at \d\d:\d\d/i)
+
+  // The First run card, above the Summary table, names no source count.
+  const card = page.getByText(/classifies what it finds/i)
+  await expect(card).toBeVisible()
+  await expect(card).not.toContainText(/backfills 90 days/i)
+  await expect(card).not.toContainText(/pulls \d+ source/i)
+
+  // The Summary table uses the artboard's keys.
+  await expect(page.getByText('NAME', { exact: true })).toBeVisible()
+  await expect(page.getByText('ALERTS', { exact: true })).toBeVisible()
+  await expect(
+    page.getByText('Nothing here is locked in. Connections, modules and rules all live in Settings once you are inside.'),
+  ).toBeVisible()
+
+  // Each summary row jumps back to the step it summarises.
+  await page.getByRole('button', { name: 'Change' }).first().click()
+  await expect(page.getByRole('heading', { name: 'Start with the basics' })).toBeVisible()
 })
 
 test('second brain, the inbox holds a draft beside its source', async ({ page }) => {

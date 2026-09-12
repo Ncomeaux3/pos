@@ -6,13 +6,11 @@ import { useState, useTransition } from 'react'
 import {
   ActionButton,
   Card,
-  CardHead,
   Chip,
   EmptyState,
   Eyebrow,
   Row,
   RowList,
-  StatusChip,
   Switch,
   WizardShell,
   fieldClass,
@@ -46,6 +44,7 @@ export type SetupData = {
   metrics: Metric[]
   hasGoals: boolean
   todayIso: string
+  nightlyAt: string
   schedule: {
     morningAt: string
     morningEnabled: boolean
@@ -60,52 +59,112 @@ export type SetupData = {
 
 type StepKey = 'you' | 'modules' | 'connect' | 'goals' | 'notify' | 'ready'
 
-const STEPS: { key: StepKey; name: string; kicker: string; question: string; helper: string }[] = [
+// Title, lede and rail hint are the artboard's own copy (logic line 63 to 107,
+// 414 to 421), kept verbatim wherever it is true. Two clauses are not: step
+// one's "and a wake time" (the day-start picker is not built, see the plan's
+// decision) and step six's line, which moves to the First run card below
+// rather than staying here (see firstRunLine).
+const STEPS: { key: StepKey; name: string; hint: string; question: string; helper: string }[] = [
   {
     key: 'you',
     name: 'You',
-    kicker: 'Step one, who this is for',
-    question: 'What should it call you, and where are you?',
-    helper: 'The timezone decides what "today" means everywhere, so it is worth getting right.',
+    hint: 'Name, zone, day start',
+    question: 'Start with the basics',
+    helper: 'The agent writes in your name and runs on your clock. Two fields are all it needs.',
   },
   {
     key: 'modules',
     name: 'Modules',
-    kicker: 'Step two, what it tracks',
-    question: 'Which parts do you want?',
+    hint: 'What the OS tracks',
+    question: 'Choose what it tracks',
     helper:
-      'Visibility only. A module you turn off keeps its data and its tools; it just stops taking up room in the nav.',
+      'This decides which connectors matter on the next step. Every module can be added later without losing history.',
   },
   {
     key: 'connect',
     name: 'Connections',
-    kicker: 'Step three, where the data comes from',
-    question: 'What should it read?',
+    hint: 'By category, per module',
+    question: 'Connect what it should read',
     helper:
-      'Picking one here records the intent. Anything with a real integration is authorised properly at Settings, because a wizard is no place to handle a secret.',
+      'Grouped by what the data is for. Categories belonging to modules you left off are greyed out; turn the module on right here if you want them.',
   },
   {
     key: 'goals',
     name: 'Goals',
-    kicker: 'Step four, what you are aiming at',
-    question: 'Start with two or three?',
-    helper: 'A goal pointed at a module metric checks itself in every night. The rest you do by hand.',
+    hint: 'Seed three to start',
+    question: 'Seed a few goals',
+    helper: 'Goals read from your data where they can, so progress moves without you updating anything.',
   },
   {
     key: 'notify',
     name: 'Notifications',
-    kicker: 'Step five, when it may interrupt',
-    question: 'When can it reach you?',
-    helper: 'Quiet hours hold everything but an urgent rule, and held is not dropped.',
+    hint: 'Digest and quiet hours',
+    question: 'Decide how loud it is',
+    helper: 'Pick a starting point. Individual rules stay editable, per module and per channel.',
   },
   {
     key: 'ready',
     name: 'First run',
-    kicker: 'Step six, start it',
-    question: 'Ready?',
-    helper: 'Nothing here is permanent. Every answer is a setting you can change later.',
+    hint: 'Review and finish',
+    question: 'Ready for the first run',
+    // Computed below (needs the real nightly hour), not static.
+    helper: '',
   },
 ]
+
+/**
+ * Categories with nothing requested that leave a real tile empty: the
+ * dashboard's net worth and the runway goal both read Finance's balances.
+ * Named here rather than added to config/connectors.yaml, since a plain
+ * array of the ids that already exist there is the smaller, in-scope change.
+ */
+const NEEDED_CATEGORY_IDS = ['bank', 'broker']
+
+/** "Banks and credit unions" to "Banks & credit unions", the artboard's own style. */
+const withAmpersand = (name: string) => name.replace(/ and /g, ' & ')
+
+/** "balances and transactions" to "balances, transactions": the category's
+ * true `data` field, rephrased into the artboard's comma list shape rather
+ * than prose, without adding an item it does not actually give. */
+const listify = (data: string) => data.replace(/ and /g, ', ')
+
+/**
+ * Three quiet-hours shortcuts. There is no per-rule loudness setting to
+ * pick between (core.settings has only the two digest toggles and one quiet
+ * window), so each preset only ever writes the quiet-hours width and the
+ * urgent override, the same two fields the panel below already saves. No
+ * per-day notification count is shown: nothing here counts real rules, so a
+ * number would be invented.
+ */
+const NOTIFY_PRESETS = [
+  {
+    id: 'quiet',
+    tag: 'LIGHTEST',
+    name: 'Digest only',
+    note: 'Everything batches into the morning and evening digest. Nothing interrupts.',
+    quietFrom: '00:00',
+    quietTo: '23:59',
+    override: false,
+  },
+  {
+    id: 'balanced',
+    tag: 'RECOMMENDED',
+    name: 'Money and deadlines',
+    note: 'Quiet hours hold the rest; an urgent rule still breaks through.',
+    quietFrom: '22:00',
+    quietTo: '06:30',
+    override: true,
+  },
+  {
+    id: 'all',
+    tag: 'LOUDEST',
+    name: 'Tell me everything',
+    note: 'No quiet hours at all. Useful for the first week, then trim it.',
+    quietFrom: '00:00',
+    quietTo: '00:00',
+    override: true,
+  },
+] as const
 
 /**
  * Goals a fresh install can start from.
@@ -167,7 +226,14 @@ export function Onboarding({ data }: { data: SetupData }) {
     data.modules.filter((m) => m.enabled).map((m) => m.id),
   )
   const [picked, setPicked] = useState<string[]>([])
+  const [goalCfg, setGoalCfg] = useState<Record<string, { target?: string; deadline?: string }>>(
+    {},
+  )
   const [openCategory, setOpenCategory] = useState<string | null>(null)
+  const [connectSearch, setConnectSearch] = useState('')
+  const [manualOpen, setManualOpen] = useState(false)
+  const [manualValue, setManualValue] = useState('')
+  const [selectedPreset, setSelectedPreset] = useState<string | null>(null)
   const [done, setDone] = useState(data.completedAt !== '')
   const [pending, start] = useTransition()
   const toast = useToast()
@@ -192,25 +258,30 @@ export function Onboarding({ data }: { data: SetupData }) {
     run(() => saveSetting('modules_enabled', next))
   }
 
+  // A year out, so a starter goal has room to be wrong about its date without
+  // being overdue on the day it is created. The default the TARGET and BY
+  // WHEN inputs show, and what a goal falls back to if left blank or typed
+  // as something that does not parse.
+  const [defaultYear, defaultMonth, defaultDay] = data.todayIso.split('-').map(Number)
+  const defaultDeadline = `${defaultYear + 1}-${String(defaultMonth).padStart(2, '0')}-${String(defaultDay).padStart(2, '0')}`
+
   const finishUp = () =>
     start(async () => {
-      // A year out, so a starter goal has room to be wrong about its date
-      // without being overdue on the day it is created.
-      const [year, month, day] = data.todayIso.split('-').map(Number)
-      const deadline = `${year + 1}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-
       if (picked.length > 0 && data.hasGoals) {
-        const goals = STARTER_GOALS.filter((g) => picked.includes(g.title)).map((g) => ({
-          title: g.title,
-          area: g.area,
-          kind: g.kind,
-          unit: g.unit,
-          target_value: g.target_value,
-          deadline,
-          // Only when something really provides it. A goal pointed at a metric
-          // that does not exist would sit at zero forever looking broken.
-          metric_source: g.wants && metricIds.has(g.wants) ? g.wants : null,
-        }))
+        const goals = STARTER_GOALS.filter((g) => picked.includes(g.title)).map((g) => {
+          const typedTarget = Number((goalCfg[g.title]?.target ?? '').replace(/[^0-9.-]/g, ''))
+          return {
+            title: g.title,
+            area: g.area,
+            kind: g.kind,
+            unit: g.unit,
+            target_value: Number.isFinite(typedTarget) && typedTarget > 0 ? typedTarget : g.target_value,
+            deadline: goalCfg[g.title]?.deadline || defaultDeadline,
+            // Only when something really provides it. A goal pointed at a metric
+            // that does not exist would sit at zero forever looking broken.
+            metric_source: g.wants && metricIds.has(g.wants) ? g.wants : null,
+          }
+        })
         const seeded = await seedGoals(goals)
         if (!seeded.ok) toast(seeded.error)
       }
@@ -251,19 +322,33 @@ export function Onboarding({ data }: { data: SetupData }) {
 
   return (
     <WizardShell
-      railTitle="First run"
-      railLede="Six steps. Everything saves as you go, so you can stop anywhere."
-      steps={STEPS.map((s) => ({ key: s.key, name: s.name }))}
+      railTitle={`Set up in ${STEPS.length} steps`}
+      railLede="Nothing is shared. Every connection can be revoked later in Settings."
+      steps={STEPS.map((s) => ({ key: s.key, name: s.name, hint: s.hint }))}
       current={step}
       onStep={(key) => setStep(key as StepKey)}
-      kicker={stage.kicker}
+      kicker={
+        <span className="text-brand">
+          STEP {String(index + 1).padStart(2, '0')} / {STEPS.length}
+        </span>
+      }
       title={stage.question}
-      helper={stage.helper}
+      helper={
+        step === 'ready'
+          ? `The agent will do a full pass tonight at ${data.nightlyAt} and write its first digest for the morning.`
+          : stage.helper
+      }
       onBack={index > 0 ? () => setStep(STEPS[index - 1].key) : undefined}
       onSkip={index < STEPS.length - 1 ? () => setStep(STEPS[index + 1].key) : undefined}
       onNext={index === STEPS.length - 1 ? finishUp : () => setStep(STEPS[index + 1].key)}
-      nextLabel={index === STEPS.length - 1 ? 'Finish' : 'Continue'}
-      footnote={pending ? 'Saving.' : undefined}
+      nextLabel={index === STEPS.length - 1 ? 'Open the dashboard' : 'Continue'}
+      footnote={
+        pending
+          ? 'Saving.'
+          : index === STEPS.length - 1
+            ? 'Setup takes effect immediately'
+            : 'Everything is editable later'
+      }
     >
       {step === 'you' && (
         <div className="grid gap-4 sm:grid-cols-2">
@@ -295,85 +380,267 @@ export function Onboarding({ data }: { data: SetupData }) {
       )}
 
       {step === 'modules' && (
-        <RowList>
-          {data.modules.map((m) => (
-            <Row
-              key={m.id}
-              title={m.label}
-              meta={m.note}
-              muted={!enabled.includes(m.id)}
-              right={
-                <Switch
-                  label={`Show ${m.label}`}
-                  checked={enabled.includes(m.id)}
-                  onChange={() => toggleModule(m.id)}
-                />
-              }
-            />
-          ))}
-        </RowList>
-      )}
-
-      {step === 'connect' && (
-        <div className="space-y-3">
-          {data.categories.length === 0 ? (
-            <EmptyState headline="Nothing to connect">
-              None of the modules you kept read from an outside provider. You can still enter
-              everything by hand.
-            </EmptyState>
-          ) : (
-            data.categories.map((category) => (
-              <Card key={category.id} className="space-y-3">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setOpenCategory(openCategory === category.id ? null : category.id)
-                  }
-                  className="w-full text-left"
-                >
-                  <CardHead
-                    label={category.name}
-                    meta={openCategory === category.id ? 'Hide' : `${category.providers.length}`}
-                  />
-                  <p className="t-caption mt-1 text-ink-3">Gives you {category.data}.</p>
-                </button>
-
-                {openCategory === category.id && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {category.providers.map((provider) => {
-                      const on = requested.has(provider)
-                      return (
-                        <ActionButton
-                          key={provider}
-                          variant={on ? 'brand' : 'outline'}
-                          onClick={() =>
-                            run(
-                              () =>
-                                on
-                                  ? removeProvider(provider)
-                                  : requestProvider(provider, category.id),
-                              on ? undefined : `${provider} noted`,
-                            )
-                          }
-                        >
-                          {provider}
-                          {supported.has(provider) ? ' *' : ''}
-                        </ActionButton>
-                      )
-                    })}
-                  </div>
-                )}
-              </Card>
-            ))
-          )}
-
+        <div className="space-y-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,230px),1fr))] gap-2.5">
+            {data.modules.map((m, i) => {
+              const on = enabled.includes(m.id)
+              return (
+                <Card key={m.id} selected={on} className="p-0">
+                  <button
+                    type="button"
+                    onClick={() => toggleModule(m.id)}
+                    className="w-full p-4 text-left"
+                  >
+                    <span className="flex items-baseline justify-between gap-2.5">
+                      <span
+                        className={cn(
+                          'label text-[9px] tracking-[0.12em]',
+                          on ? 'text-brand' : 'text-ink-3',
+                        )}
+                      >
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <span
+                        className={cn(
+                          'label text-[9px] tracking-[0.1em]',
+                          on ? 'text-brand' : 'text-ink-3',
+                        )}
+                      >
+                        {on ? 'ON' : 'OFF'}
+                      </span>
+                    </span>
+                    <span className="mt-2.5 block text-[15px] text-ink">{m.label}</span>
+                    <span className="mt-1 block text-[11px] leading-[1.45] text-ink-3">
+                      {m.note}
+                    </span>
+                  </button>
+                </Card>
+              )
+            })}
+          </div>
           <p className="t-caption text-ink-3">
-            A star means a real integration exists and can sync it once you authorise it at
-            Settings. Everything else is recorded as a request, so it is written down and nothing
-            pretends to be connected.
+            {enabled.length} of {data.modules.length} on.{' '}
+            {data.categories.filter((c) => enabled.includes(c.module)).length} connector
+            categories unlock on the next step; the rest stay visible but greyed.
           </p>
         </div>
       )}
+
+      {step === 'connect' && (() => {
+        const connectQuery = connectSearch.trim().toLowerCase()
+        const searchResults = connectQuery
+          ? data.categories
+              .flatMap((category) =>
+                category.providers
+                  .filter((p) => p.toLowerCase().includes(connectQuery))
+                  .map((provider) => ({ provider, category })),
+              )
+              .slice(0, 12)
+          : []
+
+        const neededMissing = data.categories.filter(
+          (c) =>
+            NEEDED_CATEGORY_IDS.includes(c.id) &&
+            enabled.includes(c.module) &&
+            !c.providers.some((p) => requested.has(p)),
+        )
+
+        const requestedList = data.requested.map((name) => ({
+          name,
+          categoryLabel: data.categories.find((c) => c.providers.includes(name))?.name ?? 'Other',
+        }))
+
+        const providerButton = (provider: string, categoryId: string) => {
+          const on = requested.has(provider)
+          return (
+            <ActionButton
+              key={provider}
+              variant={on ? 'brand' : 'outline'}
+              onClick={() =>
+                run(
+                  () => (on ? removeProvider(provider) : requestProvider(provider, categoryId)),
+                  on ? undefined : `${provider} noted`,
+                )
+              }
+            >
+              {provider}
+              {supported.has(provider) ? ' *' : ''}
+            </ActionButton>
+          )
+        }
+
+        return (
+          <div className="space-y-3">
+            <input
+              value={connectSearch}
+              onChange={(e) => setConnectSearch(e.target.value)}
+              aria-label="Search every connector"
+              placeholder="Search every connector, Chase, Amex, Delta, Whoop..."
+              className={cn(fieldClass, 'w-full')}
+            />
+
+            {connectQuery && (
+              <Card className="space-y-2">
+                <Eyebrow>Matches · {searchResults.length}</Eyebrow>
+                {searchResults.length === 0 ? (
+                  <p className="t-caption text-ink-3">
+                    Nothing matches. Open the closest category below and add it manually.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {searchResults.map(({ provider, category }) =>
+                      providerButton(provider, category.id),
+                    )}
+                  </div>
+                )}
+              </Card>
+            )}
+
+            {requestedList.length > 0 && (
+              <Card className="space-y-2 border-brand bg-brand-soft">
+                <Eyebrow>Requested · {requestedList.length}</Eyebrow>
+                <div className="flex flex-wrap gap-1.5">
+                  {requestedList.map(({ name }) => (
+                    <ActionButton
+                      key={name}
+                      variant="brand"
+                      onClick={() => run(() => removeProvider(name))}
+                    >
+                      {name}
+                    </ActionButton>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {data.categories.length === 0 ? (
+              <EmptyState headline="Nothing to connect">
+                None of the modules you kept read from an outside provider. You can still enter
+                everything by hand.
+              </EmptyState>
+            ) : (
+              data.categories.map((category) => {
+                const moduleOn = enabled.includes(category.module)
+                const moduleLabel = data.modules.find((m) => m.id === category.module)?.label ?? category.module
+                const displayName = withAmpersand(category.name)
+                const subLine = `Feeds ${moduleLabel} · ${listify(category.data)}`
+
+                // A category whose module is off stays visible, greyed, with
+                // an inline way to turn that module on, rather than
+                // disappearing or opening.
+                if (!moduleOn) {
+                  return (
+                    <Card key={category.id} className="border-dashed bg-transparent">
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                        <span className="text-[15px] text-ink-3">{displayName}</span>
+                        <span className="flex items-center gap-2.5">
+                          <span className="label text-[9px] tracking-[0.1em] text-ink-3">
+                            {moduleLabel} module off
+                          </span>
+                          <ActionButton variant="outline" onClick={() => toggleModule(category.module)}>
+                            Add {moduleLabel} module
+                          </ActionButton>
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[11px] text-ink-3">{subLine}</p>
+                    </Card>
+                  )
+                }
+
+                const requestedCount = category.providers.filter((p) => requested.has(p)).length
+                const needed = NEEDED_CATEGORY_IDS.includes(category.id) && requestedCount === 0
+                const open = openCategory === category.id
+
+                return (
+                  <Card key={category.id} className="space-y-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenCategory(open ? null : category.id)
+                        setManualOpen(false)
+                      }}
+                      className="w-full text-left"
+                    >
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                        <span className="flex items-baseline gap-2">
+                          <span className="text-[15px] text-ink">{displayName}</span>
+                          {needed && (
+                            <span className="label border border-amber px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-amber">
+                              Needed
+                            </span>
+                          )}
+                        </span>
+                        <span className="flex items-center gap-2">
+                          <span
+                            className={cn(
+                              'label text-[9px] tracking-[0.1em]',
+                              requestedCount > 0 ? 'text-brand' : 'text-ink-3',
+                            )}
+                          >
+                            {requestedCount > 0
+                              ? `${requestedCount} requested`
+                              : `${category.providers.length} available`}
+                          </span>
+                          <span className="text-ink-3">{open ? '▴' : '▾'}</span>
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[11px] text-ink-3">{subLine}</p>
+                    </button>
+
+                    {open && (
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap gap-1.5">
+                          {category.providers.map((provider) => providerButton(provider, category.id))}
+                        </div>
+
+                        {manualOpen ? (
+                          <div className="flex flex-wrap gap-2">
+                            <input
+                              value={manualValue}
+                              onChange={(e) => setManualValue(e.target.value)}
+                              aria-label="Name of the institution"
+                              placeholder="Name of the institution"
+                              className={cn(fieldClass, 'flex-1')}
+                            />
+                            <ActionButton
+                              variant="solid"
+                              onClick={() => {
+                                const name = manualValue.trim()
+                                if (!name) return
+                                run(() => requestProvider(name, category.id), `${name} noted`)
+                                setManualValue('')
+                                setManualOpen(false)
+                              }}
+                            >
+                              Add
+                            </ActionButton>
+                          </div>
+                        ) : (
+                          <ActionButton variant="outline" onClick={() => setManualOpen(true)}>
+                            Add manually
+                          </ActionButton>
+                        )}
+                      </div>
+                    )}
+                  </Card>
+                )
+              })
+            )}
+
+            <p className="t-caption text-ink-3">
+              {neededMissing.length > 0
+                ? `${neededMissing.map((c) => withAmpersand(c.name)).join(' and ')} carry the numbers behind Finance and Goals. Without at least one in each, those tiles open empty.`
+                : `${requested.size} requested across ${data.categories.filter((c) => c.providers.some((p) => requested.has(p))).length} categories. Add the rest any time from Settings, Connections.`}
+            </p>
+
+            <p className="t-caption text-ink-3">
+              A star means a real integration exists and can sync it once you authorise it at
+              Settings. Everything else is recorded as a request, so it is written down and nothing
+              pretends to be connected.
+            </p>
+          </div>
+        )
+      })()}
 
       {step === 'goals' && (
         <div className="space-y-3">
@@ -385,12 +652,15 @@ export function Onboarding({ data }: { data: SetupData }) {
             <RowList>
               {STARTER_GOALS.map((g) => {
                 const computable = g.wants !== null && metricIds.has(g.wants)
+                const on = picked.includes(g.title)
+                const setCfg = (key: 'target' | 'deadline', value: string) =>
+                  setGoalCfg((prev) => ({ ...prev, [g.title]: { ...prev[g.title], [key]: value } }))
                 return (
                   <Row
                     key={g.title}
                     title={g.title}
                     meta={g.blurb}
-                    selected={picked.includes(g.title)}
+                    selected={on}
                     right={
                       <>
                         {g.wants && (
@@ -399,34 +669,83 @@ export function Onboarding({ data }: { data: SetupData }) {
                           </Chip>
                         )}
                         <ActionButton
-                          variant={picked.includes(g.title) ? 'brand' : 'outline'}
+                          variant={on ? 'brand' : 'outline'}
                           onClick={() =>
-                            setPicked(
-                              picked.includes(g.title)
-                                ? picked.filter((t) => t !== g.title)
-                                : [...picked, g.title],
-                            )
+                            setPicked(on ? picked.filter((t) => t !== g.title) : [...picked, g.title])
                           }
                         >
-                          {picked.includes(g.title) ? 'Picked' : 'Add'}
+                          {on ? 'Picked' : 'Add'}
                         </ActionButton>
                       </>
                     }
-                  />
+                  >
+                    {on && (
+                      <div className="mt-3.5 flex flex-wrap gap-3.5 border-t border-rule pt-3.5">
+                        <label className="flex min-w-[130px] flex-1 flex-col gap-1.5">
+                          <Eyebrow>Target ({g.unit})</Eyebrow>
+                          <input
+                            aria-label={`${g.title} target`}
+                            defaultValue={String(g.target_value)}
+                            onChange={(e) => setCfg('target', e.target.value)}
+                            className={cn(fieldClass, 'w-full')}
+                          />
+                        </label>
+                        <label className="flex min-w-[150px] flex-1 flex-col gap-1.5">
+                          <Eyebrow>By when</Eyebrow>
+                          <input
+                            type="date"
+                            aria-label={`${g.title} deadline`}
+                            defaultValue={goalCfg[g.title]?.deadline ?? defaultDeadline}
+                            onChange={(e) => setCfg('deadline', e.target.value)}
+                            className={cn(fieldClass, 'w-full')}
+                          />
+                        </label>
+                      </div>
+                    )}
+                  </Row>
                 )
               })}
             </RowList>
           )}
           <p className="t-caption text-ink-3">
-            These are written when you finish, not now, so changing your mind costs nothing. A goal
-            whose metric is not installed is created for hand check-ins rather than pointed at
-            something that would never compute.
+            {picked.length > 0
+              ? `${picked.length} picked. Written when you finish, not now; anything computed updates nightly, manual goals only move when you check in.`
+              : 'You can start with none, but the Goals tile stays empty until something is seeded.'}
           </p>
         </div>
       )}
 
       {step === 'notify' && (
-        <div className="grid gap-5 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,210px),1fr))]">
+        <div className="space-y-5">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,210px),1fr))] gap-3.5">
+            {NOTIFY_PRESETS.map((p) => (
+              <Card key={p.id} selected={selectedPreset === p.id} className="p-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedPreset(p.id)
+                    run(async () => {
+                      const results = await Promise.all([
+                        saveSetting('quiet_from', p.quietFrom),
+                        saveSetting('quiet_to', p.quietTo),
+                        saveSetting('quiet_urgent_override', p.override),
+                      ])
+                      return results.find((r) => !r.ok) ?? { ok: true }
+                    })
+                  }}
+                  className="w-full p-4 text-left"
+                >
+                  <Eyebrow>{p.tag}</Eyebrow>
+                  <span className="mt-3 block text-[16px] tracking-[-0.01em] text-ink">
+                    {p.name}
+                  </span>
+                  <span className="mt-2 block text-[12px] leading-[1.5] text-ink-3">{p.note}</span>
+                </button>
+              </Card>
+            ))}
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,210px),1fr))]">
           <div className="space-y-2">
             <Eyebrow>Morning digest</Eyebrow>
             <div className="flex items-center gap-2.5">
@@ -467,6 +786,7 @@ export function Onboarding({ data }: { data: SetupData }) {
             <Eyebrow>Quiet hours</Eyebrow>
             <div className="flex flex-wrap items-center gap-2">
               <input
+                key={data.schedule.quietFrom}
                 type="time"
                 aria-label="Quiet hours start"
                 defaultValue={data.schedule.quietFrom}
@@ -475,6 +795,7 @@ export function Onboarding({ data }: { data: SetupData }) {
               />
               <span className="t-caption text-ink-3">to</span>
               <input
+                key={data.schedule.quietTo}
                 type="time"
                 aria-label="Quiet hours end"
                 defaultValue={data.schedule.quietTo}
@@ -491,41 +812,76 @@ export function Onboarding({ data }: { data: SetupData }) {
               {data.schedule.urgentOverride ? 'Urgent breaks through' : 'Nothing breaks through'}
             </ActionButton>
           </div>
-        </div>
-      )}
-
-      {step === 'ready' && (
-        <div className="space-y-4">
-          <RowList>
-            <Row title="Called" meta="What the app calls you" right={<span className="t-caption text-ink-2">{data.ownerName || 'not set'}</span>} />
-            <Row title="Timezone" meta="Decides what today means" right={<span className="t-caption text-ink-2">{data.timezone}</span>} />
-            <Row
-              title="Modules"
-              meta="Visible in the nav"
-              right={<span className="t-caption text-ink-2">{enabled.length} of {data.modules.length}</span>}
-            />
-            <Row
-              title="Connections"
-              meta="Recorded as requests until authorised"
-              right={<span className="t-caption text-ink-2">{data.requested.length}</span>}
-            />
-            <Row
-              title="Goals"
-              meta="Written when you finish"
-              right={<span className="t-caption text-ink-2">{picked.length}</span>}
-            />
-          </RowList>
-
-          <div className="space-y-2 rounded-md border border-rule-2 p-3.5">
-            <StatusChip tone="brand">What happens next</StatusChip>
-            <p className="t-caption text-ink-3">
-              Finishing writes the goals you picked and marks first run done. The nightly job then
-              runs on its own schedule: it snapshots what it can reach, writes each module a digest,
-              and sends one email. Nothing here is permanent.
-            </p>
           </div>
         </div>
       )}
+
+      {step === 'ready' && (() => {
+        const onLabels = data.modules.filter((m) => enabled.includes(m.id)).map((m) => m.label)
+        const presetName = NOTIFY_PRESETS.find((p) => p.id === selectedPreset)?.name ?? 'Custom'
+        const rows: { key: string; value: string; jump: StepKey }[] = [
+          { key: 'NAME', value: `${data.ownerName || 'not set'} · ${data.timezone}`, jump: 'you' },
+          { key: 'MODULES', value: `${enabled.length} on · ${onLabels.join(', ')}`, jump: 'modules' },
+          {
+            key: 'CONNECTED',
+            value: data.requested.length
+              ? `Requested: ${data.requested.join(', ')}`
+              : 'Nothing yet, the dashboard will be empty',
+            jump: 'connect',
+          },
+          {
+            key: 'GOALS',
+            value: picked.length
+              ? STARTER_GOALS.filter((g) => picked.includes(g.title)).map((g) => g.title).join(', ')
+              : 'None seeded',
+            jump: 'goals',
+          },
+          {
+            key: 'ALERTS',
+            value: `${presetName} · quiet ${data.schedule.quietFrom}–${data.schedule.quietTo}${data.schedule.urgentOverride ? ' with urgent override' : ''}`,
+            jump: 'notify',
+          },
+        ]
+
+        return (
+          <div className="space-y-5">
+            <div className="space-y-2 border border-brand bg-brand-soft p-4">
+              <Eyebrow>First run</Eyebrow>
+              <p className="text-[14px] leading-[1.55] text-ink">
+                Tonight at {data.nightlyAt} the agent classifies what it finds and writes the{' '}
+                {data.nightlyAt} digest. A requested connection does not sync until you authorise
+                it at Settings. Everything it changes is logged in the Agent Log with one-click
+                undo.
+              </p>
+            </div>
+
+            <div>
+              <Eyebrow>Summary</Eyebrow>
+              {rows.map((row) => (
+                <div
+                  key={row.key}
+                  className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-rule py-3"
+                >
+                  <span className="label w-[110px] shrink-0 text-[10px] tracking-[0.12em] text-ink-3">
+                    {row.key}
+                  </span>
+                  <span className="min-w-0 flex-1 text-[14px] leading-[1.45] text-ink">
+                    {row.value}
+                  </span>
+                  <ActionButton variant="quiet" onClick={() => setStep(row.jump)}>
+                    Change
+                  </ActionButton>
+                </div>
+              ))}
+            </div>
+
+            <p className="t-caption text-ink-3">
+              Nothing here is locked in. Connections, modules and rules all live in Settings once
+              you are inside.
+            </p>
+          </div>
+        )
+      })()}
     </WizardShell>
   )
 }
