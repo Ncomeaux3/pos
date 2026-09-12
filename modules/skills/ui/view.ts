@@ -42,7 +42,7 @@ export function zoomStep(
   at: { x: number; y: number },
 ): View {
   const lines = deltaMode === 1 ? 16 : 1
-  return zoomBy(view, Math.exp(-deltaY * lines * 0.0015), at)
+  return zoomBy(view, Math.exp(-deltaY * lines * 0.003), at)
 }
 
 /** The view zoomed by a factor about a point, clamped. Double-click uses 1.5. */
@@ -67,4 +67,20 @@ export function zoomBy(view: View, factor: number, at: { x: number; y: number })
  */
 export function labelScale(zoom: number): number {
   return Math.min(1.6, Math.max(0.6, Math.pow(1 / zoom, 0.7)))
+}
+
+/** How long a double-click takes to arrive, in milliseconds. */
+export const FLY_MS = 250
+
+/**
+ * Where a fly-to is at time t in [0, 1]: eased out, so it leaves fast and
+ * settles. t = 0 is `from` and t = 1 is exactly `to`, so the last frame lands
+ * on the target rather than a rounding error short of it.
+ */
+export function flyAt(from: View, to: View, t: number): View {
+  const k = 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3)
+  return {
+    zoom: from.zoom + (to.zoom - from.zoom) * k,
+    pan: { x: from.pan.x + (to.pan.x - from.pan.x) * k, y: from.pan.y + (to.pan.y - from.pan.y) * k },
+  }
 }

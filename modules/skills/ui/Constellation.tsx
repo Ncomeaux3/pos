@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import type { SkillStat } from '../data'
 import type { SkillNode } from '../tree'
 import { layout, nodeRadius, ROOT_ID, VIEW_H, VIEW_W, type Placed } from './layout'
-import { labelScale, viewPoint, zoomBy, zoomStep, ZOOM_MAX, type View } from './view'
+import { FLY_MS, flyAt, labelScale, viewPoint, zoomBy, zoomStep, ZOOM_MAX, type View } from './view'
 
 // Obsidian style, but placed rather than simulated: see ./layout.ts.
 
@@ -129,6 +129,7 @@ export function Constellation({
   const view = useRef<View>(HOME)
   const group = useRef<SVGGElement>(null)
   const frame = useRef(0)
+  const still = useRef(0)
   const apply = useCallback(() => {
     if (frame.current) return
     frame.current = requestAnimationFrame(() => {
@@ -141,7 +142,35 @@ export function Constellation({
       // Zoomed out far enough that a leaf's own name is already crowding its
       // neighbours, the second line comes off (a CSS rule on this attribute).
       g.toggleAttribute('data-far', zoom < 0.91)
+      // The glow filters cost 25ms a frame at Retina scale, against 8ms
+      // without them, so they come off while the view is in motion (a CSS
+      // rule on this attribute) and back the moment it has been still.
+      g.setAttribute('data-moving', '')
+      clearTimeout(still.current)
+      still.current = window.setTimeout(() => g.removeAttribute('data-moving'), 120)
     })
+  }, [])
+  /** A double-click flies rather than cuts: the view eased to a target over
+   * FLY_MS, one frame at a time. Any wheel or drag cancels it. */
+  const flight = useRef(0)
+  const fly = useCallback(
+    (to: View) => {
+      cancelAnimationFrame(flight.current)
+      const from = view.current
+      const began = performance.now()
+      const step = (now: number) => {
+        const t = (now - began) / FLY_MS
+        view.current = flyAt(from, to, t)
+        apply()
+        flight.current = t < 1 ? requestAnimationFrame(step) : 0
+      }
+      flight.current = requestAnimationFrame(step)
+    },
+    [apply],
+  )
+  const settle = useCallback(() => {
+    cancelAnimationFrame(flight.current)
+    flight.current = 0
   }, [])
   const [hover, setHover] = useState<{ node: Placed; x: number; y: number } | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
@@ -172,6 +201,7 @@ export function Constellation({
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
+      settle()
       view.current = zoomStep(view.current, e.deltaY, e.deltaMode, viewPoint(el, e.clientX, e.clientY))
       apply()
     }
@@ -181,8 +211,10 @@ export function Constellation({
       el.removeEventListener('wheel', onWheel)
       cancelAnimationFrame(frame.current)
       frame.current = 0
+      settle()
+      clearTimeout(still.current)
     }
-  }, [apply])
+  }, [apply, settle])
 
   const edges = placed.filter((p) => p.id !== ROOT_ID)
   const positionOf = (id: string) => placed.find((p) => p.id === id)
@@ -252,6 +284,7 @@ export function Constellation({
         viewBox={`${-VIEW_W / 2} ${-VIEW_H / 2} ${VIEW_W} ${VIEW_H}`}
         className="absolute inset-0 h-full w-full cursor-grab touch-none select-none active:cursor-grabbing"
         onPointerDown={(e) => {
+          settle()
           const { pan } = view.current
           drag.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y, panning: false }
           panned.current = false
@@ -296,8 +329,7 @@ export function Constellation({
           onSelect(null)
         }}
         onDoubleClick={(e) => {
-          view.current = zoomBy(view.current, 1.5, viewPoint(e.currentTarget, e.clientX, e.clientY))
-          apply()
+          fly(zoomBy(view.current, 1.5, viewPoint(e.currentTarget, e.clientX, e.clientY)))
         }}
       >
         <defs>
@@ -413,11 +445,10 @@ export function Constellation({
                 onDoubleClick={(e) => {
                   e.stopPropagation()
                   const z = view.current.zoom
-                  view.current = {
+                  fly({
                     zoom: Math.min(ZOOM_MAX, Math.max(1.6, z * 1.5)),
                     pan: { x: -node.x, y: -node.y },
-                  }
-                  apply()
+                  })
                 }}
                 onDragOver={(e) => {
                   if (isRoot || !onReassign) return

@@ -297,16 +297,20 @@ test('skill tree, a trackpad burst zooms smoothly and the main stars are blue', 
 
   // A trackpad sends many small deltas inside one frame. Thirty of them,
   // dispatched back to back with no chance for React to commit in between,
-  // must land where the sum of the deltas says: base * exp(240 * 0.0015). A
+  // must land where the sum of the deltas says: base * exp(240 * 0.003). A
   // handler that reads a stale zoom applies every one of them to the same
   // base and lands one step up instead, which is the jump you feel.
   await svg.evaluate(burst, { ...at, n: 30 })
   await expect.poll(scaleOf).toBeGreaterThan(base)
-  await page.waitForTimeout(200)
+  // While the view moves the group carries data-moving and the glow filters
+  // are off: 25ms a frame with them at Retina scale, 8ms without. It clears
+  // once the view has been still.
+  await expect(group).toHaveAttribute('data-moving', '')
+  await expect(group).not.toHaveAttribute('data-moving', '')
 
   const ratio = (await scaleOf()) / base
-  expect(ratio).toBeGreaterThan(Math.exp(240 * 0.0015) * 0.98)
-  expect(ratio).toBeLessThan(Math.exp(240 * 0.0015) * 1.02)
+  expect(ratio).toBeGreaterThan(Math.exp(240 * 0.003) * 0.98)
+  expect(ratio).toBeLessThan(Math.exp(240 * 0.003) * 1.02)
   expect(await page.evaluate(() => window.scrollY)).toBe(0)
 
   // The svg is absolutely positioned, as the artboard's is. In flow with a
@@ -358,6 +362,27 @@ test('skill tree, the constellation hovers, selects, pans and zooms', async ({ p
   await page.mouse.wheel(0, 240)
   const back = (await star.boundingBox())!
   expect(Math.abs(back.x - before.x)).toBeLessThan(2)
+
+  // Double-click flies to the star over 250ms rather than cutting: the view
+  // is somewhere between the two a frame later, and centred on the star once
+  // it has landed.
+  const svg = page.getByRole('img', { name: 'Skill constellation' })
+  const group = svg.locator('> g').last()
+  const scaleOf = async () =>
+    Number(/scale\(([\d.]+)\)/.exec((await group.getAttribute('transform')) ?? '')?.[1])
+  const z0 = await scaleOf()
+  await star.dblclick({ force: true })
+  await page.waitForTimeout(60)
+  const mid = await scaleOf()
+  expect(mid).toBeGreaterThan(z0)
+  expect(mid).toBeLessThan(Math.max(1.6, z0 * 1.5) * 0.99)
+  await expect.poll(scaleOf).toBeCloseTo(Math.max(1.6, z0 * 1.5), 6)
+  // The body circle, not the group: the group's box takes in the label
+  // under the star and sits low of it.
+  const svgBox = (await svg.boundingBox())!
+  const landed = (await star.locator('circle').nth(2).boundingBox())!
+  expect(Math.abs(landed.x + landed.width / 2 - (svgBox.x + svgBox.width / 2))).toBeLessThan(4)
+  expect(Math.abs(landed.y + landed.height / 2 - (svgBox.y + svgBox.height / 2))).toBeLessThan(4)
   expect(Math.abs(back.y - before.y)).toBeLessThan(2)
 
   // Dragging pans and does not select: a pan that ends on a star is not a

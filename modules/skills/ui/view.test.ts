@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { labelScale, zoomStep, ZOOM_MAX, ZOOM_MIN, type View } from './view'
+import { flyAt, labelScale, zoomStep, ZOOM_MAX, ZOOM_MIN, type View } from './view'
 
 // The constellation's zoom is a group transform scale(z) translate(p). These
 // pin the arithmetic the wheel handler applies per event, so a burst of
@@ -44,6 +44,12 @@ describe('zoomStep', () => {
     expect(v.zoom).toBeCloseTo(zoomStep(start, -240, 0, at).zoom, 9)
   })
 
+  it('doubles the zoom in about 230 pixels of scroll', () => {
+    // 0.003 per pixel: exp(231 * 0.003) is 2. Half what it was, which felt
+    // like scrolling for ever.
+    expect(zoomStep(start, -231, 0, { x: 0, y: 0 }).zoom).toBeCloseTo(2, 2)
+  })
+
   it('reads a wheel notch (deltaMode 1) as sixteen pixels', () => {
     const at = { x: 0, y: 0 }
     expect(zoomStep(start, -1, 1, at).zoom).toBeCloseTo(zoomStep(start, -16, 0, at).zoom, 12)
@@ -56,5 +62,19 @@ describe('labelScale', () => {
     expect(labelScale(2)).toBeCloseTo(Math.pow(0.5, 0.7), 9)
     expect(labelScale(0.1)).toBe(1.6)
     expect(labelScale(10)).toBe(0.6)
+  })
+})
+
+describe('flyAt', () => {
+  const to: View = { zoom: 2.4, pan: { x: -300, y: 90 } }
+
+  it('starts at from and lands exactly on to', () => {
+    expect(flyAt(start, to, 0)).toEqual(start)
+    expect(flyAt(start, to, 1)).toEqual(to)
+    expect(flyAt(start, to, 1.5)).toEqual(to)
+  })
+
+  it('eases out: more than half way at half time', () => {
+    expect(flyAt(start, to, 0.5).zoom).toBeGreaterThan((start.zoom + to.zoom) / 2)
   })
 })
