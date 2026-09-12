@@ -2,6 +2,8 @@ import { z } from 'zod'
 import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
+import { callTool } from '@/core/tools'
+import { deleteIdea } from './data'
 import { nightlyDigest } from './jobs/nightly-digest'
 import { researchIdea } from './jobs/research'
 import IdeasPage from './ui/IdeasPage'
@@ -33,6 +35,7 @@ export default defineModule({
         impact: level.optional(),
         killed_reason: z.string().max(1000).optional(),
         goal_ref: z.uuid().nullable().optional(),
+        tags: z.array(z.string().min(1).max(40)).max(20).optional(),
       }),
       run: async (input) => {
         if (input.id) {
@@ -69,8 +72,8 @@ export default defineModule({
         if (!input.title) throw new Error('An idea needs a title')
 
         const { rows } = await db().query<{ id: string }>(
-          `insert into ideas.idea (title, pitch, notes, stage, effort, impact, goal_ref)
-           values ($1, $2, $3, $4, $5, $6, $7)
+          `insert into ideas.idea (title, pitch, notes, stage, effort, impact, goal_ref, tags)
+           values ($1, $2, $3, $4, $5, $6, $7, $8)
            returning id`,
           [
             input.title,
@@ -80,6 +83,7 @@ export default defineModule({
             input.effort ?? 2,
             input.impact ?? 2,
             input.goal_ref ?? null,
+            input.tags ?? [],
           ],
         )
 
@@ -88,13 +92,93 @@ export default defineModule({
           entityType: 'idea',
           entityId: rows[0].id,
           title: input.title,
-          text: input.pitch,
+          text: [input.pitch, input.notes, (input.tags ?? []).join(' ')].filter(Boolean).join('\n'),
           eventType: 'idea_captured',
         })
 
         return { id: rows[0].id }
       },
     }),
+
+    merge: defineTool({
+      description:
+        'Fold one idea into another: the kept idea gains the pitch and tags, the other is killed with the reason.',
+      input: z.object({ keep: z.uuid(), drop: z.uuid() }),
+      run: async ({ keep, drop }) => {
+        const { rows } = await db().query<{ title: string; pitch: string; tags: string[] }>(
+          `select title, pitch, tags from ideas.idea where id = $1`,
+          [drop],
+        )
+        const other = rows[0]
+        if (!other) throw new Error('Nothing to merge')
+        const { rows: kept } = await db().query<{ title: string }>(
+          `update ideas.idea
+              set pitch = case when $2 = '' then pitch else trim(pitch || ' ' || $2) end,
+                  tags = (select array_agg(distinct t) from unnest(tags || $3::text[]) t)
+            where id = $1 returning title`,
+          [keep, other.pitch, other.tags],
+        )
+        await db().query(
+          `update ideas.idea set stage = 'killed', stage_since = now(), killed_reason = $2 where id = $1`,
+          [drop, `Merged into ${kept[0]?.title ?? 'another idea'}`],
+        )
+        return { keep, drop }
+      },
+    }),
+
+    draft_task: defineTool({
+      description:
+        'Draft a validation task for an idea. The task is written as an agent would write it, so it lands in review.',
+      input: z.object({ id: z.uuid() }),
+      run: async ({ id }) => {
+        const { rows } = await db().query<{
+          title: string
+          pitch: string
+          notes: string
+          stage: string
+          goal_ref: string | null
+        }>(`select title, pitch, notes, stage, goal_ref from ideas.idea where id = $1`, [id])
+        const idea = rows[0]
+        if (!idea) throw new Error('No such idea')
+
+        const title =
+          idea.stage === 'exploring'
+            ? `Validate: ${idea.title} · 30m`
+            : `Next step: ${idea.title} · 45m`
+        // Through the tool registry, as an agent: that is what puts the task in
+        // Tasks' review state (or the Review inbox under observe), and the
+        // only way one module reaches another.
+        const result = await callTool(
+          'tasks',
+          'write',
+          {
+            title,
+            notes: [idea.pitch, idea.notes, `From the idea: ${idea.title}`].filter(Boolean).join('\n\n'),
+            estimated_minutes: idea.stage === 'exploring' ? 30 : 45,
+            goal_ref: idea.goal_ref,
+          },
+          { source: 'agent', agent: 'ideas', title: `Draft a task for ${idea.title}` },
+        )
+        const taskId =
+          result.status === 'done' ? ((result.result as { id?: string }).id ?? null) : null
+        await db().query(`update ideas.idea set draft_task_id = $2, draft_title = $3 where id = $1`, [
+          id,
+          taskId,
+          title,
+        ])
+        return { id, task_id: taskId, proposed: result.status === 'proposed' }
+      },
+    }),
+
+    delete: defineTool({
+      description: 'Delete an idea and its registry row. Killing keeps it; this does not.',
+      input: z.object({ id: z.uuid() }),
+      run: async ({ id }) => {
+        await deleteIdea(id)
+        return { id }
+      },
+    }),
+
     research: defineTool({
       description:
         'Run the research rubric over an idea with web search. Spends money: a cent a search plus tokens.',
@@ -119,7 +203,7 @@ export default defineModule({
    * night would be inside the monthly cap and still wrong. The owner pressing
    * the button is the approval; an agent asking lands in the Review inbox.
    */
-  guarded: ['research'],
+  guarded: ['research', 'delete'],
   requires: [],
 
   metrics: {

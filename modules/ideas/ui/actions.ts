@@ -19,11 +19,57 @@ function done(): ActionResult {
   return { ok: true }
 }
 
-export async function captureIdea(title: string): Promise<ActionResult> {
+export type IdeaInput = {
+  id?: string
+  title?: string
+  pitch?: string
+  notes?: string
+  stage?: 'exploring' | 'validated' | 'building' | 'killed'
+  effort?: number
+  impact?: number
+  killed_reason?: string
+  goal_ref?: string | null
+  tags?: string[]
+}
+
+/** Create or update an idea in one write. The capture line and the form both land here. */
+export async function saveIdea(input: IdeaInput): Promise<ActionResult> {
   await requireOwner()
-  if (!title.trim()) return { ok: false, error: 'An idea needs a title' }
+  if (!input.id && !input.title?.trim()) return { ok: false, error: 'An idea needs a title' }
   try {
-    await callTool('ideas', 'write', { title: title.trim() }, { source: 'ui' })
+    await callTool('ideas', 'write', input, { source: 'ui' })
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+export async function deleteIdea(id: string): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    await callTool('ideas', 'delete', { id }, { source: 'ui' })
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+export async function mergeIdeas(keep: string, drop: string): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    await callTool('ideas', 'merge', { keep, drop }, { source: 'ui' })
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+/** Draft the validation task. The tool writes it as an agent, so it lands in review. */
+export async function draftTask(id: string): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    await callTool('ideas', 'draft_task', { id }, { source: 'ui' })
+    revalidatePath('/tasks')
     return done()
   } catch (error) {
     return failed(error)

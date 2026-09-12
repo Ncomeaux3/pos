@@ -30,7 +30,7 @@ export function quadrant(effort: Level, impact: Level): Quadrant {
 export const QUADRANT_LABELS: Record<Quadrant, string> = {
   'quick-win': 'Quick win',
   'big-bet': 'Big bet',
-  filler: 'Filler',
+  filler: 'Fill-in',
   'money-pit': 'Money pit',
 }
 
@@ -61,4 +61,37 @@ export function boardOrder<T extends { effort: Level; impact: Level }>(ideas: T[
     if (a.impact !== b.impact) return b.impact - a.impact
     return a.effort - b.effort
   })
+}
+
+export const LEVEL_WORDS: Record<string, Level> = { low: 1, med: 2, medium: 2, high: 3 }
+
+export type Capture = { title: string; tags: string[]; effort: Level; impact: Level }
+
+/**
+ * The capture line: "#tags" are tags, "effort:low" and "impact:high" are the
+ * scores, and whatever is left is the title. Medium by default on both axes,
+ * because the board is where they get set properly.
+ */
+export function parseCapture(raw: string): Capture {
+  const tags: string[] = []
+  let effort: Level = 2
+  let impact: Level = 2
+  let text = raw.replace(/#(\w+)/g, (_, t: string) => {
+    tags.push(t.toLowerCase())
+    return ''
+  })
+  text = text.replace(/\beffort:(low|med|medium|high)\b/i, (_, v: string) => {
+    effort = LEVEL_WORDS[v.toLowerCase()]
+    return ''
+  })
+  text = text.replace(/\bimpact:(low|med|medium|high)\b/i, (_, v: string) => {
+    impact = LEVEL_WORDS[v.toLowerCase()]
+    return ''
+  })
+  return { title: text.replace(/\s+/g, ' ').trim(), tags: [...new Set(tags)], effort, impact }
+}
+
+/** The artboard's column order: impact twice over effort, higher first. */
+export function boardScore(idea: { effort: Level; impact: Level }): number {
+  return idea.impact * 2 - idea.effort
 }
