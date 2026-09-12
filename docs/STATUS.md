@@ -3,8 +3,8 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
-Last updated: 2026-09-11, the Weekly Review, Dashboard, Finance and Skill Tree
-fidelity passes and the rail to PosSidebar. Branch `main`.
+Last updated: 2026-09-11, the Weekly Review, Dashboard, Finance, Skill Tree and
+Travel fidelity passes and the rail to PosSidebar. Branch `main`.
 
 ## Done
 
@@ -24,6 +24,22 @@ bundle landed 2026-09-07 and steps 0, 7.5 and 8 to 14 followed.
 | 13 | `pnpm setup` and `pnpm setup:demo`, both idempotent |
 | 14 | CI and backup workflows, restore drilled |
 | 16 | Docs squared up: README quickstart, connections registry, the notes module README |
+
+**The fidelity pass, screen five: Travel.** docs/plans/travel-fidelity.md.
+The artboard's page: band with the summary, the loyalty strip with Manage
+(a drawer with the balances and the cents-per-point calculator), the title
+with Add to wishlist and New trip, the globe with the continents as a dot
+matrix (`modules/travel/land.json`, 4,859 points sampled once from Natural
+Earth by `scripts/land-dots.mts`; no d3 at runtime), pins by status, legend
+and controls, an alert slot fed by travel notifications; Upcoming as cards
+with booking segments and the next step; Past beside Wishlist (trips with
+status idea). The trip drawer at 560px: Itinerary by day with inline edit
+and a parsed add line, Budget with per-category lines (migration
+`20260911230000_travel_budget_lines`, actuals from the confirmed itinerary
+by kind), Packing with add and tick, Inbox; Edit details, the forms, Delete
+trip. New tools: write_budget_line, delete_budget_line, write_packing,
+delete_item, delete_trip (guarded). Not drawn for want of a source: the HOME
+pin, a fare alert, the packing suggester.
 
 **The fidelity pass, screen four: Skill Tree.** docs/plans/skill-tree-fidelity.md.
 Two flush halves split by one rule under a 56px band (crumb, scoped search,
