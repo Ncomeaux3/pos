@@ -3,11 +3,12 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
-Last updated: 2026-09-12, eleven fidelity passes (Weekly Review, Dashboard,
-Finance, Skill Tree, Travel, Tasks, Goals, Ideas, then Second Brain, Insurance
-and Meals as the first parallel batch) and the rail to PosSidebar. Branch
-`main`. Sixteen screens remain: Fitness, Health, Home, Review, Notifications,
-Agent Log, Settings, Search, Login, Onboarding, Mobile and the phone views.
+Last updated: 2026-09-12, twelve fidelity passes (Weekly Review, Dashboard,
+Finance, Skill Tree, Travel, Tasks, Goals, Ideas, Health, then Second Brain,
+Insurance and Meals as the first parallel batch) and the rail to PosSidebar.
+Branch `main`. Fitness, Home and Review are in flight in another session
+(`.worktrees/`). Remaining after those: Notifications, Agent Log, Settings,
+Search, Login, Onboarding, Mobile and the phone views.
 
 ## Done
 
@@ -27,6 +28,24 @@ bundle landed 2026-09-07 and steps 0, 7.5 and 8 to 14 followed.
 | 13 | `pnpm setup` and `pnpm setup:demo`, both idempotent |
 | 14 | CI and backup workflows, restore drilled |
 | 16 | Docs squared up: README quickstart, connections registry, the notes module README |
+
+**The fidelity pass, screen twelve: Health.** docs/plans/health-fidelity.md.
+The shared band carries "{n} screenings overdue · next visit {D Mon}" above
+the artboard's title block and Log a visit. Left pane: vitals tiles with
+their source (FITNESS for body weight through the registry, LAB / DEVICE /
+MANUAL for stored readings) and a delta against the previous reading;
+Appointments as month-day cards with a CONFIRMED / HELD / DONE tag and
+Upcoming / History pills; Medications & supplements with "{n} DAYS LEFT"
+and Mark taken; Records with search, type filters and the RECORD / TYPE ·
+DATE · FILE list. Right rail: Due & overdue cards (OVERDUE, DUE SOON,
+NEVER DONE, SCHEDULED with View appointment) with Mark done and Snooze,
+Insurance & cost from the Insurance digest, Care team. One drawer (shared
+Overlay at 480) for an appointment, a record with Open the file (signed
+URL), and the Log a visit form, which files a future date as an
+appointment and a past one as a record with a real attachment. New tool
+`write_record`; `write_appointment` takes `provider_id`. Not drawn for
+want of a source: wearable tiles, Request booking, Add to calendar, File
+to Second Brain, insurance plan figures, the agent refill sentence.
 
 **The fidelity pass, screen eleven: Ideas.** docs/plans/ideas-fidelity.md.
 The band's "{live} ideas · {stale} stale" with an amber dot when anything
