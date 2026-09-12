@@ -61,6 +61,7 @@ export type ConnectionStatus = {
   lastTestedAt: Date | null
   lastTestDetail: string | null
   expiresAt: Date | null
+  createdAt: Date | null
 }
 
 export async function getConnectionStatuses(): Promise<Record<string, ConnectionStatus>> {
@@ -70,7 +71,10 @@ export async function getConnectionStatuses(): Promise<Record<string, Connection
     last_tested_at: Date | null
     last_test_detail: string | null
     expires_at: Date | null
-  }>('select integration_id, status, last_tested_at, last_test_detail, expires_at from core.connections')
+    created_at: Date | null
+  }>(
+    'select integration_id, status, last_tested_at, last_test_detail, expires_at, created_at from core.connections',
+  )
 
   return Object.fromEntries(
     rows.map((r) => [
@@ -84,6 +88,7 @@ export async function getConnectionStatuses(): Promise<Record<string, Connection
         lastTestedAt: r.last_tested_at,
         lastTestDetail: r.last_test_detail,
         expiresAt: r.expires_at,
+        createdAt: r.created_at,
       },
     ]),
   )
