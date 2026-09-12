@@ -1470,14 +1470,23 @@ test('home, logging service moves the schedule it belongs to', async ({ page }) 
 test('insurance, sorted by what expires first with numbers masked', async ({ page }) => {
   await page.goto('/insurance')
   await expect(page.getByRole('heading', { name: 'Insurance', exact: true })).toBeVisible()
+  await expect(page.getByText('Insurance / Policies')).toBeVisible()
+  await expect(page.getByText(/\d+ policies · \d+ expiring soon/)).toBeVisible()
+  await expect(page.getByRole('button', { name: /Add policy/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Upload PDF' })).toBeVisible()
 
   // Masked in the query, so the plaintext is not in this page at all.
-  await expect(page.getByText('**** 7730')).toBeVisible()
+  await expect(page.getByText('•••• 7730')).toBeVisible()
+  await expect(page.getByText('**** 7730')).toHaveCount(0)
   await expect(page.getByText('LMD-48211-7730')).toHaveCount(0)
 
-  // The soonest first: renters at 36 days, then the phone at 58.
+  // The soonest first: renters at 36 days, then the phone at 58. The kind sits
+  // inside the Policy cell, so the row's text starts with it.
   const rows = page.getByRole('button', { name: /Lemonade|Apple|Progressive/ })
   await expect(rows.first()).toContainText('Lemonade')
+  await expect(rows.first()).toHaveText(/^RENTERS/)
+  await expect(rows.first()).toContainText(/\d+ days/)
+  await expect(rows.first()).toContainText('EXPIRING')
 
   await shoot(page, 'insurance')
 })
@@ -1486,21 +1495,28 @@ test('insurance, a policy number is revealed only when asked for', async ({ page
   await page.goto('/insurance')
   await page.getByRole('button', { name: /Apartment, renters/ }).click()
 
-  await expect(page.getByText('**** 7730')).toBeVisible()
-  await page.getByRole('button', { name: 'Reveal' }).click()
-  await expect(page.getByText('LMD-48211-7730')).toBeVisible()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByText('•••• 7730')).toBeVisible()
+  await dialog.getByRole('button', { name: /REVEAL/ }).click()
+  await expect(dialog.getByText('LMD-48211-7730')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Hide' }).click()
+  await dialog.getByRole('button', { name: /HIDE/ }).click()
   await expect(page.getByText('LMD-48211-7730')).toHaveCount(0)
+
+  // The rest of the drawer, as the artboard draws it.
+  for (const head of ['Payment schedule', 'Renewal reminders', 'Documents', 'Agent']) {
+    await expect(dialog.getByText(head, { exact: true })).toBeVisible()
+  }
+  await expect(dialog.getByText('renters-declarations-2026.pdf')).toBeVisible()
 })
 
 test('insurance, no deductible is not a deductible of zero', async ({ page }) => {
   await page.goto('/insurance')
   await page.getByRole('button', { name: /Term life/ }).click()
 
-  await expect(page.getByText('none on this policy')).toBeVisible()
-  // And the screen says what it will not do with any of it.
-  await expect(page.getByText(/nothing here scores it/i)).toBeVisible()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByText('none', { exact: true })).toBeVisible()
+  await expect(dialog.getByText('$0')).toHaveCount(0)
 })
 
 test('insurance, renewing keeps the same row', async ({ page }) => {
@@ -1508,9 +1524,18 @@ test('insurance, renewing keeps the same row', async ({ page }) => {
   await page.getByRole('button', { name: /Apartment, renters/ }).click()
 
   const before = await page.getByRole('button', { name: /Apartment, renters/ }).count()
-  await page.getByRole('button', { name: /Mark renewed to/ }).click()
+  await page.getByRole('button', { name: /Mark renewed · \w{3} \d+ \d{4}/ }).click()
   await expect(page.getByText(/Same row, so the history stays together/)).toBeVisible()
   await expect(page.getByRole('button', { name: /Apartment, renters/ })).toHaveCount(before)
+})
+
+test('insurance, delete asks first and removes the row', async ({ page }) => {
+  await page.goto('/insurance')
+  await page.getByRole('button', { name: /Term life/ }).click()
+
+  page.on('dialog', (d) => d.accept())
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
+  await expect(page.getByRole('button', { name: /Term life/ })).toHaveCount(0)
 })
 
 test('meals, cook mode scales what can be scaled and says what cannot', async ({ page }) => {
