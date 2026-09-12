@@ -1168,10 +1168,14 @@ test('onboarding, six steps that write as they go', async ({ page }) => {
   await shoot(page, 'onboarding')
 
   // Modules is a visibility switch, not a delete: the copy has to say so,
-  // because turning one off looks destructive.
+  // because turning one off looks destructive. The artboard draws it as a
+  // grid of numbered, clickable cards with an ON/OFF state word, not a
+  // switch row, so the switch role is gone from this step.
   await page.getByRole('button', { name: '02 Modules' }).click()
-  await expect(page.getByRole('switch', { name: 'Show Finance' })).toBeVisible()
   await expect(page.getByText(/keeps its data and its tools/)).toBeVisible()
+  await expect(page.getByRole('switch', { name: 'Show Finance' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /01[\s\S]*ON[\s\S]*Finance/ })).toBeVisible()
+  await expect(page.getByText(/connector categories unlock/)).toBeVisible()
 
   // Connections records intent. A provider with a real integration is starred;
   // everything else is honestly a request.

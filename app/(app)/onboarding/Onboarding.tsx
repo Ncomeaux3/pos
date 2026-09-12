@@ -295,23 +295,49 @@ export function Onboarding({ data }: { data: SetupData }) {
       )}
 
       {step === 'modules' && (
-        <RowList>
-          {data.modules.map((m) => (
-            <Row
-              key={m.id}
-              title={m.label}
-              meta={m.note}
-              muted={!enabled.includes(m.id)}
-              right={
-                <Switch
-                  label={`Show ${m.label}`}
-                  checked={enabled.includes(m.id)}
-                  onChange={() => toggleModule(m.id)}
-                />
-              }
-            />
-          ))}
-        </RowList>
+        <div className="space-y-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,230px),1fr))] gap-2.5">
+            {data.modules.map((m, i) => {
+              const on = enabled.includes(m.id)
+              return (
+                <Card key={m.id} selected={on} className="p-0">
+                  <button
+                    type="button"
+                    onClick={() => toggleModule(m.id)}
+                    className="w-full p-4 text-left"
+                  >
+                    <span className="flex items-baseline justify-between gap-2.5">
+                      <span
+                        className={cn(
+                          'label text-[9px] tracking-[0.12em]',
+                          on ? 'text-brand' : 'text-ink-3',
+                        )}
+                      >
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <span
+                        className={cn(
+                          'label text-[9px] tracking-[0.1em]',
+                          on ? 'text-brand' : 'text-ink-3',
+                        )}
+                      >
+                        {on ? 'ON' : 'OFF'}
+                      </span>
+                    </span>
+                    <span className="mt-2.5 block text-[15px] text-ink">{m.label}</span>
+                    <span className="mt-1 block text-[11px] leading-[1.45] text-ink-3">
+                      {m.note}
+                    </span>
+                  </button>
+                </Card>
+              )
+            })}
+          </div>
+          <p className="t-caption text-ink-3">
+            {enabled.length} of {data.modules.length} on. {data.categories.length} connector
+            categories unlock on the next step; the rest stay visible but greyed.
+          </p>
+        </div>
       )}
 
       {step === 'connect' && (
