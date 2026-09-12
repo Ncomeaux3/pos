@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { bestSet, distance, duration, load, mass, pace, toGrams } from './units'
+import {
+  bestSet,
+  distance,
+  duration,
+  hoursLabel,
+  load,
+  mass,
+  pace,
+  screenState,
+  sourcesLabel,
+  toGrams,
+  whenLabel,
+} from './units'
 
 describe('mass', () => {
   it('renders the number that was actually loaded on the bar', () => {
@@ -92,5 +104,31 @@ describe('load', () => {
 
   it('treats a kind it has never heard of as ordinary rather than free', () => {
     expect(load([{ kind: 'kitesurfing', durationS: 3600 }])).toBe(60)
+  })
+})
+
+describe('the overview labels', () => {
+  it('names when a set happened', () => {
+    expect(whenLabel('2026-09-12T18:00:00.000Z', '2026-09-12')).toBe('TODAY')
+    expect(whenLabel('2026-09-11T18:00:00.000Z', '2026-09-12')).toBe('YESTERDAY')
+    expect(whenLabel('2026-09-04T18:00:00.000Z', '2026-09-12')).toBe('SEP 04')
+  })
+
+  it('prints the week in hours and minutes', () => {
+    expect(hoursLabel(222)).toBe('3H 42M')
+    expect(hoursLabel(51)).toBe('51M')
+    expect(hoursLabel(120)).toBe('2H 00M')
+  })
+
+  it('counts where the rows came from and drops zeros', () => {
+    expect(sourcesLabel([{ source: 'strava' }, { source: 'demo' }, { source: 'manual' }])).toBe('1 STRAVA · 2 BY HAND')
+    expect(sourcesLabel([{ source: 'demo' }])).toBe('1 BY HAND')
+    expect(sourcesLabel([])).toBe('')
+  })
+
+  it('draws the setup card only when there is nothing at all', () => {
+    expect(screenState({ workouts: 0, connected: false })).toBe('setup')
+    expect(screenState({ workouts: 0, connected: true })).toBe('setup-connected')
+    expect(screenState({ workouts: 3, connected: false })).toBe('live')
   })
 })
