@@ -12,8 +12,9 @@ import {
   useToast,
 } from '@/components/pos'
 import type { Entry, Run } from '@/core/writelog-shape'
+import { jobLabel } from './format'
 import { cn } from '@/lib/utils'
-import { redo, undo } from './actions'
+import { redo, retryModule, undo } from './actions'
 import type { ActionResult } from './actions'
 
 // The run accordion. One run open at a time, filtered by module, with every
@@ -22,12 +23,18 @@ import type { ActionResult } from './actions'
 export function RunLog({
   runs,
   moduleLabels,
+  registeredModules,
 }: {
   runs: Run[]
   /** Module id to display name, for the filter chips. */
   moduleLabels: Record<string, string>
+  /** Nav order, and the only ids `runNightly({ module })` can rerun: a
+   * failed job outside this list (a core stage, say) gets no Retry now,
+   * since the button would otherwise rerun nothing and call it done. */
+  registeredModules: string[]
 }) {
   const [filter, setFilter] = useState('all')
+  const [retrying, setRetrying] = useState<string | null>(null)
   // Open the newest run that actually wrote something. Defaulting to the newest
   // run means a page that greets you with "this run wrote nothing", which is
   // true and useless: the reason to come here is to see what changed.
@@ -43,6 +50,22 @@ export function RunLog({
       toast(result.ok ? ok : result.error)
     })
 
+  // Retry's own toast names the real outcome rather than a fixed word, the
+  // same way Run now does, since a rerun can fail again.
+  const retry = (module: string) =>
+    start(async () => {
+      setRetrying(module)
+      const result = await retryModule(module)
+      setRetrying(null)
+      toast(
+        result.ok
+          ? result.failedJobs
+            ? `Run partial, ${result.failedJobs} job${result.failedJobs === 1 ? '' : 's'} failed`
+            : 'Run clean'
+          : result.error,
+      )
+    })
+
   const matches = (e: Entry) => filter === 'all' || e.module === filter
 
   const shown = runs
@@ -52,7 +75,13 @@ export function RunLog({
     .filter((r) => filter === 'all' || r.entries.length > 0)
 
   const total = shown.reduce((n, r) => n + r.entries.length, 0)
-  const modules = [...new Set(runs.flatMap((r) => r.entries.map((e) => e.module)))]
+  const modules = [...new Set(runs.flatMap((r) => r.entries.map((e) => e.module)))].sort((a, b) => {
+    const ai = registeredModules.indexOf(a)
+    const bi = registeredModules.indexOf(b)
+    // A module outside the registry (a core stage, say) sorts after every
+    // real one rather than at an arbitrary spot indexOf's -1 would put it.
+    return (ai === -1 ? Infinity : ai) - (bi === -1 ? Infinity : bi)
+  })
 
   return (
     <div className="space-y-3">
@@ -224,7 +253,7 @@ export function RunLog({
                           className="space-y-2 border-t border-rule bg-bad/5 px-4 py-3.5"
                         >
                           <Eyebrow className="text-[10px] tracking-[0.1em] text-bad">Error</Eyebrow>
-                          <p className="t-body text-ink">{j.name}</p>
+                          <p className="t-body text-ink">{jobLabel(j.name)}</p>
                           {/* The raw provider message, not a paraphrase of it.
                               A rewritten error is one you cannot search for. */}
                           <p className="code t-caption break-all text-ink-2">
@@ -233,6 +262,14 @@ export function RunLog({
                           <p className="t-caption text-ink-3">
                             Retried twice inside the run, then left for the next one.
                           </p>
+                          {/* Only when the module is a real one runNightly can
+                              rerun: a job stamped with anything else would
+                              have this button do nothing and call it done. */}
+                          {registeredModules.includes(j.module) && (
+                            <ActionButton disabled={retrying === j.module} onClick={() => retry(j.module)}>
+                              {retrying === j.module ? 'Retrying' : 'Retry now'}
+                            </ActionButton>
+                          )}
                         </div>
                       ))}
                   </div>
