@@ -3,12 +3,13 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
-Last updated: 2026-09-12, sixteen fidelity passes (Weekly Review, Dashboard,
-Finance, Skill Tree, Travel, Tasks, Goals, Ideas, Health, Settings, then two
-parallel batches: Second Brain, Insurance and Meals; Home, Fitness and Review)
-and the rail to PosSidebar. Branch `main`. In flight in the third parallel
-batch: Notifications, Agent Log, Onboarding, Login. Remaining after those:
-Search, Finance Options, and the Mobile artboard re-check.
+Last updated: 2026-09-12, seventeen fidelity passes (Weekly Review, Dashboard,
+Finance, Skill Tree, Travel, Tasks, Goals, Ideas, Health, Settings, Search,
+then two parallel batches: Second Brain, Insurance and Meals; Home, Fitness and
+Review) and the rail to PosSidebar. Branch `main`. In flight in the third
+parallel batch: Notifications, Agent Log, Onboarding, Login. Remaining after
+those: the Mobile artboard re-check. Finance Options is three alternates of
+Finance and is not built (Finance follows POS Finance.dc.html).
 
 ## Done
 
@@ -78,6 +79,17 @@ Evidence / Affects strip, the 51px "Approve →", Undo on a dismissal only
 (reopening an approval would run the tool twice). Copy cut to what the code
 does: no "is_manual = true", no "marked manual"; the empty inbox names the
 nightly hour from the cron in the owner's zone.
+
+**The fidelity pass, screen seventeen: Search.** docs/plans/search-fidelity.md.
+The band is the crumb and "Quick search ⌘K" (no band field); the 60px box
+18vh down on an empty page and under the band once there is a query; chips
+for every module (counts while searching, ink-filled when active); results
+in an 880px measure with the group head, type chip, snippet, "{n} days ago"
+and skills, the match bar and Show more; the preview drawer (480) with the
+fields strip, linked skills, related rows that open the module and the DS
+"Open in {module} →"; the open row in the URL. The command palette takes the
+artboard's 640px column: the box, then a Results / Go to panel with G-codes.
+Hits carry `updatedAt`. Not drawn: an Amount cell (the registry holds none).
 
 **The fidelity pass, screen thirteen: Settings.** docs/plans/settings-fidelity.md.
 One header on every tab ("Settings", the lede, the tab as the crumb,
