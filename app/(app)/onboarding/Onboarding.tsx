@@ -12,7 +12,6 @@ import {
   Eyebrow,
   Row,
   RowList,
-  StatusChip,
   Switch,
   WizardShell,
   fieldClass,
@@ -61,50 +60,56 @@ export type SetupData = {
 
 type StepKey = 'you' | 'modules' | 'connect' | 'goals' | 'notify' | 'ready'
 
-const STEPS: { key: StepKey; name: string; kicker: string; question: string; helper: string }[] = [
+// Title, lede and rail hint are the artboard's own copy (logic line 63 to 107,
+// 414 to 421), kept verbatim wherever it is true. Two clauses are not: step
+// one's "and a wake time" (the day-start picker is not built, see the plan's
+// decision) and step six's line, which moves to the First run card below
+// rather than staying here (see firstRunLine).
+const STEPS: { key: StepKey; name: string; hint: string; question: string; helper: string }[] = [
   {
     key: 'you',
     name: 'You',
-    kicker: 'Step one, who this is for',
-    question: 'What should it call you, and where are you?',
-    helper: 'The timezone decides what "today" means everywhere, so it is worth getting right.',
+    hint: 'Name, zone, day start',
+    question: 'Start with the basics',
+    helper: 'The agent writes in your name and runs on your clock. Two fields are all it needs.',
   },
   {
     key: 'modules',
     name: 'Modules',
-    kicker: 'Step two, what it tracks',
-    question: 'Which parts do you want?',
+    hint: 'What the OS tracks',
+    question: 'Choose what it tracks',
     helper:
-      'Visibility only. A module you turn off keeps its data and its tools; it just stops taking up room in the nav.',
+      'This decides which connectors matter on the next step. Every module can be added later without losing history.',
   },
   {
     key: 'connect',
     name: 'Connections',
-    kicker: 'Step three, where the data comes from',
-    question: 'What should it read?',
+    hint: 'By category, per module',
+    question: 'Connect what it should read',
     helper:
-      'Picking one here records the intent. Anything with a real integration is authorised properly at Settings, because a wizard is no place to handle a secret.',
+      'Grouped by what the data is for. Categories belonging to modules you left off are greyed out; turn the module on right here if you want them.',
   },
   {
     key: 'goals',
     name: 'Goals',
-    kicker: 'Step four, what you are aiming at',
-    question: 'Start with two or three?',
-    helper: 'A goal pointed at a module metric checks itself in every night. The rest you do by hand.',
+    hint: 'Seed three to start',
+    question: 'Seed a few goals',
+    helper: 'Goals read from your data where they can, so progress moves without you updating anything.',
   },
   {
     key: 'notify',
     name: 'Notifications',
-    kicker: 'Step five, when it may interrupt',
-    question: 'When can it reach you?',
-    helper: 'Quiet hours hold everything but an urgent rule, and held is not dropped.',
+    hint: 'Digest and quiet hours',
+    question: 'Decide how loud it is',
+    helper: 'Pick a starting point. Individual rules stay editable, per module and per channel.',
   },
   {
     key: 'ready',
     name: 'First run',
-    kicker: 'Step six, start it',
-    question: 'Ready?',
-    helper: 'Nothing here is permanent. Every answer is a setting you can change later.',
+    hint: 'Review and finish',
+    question: 'Ready for the first run',
+    // Computed below (needs the real nightly hour), not static.
+    helper: '',
   },
 ]
 
@@ -221,6 +226,7 @@ export function Onboarding({ data }: { data: SetupData }) {
   const [connectSearch, setConnectSearch] = useState('')
   const [manualOpen, setManualOpen] = useState(false)
   const [manualValue, setManualValue] = useState('')
+  const [selectedPreset, setSelectedPreset] = useState<string | null>(null)
   const [done, setDone] = useState(data.completedAt !== '')
   const [pending, start] = useTransition()
   const toast = useToast()
@@ -309,19 +315,33 @@ export function Onboarding({ data }: { data: SetupData }) {
 
   return (
     <WizardShell
-      railTitle="First run"
-      railLede="Six steps. Everything saves as you go, so you can stop anywhere."
-      steps={STEPS.map((s) => ({ key: s.key, name: s.name }))}
+      railTitle={`Set up in ${STEPS.length} steps`}
+      railLede="Nothing is shared. Every connection can be revoked later in Settings."
+      steps={STEPS.map((s) => ({ key: s.key, name: s.name, hint: s.hint }))}
       current={step}
       onStep={(key) => setStep(key as StepKey)}
-      kicker={stage.kicker}
+      kicker={
+        <span className="text-brand">
+          STEP {String(index + 1).padStart(2, '0')} / {STEPS.length}
+        </span>
+      }
       title={stage.question}
-      helper={stage.helper}
+      helper={
+        step === 'ready'
+          ? `The agent will do a full pass tonight at ${data.nightlyAt} and write its first digest for the morning.`
+          : stage.helper
+      }
       onBack={index > 0 ? () => setStep(STEPS[index - 1].key) : undefined}
       onSkip={index < STEPS.length - 1 ? () => setStep(STEPS[index + 1].key) : undefined}
       onNext={index === STEPS.length - 1 ? finishUp : () => setStep(STEPS[index + 1].key)}
-      nextLabel={index === STEPS.length - 1 ? 'Finish' : 'Continue'}
-      footnote={pending ? 'Saving.' : undefined}
+      nextLabel={index === STEPS.length - 1 ? 'Open the dashboard' : 'Continue'}
+      footnote={
+        pending
+          ? 'Saving.'
+          : index === STEPS.length - 1
+            ? 'Setup takes effect immediately'
+            : 'Everything is editable later'
+      }
     >
       {step === 'you' && (
         <div className="grid gap-4 sm:grid-cols-2">
@@ -560,12 +580,11 @@ export function Onboarding({ data }: { data: SetupData }) {
               })
             )}
 
-            {neededMissing.length > 0 && (
-              <p className="t-caption text-ink-3">
-                {neededMissing.map((c) => c.name).join(' and ')} carry the numbers behind Finance
-                and Goals. Without at least one in each, those tiles open empty.
-              </p>
-            )}
+            <p className="t-caption text-ink-3">
+              {neededMissing.length > 0
+                ? `${neededMissing.map((c) => c.name).join(' and ')} carry the numbers behind Finance and Goals. Without at least one in each, those tiles open empty.`
+                : `${requested.size} requested across ${data.categories.filter((c) => c.providers.some((p) => requested.has(p))).length} categories. Add the rest any time from Settings, Connections.`}
+            </p>
 
             <p className="t-caption text-ink-3">
               A star means a real integration exists and can sync it once you authorise it at
@@ -642,9 +661,9 @@ export function Onboarding({ data }: { data: SetupData }) {
             </RowList>
           )}
           <p className="t-caption text-ink-3">
-            These are written when you finish, not now, so changing your mind costs nothing. A goal
-            whose metric is not installed is created for hand check-ins rather than pointed at
-            something that would never compute.
+            {picked.length > 0
+              ? `${picked.length} picked. Written when you finish, not now; anything computed updates nightly, manual goals only move when you check in.`
+              : 'You can start with none, but the Goals tile stays empty until something is seeded.'}
           </p>
         </div>
       )}
@@ -653,10 +672,11 @@ export function Onboarding({ data }: { data: SetupData }) {
         <div className="space-y-5">
           <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,210px),1fr))] gap-3.5">
             {NOTIFY_PRESETS.map((p) => (
-              <Card key={p.id} className="p-0">
+              <Card key={p.id} selected={selectedPreset === p.id} className="p-0">
                 <button
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
+                    setSelectedPreset(p.id)
                     run(async () => {
                       const results = await Promise.all([
                         saveSetting('quiet_from', p.quietFrom),
@@ -665,7 +685,7 @@ export function Onboarding({ data }: { data: SetupData }) {
                       ])
                       return results.find((r) => !r.ok) ?? { ok: true }
                     })
-                  }
+                  }}
                   className="w-full p-4 text-left"
                 >
                   <Eyebrow>{p.tag}</Eyebrow>
@@ -749,60 +769,72 @@ export function Onboarding({ data }: { data: SetupData }) {
         </div>
       )}
 
-      {step === 'ready' && (
-        <div className="space-y-4">
-          <RowList>
-            {(
-              [
-                { title: 'Called', meta: 'What the app calls you', value: data.ownerName || 'not set', jump: 'you' },
-                { title: 'Timezone', meta: 'Decides what today means', value: data.timezone, jump: 'you' },
-                {
-                  title: 'Modules',
-                  meta: 'Visible in the nav',
-                  value: `${enabled.length} of ${data.modules.length}`,
-                  jump: 'modules',
-                },
-                {
-                  title: 'Connections',
-                  meta: 'Recorded as requests until authorised',
-                  value: String(data.requested.length),
-                  jump: 'connect',
-                },
-                {
-                  title: 'Goals',
-                  meta: 'Written when you finish',
-                  value: String(picked.length),
-                  jump: 'goals',
-                },
-              ] as const
-            ).map((row) => (
-              <Row
-                key={row.title}
-                title={row.title}
-                meta={row.meta}
-                right={
-                  <>
-                    <span className="t-caption text-ink-2">{row.value}</span>
-                    <ActionButton variant="quiet" onClick={() => setStep(row.jump)}>
-                      Change
-                    </ActionButton>
-                  </>
-                }
-              />
-            ))}
-          </RowList>
+      {step === 'ready' && (() => {
+        const onLabels = data.modules.filter((m) => enabled.includes(m.id)).map((m) => m.label)
+        const presetName = NOTIFY_PRESETS.find((p) => p.id === selectedPreset)?.name ?? 'Custom'
+        const rows: { key: string; value: string; jump: StepKey }[] = [
+          { key: 'NAME', value: `${data.ownerName || 'not set'} · ${data.timezone}`, jump: 'you' },
+          { key: 'MODULES', value: `${enabled.length} on · ${onLabels.join(', ')}`, jump: 'modules' },
+          {
+            key: 'CONNECTED',
+            value: data.requested.length
+              ? `Requested: ${data.requested.join(', ')}`
+              : 'Nothing yet, the dashboard will be empty',
+            jump: 'connect',
+          },
+          {
+            key: 'GOALS',
+            value: picked.length
+              ? STARTER_GOALS.filter((g) => picked.includes(g.title)).map((g) => g.title).join(', ')
+              : 'None seeded',
+            jump: 'goals',
+          },
+          {
+            key: 'ALERTS',
+            value: `${presetName} · quiet ${data.schedule.quietFrom}–${data.schedule.quietTo}${data.schedule.urgentOverride ? ' with urgent override' : ''}`,
+            jump: 'notify',
+          },
+        ]
 
-          <div className="space-y-2 rounded-md border border-rule-2 p-3.5">
-            <StatusChip tone="brand">What happens next</StatusChip>
+        return (
+          <div className="space-y-5">
+            <div className="space-y-2 border border-brand bg-brand-soft p-4">
+              <Eyebrow>First run</Eyebrow>
+              <p className="text-[14px] leading-[1.55] text-ink">
+                Tonight at {data.nightlyAt} the agent classifies what it finds and writes the{' '}
+                {data.nightlyAt} digest. A requested connection does not sync until you authorise
+                it at Settings. Everything it changes is logged in the Agent Log with one-click
+                undo.
+              </p>
+            </div>
+
+            <div>
+              <Eyebrow>Summary</Eyebrow>
+              {rows.map((row) => (
+                <div
+                  key={row.key}
+                  className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-rule py-3"
+                >
+                  <span className="label w-[110px] shrink-0 text-[10px] tracking-[0.12em] text-ink-3">
+                    {row.key}
+                  </span>
+                  <span className="min-w-0 flex-1 text-[14px] leading-[1.45] text-ink">
+                    {row.value}
+                  </span>
+                  <ActionButton variant="quiet" onClick={() => setStep(row.jump)}>
+                    Change
+                  </ActionButton>
+                </div>
+              ))}
+            </div>
+
             <p className="t-caption text-ink-3">
-              Finishing writes the goals you picked and marks first run done. Tonight at{' '}
-              {data.nightlyAt}, the nightly job writes each module a digest and sends one email.
-              A requested connection does not sync until you authorise it at Settings. Nothing
-              here is permanent.
+              Nothing here is locked in. Connections, modules and rules all live in Settings once
+              you are inside.
             </p>
           </div>
-        </div>
-      )}
+        )
+      })()}
     </WizardShell>
   )
 }

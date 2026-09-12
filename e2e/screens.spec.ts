@@ -1183,18 +1183,17 @@ test('finance, the limits drawer holds edits until Done', async ({ page }) => {
 
 test('onboarding, six steps that write as they go', async ({ page }) => {
   await page.goto('/onboarding')
-  await expect(page.getByRole('heading', { name: 'First run' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Start with the basics' })).toBeVisible()
 
   await page.getByLabel('Your name').fill('Owner')
   await page.getByLabel('Timezone').click()
   await shoot(page, 'onboarding')
 
-  // Modules is a visibility switch, not a delete: the copy has to say so,
-  // because turning one off looks destructive. The artboard draws it as a
+  // Modules is a visibility switch, not a delete. The artboard draws it as a
   // grid of numbered, clickable cards with an ON/OFF state word, not a
   // switch row, so the switch role is gone from this step.
   await page.getByRole('button', { name: '02 Modules' }).click()
-  await expect(page.getByText(/keeps its data and its tools/)).toBeVisible()
+  await expect(page.getByText(/every module can be added later/i)).toBeVisible()
   await expect(page.getByRole('switch', { name: 'Show Finance' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /01[\s\S]*ON[\s\S]*Finance/ })).toBeVisible()
   await expect(page.getByText(/connector categories unlock/)).toBeVisible()
@@ -1289,16 +1288,28 @@ test('onboarding, requesting a provider records it without pretending', async ({
 test('onboarding, first run copy names no source count', async ({ page }) => {
   await page.goto('/onboarding?step=ready')
 
-  const copy = page.getByText(/writes each module a digest/)
-  await expect(copy).toBeVisible()
-  await expect(copy).not.toContainText(/backfills 90 days/i)
-  await expect(copy).not.toContainText(/pulls \d+ source/i)
+  // The step's own lede, above the h2.
+  const lede = page.getByText(/write its first digest for the morning/i)
+  await expect(lede).toBeVisible()
   // A real, computed hour (HH:MM), not a hardcoded one.
-  await expect(copy).toContainText(/tonight at \d\d:\d\d/i)
+  await expect(lede).toContainText(/tonight at \d\d:\d\d/i)
+
+  // The First run card, above the Summary table, names no source count.
+  const card = page.getByText(/classifies what it finds/i)
+  await expect(card).toBeVisible()
+  await expect(card).not.toContainText(/backfills 90 days/i)
+  await expect(card).not.toContainText(/pulls \d+ source/i)
+
+  // The Summary table uses the artboard's keys.
+  await expect(page.getByText('NAME', { exact: true })).toBeVisible()
+  await expect(page.getByText('ALERTS', { exact: true })).toBeVisible()
+  await expect(
+    page.getByText('Nothing here is locked in. Connections, modules and rules all live in Settings once you are inside.'),
+  ).toBeVisible()
 
   // Each summary row jumps back to the step it summarises.
   await page.getByRole('button', { name: 'Change' }).first().click()
-  await expect(page.getByRole('heading', { name: /what should it call you/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Start with the basics' })).toBeVisible()
 })
 
 test('second brain, the inbox holds a draft beside its source', async ({ page }) => {
