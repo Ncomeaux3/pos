@@ -1,4 +1,3 @@
-import { PageHeader } from '@/components/pos'
 import { readMetric } from '@/core/metrics'
 import {
   listAssets,
@@ -13,22 +12,22 @@ import { dueStatus, nextDue } from '../schedule'
 import { Home, type HomeData } from './Home'
 
 export default async function HomePage() {
-  const [assets, services, log, warranties, vendors, todayIso, netWorth] = await Promise.all([
+  const [assets, services, log, warranties, vendors, todayIso, propertyPremium] = await Promise.all([
     listAssets(),
     listServices(),
     listServiceLog(),
     listWarranties(),
     listVendors(),
     ownerToday(),
-    // The mortgage and what the house is worth against it belong to Finance.
-    // Read through the registry rather than kept here twice, so there is one
-    // source of truth and it is simply absent when Finance is not installed.
-    readMetric('finance.net_worth'),
+    // What the house is insured for belongs to Insurance. Read through the
+    // registry rather than kept here twice, so there is one number and it is
+    // simply absent when Insurance is not installed.
+    readMetric('insurance.property_premium'),
   ])
 
   const data: HomeData = {
     todayIso,
-    netWorth,
+    propertyPremium,
     assets: assets.map((a) => ({
       id: a.id,
       kind: a.kind,
@@ -84,27 +83,5 @@ export default async function HomePage() {
     })),
   }
 
-  const dueNow = data.services.filter((s) => s.status === 'overdue' || s.status === 'due')
-  const dueCents = dueNow.reduce((sum, s) => sum + s.costEstimateCents, 0)
-
-  return (
-    <div className="space-y-7">
-      <PageHeader
-        eyebrow={
-          dueNow.length === 0
-            ? 'Home / nothing due this month'
-            : `Home / ${dueNow.length} job${dueNow.length === 1 ? '' : 's'} due this month / $${Math.round(dueCents / 100).toLocaleString('en-US')} estimated`
-        }
-        dot={
-          dueNow.some((s) => s.status === 'overdue') ? 'bad' : dueNow.length > 0 ? 'warn' : 'ok'
-        }
-        title="Home and assets"
-        lede="The house, the vehicles and the equipment worth tracking: what each is worth, what it costs to keep, and what it needs next. Maintenance is an interval and the date it was last done, so the calendar is worked out from the history rather than kept beside it."
-        actions={
-          <span className="num text-[11px] text-ink-3">{data.assets.length} tracked</span>
-        }
-      />
-      <Home data={data} />
-    </div>
-  )
+  return <Home data={data} />
 }

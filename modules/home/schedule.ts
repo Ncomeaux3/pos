@@ -148,6 +148,11 @@ export function intervalLabel(months: number): string {
   return `every ${months} months`
 }
 
+/** "$684,000": whole dollars, as every figure on the screen reads. */
+export function money(cents: number): string {
+  return `$${(cents / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+}
+
 /** "$2,617", "$21.3k", "$743k": the strip's figures, compact past ten thousand. */
 export function compactMoney(cents: number): string {
   const dollars = cents / 100

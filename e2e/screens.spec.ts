@@ -1614,7 +1614,7 @@ test('home, the calendar is worked out from the history', async ({ page }) => {
   // Twelve months, including the empty ones, because an empty month is
   // information. The selected month is written out in full under them.
   await expect(page.getByRole('button', { name: /^[A-Z]{3} \d\d /  })).toHaveCount(12)
-  await expect(page.getByText(/^[A-Z]{3} \d{4}$/)).toBeVisible()
+  await expect(page.getByText(/^[A-Z]{3} \d{4}$/).first()).toBeVisible()
 
   await expect(page.getByText('COVER · EXPIRES · FILE')).toBeVisible()
 

@@ -187,7 +187,8 @@ export async function seed(): Promise<number> {
           source, external_id)
        values ($1, $2, $3, $4, $5, core.today(), $6, 'demo', $7)
        on conflict (source, external_id) do update
-         set value_cents = excluded.value_cents,
+         set subtitle = excluded.subtitle,
+             value_cents = excluded.value_cents,
              annual_cost_cents = excluded.annual_cost_cents,
              facts = excluded.facts
        returning id`,
