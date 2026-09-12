@@ -518,7 +518,7 @@ test('review, dismiss and undo keep the row', async ({ page }) => {
   await page.goto('/review?tab=dismissed')
   await expect(page.getByText('Dismissed. Undo puts it back in the inbox.')).toBeVisible()
   await page.getByRole('button', { name: 'Undo' }).click()
-  await expect(page.getByText('Back in the inbox')).toBeVisible()
+  await expect(page.getByText('Back in the inbox', { exact: true })).toBeVisible()
 
   await page.goto('/review')
   await expect(page.getByRole('button', { name: /Add a little weight/ })).toBeVisible()
@@ -540,7 +540,7 @@ test('review, inbox clear', async ({ page }) => {
   await page.goto('/review?tab=dismissed')
   for (let i = 0; i < 2; i++) {
     await page.getByRole('button', { name: 'Undo' }).click()
-    await expect(page.getByText('Back in the inbox')).toBeVisible()
+    await expect(page.getByText('Back in the inbox', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Undo' })).toHaveCount(1 - i)
   }
 })
