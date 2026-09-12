@@ -79,14 +79,14 @@ supabase link --project-ref <your-ref>  # the ref is in the dashboard URL
 
 It will ask for the database password from step 1.
 
-Then push all 23 migrations:
+Then push all 27 migrations:
 
 ```bash
 supabase db push
 ```
 
 `db push` defaults to the linked remote, so no flag is needed. It lists what it
-is about to apply and asks before it does. Expect 23 files, `core_init` first.
+is about to apply and asks before it does. Expect 27 files, `core_init` first.
 
 **Never run `supabase db reset` against the linked project.** It is the local
 command. On a linked project it would drop everything. `db push` is the only
@@ -98,7 +98,7 @@ Verify:
 supabase migration list --linked
 ```
 
-Local and remote columns should match, 23 rows.
+Local and remote columns should match, 27 rows.
 
 ---
 
@@ -194,12 +194,25 @@ would look overdue.
 
 ## 7. Deploy to Vercel
 
-Import the repo at [vercel.com/new](https://vercel.com/new). It detects Next.js;
-no build settings need changing.
+The Vercel project `pos` already exists (verified 2026-09-12): it was imported
+from GitHub on 2026-09-09, deploys every push, and production is
+`https://pos-gilt-rho.vercel.app`. What is left is settings and environment.
 
-Paste every environment variable from step 4 before the first deploy. A build
-with a missing key succeeds and then fails at runtime with
-`X is not set`, which is a slower way to find the same problem.
+**Node.js version: 22.x**, under Settings > General. Vercel defaulted to 24;
+the repo's `engines`, `.nvmrc` and CI are all 22, and one runtime everywhere
+is the point.
+
+**Deployment Protection**, under Settings > Deployment Protection: Vercel
+Authentication for **preview deployments only**, off for production
+(decision 2026-09-12). With it on for every domain, production sat behind a
+Vercel login before the app's own login, which breaks the magic link on a
+phone and the PWA. Production's gate is `OWNER_EMAIL`, disabled signup and
+RLS, which is step 5.
+
+Paste every environment variable from step 4 into the Production environment
+before redeploying. A build with a missing key succeeds and then fails at
+runtime with `X is not set`, which is a slower way to find the same problem.
+`RESEND_FROM` may stay unset; the digest sends from `onboarding@resend.dev`.
 
 The cron is already declared in `vercel.json`:
 
@@ -216,6 +229,16 @@ Hobby plan allows one cron a day, which is what this uses.
 
 After the deploy, go back to Supabase Authentication > URL Configuration and set
 Site URL to the production domain.
+
+**Rolling back.** Code rolls back on Vercel: Deployments > the previous READY
+deployment > Promote to Production, which takes seconds and needs no push.
+The database does not: migrations are forward-only and `db push` has no undo.
+A migration that has to be reversed is a new migration that reverses it, and
+the nightly dump in docs/RESTORE.md is the last resort. So when a deploy pairs
+a migration with code, roll the code back first and leave the schema. That is
+safe as long as the migration only added, which every migration so far has
+done to data: the only drops to date replace a view, a function and three
+check constraints with wider ones.
 
 ---
 

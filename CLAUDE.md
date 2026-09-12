@@ -30,6 +30,12 @@ Owner: Nick. Solo, nights and weekends. Finish one module before starting the ne
 - Show evidence of verification (test output, command result), not a claim that it works.
 - Commit after each completed step with a descriptive message. Log any decision to decisions/log.md.
 - When compacting, preserve the list of modified files, open questions, and the test command.
+- A red CI check is a merge gate. Branch protection is unavailable on this private free repo, so the rule is manual: never merge a PR while any check is red, and say so if asked to.
+
+## Tools for this project
+- Agents: `quick-builder` for Complexity low phases and small specified edits; `test-runner` for the full suites, lint, typecheck and build; `ui-verifier` after any change to a screen, at 402 and 1440 px, against the artboard in the design bundle; `spec-reviewer` before each PR; `prod-auditor` on the last phase of a plan; `researcher` and `reviewer` (in `.claude/agents/`) for docs lookups and a fresh-context diff review.
+- Skills: `/module <name>` to load one module's spec; `/integration` before touching a provider; `/research` before adding a dependency; `code-review` before a PR; `brainstorming` before a new screen or a schema change.
+- MCP: the Vercel connector for deployments, build logs and runtime errors of project `pos` (production `pos-gilt-rho.vercel.app`); the Supabase connector for the hosted project once the owner's account is linked (it does not see the project yet); context7 for Next 16, Supabase and Playwright docs; the Playwright plugin for `ui-verifier`; `pos` (`http://localhost:3000/api/mcp`, bearer `MCP_TOKEN`) is the app's own server and only answers while `pnpm dev` runs. Prefer `gh`, `supabase` and `vercel` CLIs when both can do the job.
 
 ## Commands
 - `pnpm dev` dev server. `pnpm test` vitest. `pnpm test:e2e` Playwright screens. `pnpm lint`. `pnpm typecheck`.

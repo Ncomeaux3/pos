@@ -36,6 +36,7 @@ Owner: Nick. Solo builder, nights and weekends. Ships incrementally. Do not buil
 ### 1. Finance (includes Subscriptions)
 - Bank aggregation: provider TBD (Plaid, SimpleFIN, or Teller). Abstract behind a `BankProvider` interface so it can be swapped.
 - Tables: `accounts`, `balances_daily`, `transactions`, `categories`, `category_rules`, `budgets`, `budget_lines`, `recurring` (detected bills), `subscriptions`.
+- Amended 2026-09-12. `budgets` and `budget_lines` are one table, `finance.budget`, one row per category per month with `unique (category_id, month)`. A budget header with no fields of its own was a join for nothing.
 - Recurring detection: same merchant, amount within 10 percent, regular cadence (weekly, monthly, yearly). Output feeds `subscriptions` and bill-due notifications.
 - Subscriptions: name, vendor, amount, cadence, next_charge, category, linked transaction pattern, status (active, paused, cancelled), cancel_url, notes. Subscriptions with no matching charge in 2 cycles get flagged.
 - Digest: net worth and 30 day change, upcoming charges next 14 days, budget categories over 80 percent, unusual transactions.
@@ -57,10 +58,12 @@ Owner: Nick. Solo builder, nights and weekends. Ships incrementally. Do not buil
 ### 4. Meals
 - Recipe import from URL via schema.org JSON-LD, fallback to `recipe-scrapers`.
 - Tables: `recipes`, `ingredients`, `steps`, `meal_log`.
+- Amended 2026-09-12. `meal_log` is `meals.plan_entry` with an `eaten` flag: a planned meal and an eaten one are the same row at two moments, and the flag is the whole difference. Logging something with no recipe is a `plan_entry` with a label and a null `recipe_id`.
 - Cook mode view: large text, step at a time, ingredient scaling.
 
 ### 5. Travel
 - Tables: `trips`, `itinerary_items`, `places_visited` (lat, lng, dates), `loyalty_programs` (manual balances, no public APIs exist), `bookings`.
+- Amended 2026-09-12. `bookings` is folded into `travel.itinerary_item`: an item carries `amount_cents`, `confirmation` and `status` (`pending` from a parsed email, `confirmed` by the owner), and only confirmed spend counts against the trip budget. A booking was an itinerary item with a receipt.
 - Map view of `places_visited`.
 - Booking helper: cents per point calculator with user-supplied cash and points prices. Do not attempt to scrape loyalty sites.
 
