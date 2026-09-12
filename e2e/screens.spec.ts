@@ -1343,7 +1343,7 @@ test('meals, a plan is not a log', async ({ page }) => {
   // a log until the meal is ticked.
   await expect(page.getByText('Eaten so far')).toBeVisible()
   await expect(page.getByText('Calories', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Mark eaten' }).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Mark eaten', exact: true }).first()).toBeVisible()
 
   // The week cells. The calorie target comes from Fitness through the
   // registry and is labelled an estimate rather than a prescription.
@@ -1362,7 +1362,7 @@ test('meals, the grocery list lists quantities rather than adding them', async (
   // Grouped by recipe, quantities as written. The point is the sentence
   // under the list, which is the honest half.
   const drawer = page.getByRole('dialog')
-  await expect(drawer.getByText('Grocery list')).toBeVisible()
+  await expect(drawer.getByRole('heading', { name: 'Grocery list' })).toBeVisible()
   await expect(drawer.getByText('Chicken thigh')).toBeVisible()
   await expect(drawer.getByText('600 g')).toBeVisible()
   await expect(drawer.getByText(/Quantities are as written and are not added up/)).toBeVisible()
@@ -1376,8 +1376,9 @@ test('meals, an imported recipe waits in the inbox', async ({ page }) => {
   // A draft is a card at the top of the grid, tagged, with the decision on it.
   await expect(page.getByText('Sheet pan salmon')).toBeVisible()
   await expect(page.getByText('draft', { exact: true })).toBeVisible()
+  await shoot(page, 'meals-recipes')
 
-  await page.getByRole('button', { name: 'Accept' }).first().click()
+  await page.getByRole('button', { name: 'Accept', exact: true }).first().click()
   await expect(page.getByText('Added to the library')).toBeVisible()
   await expect(page.getByText('draft', { exact: true })).toHaveCount(0)
 })
@@ -1389,6 +1390,7 @@ test('meals, a slot is picked, swapped and cleared from the drawer', async ({ pa
   await page.getByRole('button', { name: 'Plan a meal' }).first().click()
   const drawer = page.getByRole('dialog')
   await expect(drawer.getByText('Pick a recipe')).toBeVisible()
+  await shoot(page, 'meals-pick')
   await drawer.getByRole('button', { name: /Lentil soup/ }).click()
   await expect(drawer).toHaveCount(0)
 
@@ -1397,6 +1399,7 @@ test('meals, a slot is picked, swapped and cleared from the drawer', async ({ pa
   await expect(drawer.getByRole('heading', { name: 'Turkey chili' })).toBeVisible()
   await expect(drawer.getByText('Serves 6 · per-serving values')).toBeVisible()
   await expect(drawer.getByRole('button', { name: 'Cook' })).toBeVisible()
+  await shoot(page, 'meals-recipe')
   await drawer.getByRole('button', { name: 'Remove from plan' }).click()
   await expect(drawer).toHaveCount(0)
 })

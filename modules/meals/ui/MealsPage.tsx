@@ -1,15 +1,23 @@
-import { PageHeader } from '@/components/pos'
 import { readMetric } from '@/core/metrics'
 import { ownerToday } from '@/core/today'
 import { listPlan, listRecipes, recipeDetail } from '../data'
 import { Meals, type MealsData } from './Meals'
 
+const addDays = (iso: string, n: number) =>
+  new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10)
+
 export default async function MealsPage() {
   const todayIso = await ownerToday()
+  const dow = (new Date(`${todayIso}T12:00:00Z`).getUTCDay() + 6) % 7
+  const monday = addDays(todayIso, -dow)
 
   const [recipes, plan, bodyWeight] = await Promise.all([
     listRecipes(),
-    listPlan(todayIso, 7),
+    // Four weeks either side of this one. The stepper pages further, into an
+    // empty grid that "+" still plans into.
+    // ponytail: a fixed window; page the query by ?week= if the plan ever
+    // matters that far out.
+    listPlan(addDays(monday, -28), 63),
     // A calorie target is a Fitness concern. Read through the registry so
     // there is one source of truth, and absent rather than invented when that
     // module is not installed.
@@ -58,22 +66,5 @@ export default async function MealsPage() {
     })),
   }
 
-  const drafts = data.recipes.filter((r) => r.status === 'draft').length
-
-  return (
-    <div className="space-y-7">
-      <PageHeader
-        eyebrow={`Meals / ${data.plan.length} planned / ${drafts} to review`}
-        dot={drafts > 0 ? 'warn' : 'brand'}
-        title="Meals"
-        lede="A week of slots, what each one comes to, and the list to shop from. A plan is not a log: a meal counts only once you tick it."
-        actions={
-          <span className="num text-[11px] text-ink-3">
-            {data.recipes.filter((r) => r.status === 'ready').length} recipes
-          </span>
-        }
-      />
-      <Meals data={data} />
-    </div>
-  )
+  return <Meals data={data} />
 }

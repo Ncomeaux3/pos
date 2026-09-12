@@ -1,27 +1,23 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useTransition } from 'react'
+import { Fragment, useEffect, useState, useTransition, type ReactNode } from 'react'
 import {
   ActionButton,
-  Card,
-  CardHead,
-  Chip,
-  EmptyState,
+  BandSearch,
   Eyebrow,
-  MetricTile,
   PillGroup,
-  Row,
-  RowList,
-  StatusChip,
-  Switch,
+  SearchButton,
+  StatusDot,
   TabBar,
   useToast,
 } from '@/components/pos'
 import { cn } from '@/lib/utils'
-import { groceryList, standing, total, type Macros } from '../macros'
+import { standing, total, type Macros } from '../macros'
 import { scaleQuantity, servingFactor } from '../scale'
-import { decideRecipe, markEaten, planMeal, type ActionResult } from './actions'
+import { decideRecipe, fillWeek, logAdhoc, markEaten, setFavourite, type ActionResult } from './actions'
+import { GroceryDrawer, PickDrawer, RecipeDrawer } from './Drawers'
 
 export type MealsData = {
   todayIso: string
@@ -54,26 +50,39 @@ export type MealsData = {
   }[]
 }
 
-const SLOTS = ['breakfast', 'lunch', 'dinner', 'snack'] as const
+export type Recipe = MealsData['recipes'][number]
+export type Entry = MealsData['plan'][number]
+export type Slot = (typeof SLOTS)[number]
+
+export const SLOTS = ['breakfast', 'lunch', 'dinner', 'snack'] as const
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-
-const addDays = (iso: string, n: number) =>
-  new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10)
-
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+// The artboard's filter order: how a recipe cooks, then when it is eaten.
+const TAG_ORDER = ['quick', 'high-protein', 'batch', 'prep-ahead', 'veg', 'breakfast', 'lunch', 'dinner', 'snack']
 
-/** "12 Sep", for the week the stepper is on. */
-const dayLabel = (iso: string) => {
-  const d = new Date(`${iso}T12:00:00`)
-  return `${d.getDate()} ${MONTHS[d.getMonth()]}`
-}
+export const addDays = (iso: string, n: number) =>
+  new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10)
+const dateOf = (iso: string) => new Date(`${iso}T12:00:00`)
+/** "Sep 7" */
+const shortDate = (iso: string) => `${MONTHS[dateOf(iso).getMonth()]} ${dateOf(iso).getDate()}`
+export const money = (cents: number) => `$${(cents / 100).toFixed(2)}`
+export const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+/** The whole recipe's cost is stored; a serving of it is what a slot costs. */
+export const costOf = (recipe: Recipe | undefined, servings: number) =>
+  recipe ? Math.round((recipe.costCents / recipe.servings) * servings) : 0
+
+// The artboard's three button sizes: the ghost, its accent twin, and the mini.
+export const GHOST =
+  'shrink-0 whitespace-nowrap border border-rule-2 px-3 py-2 text-[12px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink'
+export const GHOST_ACCENT =
+  'shrink-0 whitespace-nowrap border border-brand px-3 py-2 text-[12px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg'
+export const MINI =
+  'shrink-0 whitespace-nowrap border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink'
 
 export function Meals({ data }: { data: MealsData }) {
   const router = useRouter()
   const params = useSearchParams()
-  const tab = params.get('tab') ?? 'week'
-  const openRecipe = data.recipes.find((r) => r.id === params.get('recipe')) ?? null
-  const cooking = data.recipes.find((r) => r.id === params.get('cook')) ?? null
+  const tab = params.get('tab') === 'recipes' ? 'recipes' : 'week'
 
   const setParams = (next: Record<string, string | null>) => {
     const search = new URLSearchParams(params.toString())
@@ -85,7 +94,7 @@ export function Meals({ data }: { data: MealsData }) {
     router.replace(query ? `?${query}` : '?', { scroll: false })
   }
 
-  const [, start] = useTransition()
+  const [pending, start] = useTransition()
   const toast = useToast()
 
   const run = (action: () => Promise<ActionResult>, ok?: string) =>
@@ -95,27 +104,47 @@ export function Meals({ data }: { data: MealsData }) {
       else if (ok) toast(ok)
     })
 
-  // Which week is on screen, as an offset from today. In the URL, so a week
-  // you paged to survives a refresh and can be linked to.
+  const byId = (id: string | null) => data.recipes.find((r) => r.id === id)
+
+  // Which week is on screen, as an offset from this one. In the URL, so a
+  // week you paged to survives a refresh and can be linked to.
   const offset = Number(params.get('week') ?? 0) || 0
-  const weekStart = addDays(data.todayIso, offset * 7)
-  const week = Array.from({ length: 7 }, (unused, i) => addDays(weekStart, i))
-  const drafts = data.recipes.filter((r) => r.status === 'draft')
+  const todayIdx = (dateOf(data.todayIso).getDay() + 6) % 7
+  const monday = addDays(data.todayIso, -todayIdx + offset * 7)
+  const week = Array.from({ length: 7 }, (unused, i) => addDays(monday, i))
+  const thisWeek = offset === 0
+
   const ready = data.recipes.filter((r) => r.status === 'ready')
-
-  // The week on screen, not every row the server sent: paging to next week
-  // and reading this week's calories would be worse than showing nothing.
+  const drafts = data.recipes.filter((r) => r.status === 'draft')
   const inWeek = data.plan.filter((m) => m.onDate >= week[0] && m.onDate <= week[6])
-  const planned = total(inWeek)
-  const eaten = total(inWeek, true)
-  const weekTarget = data.kcalTarget === null ? null : data.kcalTarget * 7
+  const entryAt = (iso: string, slot: string) => inWeek.find((p) => p.onDate === iso && p.slot === slot)
 
-  const plannedRecipes = data.plan
-    .map((p) => data.recipes.find((r) => r.id === p.recipeId))
-    .filter((r): r is MealsData['recipes'][number] => r !== undefined)
+  const dayTotal = (iso: string) => {
+    const entries = inWeek.filter((p) => p.onDate === iso)
+    const t = total(entries)
+    return {
+      ...t,
+      n: entries.length,
+      cost: entries.reduce((sum, e) => sum + costOf(byId(e.recipeId), e.servings), 0),
+      time: entries.reduce((sum, e) => sum + (byId(e.recipeId)?.timeMinutes ?? 0), 0),
+    }
+  }
+  const days = week.map(dayTotal)
+  const plannedDays = days.filter((d) => d.n > 0)
+  const avg = (key: 'kcal' | 'protein') =>
+    plannedDays.length ? Math.round(plannedDays.reduce((a, d) => a + d[key], 0) / plannedDays.length) : 0
+  const weekCost = days.reduce((a, d) => a + d.cost, 0)
+  const cooked = inWeek.filter((e) => e.eaten && e.recipeId).length
+  const target = data.kcalTarget
+  const kcalStanding = target === null ? 'none' : standing(avg('kcal'), target)
 
-  // Cooking takes the whole screen. Standing at a hob with wet hands is not the
-  // moment for a tab bar, four metric tiles and a week grid.
+  // Today: the slots, what was eaten, and the one target the app has.
+  const todayEntries = SLOTS.map((s) => entryAt(data.todayIso, s))
+  const eatenToday = total(todayEntries.filter((e): e is Entry => e !== undefined), true)
+  const firstEmptyToday = SLOTS.find((s, i) => !todayEntries[i])
+  const [adhoc, setAdhoc] = useState('')
+
+  const cooking = byId(params.get('cook'))
   if (cooking) {
     return (
       <CookMode
@@ -127,323 +156,440 @@ export function Meals({ data }: { data: MealsData }) {
     )
   }
 
+  const tag = params.get('tag') ?? 'All'
+  const tags = [...new Set(ready.flatMap((r) => r.tags))].sort(
+    (a, b) => (TAG_ORDER.indexOf(a) + 1 || 99) - (TAG_ORDER.indexOf(b) + 1 || 99) || a.localeCompare(b),
+  )
+  const shown = [...drafts, ...ready].filter(
+    (r) => tag === 'All' || (tag === 'favorites' ? r.favourite : r.tags.includes(tag)),
+  )
+  const usage = (id: string) => inWeek.filter((e) => e.recipeId === id).length
+  const groceryCount = new Set(inWeek.map((e) => e.recipeId).filter(Boolean)).size
+
+  const weekLabel =
+    (offset === 0 ? 'This week · ' : offset === -1 ? 'Last week · ' : offset === 1 ? 'Next week · ' : '') +
+    `${shortDate(week[0])} – ${shortDate(week[6])}`
+
   return (
-    <div className="space-y-5">
-      {/* The artboard puts the week stepper on the right of the tab row, so
-        * paging a week is where the week is rather than above it. */}
-      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+    <>
+      <header className="-mx-[18px] -mt-[18px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 md:-mx-7 md:-mt-7 md:h-14 md:flex-nowrap md:px-7 md:py-0">
+        <span className="eyebrow shrink-0 whitespace-nowrap text-ink-3">
+          Meals <span className="text-ink-4">/</span> {tab === 'week' ? 'Week' : 'Recipes'}
+        </span>
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-4">
+          <SearchButton className="md:hidden" />
+          <BandSearch className="hidden min-w-[160px] max-w-[320px] flex-1 md:flex" placeholder="Search meals" />
+          <span className="eyebrow hidden shrink-0 whitespace-nowrap text-ink-3 md:inline-flex">
+            <StatusDot tone={kcalStanding === 'none' ? 'brand' : kcalStanding === 'on' ? 'ok' : 'warn'} />
+            {inWeek.length} / 28 planned · {avg('protein')}g protein avg
+          </span>
+        </div>
+      </header>
+
+      <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0 flex-1 basis-[420px]">
+          <h1 className="text-[28px] font-normal leading-none tracking-[-0.03em] text-ink">Meals</h1>
+          <p className="mt-2 hidden text-[13px] text-ink-3 md:block">
+            Plan the week, log what you ate, and see calories against the Fitness estimate. Cooking a
+            planned meal earns XP on the skills the recipe is linked to.
+          </p>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <button type="button" onClick={() => setParams({ drawer: 'grocery' })} className={GHOST}>
+            Grocery list <span className="num ml-1.5 text-[10px] text-ink-4">{groceryCount}</span>
+          </button>
+          <ActionButton
+            variant="solid"
+            size="xl"
+            disabled={pending}
+            className="h-11 gap-2 px-3.5 text-[13px] md:h-[51px] md:px-[22px] md:text-[15px]"
+            onClick={() => run(() => fillWeek(thisWeek ? data.todayIso : week[0], week[6]), 'Week filled from the library')}
+          >
+            {pending ? 'Suggesting…' : 'Suggest week'} <span aria-hidden="true">&rarr;</span>
+          </ActionButton>
+        </div>
+      </div>
+
+      <div className="mt-[18px] flex flex-wrap items-end justify-between gap-2 border-b border-rule">
         <TabBar
           label="Meals views"
           value={tab}
-          onChange={(next) => setParams({ tab: next === 'week' ? null : next, recipe: null })}
+          className="border-b-0"
+          tabClassName="px-3.5"
+          onChange={(next) => setParams({ tab: next === 'week' ? null : next, recipe: null, slot: null, tag: null })}
           tabs={[
-            { value: 'week', label: 'Week', count: data.plan.length },
+            { value: 'week', label: 'Week', count: inWeek.length },
             { value: 'recipes', label: 'Recipes', count: ready.length },
-            { value: 'grocery', label: 'Grocery' },
-            { value: 'inbox', label: 'Inbox', count: drafts.length },
           ]}
         />
-
         {tab === 'week' && (
-          <div className="flex shrink-0 items-center gap-1.5 pb-2">
-            <ActionButton
-              aria-label="Previous week"
-              onClick={() => setParams({ week: offset - 1 === 0 ? null : String(offset - 1) })}
-            >
+          <div className="flex items-center gap-1 pb-2">
+            <button type="button" aria-label="Previous week" className={MINI} onClick={() => setParams({ week: offset - 1 === 0 ? null : String(offset - 1) })}>
               ←
-            </ActionButton>
-            <span className="num min-w-[132px] text-center text-[11px] text-ink-3">
-              {offset === 0 ? 'This week' : `${dayLabel(week[0])} to ${dayLabel(week[6])}`}
-            </span>
-            <ActionButton
-              aria-label="Next week"
-              onClick={() => setParams({ week: offset + 1 === 0 ? null : String(offset + 1) })}
-            >
+            </button>
+            <span className="num min-w-[150px] text-center text-[11px] text-ink-3">{weekLabel}</span>
+            <button type="button" aria-label="Next week" className={MINI} onClick={() => setParams({ week: offset + 1 === 0 ? null : String(offset + 1) })}>
               →
-            </ActionButton>
-            {offset !== 0 && (
-              <ActionButton onClick={() => setParams({ week: null })}>Today</ActionButton>
-            )}
+            </button>
           </div>
         )}
       </div>
 
       {tab === 'week' && (
-        <div className="space-y-4">
-          <div className="grid gap-2.5 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,160px),1fr))]">
-            <MetricTile
-              label="Planned"
-              value={planned.kcal.toLocaleString()}
-              delta={
-                weekTarget === null
-                  ? 'no target'
-                  : `${standing(planned.kcal, weekTarget)} against ${weekTarget.toLocaleString()}`
-              }
-              deltaTone={
-                weekTarget === null
-                  ? 'quiet'
-                  : standing(planned.kcal, weekTarget) === 'on'
-                    ? 'ok'
-                    : 'warn'
-              }
-            />
-            <MetricTile label="Eaten" value={eaten.kcal.toLocaleString()} delta="ticked only" />
-            <MetricTile label="Protein" value={`${planned.protein} g`} delta="planned" />
-            <MetricTile
-              label="Unknown"
-              value={planned.unknown}
-              delta={planned.unknown > 0 ? 'meals with no recipe' : 'every meal counted'}
-              deltaTone={planned.unknown > 0 ? 'warn' : 'quiet'}
-            />
-          </div>
-
-          {data.kcalTarget !== null && (
-            <p className="t-caption text-ink-3">
-              The target is an estimate: fifteen calories a pound of body weight, read from Fitness.
-              It is a rule of thumb, not a prescription, and nothing here is a nutritional opinion.
-            </p>
+        <div className="mt-[18px] space-y-[18px]">
+          {thisWeek && (
+            <section className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-5 gap-y-3 border border-brand px-4 py-3">
+              <Eyebrow className="text-brand">
+                Today · {DAYS[todayIdx].toUpperCase()} {shortDate(data.todayIso).toUpperCase()}
+              </Eyebrow>
+              <div className="flex flex-wrap items-center gap-2">
+                {SLOTS.map((s, i) => {
+                  const entry = todayEntries[i]
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      disabled={!entry}
+                      onClick={() => entry && run(() => markEaten(entry.id, !entry.eaten))}
+                      className={cn(
+                        'inline-flex items-center gap-2 border px-2.5 py-[5px] text-[12px] transition-colors duration-150',
+                        entry?.eaten ? 'border-brand' : 'border-rule-2',
+                        entry ? 'text-ink hover:border-ink' : 'text-ink-4',
+                      )}
+                    >
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'size-3 shrink-0 border text-center text-[9px] leading-[10px] text-bg',
+                          entry?.eaten ? 'border-brand bg-brand' : 'border-ink-3',
+                        )}
+                      >
+                        {entry?.eaten ? '✓' : ''}
+                      </span>
+                      {cap(s)} · {entry ? entry.label || 'Something' : 'nothing planned'}
+                    </button>
+                  )
+                })}
+                {firstEmptyToday && (
+                  <form
+                    className="flex gap-1"
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      const label = adhoc.trim()
+                      if (!label) return
+                      run(() => logAdhoc(data.todayIso, firstEmptyToday, label), `Logged as ${firstEmptyToday}`)
+                      setAdhoc('')
+                    }}
+                  >
+                    <input
+                      value={adhoc}
+                      onChange={(e) => setAdhoc(e.target.value)}
+                      placeholder="Ate something else? e.g. burrito"
+                      className="w-[280px] max-w-full border border-rule-2 bg-bg px-2.5 py-1.5 text-[12px] text-ink outline-none focus:border-brand"
+                    />
+                    <button type="submit" className={MINI}>
+                      Log
+                    </button>
+                  </form>
+                )}
+              </div>
+              <Eyebrow>Eaten so far</Eyebrow>
+              <div className="flex flex-wrap items-center gap-[18px]">
+                {(
+                  [
+                    ['Calories', eatenToday.kcal, target, ''],
+                    ['Protein', eatenToday.protein, null, 'g'],
+                    ['Carbs', eatenToday.carbs, null, 'g'],
+                    ['Fat', eatenToday.fat, null, 'g'],
+                  ] as const
+                ).map(([label, value, t, unit]) => (
+                  <div key={label} className="min-w-[150px]">
+                    <div className="flex justify-between gap-2 whitespace-nowrap text-[11px] text-ink-3">
+                      <span>{label}</span>
+                      <span className="num text-ink-2">
+                        {value.toLocaleString('en-US')}
+                        {unit}
+                        {t !== null && <span className="text-ink-4"> / {t.toLocaleString('en-US')}</span>}
+                      </span>
+                    </div>
+                    {t !== null && (
+                      <div className="mt-1 h-[3px] bg-rule-2">
+                        <div
+                          className={cn('h-full', value > t * 1.1 ? 'bg-warn' : 'bg-brand')}
+                          style={{ width: `${Math.min(100, (value / t) * 100)}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {eatenToday.unknown > 0 && (
+                  <span className="text-[11px] text-ink-3">{eatenToday.unknown} without a recipe, not counted</span>
+                )}
+              </div>
+            </section>
           )}
 
           <div className="overflow-x-auto">
-            <div className="min-w-[640px] space-y-px">
-              <div className="label grid grid-cols-[80px_repeat(4,1fr)] gap-px text-[10px] tracking-[0.12em] text-ink-3">
-                <span className="px-2 py-1.5">Day</span>
-                {SLOTS.map((s) => (
-                  <span key={s} className="px-2 py-1.5">
-                    {s}
-                  </span>
-                ))}
-              </div>
-
-              {week.map((iso) => {
-                const dow = new Date(`${iso}T12:00:00`).getDay()
+            <div className="grid min-w-[920px] grid-cols-[72px_repeat(7,minmax(120px,1fr))] gap-px border border-rule bg-rule">
+              <div className="bg-bg px-2 py-2.5" />
+              {week.map((iso, i) => {
+                const isToday = iso === data.todayIso
                 return (
-                  <div key={iso} className="grid grid-cols-[80px_repeat(4,1fr)] gap-px bg-rule">
-                    <div
-                      className={cn(
-                        'space-y-0.5 px-2 py-2.5',
-                        // Today, not the first row: on a week you paged to,
-                        // no row is today.
-                        iso === data.todayIso ? 'bg-brand-soft' : 'bg-bg-elev',
-                      )}
-                    >
-                      <p className="label text-[10px] text-ink-3">{DAYS[(dow + 6) % 7]}</p>
-                      <p className="num text-[11px] text-ink-2">{iso.slice(8)}</p>
-                    </div>
-
-                    {SLOTS.map((s) => {
-                      const entry = data.plan.find((p) => p.onDate === iso && p.slot === s)
-                      return (
-                        <div key={s} className="min-h-16 space-y-1.5 bg-bg-elev px-2 py-2">
-                          {entry ? (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  entry.recipeId && setParams({ tab: 'recipes', recipe: entry.recipeId })
-                                }
-                                className={cn(
-                                  't-caption block text-left',
-                                  entry.eaten ? 'text-ink-3' : 'text-ink',
-                                )}
-                              >
-                                {entry.label || 'Something'}
-                              </button>
-                              <div className="flex items-center gap-1.5">
-                                <Switch
-                                  label={`Eaten, ${entry.label || s}`}
-                                  checked={entry.eaten}
-                                  onChange={(next) => run(() => markEaten(entry.id, next))}
-                                />
-                                {entry.macros && (
-                                  <span className="label text-[10px] text-ink-3">
-                                    {Math.round(entry.macros.kcal * entry.servings)}
-                                  </span>
-                                )}
-                              </div>
-                            </>
-                          ) : (
-                            <p className="t-caption text-ink-4">empty</p>
-                          )}
-                        </div>
-                      )
-                    })}
+                  <div key={iso} className={cn('flex flex-col border-t-2 bg-bg px-2 py-2.5', isToday ? 'border-brand' : 'border-transparent')}>
+                    <span className={cn('num text-[9px] uppercase tracking-[0.08em]', isToday ? 'text-brand' : 'text-ink-2')}>{DAYS[i].toUpperCase()}</span>
+                    <span className={cn('mt-0.5 text-[14px]', isToday ? 'text-brand' : 'text-ink-2')}>{dateOf(iso).getDate()}</span>
                   </div>
                 )
               })}
+
+              {SLOTS.map((slot) => (
+                <Fragment key={slot}>
+                  <div className="flex items-center bg-bg px-2 py-2.5">
+                    <Eyebrow>{slot.toUpperCase()}</Eyebrow>
+                  </div>
+                  {week.map((iso) => {
+                    const entry = entryAt(iso, slot)
+                    const recipe = entry ? byId(entry.recipeId) : undefined
+                    const isToday = iso === data.todayIso
+                    const past = iso < data.todayIso
+                    return (
+                      <div key={iso} className={cn('min-h-[76px] p-1.5', isToday ? 'bg-brand-soft' : 'bg-bg')}>
+                        {entry ? (
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setParams({ recipe: entry.recipeId, slot: entry.id, tab: null })}
+                            onKeyDown={(e) => e.key === 'Enter' && setParams({ recipe: entry.recipeId, slot: entry.id, tab: null })}
+                            className={cn(
+                              'h-full cursor-grab border bg-bg-elev px-[9px] py-2 transition-colors duration-150 hover:border-rule-2',
+                              entry.eaten ? 'border-brand' : 'border-rule',
+                              past && !entry.eaten && 'opacity-55',
+                            )}
+                          >
+                            <div className="flex items-start justify-between gap-1.5">
+                              <span className="min-w-0 text-[12.5px] leading-[1.3] tracking-[-0.01em] [overflow-wrap:anywhere]">
+                                {entry.label || 'Something'}
+                              </span>
+                              <button
+                                type="button"
+                                title="Mark eaten"
+                                aria-label="Mark eaten"
+                                aria-pressed={entry.eaten}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  run(() => markEaten(entry.id, !entry.eaten))
+                                }}
+                                className={cn(
+                                  'size-4 shrink-0 border text-[10px] leading-[14px] text-bg transition-colors hover:border-ink',
+                                  entry.eaten ? 'border-brand bg-brand' : 'border-rule-2',
+                                )}
+                              >
+                                {entry.eaten ? '✓' : ''}
+                              </button>
+                            </div>
+                            <div className="num mt-1.5 flex flex-wrap gap-1.5 text-[9.5px] text-ink-3">
+                              <span>{entry.macros ? Math.round(entry.macros.kcal * entry.servings) : 0} kcal</span>
+                              <span className="text-brand">{entry.macros ? Math.round(entry.macros.protein * entry.servings) : 0}p</span>
+                              <span>{recipe?.timeMinutes ?? 0}m</span>
+                              <span>{money(costOf(recipe, entry.servings))}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            aria-label="Plan a meal"
+                            onClick={() => setParams({ pick: `${iso}:${slot}` })}
+                            className="h-full min-h-16 w-full border border-dashed border-rule text-[16px] text-ink-4 transition-colors duration-150 hover:border-brand hover:text-brand"
+                          >
+                            +
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </Fragment>
+              ))}
+
+              <div className="flex items-center bg-bg px-2 py-2.5">
+                <Eyebrow>TOTAL</Eyebrow>
+              </div>
+              {days.map((d, i) => (
+                <div key={week[i]} className="flex flex-col gap-[5px] bg-bg px-2 py-2.5">
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-ink-3">kcal</span>
+                    <span className={cn('num', d.n === 0 ? 'text-ink-4' : target !== null && d.kcal > target * 1.1 ? 'text-warn' : 'text-ink-2')}>{d.kcal.toLocaleString('en-US')}</span>
+                  </div>
+                  {target !== null && (
+                    <div className="h-0.5 bg-rule-2">
+                      <div className={cn('h-full', d.kcal > target * 1.1 ? 'bg-warn' : 'bg-brand')} style={{ width: `${Math.min(100, (d.kcal / target) * 100)}%` }} />
+                    </div>
+                  )}
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-ink-3">protein</span>
+                    <span className={cn('num', d.n === 0 ? 'text-ink-4' : 'text-ink-2')}>{d.protein}g</span>
+                  </div>
+                  <span className="num mt-0.5 text-[9.5px] text-ink-4">
+                    {money(d.cost)} · {d.time}m
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
+
+          <section className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))] gap-px border border-rule bg-rule">
+            <WeekCell
+              label="Week · kcal / day"
+              value={avg('kcal').toLocaleString('en-US')}
+              suffix={target === null ? undefined : ` / ${target.toLocaleString('en-US')}`}
+              note={
+                target === null ? (
+                  'No estimate: Fitness has no body weight'
+                ) : (
+                  <>
+                    {kcalStanding === 'over' ? 'Over the estimate on average' : kcalStanding === 'under' ? 'Under the estimate · plan more' : 'Within 10% of the estimate'}
+                    {' · '}
+                    <Link href="/fitness" className="hover:text-ink">15 kcal a pound, from Fitness</Link>
+                  </>
+                )
+              }
+            />
+            <WeekCell label="Week · protein / day" value={`${avg('protein')}g`} note="per planned day" />
+            <WeekCell label="Week · cost" value={money(weekCost)} note={`${money(Math.round(weekCost / 7))} per day`} />
+            <WeekCell label="Cooked" value={String(cooked)} suffix=" meals" note={`${inWeek.length} planned`} />
+          </section>
         </div>
       )}
 
       {tab === 'recipes' && (
-        <div className="flex flex-wrap items-start gap-x-6 gap-y-5">
-          <div className="min-w-0 flex-[1_1_360px]">
-            {ready.length === 0 ? (
-              <EmptyState headline="No recipes">
-                Add one by hand, or paste a URL and accept what the parser drafts.
-              </EmptyState>
-            ) : (
-              <RowList>
-                {ready.map((r) => (
-                  <Row
-                    key={r.id}
-                    title={r.name}
-                    meta={`${r.macros.kcal} kcal / ${r.macros.protein} g protein / ${r.timeMinutes} min / serves ${r.servings}`}
-                    selected={openRecipe?.id === r.id}
-                    onClick={() => setParams({ recipe: r.id })}
-                    right={
-                      <>
-                        {r.favourite && <Chip tone="brand">favourite</Chip>}
-                        {r.tags.slice(0, 2).map((t) => (
-                          <Chip key={t} tone="quiet">
-                            {t}
-                          </Chip>
-                        ))}
-                      </>
-                    }
-                  />
-                ))}
-              </RowList>
-            )}
+        <div className="mt-[18px] space-y-3.5">
+          <div className="flex flex-wrap items-center gap-2">
+            {['All', 'favorites', ...tags].map((t) => {
+              const on = tag === t
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setParams({ tag: t === 'All' ? null : t })}
+                  className={cn(
+                    'label rounded-full border px-[9px] py-[3px] text-[11px] uppercase tracking-[0.08em] transition-colors duration-150',
+                    on ? 'border-ink bg-ink text-bg' : 'border-rule-2 text-ink-3 hover:text-ink',
+                  )}
+                >
+                  {t === 'favorites' ? '★ favorites' : t}
+                </button>
+              )
+            })}
           </div>
 
-          {openRecipe && (
-            <aside className="min-w-0 flex-[1_1_320px] space-y-4 md:max-w-[420px]">
-              <Card className="space-y-3">
-                <CardHead
-                  label={`Serves ${openRecipe.servings}`}
-                  meta={`${openRecipe.timeMinutes} min`}
-                />
-                <h2 className="t-title text-ink">{openRecipe.name}</h2>
-
-                <div className="grid grid-cols-4 gap-2">
-                  {(['kcal', 'protein', 'carbs', 'fat'] as const).map((k) => (
-                    <div key={k} className="space-y-1 rounded-md border border-rule-2 p-2">
-                      <Eyebrow className="text-[10px]">{k}</Eyebrow>
-                      <p className="num text-[13px] text-ink">
-                        {openRecipe.macros[k]}
-                        {k === 'kcal' ? '' : ' g'}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-                <p className="t-caption text-ink-3">Per serving.</p>
-
-                {openRecipe.ingredients.length > 0 && (
-                  <div className="space-y-1.5">
-                    <Eyebrow>Ingredients</Eyebrow>
-                    {openRecipe.ingredients.map((i) => (
-                      <p key={i.item} className="t-caption text-ink-2">
-                        {i.quantity ? `${i.quantity} ` : ''}
-                        {i.item}
-                      </p>
-                    ))}
-                  </div>
-                )}
-
-                {openRecipe.steps.length > 0 && (
-                  <div className="space-y-1.5">
-                    <Eyebrow>Method</Eyebrow>
-                    {openRecipe.steps.map((s, i) => (
-                      <p key={s} className="t-caption text-ink-2">
-                        {i + 1}. {s}
-                      </p>
-                    ))}
-                  </div>
-                )}
-
-                {openRecipe.steps.length > 0 && (
-                  <ActionButton
-                    variant="brand"
-                    onClick={() => setParams({ cook: openRecipe.id, step: '0' })}
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,240px),1fr))] gap-3">
+            {shown.map((r) => (
+              <div
+                key={r.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => setParams({ recipe: r.id, slot: null })}
+                onKeyDown={(e) => e.key === 'Enter' && setParams({ recipe: r.id, slot: null })}
+                className="min-w-0 cursor-pointer border border-rule bg-bg-elev px-4 py-3.5 text-left transition-colors duration-200 hover:border-rule-2"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="min-w-0 text-[14.5px] leading-[1.3] tracking-[-0.01em]">{r.name}</span>
+                  <button
+                    type="button"
+                    title="Favorite"
+                    aria-label={r.favourite ? 'Remove favorite' : 'Add favorite'}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      run(() => setFavourite(r.id, !r.favourite))
+                    }}
+                    className={cn('num shrink-0 text-[12px]', r.favourite ? 'text-brand' : 'text-ink-4')}
                   >
-                    Cook this
-                  </ActionButton>
-                )}
-
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {SLOTS.map((s) => (
-                    <ActionButton
-                      key={s}
-                      onClick={() =>
-                        run(
-                          () => planMeal(data.todayIso, s, openRecipe.id),
-                          `Planned for ${s} today`,
-                        )
-                      }
-                    >
-                      Today, {s}
-                    </ActionButton>
+                    {r.favourite ? '★' : '☆'}
+                  </button>
+                </div>
+                <div className="num mt-2 flex flex-wrap gap-2 text-[10px] text-ink-3">
+                  <span>{r.macros.kcal} kcal</span>
+                  <span className="text-brand">{r.macros.protein}g protein</span>
+                  <span>{r.timeMinutes} min</span>
+                  <span>{money(costOf(r, 1))}/serving</span>
+                </div>
+                <div className="mt-2.5 flex flex-wrap gap-1">
+                  {r.status === 'draft' && <span className="num border border-warn/60 px-[5px] py-px text-[9.5px] text-warn">draft</span>}
+                  {r.tags.map((t) => (
+                    <span key={t} className="num border border-rule px-[5px] py-px text-[9.5px] text-ink-3">
+                      {t}
+                    </span>
                   ))}
                 </div>
-              </Card>
-            </aside>
-          )}
+                {r.status === 'draft' ? (
+                  <DraftActions id={r.id} run={run} className="mt-2.5" />
+                ) : (
+                  <div className="mt-2.5 text-[10.5px] text-ink-4">
+                    {usage(r.id) ? `${usage(r.id)}× this week` : 'not planned this week'}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {tab === 'grocery' && (
-        <Card className="space-y-3">
-          <CardHead label="Grocery list" meta="from what is planned" />
-          {plannedRecipes.length === 0 ? (
-            <EmptyState headline="Nothing to buy" className="border-0">
-              Plan a meal and its ingredients appear here.
-            </EmptyState>
-          ) : (
-            <>
-              <RowList>
-                {groceryList(plannedRecipes).map((line) => (
-                  <Row
-                    key={line.item}
-                    title={line.item}
-                    meta={line.recipes.join(', ')}
-                    right={
-                      <span className="t-caption text-ink-2">{line.quantities.join(' + ')}</span>
-                    }
-                  />
-                ))}
-              </RowList>
-              <p className="t-caption text-ink-3">
-                Quantities are listed, not added up. Grams and cloves and splashes do not sum, and a
-                list that pretended otherwise would have to invent a number or refuse the recipe.
-              </p>
-            </>
-          )}
-        </Card>
-      )}
+      <PickDrawer
+        pick={params.get('pick')}
+        recipes={ready}
+        onClose={() => setParams({ pick: null })}
+        run={run}
+      />
+      <GroceryDrawer
+        open={params.get('drawer') === 'grocery'}
+        entries={inWeek}
+        recipes={data.recipes}
+        weekCost={weekCost}
+        onClose={() => setParams({ drawer: null })}
+      />
+      <RecipeDrawer
+        recipe={byId(params.get('recipe'))}
+        entry={inWeek.find((e) => e.id === params.get('slot')) ?? data.plan.find((e) => e.id === params.get('slot'))}
+        fromDate={thisWeek ? data.todayIso : week[0]}
+        plan={data.plan}
+        run={run}
+        setParams={setParams}
+      />
+    </>
+  )
+}
 
-      {tab === 'inbox' &&
-        (drafts.length === 0 ? (
-          <EmptyState headline="Inbox zero">
-            An imported recipe waits here. A parser reading someone else&apos;s markup is proposing,
-            not deciding, so nothing joins the library until you accept it.
-          </EmptyState>
-        ) : (
-          <RowList>
-            {drafts.map((r) => (
-              <Row
-                key={r.id}
-                title={r.name}
-                meta={`${r.macros.kcal} kcal / ${r.ingredients.length} ingredients / ${r.sourceUrl || 'no source'}`}
-                right={
-                  <>
-                    <StatusChip tone="warn">Draft</StatusChip>
-                    <ActionButton
-                      variant="brand"
-                      onClick={() => run(() => decideRecipe(r.id, true), 'Added to the library')}
-                    >
-                      Accept
-                    </ActionButton>
-                    <ActionButton onClick={() => run(() => decideRecipe(r.id, false), 'Discarded')}>
-                      Discard
-                    </ActionButton>
-                  </>
-                }
-              />
-            ))}
-          </RowList>
-        ))}
+function WeekCell({ label, value, suffix, note }: { label: string; value: string; suffix?: string; note: ReactNode }) {
+  return (
+    <div className="bg-bg px-[18px] py-3.5">
+      <Eyebrow>{label}</Eyebrow>
+      <div className="num mt-2 text-[22px] font-light leading-none text-ink">
+        {value}
+        {suffix && <span className="text-[11px] text-ink-3">{suffix}</span>}
+      </div>
+      <div className="mt-1 text-[11px] text-ink-3">{note}</div>
+    </div>
+  )
+}
+
+/** Accept or discard an imported recipe: on its card and in its drawer. */
+export function DraftActions({
+  id,
+  run,
+  className,
+}: {
+  id: string
+  run: (action: () => Promise<ActionResult>, ok?: string) => void
+  className?: string
+}) {
+  return (
+    <div className={cn('flex gap-1.5', className)} onClick={(e) => e.stopPropagation()}>
+      <button type="button" className={cn(MINI, 'border-brand text-ink')} onClick={() => run(() => decideRecipe(id, true), 'Added to the library')}>
+        Accept
+      </button>
+      <button type="button" className={MINI} onClick={() => run(() => decideRecipe(id, false), 'Discarded')}>
+        Discard
+      </button>
     </div>
   )
 }

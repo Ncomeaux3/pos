@@ -28,16 +28,34 @@ Nothing in this module offers a nutritional opinion.
 
 ## The grocery list does not add up
 
-Quantities are listed, not summed. `600 g` and `3 cloves` and `a splash` do not
-add, and a list that tried would either refuse the recipe or invent a number by
-silently dropping a unit.
-
-Two lines reading "chicken thigh, 600 g + 400 g" is something a person can shop
-from. `1000` alone is not, and worse, it is confidently wrong. The screen says
-so under the list rather than leaving the reader to notice.
+The list is grouped by recipe, and every quantity is as the recipe wrote it.
+`600 g` and `3 cloves` and `a splash` do not add, and a list that tried would
+either refuse the recipe or invent a number by silently dropping a unit. A
+recipe planned three times says so in its group head and, when it serves one,
+beside each quantity; a batch recipe that serves six is cooked once.
 
 `ingredient.quantity` is free text for the same reason: recipes say "a splash"
 and "2 cloves", and a schema insisting on a number and a unit would reject both.
+
+## A recipe comes in from a page's JSON-LD, and waits
+
+`import_recipe` reads the schema.org `Recipe` block out of a page's source and
+files it as a `draft`: name, ingredients split into a quantity and the thing
+you buy, steps, yield, time, and per-serving nutrition when the page has it.
+No model reads the page. A page with no Recipe block is refused rather than
+guessed at; the Python scrapers that read other formats cannot run in the
+Vercel Node runtime, so there is no fallback.
+
+The tool takes the page source rather than fetching it. The checked fetch
+that stops a pasted URL reaching a private address lives in Second Brain and
+is not shared, so until it is, whoever calls this tool fetches first.
+
+## Suggest week is a rule, not a model
+
+`fill_week` puts a recipe in every empty slot between two dates: one tagged
+for that slot, favourites first, rotating by day so a week is not seven of the
+same breakfast. A slot with nothing tagged for it stays empty. Nothing already
+planned is touched.
 
 ## Macros are per serving
 
