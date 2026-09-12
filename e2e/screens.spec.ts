@@ -313,6 +313,10 @@ test('settings, skills', async ({ page }) => {
   await expect(page.getByRole('link', { name: /^Skills \d+$/ })).toHaveAttribute('aria-current', 'page')
   await expect(page.getByText('Engineering · Coding')).toBeVisible()
   await shoot(page, 'settings-skills')
+  // The name stays readable at 402: the keywords drop to their own line
+  // rather than squeezing the input to two characters.
+  const nameBox = (await page.getByRole('textbox', { name: 'Rename TypeScript' }).boundingBox())!
+  expect(nameBox.width).toBeGreaterThanOrEqual(120)
 
   // Renaming, then resetting: the writes the tab exists for, each through the
   // module's own tool. The name is the artboard's transparent input.
@@ -791,10 +795,28 @@ test('tasks, a row expands in place and EDIT opens the form drawer', async ({ pa
   await expect(drawer.getByText('Linked skills')).toBeVisible()
   await shoot(page, 'tasks-drawer')
 
+  // On the phone the drawer is PosPhone's sheet: full width, on the bottom
+  // edge, at most 74% of the screen.
+  const viewport = page.viewportSize()!
+  if (viewport.width < 720) {
+    const box = (await drawer.boundingBox())!
+    expect(box.x).toBe(0)
+    expect(box.width).toBe(viewport.width)
+    expect(Math.round(box.y + box.height)).toBe(viewport.height)
+    expect(box.height).toBeLessThanOrEqual(viewport.height * 0.74 + 1)
+  }
+
   // Edits hold until Save, then land as one write.
   await drawer.getByLabel('Estimate · min').fill('95')
   await drawer.getByRole('button', { name: /^Save/ }).click()
-  await expect(page.getByText('Saved')).toBeVisible()
+  const toast = page.getByText('Saved')
+  await expect(toast).toBeVisible()
+  // The toast clears the phone tab bar rather than sitting under it.
+  if (viewport.width < 720) {
+    const bar = (await page.getByRole('navigation', { name: 'Sections' }).boundingBox())!
+    const t = (await toast.boundingBox())!
+    expect(t.y + t.height).toBeLessThan(bar.y)
+  }
   await expect(page.locator('article').filter({ hasText: 'Recurring detection tests' }).getByText('95m')).toBeVisible()
 })
 
@@ -969,6 +991,9 @@ test('goals, a check-in moves the goal', async ({ page }) => {
 test('weekly review, six steps and a note built from the answers', async ({ page }) => {
   await page.goto('/weekly-review')
   await expect(page.getByRole('heading', { name: 'Weekly review' })).toBeVisible()
+  // The shell's negative margin matches the phone's 18px body, so nothing
+  // scrolls sideways at 402.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(page.viewportSize()!.width)
 
   // Step one is the artboard's six tiles, in its order, each from a module's
   // digest. POS Weekly Review.dc.html at 1440x900.
