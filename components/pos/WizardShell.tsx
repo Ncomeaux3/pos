@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { ActionButton } from './Button'
+import { ActionButton, type ActionButtonVariant } from './Button'
 import { Eyebrow } from './text'
 
 export type WizardStep = { key: string; name: string; hint?: string }
@@ -25,6 +25,8 @@ export function WizardShell({
   onSkip,
   onNext,
   nextLabel = 'Continue',
+  nextVariant = 'solid',
+  backVariant = 'quiet',
   footnote,
   railTitle,
   railLede,
@@ -40,6 +42,9 @@ export function WizardShell({
   onSkip?: () => void
   onNext: () => void
   nextLabel?: string
+  /** Onboarding's artboard draws an accent primary and a bordered Back; the review's does not. */
+  nextVariant?: ActionButtonVariant
+  backVariant?: ActionButtonVariant
   footnote?: ReactNode
   railTitle: string
   railLede?: string
@@ -113,7 +118,7 @@ export function WizardShell({
         <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-rule pt-4">
           <div className="flex items-center gap-2">
             {onBack && (
-              <ActionButton variant="quiet" onClick={onBack}>
+              <ActionButton variant={backVariant} onClick={onBack}>
                 Back
               </ActionButton>
             )}
@@ -125,7 +130,7 @@ export function WizardShell({
           </div>
           <div className="flex flex-wrap items-center gap-3">
             {footnote && <span className="text-[11px] text-ink-3">{footnote}</span>}
-            <ActionButton variant="solid" onClick={onNext} className="px-4">
+            <ActionButton variant={nextVariant} onClick={onNext} className="px-4">
               {nextLabel}
             </ActionButton>
           </div>
