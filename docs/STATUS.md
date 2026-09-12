@@ -603,6 +603,14 @@ Devices card in Settings, and the sender honouring the push channel it has been
 storing since the notifications step. Needs two keys in `.env` before it does
 anything; the screen says so.
 
+**The skills digest's third bullet** (2026-09-12). SPEC's "skills with high
+goal weight but low activity" was hardcoded empty from before Goals existed.
+It is now the page's "Goal weight high, low activity" column computed at
+night: `modules/skills/pressure.ts` holds the rule for both, and
+`goalWeightBySkill()` in `modules/skills/data.ts` is the one query. Empty on
+the demo seed, whose goal-linked skills all gained XP this month.
+docs/plans/skills-goal-pressure.md.
+
 **Gestures.** Swipe between tabs, swipe a task to complete or reopen it, pull
 down on the dashboard to sync, and (2026-09-12) hold a dashboard tile for
 480ms to enter Arrange mode. Touch and pen only, so a mouse drag over a task

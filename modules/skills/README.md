@@ -20,7 +20,8 @@ classifies.
 | `xp.ts` | `level()`, mirrored by `skills.level()` in SQL |
 | `data.ts` | Everything the screen needs, in two queries |
 | `ui/layout.ts` | Deterministic constellation placement. No d3-force |
-| `jobs/nightly-digest.ts` | Attribute levels, gaining, stagnant |
+| `pressure.ts` | Which goal-linked skills have gone quiet; shared by the page and the digest |
+| `jobs/nightly-digest.ts` | Attribute levels, gaining, stagnant, under goal pressure |
 
 ## Schema
 
@@ -48,7 +49,7 @@ in the tree that no view can place and no XP can roll up.
 
 | Tool | Guarded | Notes |
 |---|---|---|
-| `skills.get_digest` | no | Attribute levels, character level, gaining, stagnant |
+| `skills.get_digest` | no | Attribute levels, character level, gaining, stagnant, under goal pressure |
 | `skills.write` | no | Add, rename or delete a skill |
 | `skills.reassign` | no | Move a link by hand. The one write that sets `is_manual` |
 | `skills.query` | no | Provided by core, scoped to `skills` and `core` |

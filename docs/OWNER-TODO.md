@@ -168,10 +168,11 @@ Test button now, so you get a clear yes or no rather than "not verified".
       into `itinerary_item`, `meals.meal_log` into `plan_entry`. All three read
       as reasonable simplifications. Amend SPEC to match the code, or change the
       code to match SPEC?
-- [ ] **The Skill Tree's third digest bullet cannot be computed.** SPEC asks for
-      "skills with high goal weight but low activity", and nothing anywhere
-      stores a goal weight. Either goals grow a per-skill weight, or that bullet
-      comes out of SPEC. It is currently hardcoded empty with a stale comment.
+- [x] **2026-09-12. The Skill Tree's third digest bullet is computed.** Goal
+      weight is the sum of `weight * confidence` over the skill links of goals,
+      the number the Skill Tree page was already drawing; "low activity" is no
+      XP in 30 days. `modules/skills/pressure.ts` holds the rule for both the
+      page and the nightly digest. No new column, no SPEC change.
 
 ## Later phases
 
