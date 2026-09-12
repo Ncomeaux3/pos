@@ -15,7 +15,13 @@ deploy, is the only Phase 1 step left, and it is now the plan in
 `docs/plans/backend-live.md` (adopted 2026-09-12): a hygiene phase with the
 production login fix, production live, the integrations, the Apple Health
 webhook, a cron-silence check, and PR #10. The owner's ordered steps are in
-`docs/OWNER-TODO.md`.
+`docs/OWNER-TODO.md`. Phase 1 is PR #13: `fieldClass` lives in
+`components/pos/field.ts` so the production login input is styled again; CI
+builds and then serves `/login` from `next start` (the build alone exits 0 on
+the defect, the page is dynamic); the seven e2e failures assert the CI state
+or the seed produces it; `digest_morning_at` is read-only everywhere. One
+thing for the laptop: `.env` has no VAPID pair yet, so `pnpm setup` and the
+push Devices e2e test fail locally until it is added.
 
 ## Done
 

@@ -60,13 +60,25 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
 
+      # The login page shipped with a class that was a thrown-error string:
+      # a client module's export interpolated by a server component. Dev does
+      # not show it and next build exits 0 (the page is dynamic, nothing
+      # renders it at build time), so the built server is asked for /login.
+      - run: pnpm build
+      - name: Serve /login from the build
+        run: |
+          pnpm start &
+          for i in $(seq 1 30); do curl -sf -o login.html localhost:3000/login && break; sleep 1; done
+          grep -q 'w-full rounded-md' login.html
+          if grep -q 'Attempted to call' login.html; then exit 1; fi
+
       # vitest builds its own pos_test database from the migrations, so this
       # also proves every migration replays on a clean Postgres.
       - run: pnpm test
 
   screens:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     needs: check
 
     steps:

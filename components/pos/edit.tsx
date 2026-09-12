@@ -3,11 +3,7 @@
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { ActionButton } from './Button'
-
-/** The one input style. Forms across every screen use it. */
-export const fieldClass =
-  'w-full rounded-md border border-rule-2 bg-bg-deep px-2.5 py-2 text-sm text-ink outline-none ' +
-  'placeholder:text-ink-4 focus-visible:border-brand'
+import { fieldClass } from './field'
 
 /**
  * Click the value, it becomes an input. Enter saves, Escape cancels and keeps

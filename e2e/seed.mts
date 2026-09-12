@@ -325,5 +325,27 @@ for (const d of fresh) {
   )
 }
 
+// One provider connected, so the Connections screen has a CONNECTED card
+// beside the NOT CONNECTED ones. Enabling a webhook is the one connection
+// the app makes with no outside service: exactly what the card's "Enable
+// webhook" button does. Only when the row is absent, so an owner's own
+// secret is never replaced.
+const { rows: hae } = await db().query(
+  `select 1 from core.connections where integration_id = 'health_auto_export'`,
+)
+if (hae.length === 0) {
+  const { randomBytes } = await import('node:crypto')
+  const { saveCredentials } = await import('@/core/credentials')
+  await saveCredentials('health_auto_export', { secret: randomBytes(24).toString('base64url') })
+}
+
+// The dashboard draws one tile per module in the last summary, and the
+// screen tests assert the tiles before anything has pressed Run now. A fresh
+// database has no summary, so the orchestrate stage runs here against the
+// digests written above. It writes one core.dashboard_summary row and, when
+// the summary has alerts, replaces the unsent digest notification.
+const { assembleSummary } = await import('@/core/orchestrator')
+await assembleSummary()
+
 console.log(`seeded ${notes} notes, indexed ${index.indexed}, embedded ${index.embedded}, 2 proposals, 7 alerts, 2 runs, ${taskCount} tasks, ${goalCount} goals, ${txCount} transactions, ${detected.found} subscriptions detected, ${brainCount} notes, ${travelCount} travel rows, ${fitCount} workouts, ${healthCount} health rows, ${mealCount} meal rows, ${ideaCount} ideas, ${homeCount} home rows, ${policyCount} policies, ${coached.proposed} coach proposal`)
 process.exit(0)

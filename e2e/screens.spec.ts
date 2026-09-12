@@ -269,7 +269,7 @@ test('skill tree, a trackpad burst zooms smoothly and the main stars are blue', 
   const group = svg.locator('> g').last()
   const scaleOf = async () =>
     Number(/scale\(([\d.]+)\)/.exec((await group.getAttribute('transform')) ?? '')?.[1])
-  const burst = (el: SVGSVGElement, at: { x: number; y: number; n: number }) => {
+  const burst = async (el: SVGSVGElement, at: { x: number; y: number; n: number }) => {
     for (let i = 0; i < at.n; i++) {
       el.dispatchEvent(
         new WheelEvent('wheel', {
@@ -282,6 +282,12 @@ test('skill tree, a trackpad burst zooms smoothly and the main stars are blue', 
         }),
       )
     }
+    // data-moving is set inside the component's animation frame and cleared
+    // 120ms after the last one. Read it here, one frame after the burst,
+    // rather than from a separate expect whose round trip on a slow runner
+    // arrives after it has cleared.
+    await new Promise(requestAnimationFrame)
+    return el.querySelector(':scope > g:last-of-type')!.hasAttribute('data-moving')
   }
 
   // The listener is attached by the client component after hydration, which
@@ -300,12 +306,9 @@ test('skill tree, a trackpad burst zooms smoothly and the main stars are blue', 
   // must land where the sum of the deltas says: base * exp(240 * 0.003). A
   // handler that reads a stale zoom applies every one of them to the same
   // base and lands one step up instead, which is the jump you feel.
-  await svg.evaluate(burst, { ...at, n: 30 })
+  expect(await svg.evaluate(burst, { ...at, n: 30 })).toBe(true)
   await expect.poll(scaleOf).toBeGreaterThan(base)
-  // While the view moves the group carries data-moving and the glow filters
-  // are off: 25ms a frame with them at Retina scale, 8ms without. It clears
-  // once the view has been still.
-  await expect(group).toHaveAttribute('data-moving', '')
+  // The flag clears once the view has been still.
   await expect(group).not.toHaveAttribute('data-moving', '')
 
   const ratio = (await scaleOf()) / base
@@ -519,7 +522,8 @@ test('settings, connections', async ({ page }) => {
   await expect(page.getByRole('link', { name: /^Connections \d+$/ })).toHaveAttribute('aria-current', 'page')
 
   // One card per provider with its auth kind and a status mark; a connected
-  // one carries the last test and when it was connected.
+  // one carries the last test and when it was connected. The fixture enables
+  // the Health Auto Export webhook, so at least one card is connected.
   await expect(page.getByText('CONNECTED', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('Last test').first()).toBeVisible()
   await expect(page.getByText(/^(Connected since|Token expires)$/).first()).toBeVisible()
@@ -1082,7 +1086,9 @@ test('tasks, completing one emits the event that earns XP', async ({ page }) => 
   await expect(page.getByText('Done. Read DDIA ch. 5, Replication')).toBeVisible()
 
   await page.getByRole('tab', { name: /Done/ }).click()
-  await expect(page.getByText('Read DDIA ch. 5, Replication')).toBeVisible()
+  // Exact, because the toast "Done. Read DDIA ch. 5, Replication" is still on
+  // screen and a substring match resolved to both.
+  await expect(page.getByText('Read DDIA ch. 5, Replication', { exact: true })).toBeVisible()
 })
 
 test('tasks, Delete asks and then removes the row', async ({ page }) => {
@@ -1539,6 +1545,17 @@ test('onboarding, requesting a provider records it without pretending', async ({
   // It lands in Settings as requested, which is the honest half of the claim.
   await page.goto('/settings/connections')
   await expect(page.getByText('Ally')).toBeVisible()
+})
+
+test('onboarding, the morning digest hour is the cron\'s, not an input', async ({ page }) => {
+  await page.goto('/onboarding?step=notify')
+
+  // One nightly run a day, so the morning hour is read from the cron and shown
+  // as a value. The evening hour is still the owner's to set.
+  const morning = page.getByLabel('Morning digest time')
+  await expect(morning).toHaveText(/^\d\d:\d\d$/)
+  await expect(morning).not.toHaveJSProperty('tagName', 'INPUT')
+  await expect(page.getByLabel('Evening digest time')).toHaveJSProperty('tagName', 'INPUT')
 })
 
 test('onboarding, first run copy names no source count', async ({ page }) => {
@@ -2423,11 +2440,12 @@ test('ideas, research shows its sources and what it cost', async ({ page }) => {
 test('settings notifications, push says what it needs before it works', async ({ page }) => {
   await page.goto('/settings/notifications')
 
-  // The device card is honest about the difference between not configured and
-  // no device subscribed. Without VAPID keys there is no button to press.
+  // pnpm setup requires the VAPID keys, so "not configured" is not a state a
+  // set-up database reaches; the card distinguishes configured-with-no-device
+  // from a subscribed device, and this is the former.
   await expect(page.getByText('Devices')).toBeVisible()
-  await expect(page.getByText(/Push is not configured/)).toBeVisible()
-  await expect(page.getByText(/rules store the channel and the sender honours it/)).toBeVisible()
+  await expect(page.getByText(/No device is subscribed/)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Turn on push for this device' })).toBeVisible()
 })
 
 test('gestures, a swipe moves one tab and a mouse drag does not', async ({ page }, testInfo) => {
