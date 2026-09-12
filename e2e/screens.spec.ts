@@ -1653,7 +1653,7 @@ test('travel, trips with confirmed spend only', async ({ page }) => {
   for (const head of ['Upcoming', 'Past', 'Wishlist']) {
     await expect(page.getByTestId('travel-sections').getByText(head, { exact: true })).toBeVisible()
   }
-  const tokyo = page.getByRole('button', { name: /Tokyo/ }).first()
+  const tokyo = page.getByTestId('travel-sections').getByRole('button', { name: /Tokyo/ }).first()
   await expect(tokyo).toBeVisible()
   await expect(tokyo).toContainText(/\d\/4 booked/)
   // A pending booking is a guess about an email, so it does not move a budget:
@@ -1678,7 +1678,7 @@ test('travel, the globe is drawn from real coordinates', async ({ page }) => {
 
   // Hand rolled orthographic projection, no d3 and no world-atlas download;
   // the land is a committed list of points.
-  const globe = page.getByRole('img', { name: /Globe showing \d+ places/ })
+  const globe = page.getByRole('group', { name: /Globe showing \d+ places/ })
   await expect(globe).toBeVisible()
 
   // Only the near side is drawn, so the pins on screen are fewer than the six
@@ -1693,6 +1693,29 @@ test('travel, the globe is drawn from real coordinates', async ({ page }) => {
   // place names itself and its country.
   await expect(globe.locator('[data-pin="past"] title').first()).toHaveText(/\w+, \w+/)
   await shoot(page, 'travel-map')
+
+  // Past 2x every pin names itself; two presses of + is 2.25x. The wheel
+  // handler is a native non-passive listener, so the page under the globe
+  // does not scroll when it zooms.
+  const past = globe.locator('[data-pin="past"]').first()
+  await expect(past.locator('[data-label]')).toHaveCount(0)
+  const controls = page.getByTestId('travel-globe')
+  await controls.getByRole('button', { name: 'Zoom in' }).click()
+  await controls.getByRole('button', { name: 'Zoom in' }).click()
+  await expect(past.locator('[data-label]')).toBeVisible()
+  const name = (await past.locator('[data-label]').textContent()) ?? ''
+
+  // A grey pin opens its trip, or itself when it has none: the seeded places
+  // have none.
+  await past.locator('circle').click({ force: true })
+  await expect(page.getByRole('dialog', { name })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  // And from the keyboard: the pin is a button.
+  await past.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('dialog', { name })).toBeVisible()
+  await expect(page.getByRole('dialog')).toContainText('Visited')
 })
 
 test('travel, a parsed booking waits in the trip inbox', async ({ page }) => {

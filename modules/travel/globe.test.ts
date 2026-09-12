@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { flat, graticule, landPath, project, visible, type Rotation } from './globe'
+import { R, ZOOM_MAX, clampView, flat, graticule, landPath, project, visible, zoomAt, type Rotation } from './globe'
 
 // An orthographic projection, hand rolled.
 //
@@ -106,5 +106,37 @@ describe('flat and landPath', () => {
     const front = { lambda: 0, phi: 0 }
     expect(landPath(dots, front, 'globe').match(/M/g)?.length).toBe(1)
     expect(landPath(dots, front, 'flat').match(/M/g)?.length).toBe(2)
+  })
+})
+
+describe('zoomAt', () => {
+  const home = { zoom: 1, tx: 0, ty: 0 }
+  // The globe's box, R plus a 4 unit margin each way.
+  const box = { x: R + 4, y: R + 4 }
+
+  it('keeps the point under the cursor where it was', () => {
+    const v = zoomAt(home, 2, 50, -20, 'globe', box)
+    expect(v.zoom).toBe(2)
+    // screen = t + zoom * world, and the cursor's world point was (50, -20).
+    expect(v.tx + v.zoom * 50).toBeCloseTo(50)
+    expect(v.ty + v.zoom * -20).toBeCloseTo(-20)
+  })
+
+  it('stays between 1x and 8x and sits home at 1x', () => {
+    expect(zoomAt(home, 100, 30, 30, 'globe', box).zoom).toBe(ZOOM_MAX)
+    expect(zoomAt({ zoom: 3, tx: -40, ty: 10 }, 0.01, 30, 30, 'globe', box)).toEqual(home)
+  })
+
+  it('never pans an edge of the drawing past the edge of the box', () => {
+    // Zooming toward the corner would push the globe out of view: at 2x it
+    // is 200 across and the box shows 104 each way, so 96 is as far as it goes.
+    const v = zoomAt(home, 2, R + 4, R + 4, 'globe', box)
+    expect(v.tx).toBe(-96)
+    expect(v.ty).toBe(-96)
+    // A phone shows the flat map letterboxed: the box is taller than the map,
+    // so at 2x only the extra height may be dragged, and at 1x nothing.
+    const phone = { x: 2 * R, y: 1.8 * R }
+    expect(clampView({ zoom: 2, tx: -999, ty: -999 }, 'flat', phone)).toEqual({ zoom: 2, tx: -2 * R, ty: -20 })
+    expect(clampView({ zoom: 1, tx: 0, ty: -50 }, 'flat', phone).ty).toBeCloseTo(0)
   })
 })
