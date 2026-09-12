@@ -293,6 +293,8 @@ test('skill tree, a trackpad burst zooms smoothly and the main stars are blue', 
       return scaleOf()
     })
     .toBeGreaterThan(1)
+  // The last poll's event lands a frame later; read the base once it has.
+  await page.waitForTimeout(100)
   const base = await scaleOf()
 
   // A trackpad sends many small deltas inside one frame. Thirty of them,
@@ -306,11 +308,18 @@ test('skill tree, a trackpad burst zooms smoothly and the main stars are blue', 
   // are off: 25ms a frame with them at Retina scale, 8ms without. It clears
   // once the view has been still.
   await expect(group).toHaveAttribute('data-moving', '')
+  // The halo is only its blur, so it hides rather than showing as a flat
+  // disc three times the star.
+  const halo = page.locator('g[data-skill="engineering"] > circle').first()
+  await svg.evaluate(burst, { ...at, n: 1 })
+  await expect(halo).toBeHidden()
   await expect(group).not.toHaveAttribute('data-moving', '')
+  await expect(halo).toBeVisible()
 
+  // Thirty-one deltas of eight: the burst and the one that checked the halo.
   const ratio = (await scaleOf()) / base
-  expect(ratio).toBeGreaterThan(Math.exp(240 * 0.003) * 0.98)
-  expect(ratio).toBeLessThan(Math.exp(240 * 0.003) * 1.02)
+  expect(ratio).toBeGreaterThan(Math.exp(248 * 0.003) * 0.98)
+  expect(ratio).toBeLessThan(Math.exp(248 * 0.003) * 1.02)
   expect(await page.evaluate(() => window.scrollY)).toBe(0)
 
   // The svg is absolutely positioned, as the artboard's is. In flow with a
@@ -337,7 +346,39 @@ test('skill tree, the constellation hovers, selects, pans and zooms', async ({ p
   // branches hang off it, their levels, and what the month came to.
   await page.locator('g[data-skill="health"]').hover({ force: true })
   await expect(page.getByText(/branches/)).toBeVisible()
-  await expect(page.getByText(/XP in 30 days/)).toBeVisible()
+  await expect(page.getByText(/XP IN 30 DAYS/)).toBeVisible()
+
+  // A leaf's card is the artboard's: XP against the next level with a bar,
+  // the month, the goal weight, then its keywords. Centred under the star.
+  const travel = page.locator('g[data-skill="travel"]')
+  await travel.hover({ force: true })
+  const card = page.getByTestId('skill-hover-card')
+  await expect(page.getByText(/^XP$/)).toBeVisible()
+  await expect(page.getByText('Last 30 days')).toBeVisible()
+  await expect(page.getByText(/FLIGHT|TRIP/)).toBeVisible()
+  // Below the star, or above it on a canvas too short to fit it below;
+  // either way clear of the star and centred on it.
+  const dot = (await travel.locator('circle').nth(2).boundingBox())!
+  const cardBox = (await card.boundingBox())!
+  const clear = cardBox.y >= dot.y + dot.height || cardBox.y + cardBox.height <= dot.y
+  expect(clear).toBe(true)
+  // Travel sits near the left edge, so the card is held inside the canvas
+  // rather than centred off it.
+  const canvas = (await page.getByRole('img', { name: 'Skill constellation' }).boundingBox())!
+  expect(cardBox.x).toBeGreaterThanOrEqual(canvas.x)
+
+  // The centre star has one too: the character and its attributes.
+  await page.locator('g[data-skill="__you"]').hover({ force: true })
+  await expect(page.getByText('Engineering', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Life ops', { exact: true }).first()).toBeVisible()
+
+  // The lit limb reaches the centre: hovering a leaf lights its attribute's
+  // edge to You as well as its own. The walk up the parents used to stop one
+  // short, since an attribute has no parent row.
+  await star.hover({ force: true })
+  await expect(page.locator('line[data-edge="engineering"]')).toHaveAttribute('stroke', '#ffffff')
+  await expect(page.locator('line[data-edge="coding"]')).toHaveAttribute('stroke', '#ffffff')
+  await expect(page.locator('line[data-edge="health"]')).not.toHaveAttribute('stroke', '#ffffff')
 
   await star.hover({ force: true })
   await expect(page.getByText('Coding', { exact: true }).first()).toBeVisible()
@@ -385,7 +426,9 @@ test('skill tree, the constellation hovers, selects, pans and zooms', async ({ p
   const scaleOf = async () =>
     Number(/scale\(([\d.]+)\)/.exec((await group.getAttribute('transform')) ?? '')?.[1])
   const z0 = await scaleOf()
-  await star.dblclick({ force: true })
+  // On the body circle: the group's centre can fall between star and label,
+  // which is the canvas, not the node.
+  await star.locator('circle').nth(2).dblclick({ force: true })
   await page.waitForTimeout(60)
   const mid = await scaleOf()
   expect(mid).toBeGreaterThan(z0)

@@ -324,10 +324,24 @@
   .skill-view[data-moving] [filter] {
     filter: none;
   }
+  /* The halo is nothing but its blur: unblurred it is a flat disc three
+   * times the star, so while moving it goes rather than flattens. */
+  .skill-view[data-moving] [filter='url(#skill-glow-big)'] {
+    visibility: hidden;
+  }
 
   /* The slow pulse on a skill that is gaining, from the design bundle. Off
    * under reduced motion, which the bundle asks for by name: "Reduced motion
    * should disable the scale-on-tap and the constellation animation." */
+  @keyframes skill-fadein {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
   .skill-breathe {
     animation: skill-breathe 2.6s ease-in-out infinite;
   }
