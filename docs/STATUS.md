@@ -604,13 +604,13 @@ storing since the notifications step. Needs two keys in `.env` before it does
 anything; the screen says so.
 
 **Gestures.** Swipe between tabs, swipe a task to complete or reopen it, pull
-down on the dashboard to sync. Touch and pen only, so a mouse drag over a task
-title still selects text. The decision about what counts as a swipe is in
-`core/gestures.ts` with tests; the pointer listening is in
-`components/pos/gestures.ts`.
-
-The plan's fourth gesture, long press to arrange the dashboard, is not built:
-the dashboard has no stored tile order, so there is nothing to arrange yet.
+down on the dashboard to sync, and (2026-09-12) hold a dashboard tile for
+480ms to enter Arrange mode. Touch and pen only, so a mouse drag over a task
+title still selects text and a slow click rearranges nothing. What counts as a
+swipe or a press is decided in `core/gestures.ts` with tests; the pointer
+listening is in `components/pos/gestures.ts`. The fourth gesture waited for a
+stored tile order, which the Dashboard pass added; with it the late pass from
+docs/plans/design-build.md is complete. docs/plans/long-press-arrange.md.
 
 **Ideas research** (SPEC section 2). The last of the four follow-on features.
 Rubric with web search, every number carrying the page it came from, and a hard
