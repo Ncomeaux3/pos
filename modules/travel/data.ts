@@ -116,18 +116,48 @@ export async function listPlaces(): Promise<PlaceRow[]> {
 }
 
 export async function listLoyalty(): Promise<
-  { id: string; name: string; kind: string; balance: number; status_tier: string; updated_at: Date }[]
+  {
+    id: string
+    name: string
+    kind: string
+    balance: number
+    previous_balance: number | null
+    status_tier: string
+    updated_at: Date
+  }[]
 > {
   const { rows } = await db().query<{
     id: string
     name: string
     kind: string
     balance: number
+    previous_balance: number | null
     status_tier: string
     updated_at: Date
   }>(
-    `select id, name, kind, balance, status_tier, updated_at
+    `select id, name, kind, balance, previous_balance, status_tier, updated_at
        from travel.loyalty_program order by kind, name`,
+  )
+  return rows
+}
+
+export type BudgetLineRow = {
+  id: string
+  trip_id: string
+  category: string
+  planned_cents: number
+  actual_override_cents: number | null
+  position: number
+}
+
+export async function listBudgetLines(tripId?: string): Promise<BudgetLineRow[]> {
+  const { rows } = await db().query<BudgetLineRow>(
+    `select id, trip_id, category, planned_cents::bigint::int as planned_cents,
+            actual_override_cents::bigint::int as actual_override_cents, position
+       from travel.budget_line
+      ${tripId ? 'where trip_id = $1' : ''}
+      order by trip_id, position`,
+    tripId ? [tripId] : [],
   )
   return rows
 }

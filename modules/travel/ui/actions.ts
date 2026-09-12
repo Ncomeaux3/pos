@@ -84,3 +84,74 @@ export async function saveLoyalty(
     return failed(error)
   }
 }
+
+/** One call per tool, the same shape for each: authenticate, call, revalidate. */
+async function through(tool: string, input: Record<string, unknown>): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    await callTool('travel', tool, input, { source: 'ui' })
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+export async function saveTrip(input: {
+  id?: string
+  name?: string
+  destination?: string
+  lat?: number | null
+  lon?: number | null
+  starts_on?: string | null
+  ends_on?: string | null
+  budget_cents?: number
+  travellers?: number
+  status?: 'idea' | 'planned' | 'booked' | 'done'
+  notes?: string
+}): Promise<ActionResult> {
+  return through('write_trip', input)
+}
+
+export async function deleteTrip(id: string): Promise<ActionResult> {
+  return through('delete_trip', { id })
+}
+
+export async function saveItem(input: {
+  id?: string
+  trip_id?: string
+  kind?: 'flight' | 'lodging' | 'transit' | 'activity' | 'food'
+  title?: string
+  detail?: string
+  occurs_on?: string | null
+  occurs_at?: string | null
+  amount_cents?: number
+}): Promise<ActionResult> {
+  return through('write_item', input)
+}
+
+export async function deleteItem(id: string): Promise<ActionResult> {
+  return through('delete_item', { id })
+}
+
+export async function saveBudgetLine(input: {
+  trip_id: string
+  category: string
+  planned_cents?: number
+  actual_override_cents?: number | null
+}): Promise<ActionResult> {
+  return through('write_budget_line', input)
+}
+
+export async function deleteBudgetLine(trip_id: string, category: string): Promise<ActionResult> {
+  return through('delete_budget_line', { trip_id, category })
+}
+
+export async function savePacking(input: {
+  trip_id?: string
+  id?: string
+  label?: string
+  packed?: boolean
+  remove?: boolean
+}): Promise<ActionResult> {
+  return through('write_packing', input)
+}

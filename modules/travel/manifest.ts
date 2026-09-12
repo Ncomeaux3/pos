@@ -163,6 +163,100 @@ export default defineModule({
       },
     }),
 
+    write_budget_line: defineTool({
+      description:
+        'Set a planned amount for one category of a trip, in cents, and optionally type over its actual.',
+      input: z.object({
+        trip_id: z.uuid(),
+        category: z.string().min(1).max(80),
+        planned_cents: z.number().int().min(0).optional(),
+        actual_override_cents: z.number().int().min(0).nullable().optional(),
+      }),
+      run: async (input) => {
+        await db().query(
+          `insert into travel.budget_line (trip_id, category, planned_cents, actual_override_cents, position)
+           values ($1, $2, coalesce($3, 0), $4,
+                   (select coalesce(max(position), 0) + 1 from travel.budget_line where trip_id = $1))
+           on conflict (trip_id, category) do update
+             set planned_cents = coalesce($3, travel.budget_line.planned_cents),
+                 actual_override_cents = case when $5 then $4 else travel.budget_line.actual_override_cents end`,
+          [
+            input.trip_id,
+            input.category,
+            input.planned_cents ?? null,
+            input.actual_override_cents ?? null,
+            input.actual_override_cents !== undefined,
+          ],
+        )
+        return { trip_id: input.trip_id, category: input.category }
+      },
+    }),
+
+    delete_budget_line: defineTool({
+      description: 'Remove one category from a trip budget.',
+      input: z.object({ trip_id: z.uuid(), category: z.string().min(1).max(80) }),
+      run: async ({ trip_id, category }) => {
+        await db().query(`delete from travel.budget_line where trip_id = $1 and category = $2`, [
+          trip_id,
+          category,
+        ])
+        return { trip_id, category }
+      },
+    }),
+
+    write_packing: defineTool({
+      description: 'Add a packing item, tick it, or remove it.',
+      input: z.object({
+        trip_id: z.uuid().optional(),
+        id: z.uuid().optional(),
+        label: z.string().min(1).max(200).optional(),
+        packed: z.boolean().optional(),
+        remove: z.boolean().optional(),
+      }),
+      run: async (input) => {
+        if (input.id && input.remove) {
+          await db().query(`delete from travel.packing_item where id = $1`, [input.id])
+          return { id: input.id, removed: true }
+        }
+        if (input.id) {
+          await db().query(
+            `update travel.packing_item
+                set packed = coalesce($2, packed), label = coalesce($3, label)
+              where id = $1`,
+            [input.id, input.packed ?? null, input.label ?? null],
+          )
+          return { id: input.id }
+        }
+        if (!input.trip_id || !input.label) throw new Error('A new item needs a trip and a label')
+        const { rows } = await db().query<{ id: string }>(
+          `insert into travel.packing_item (trip_id, label, packed, position)
+           values ($1, $2, coalesce($3, false),
+                   (select coalesce(max(position), 0) + 1 from travel.packing_item where trip_id = $1))
+           returning id`,
+          [input.trip_id, input.label, input.packed ?? false],
+        )
+        return { id: rows[0].id }
+      },
+    }),
+
+    delete_item: defineTool({
+      description: 'Remove an itinerary item.',
+      input: z.object({ id: z.uuid() }),
+      run: async ({ id }) => {
+        await db().query(`delete from travel.itinerary_item where id = $1`, [id])
+        return { id }
+      },
+    }),
+
+    delete_trip: defineTool({
+      description: 'Delete a trip and everything under it.',
+      input: z.object({ id: z.uuid() }),
+      run: async ({ id }) => {
+        await db().query(`delete from travel.trip where id = $1`, [id])
+        return { id }
+      },
+    }),
+
     set_loyalty: defineTool({
       description:
         'Record a loyalty balance. Typed by the owner: no loyalty site is scraped, per SPEC.',
@@ -177,7 +271,8 @@ export default defineModule({
           `insert into travel.loyalty_program (name, kind, balance, status_tier)
            values ($1, $2, $3, $4)
            on conflict (name) do update
-             set balance = excluded.balance, kind = excluded.kind,
+             set previous_balance = travel.loyalty_program.balance,
+                 balance = excluded.balance, kind = excluded.kind,
                  status_tier = excluded.status_tier`,
           [input.name, input.kind, input.balance, input.status_tier ?? ''],
         )
@@ -194,7 +289,7 @@ export default defineModule({
    * `accept_item` is the owner acting on that, and `set_loyalty` is a number
    * they typed.
    */
-  guarded: ['write_trip'],
+  guarded: ['write_trip', 'delete_trip'],
   requires: [],
 
   metrics: {
