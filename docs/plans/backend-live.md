@@ -65,7 +65,7 @@ names the phase it unblocks.
 
 | Phase | Goal | Complexity | Parallel-safe with | Status | PR |
 |---|---|---|---|---|---|
-| 0 | Planning files and owner checklist | low | | In progress | |
+| 0 | Planning files and owner checklist | low | | PR open | #12 |
 | 1 | Hygiene and the production login fix | low | 4, 5, 6 | Not started | |
 | 2 | Production live: first real nightly | low (code), owner-heavy | 4, 5, 6 | Blocked on owner steps 2 to 7 | |
 | 3 | Strava, vault, SimpleFIN connected and syncing nightly | low | 4, 5, 6 | Blocked on 2 and owner steps 11 to 13 | |
