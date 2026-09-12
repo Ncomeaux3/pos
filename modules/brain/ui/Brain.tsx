@@ -1,56 +1,55 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState, useTransition } from 'react'
-import {
-  ActionButton,
-  Card,
-  CardHead,
-  Chip,
-  EmptyState,
-  Eyebrow,
-  Row,
-  RowList,
-  StatusChip,
-  TabBar,
-  fieldClass,
-  useToast,
-} from '@/components/pos'
+import { useTransition } from 'react'
+import { ActionButton, BandSearch, SearchButton, useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
-import { renderPreview } from '../wikilinks'
-import { ingestFromUrl, publishNote, saveNote, startFromLink, type ActionResult } from './actions'
+import { KINDS, ago, finishedOn, folderLabel, subLine } from '../shape'
+import type { ActionResult } from './actions'
+import { IngestDrawer } from './IngestDrawer'
+import { NotePane } from './NotePane'
 
-// Folder rail, list, and a reading pane. The folder and the open note live in
-// the URL, so a note can be linked to and both survive a refresh.
+// POS Second Brain.dc.html: the band, the folder row, the list and the note
+// pane. The folder, the open note and the ingest drawer live in the URL, so a
+// note can be linked to and all three survive a refresh.
 
-export type BrainData = {
-  notes: {
-    id: string
-    title: string
-    body: string
-    slug: string
-    kind: string
-    status: string
-    sourceUrl: string
-    sourceText: string
-    sourceMeta: string
-    committed: boolean
-    updatedAt: string
-    backlinks: { id: string; title: string }[]
-    unresolved: string[]
-  }[]
+export type BrainNote = {
+  id: string
+  title: string
+  body: string
+  slug: string
+  kind: string
+  status: string
+  sourceUrl: string
+  sourceText: string
+  sourceMeta: string
+  source: string
+  externalId: string | null
+  vaultSha: string
+  updatedAt: string
+  backlinks: { id: string; title: string; slug: string }[]
+  unresolved: string[]
+  skills: { id: string; name: string; confidence: number; by: 'rule' | 'model' | 'manual' }[]
 }
 
-const KINDS = ['article', 'book', 'video', 'note', 'project', 'person', 'daily'] as const
+export type BrainData = { notes: BrainNote[] }
+
+export type SetParams = (next: Record<string, string | null>) => void
+
+/** A book or an article is finished by being here (decision 2026-09-11). */
+export const isFinished = (n: BrainNote) =>
+  n.status === 'published' && (n.kind === 'book' || n.kind === 'article')
 
 export function Brain({ data }: { data: BrainData }) {
   const router = useRouter()
   const params = useSearchParams()
+  const toast = useToast()
+  const [, start] = useTransition()
 
   const folder = params.get('folder') ?? 'inbox'
-  const openNote = data.notes.find((n) => n.slug === params.get('note')) ?? null
+  const ingestOpen = params.get('ingest') === '1'
 
-  const setParams = (next: Record<string, string | null>) => {
+  const setParams: SetParams = (next) => {
     const search = new URLSearchParams(params.toString())
     for (const [key, value] of Object.entries(next)) {
       if (value === null) search.delete(key)
@@ -60,14 +59,6 @@ export function Brain({ data }: { data: BrainData }) {
     router.replace(query ? `?${query}` : '?', { scroll: false })
   }
 
-  const [draft, setDraft] = useState('')
-  const [url, setUrl] = useState('')
-  // Separate from the transition: fetching a page and summarising it takes
-  // seconds, and a button that looks idle for that long gets pressed twice.
-  const [ingesting, setIngesting] = useState(false)
-  const [, start] = useTransition()
-  const toast = useToast()
-
   const run = (action: () => Promise<ActionResult>, ok?: string) =>
     start(async () => {
       const result = await action()
@@ -75,283 +66,162 @@ export function Brain({ data }: { data: BrainData }) {
       else if (ok) toast(ok)
     })
 
-  /**
-   * Paste a URL, get a draft.
-   *
-   * Awaited rather than run through the transition so the input can be
-   * disabled while it works. The ingest's own note, an automatic transcript or
-   * a summary the cap stopped, is surfaced instead of the bare success message
-   * when there is one: it is the difference between a draft to read and a
-   * draft to be careful about.
-   */
-  const ingest = async () => {
-    const value = url.trim()
-    if (!value || ingesting) return
-    setIngesting(true)
-    try {
-      const result = await ingestFromUrl(value)
-      if (!result.ok) toast(result.error)
-      else {
-        setUrl('')
-        toast(result.note ? result.note : 'Drafted. It is waiting in the inbox.')
-      }
-    } finally {
-      setIngesting(false)
-    }
-  }
-
-  const inbox = data.notes.filter((n) => n.status === 'draft')
-  const published = data.notes.filter((n) => n.status === 'published')
+  const notes = [...data.notes].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  const drafts = notes.filter((n) => n.status === 'draft')
+  const published = notes.filter((n) => n.status === 'published')
+  const reading = notes.filter((n) => n.kind === 'article' || n.kind === 'book')
 
   const shown =
-    folder === 'inbox' ? inbox : published.filter((n) => n.kind === folder)
+    folder === 'inbox'
+      ? drafts
+      : folder === 'reading'
+        ? reading
+        : published.filter((n) => n.kind === folder)
 
-  const counts: Record<string, number> = { inbox: inbox.length }
-  for (const k of KINDS) counts[k] = published.filter((n) => n.kind === k).length
+  // The note in the URL wherever it lives, else the first row: the artboard
+  // never shows an empty pane while the list has something in it.
+  const open = notes.find((n) => n.slug === params.get('note')) ?? shown[0] ?? null
 
-  // Every link nothing has been written for yet, deduplicated. The most useful
-  // backlog in the app: each one is a note the vault is already asking for.
-  const wanted = [...new Set(data.notes.flatMap((n) => n.unresolved))].filter(
-    (slug) => !data.notes.some((n) => n.slug === slug),
-  )
+  const crumb = folder === 'inbox' ? 'Inbox' : folder === 'reading' ? 'Reading list' : folderLabel(folder)
+  const listTitle = folder === 'inbox' ? 'Inbox · drafts' : folder === 'reading' ? 'Reading list' : folderLabel(folder)
+  const listMeta =
+    folder === 'inbox'
+      ? `${shown.length} awaiting`
+      : folder === 'reading'
+        ? `${shown.filter(isFinished).length} finished`
+        : `${shown.length} ${shown.length === 1 ? 'note' : 'notes'}`
+
+  const folders: { id: string; label: string; count: number; hot?: boolean }[] = [
+    { id: 'inbox', label: 'Inbox', count: drafts.length, hot: true },
+    { id: 'reading', label: 'Reading list', count: reading.length },
+    ...KINDS.map((k) => ({
+      id: k,
+      label: folderLabel(k),
+      count: published.filter((n) => n.kind === k).length,
+    })),
+  ]
 
   return (
-    <div className="space-y-5">
-      {/* The artboard's folder row: the folders on the left, and on the right
-        * the line that explains why nothing here is the source of truth. */}
-      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-        <TabBar
-          label="Folders"
-          value={folder}
-          onChange={(next) => setParams({ folder: next === 'inbox' ? null : next, note: null })}
-          tabs={[
-            { value: 'inbox', label: 'Inbox', count: counts.inbox },
-            ...KINDS.filter((k) => counts[k] > 0 || k === 'note').map((k) => ({
-              value: k,
-              label: k === 'daily' ? 'Daily' : `${k[0].toUpperCase()}${k.slice(1)}s`,
-              count: counts[k],
-            })),
-          ]}
-        />
-        <span className="text-[11px] text-ink-4">Vault in git is the source of truth</span>
-      </div>
-
-      <div className="flex flex-wrap items-start gap-x-6 gap-y-5">
-        <div className="min-w-0 flex-[1_1_420px] space-y-4">
-          {folder === 'inbox' && (
-            <div className="flex flex-wrap gap-2">
-              <input
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    void ingest()
-                  }
-                }}
-                disabled={ingesting}
-                aria-label="URL to read"
-                placeholder="Paste a link or a YouTube URL"
-                className={cn(fieldClass, 'min-w-0 flex-1 basis-[240px]')}
-              />
-              <ActionButton
-                variant="brand"
-                disabled={!url.trim() || ingesting}
-                onClick={() => void ingest()}
-              >
-                {ingesting ? 'Reading...' : 'Read it'}
-              </ActionButton>
-            </div>
-          )}
-
-          {folder === 'note' && (
-            <div className="flex flex-wrap gap-2">
-              <input
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && draft.trim()) {
-                    e.preventDefault()
-                    run(() => saveNote({ title: draft.trim() }), 'Note started')
-                    setDraft('')
-                  }
-                }}
-                aria-label="New note title"
-                placeholder="A title, then Enter"
-                className={cn(fieldClass, 'min-w-0 flex-1 basis-[240px]')}
-              />
-              <ActionButton
-                variant="brand"
-                disabled={!draft.trim()}
-                onClick={() => {
-                  run(() => saveNote({ title: draft.trim() }), 'Note started')
-                  setDraft('')
-                }}
-              >
-                New note
-              </ActionButton>
-            </div>
-          )}
-
-          {shown.length === 0 ? (
-            <EmptyState headline={folder === 'inbox' ? 'Inbox zero' : 'Nothing here'}>
-              {folder === 'inbox'
-                ? 'Nothing waiting. An ingested draft lands here beside the text it was drawn from, and stays out of the vault until you accept it.'
-                : 'No notes of this kind yet.'}
-            </EmptyState>
-          ) : (
-            <RowList>
-              {shown.map((note) => (
-                <Row
-                  key={note.id}
-                  title={note.title}
-                  meta={`${note.kind}${note.sourceMeta ? ` / ${note.sourceMeta}` : ''}`}
-                  selected={openNote?.id === note.id}
-                  onClick={() => setParams({ note: note.slug })}
-                  right={
-                    <>
-                      {note.status === 'draft' && <StatusChip tone="warn">Draft</StatusChip>}
-                      {note.backlinks.length > 0 && (
-                        <Chip tone="quiet">{note.backlinks.length} in</Chip>
-                      )}
-                    </>
-                  }
-                />
-              ))}
-            </RowList>
-          )}
-
-          {wanted.length > 0 && (
-            <Card className="space-y-3">
-              <CardHead label="Links with nothing behind them" meta={`${wanted.length}`} />
-              <p className="t-caption text-ink-3">
-                Notes you have linked to but not written. Kept rather than dropped, because an
-                unresolved link is usually the best idea of what to write next.
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {wanted.map((slug) => (
-                  <ActionButton
-                    key={slug}
-                    onClick={() => run(() => startFromLink(slug), `Started ${slug}`)}
-                  >
-                    {slug.replace(/-/g, ' ')}
-                  </ActionButton>
-                ))}
-              </div>
-            </Card>
-          )}
+    <>
+      <header className="-mx-[18px] -mt-[18px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 md:-mx-7 md:-mt-7 md:h-14 md:flex-nowrap md:px-7 md:py-0">
+        <span className="eyebrow shrink-0 whitespace-nowrap text-ink-3">
+          Second Brain <span className="text-ink-4">/</span> {crumb}
+        </span>
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-4">
+          <SearchButton className="md:hidden" />
+          <BandSearch className="hidden min-w-[220px] flex-1 md:flex" placeholder="Search second brain" />
+          <span className="eyebrow hidden shrink-0 whitespace-nowrap text-ink-3 md:inline-flex">
+            <span className="status-dot" aria-hidden />
+            {published.length} notes
+          </span>
+          <ActionButton
+            variant="solid"
+            size="xl"
+            className="h-11 gap-2 px-3.5 text-[13px] md:h-[51px] md:px-[22px] md:text-[15px]"
+            onClick={() => setParams({ ingest: '1' })}
+          >
+            Ingest <span aria-hidden="true">&rarr;</span>
+          </ActionButton>
         </div>
+      </header>
 
-        {openNote && (
-          <aside className="min-w-0 flex-[1_1_380px] space-y-4 md:max-w-[520px]">
-            <Card className="space-y-3">
-              <CardHead
-                label={openNote.kind}
-                meta={openNote.committed ? 'in the vault' : 'not committed'}
-              />
-              <h2 className="t-title text-ink">{openNote.title}</h2>
-
-              {openNote.status === 'draft' ? (
-                <div className="space-y-3">
-                  <StatusChip tone="warn">Waiting on you</StatusChip>
-                  <p className="t-caption text-ink-3">
-                    Drafted from the source below. Nothing reaches the vault until you accept it.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <ActionButton
-                      variant="brand"
-                      onClick={() => run(() => publishNote(openNote.id, true), 'Accepted')}
-                    >
-                      Accept
-                    </ActionButton>
-                  </div>
-                </div>
-              ) : (
-                <ActionButton onClick={() => run(() => publishNote(openNote.id, false), 'Back to the inbox')}>
-                  Send back to the inbox
-                </ActionButton>
+      {/* The folder row: filled chips, Inbox and Reading list apart from the
+        * seven folders, and the line that says why nothing here is the truth. */}
+      <div
+        data-testid="brain-folders"
+        className="-mx-[18px] flex flex-wrap items-center gap-1 border-b border-rule bg-bg-elev px-5 py-2.5 md:-mx-7"
+      >
+        {folders.map((f, i) => {
+          const on = folder === f.id
+          return (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setParams({ folder: f.id === 'inbox' ? null : f.id, note: null })}
+              className={cn(
+                'inline-flex items-center gap-2 border px-2.5 py-[5px] text-[12px] transition-colors duration-150',
+                on ? 'border-ink bg-ink text-bg' : 'border-rule-2 text-ink-3 hover:border-ink hover:text-ink',
+                i === 2 && 'ml-2.5',
               )}
-
-              <label className="block space-y-1.5">
-                <Eyebrow>Body</Eyebrow>
-                <textarea
-                  key={openNote.id}
-                  defaultValue={openNote.body}
-                  rows={12}
-                  aria-label={`Body of ${openNote.title}`}
-                  onBlur={(e) =>
-                    e.target.value !== openNote.body &&
-                    run(() => saveNote({ id: openNote.id, body: e.target.value }), 'Saved')
-                  }
-                  className={cn(fieldClass, 'w-full resize-y font-normal')}
-                />
-                <p className="t-caption text-ink-3">
-                  Markdown, the vault&apos;s own format. Double brackets make a link, and a link to a
-                  note you have not written yet is fine.
-                </p>
-              </label>
-
-              {openNote.body.includes('[[') && (
-                <div className="space-y-1.5">
-                  <Eyebrow>As prose</Eyebrow>
-                  <p className="t-caption whitespace-pre-wrap text-ink-2">
-                    {renderPreview(openNote.body)}
-                  </p>
-                </div>
-              )}
-            </Card>
-
-            {openNote.sourceText && (
-              <Card className="space-y-2">
-                <CardHead label="Source" meta={openNote.sourceMeta} />
-                {/* Beside the summary, not behind it. A draft is judged against
-                    what it was drawn from, not taken on trust. */}
-                <p className="t-caption max-h-56 overflow-y-auto whitespace-pre-wrap text-ink-3">
-                  {openNote.sourceText}
-                </p>
-                {openNote.sourceUrl && (
-                  <a
-                    href={openNote.sourceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="label text-[10px] text-ok underline underline-offset-4"
-                  >
-                    Open the original
-                  </a>
-                )}
-              </Card>
-            )}
-
-            {(openNote.backlinks.length > 0 || openNote.unresolved.length > 0) && (
-              <Card className="space-y-3">
-                <CardHead label="Links" meta={`${openNote.backlinks.length} in`} />
-                {openNote.backlinks.length > 0 && (
-                  <div className="space-y-1.5">
-                    <Eyebrow className="text-[10px]">Pointing here</Eyebrow>
-                    {openNote.backlinks.map((b) => (
-                      <p key={b.id} className="t-caption text-ink-2">
-                        {b.title}
-                      </p>
-                    ))}
-                  </div>
-                )}
-                {openNote.unresolved.length > 0 && (
-                  <div className="space-y-1.5">
-                    <Eyebrow className="text-[10px]">Pointing at nothing yet</Eyebrow>
-                    <div className="flex flex-wrap gap-1.5">
-                      {openNote.unresolved.map((slug) => (
-                        <Chip key={slug} tone="warn">
-                          {slug.replace(/-/g, ' ')}
-                        </Chip>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </Card>
-            )}
-          </aside>
-        )}
+            >
+              <span className="whitespace-nowrap">{f.label}</span>
+              <span className={cn('num text-[10px]', f.hot && f.count > 0 ? 'text-warn' : 'text-ink-4')}>
+                {f.count}
+              </span>
+            </button>
+          )
+        })}
+        <span className="ml-auto whitespace-nowrap text-[11px] text-ink-4">
+          Vault in git is the source of truth
+        </span>
       </div>
-    </div>
+
+      <div className="-mx-[18px] -mb-[18px] flex flex-wrap items-stretch md:-mx-7 md:-mb-7 md:min-h-[calc(100dvh-106px)]">
+        <section className="flex min-w-0 flex-[1_1_280px] flex-col border-b border-rule md:max-w-[380px] md:border-b-0 md:border-r">
+          <div className="flex items-baseline justify-between gap-2.5 border-b border-rule px-4 pb-2.5 pt-3.5">
+            <span className="truncate text-[14px] text-ink">{listTitle}</span>
+            <span className="num whitespace-nowrap text-[11px] text-ink-3">{listMeta}</span>
+          </div>
+          {shown.length === 0 ? (
+            <p className="px-4 py-6 text-[12px] text-ink-4">
+              {folder === 'inbox' ? 'Inbox clear. Ingest something to draft a note.' : 'Nothing here'}
+            </p>
+          ) : (
+            shown.map((n) => {
+              const selected = open?.id === n.id
+              return (
+                <button
+                  key={n.id}
+                  type="button"
+                  onClick={() => setParams({ note: n.slug })}
+                  className={cn(
+                    'block w-full border-b border-l-2 border-b-rule py-[11px] pl-3.5 pr-4 text-left transition-colors duration-150 hover:bg-brand-soft',
+                    selected ? 'border-l-brand bg-brand-soft' : 'border-l-transparent',
+                  )}
+                >
+                  <span className="flex items-baseline justify-between gap-2">
+                    <span className="min-w-0 truncate text-[13px] leading-[1.3] text-ink">{n.title}</span>
+                    <span className="num shrink-0 text-[10px] text-ink-4">{ago(n.updatedAt)}</span>
+                  </span>
+                  <span className="mt-[3px] block truncate text-[11px] text-ink-3">{subLine(n)}</span>
+                  <span className="mt-[5px] flex items-center gap-1.5">
+                    <span
+                      className={cn(
+                        'label text-[9px] tracking-[0.08em]',
+                        n.status === 'draft' ? 'text-warn' : 'text-ink-4',
+                      )}
+                    >
+                      {n.kind}
+                    </span>
+                    {n.status === 'draft' && (
+                      <span className="label border border-warn px-1 text-[9px] tracking-[0.08em] text-warn">
+                        draft
+                      </span>
+                    )}
+                    {isFinished(n) && (
+                      <span className="label text-[9px] tracking-[0.08em] text-ok">
+                        FINISHED · {finishedOn(n.updatedAt)}
+                      </span>
+                    )}
+                  </span>
+                </button>
+              )
+            })
+          )}
+        </section>
+
+        <section className="flex min-w-0 flex-[3_1_300px] flex-col">
+          {open ? (
+            <NotePane key={open.id} note={open} setParams={setParams} run={run} />
+          ) : (
+            <p className="flex flex-1 items-center justify-center py-16 text-[13px] text-ink-4">
+              Select a note
+            </p>
+          )}
+        </section>
+      </div>
+
+      {ingestOpen && <IngestDrawer setParams={setParams} />}
+    </>
   )
 }

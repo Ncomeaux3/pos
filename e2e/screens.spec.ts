@@ -1066,8 +1066,7 @@ test('second brain, the inbox holds a draft beside its source', async ({ page })
 
   // POS Second Brain.dc.html: the band alone (the h1 is for the reader), the
   // folder row of chips in the artboard's order, no tab row.
-  await expect(page.getByRole('heading', { name: 'Second Brain' })).toBeAttached()
-  await expect(page.getByRole('heading', { name: 'Second Brain' })).not.toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Second Brain', level: 1 })).toHaveClass(/sr-only/)
   await expect(page.getByRole('tablist')).toHaveCount(0)
   await expect(page.getByText(/^Second Brain\s*\/\s*Inbox$/)).toBeVisible()
   await expect(page.getByText(/^\d+ notes$/)).toBeVisible()
@@ -1135,9 +1134,9 @@ test('second brain, links resolve both ways and a dangling one is kept', async (
 
   // And one link points at a note nobody has written. It is kept and offered
   // on that note, because it is usually the best idea of what to write next.
-  await page.goto('/brain?note=why-solo-builders-ship-one-module-at-a-time')
+  await page.goto('/brain?folder=article&note=the-boring-technology-club')
   await expect(page.getByText('Links to write')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'build order' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'build order', exact: true })).toBeVisible()
 
   await page.goto('/brain?folder=note&note=reciprocal-rank-fusion')
   await shoot(page, 'second-brain-links')
@@ -1148,7 +1147,7 @@ test('second brain, the reading list is what was finished', async ({ page }) => 
 
   // Adding a book or an article here means it was read, so every accepted one
   // carries the date it was accepted and there is no button to press.
-  await expect(page.getByText('Reading list', { exact: true })).toBeVisible()
+  await expect(page.getByText('Reading list', { exact: true }).nth(1)).toBeVisible()
   await expect(page.getByText(/^\d+ finished$/)).toBeVisible()
   const row = page.getByRole('button', { name: /Designing Data-Intensive Applications, ch\. 5/ })
   await expect(row).toContainText(/FINISHED · \w{3} \d+/)
@@ -1165,8 +1164,9 @@ test('second brain, accepting a draft moves it into the vault', async ({ page })
 
   // Out of the inbox and into its kind, and finished by being there.
   await page.goto('/brain?folder=article')
-  await expect(page.getByText('Postgres full text search, briefly')).toBeVisible()
-  await expect(page.getByText(/FINISHED · \w{3} \d+/).first()).toBeVisible()
+  const row = page.getByRole('button', { name: /Postgres full text search, briefly/ })
+  await expect(row).toBeVisible()
+  await expect(row).toContainText(/FINISHED · \w{3} \d+/)
   await expect(page.getByRole('button', { name: 'Send back to the inbox' })).toHaveCount(0)
 })
 

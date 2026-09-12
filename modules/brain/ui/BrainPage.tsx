@@ -1,21 +1,22 @@
-import { PageHeader } from '@/components/pos'
 import { db } from '@/core/db'
-import { listNotes } from '../data'
+import { getSkillNames } from '@/core/modules'
+import { listNotes, listSkillLinks } from '../data'
 import { Brain, type BrainData } from './Brain'
 
 export default async function BrainPage() {
-  const notes = await listNotes()
+  const [notes, links, skillLinks, skillNames] = await Promise.all([
+    listNotes(),
+    // Backlinks and dangling targets for every note in one pass. One query
+    // rather than one per note: the panel needs them for whichever note is
+    // opened, and opening one should not cost a round trip.
+    db().query<{ from_note_id: string; to_note_id: string | null; to_slug: string }>(
+      `select from_note_id, to_note_id, to_slug from brain.link`,
+    ),
+    listSkillLinks(),
+    getSkillNames(),
+  ])
 
-  // Backlinks and dangling targets for every note in one pass. Two queries
-  // rather than one per note: the panel needs them for whichever note is
-  // opened, and opening one should not cost a round trip.
-  const { rows: links } = await db().query<{
-    from_note_id: string
-    to_note_id: string | null
-    to_slug: string
-  }>(`select from_note_id, to_note_id, to_slug from brain.link`)
-
-  const titleById = new Map(notes.map((n) => [n.id, n.title]))
+  const byId = new Map(notes.map((n) => [n.id, n]))
 
   const data: BrainData = {
     notes: notes.map((n) => ({
@@ -28,36 +29,38 @@ export default async function BrainPage() {
       sourceUrl: n.source_url,
       sourceText: n.source_text,
       sourceMeta: n.source_meta,
-      committed: n.committed_sha !== '',
+      source: n.source,
+      externalId: n.external_id,
+      vaultSha: n.vault_sha,
       updatedAt: new Date(n.updated_at).toISOString(),
-      backlinks: links
+      backlinks: links.rows
         .filter((l) => l.to_note_id === n.id)
-        .map((l) => ({ id: l.from_note_id, title: titleById.get(l.from_note_id) ?? 'a note' })),
+        .map((l) => byId.get(l.from_note_id))
+        .filter((from) => from !== undefined)
+        .map((from) => ({ id: from.id, title: from.title, slug: from.slug })),
       // A link to a note that does not exist yet. Kept and shown, because it is
       // usually the best idea of what to write next.
-      unresolved: links
+      unresolved: links.rows
         .filter((l) => l.from_note_id === n.id && l.to_note_id === null)
         .map((l) => l.to_slug),
+      skills: skillLinks
+        .filter((l) => l.note_id === n.id)
+        .map((l) => ({
+          id: l.skill_id,
+          name: skillNames[l.skill_id] ?? l.skill_id,
+          confidence: Number(l.confidence),
+          by: l.is_manual ? 'manual' : l.classified_by === 'rule' ? 'rule' : 'model',
+        })),
     })),
   }
 
-  const inbox = data.notes.filter((n) => n.status === 'draft').length
-  const dangling = new Set(data.notes.flatMap((n) => n.unresolved)).size
-
   return (
-    <div className="space-y-7">
-      <PageHeader
-        eyebrow={`Second Brain / ${data.notes.length - inbox} notes / ${inbox} in the inbox`}
-        dot={inbox > 0 ? 'warn' : 'brand'}
-        title="Second Brain"
-        lede="The vault is the source of truth and nothing reaches it without you. An ingested draft sits in the inbox next to the text it was drawn from until you accept it."
-        actions={
-          <span className="num text-[11px] text-ink-3">
-            {dangling} link{dangling === 1 ? '' : 's'} to write
-          </span>
-        }
-      />
+    <>
+      {/* Drawn nowhere and present all the same: the artboard has no title
+        * block, and a page with no heading is one a screen reader cannot
+        * announce. */}
+      <h1 className="sr-only">Second Brain</h1>
       <Brain data={data} />
-    </div>
+    </>
   )
 }

@@ -62,7 +62,8 @@ const NOTES: {
       'Every new technology costs innovation tokens. Spend them on the product, not',
       'the stack.',
       '',
-      'The POS stack is deliberately boring: Postgres, Next.js, one cron.',
+      'The POS stack is deliberately boring: Postgres, Next.js, one cron. The order it',
+      'is built in is [[Build order]].',
     ].join('\n'),
     vault: { path: 'Articles/The boring technology club.md', sha: 'a1f9c2e4b7d0' },
   },
@@ -96,10 +97,10 @@ const NOTES: {
     title: 'Why solo builders ship one module at a time',
     kind: 'article',
     status: 'draft',
+    // A summary the way Haiku writes one: paragraphs, no hard wraps, so the
+    // draft card's pre-wrap shows it as it would arrive.
     body: [
-      'Scope creep is the default state of a side project. The fix is structure, not',
-      'discipline: pick one module, define done before starting, ship it to the point',
-      'of daily use, then start the next.',
+      'Scope creep is the default state of a side project. The fix is structure, not discipline: pick one module, define done before starting, ship it to the point of daily use, then start the next.',
       '',
       'Three rules worth keeping:',
       '1. Never have two modules at twenty percent.',
@@ -118,12 +119,7 @@ const NOTES: {
     title: 'Postgres full text search, briefly',
     kind: 'article',
     status: 'draft',
-    body: [
-      'tsvector plus a GIN index covers the exact match cases a vector misses:',
-      'identifiers, names, error strings. It costs nothing per query, which is the',
-      'argument for running it first and only paying for meaning when words find',
-      'nothing.',
-    ].join('\n'),
+    body: 'tsvector plus a GIN index covers the exact match cases a vector misses: identifiers, names, error strings. It costs nothing per query, which is the argument for running it first and only paying for meaning when words find nothing.',
     sourceMeta: 'URL, 900 words',
     sourceUrl: 'https://example.com/postgres-fts',
     sourceText:
