@@ -421,7 +421,19 @@ test('login rejects a malformed address without clearing it', async ({ page, con
 
 test('review inbox, list and sticky detail panel', async ({ page }) => {
   await page.goto('/review')
-  await expect(page.getByRole('heading', { name: 'Review' })).toBeVisible()
+  const heading = page.getByRole('heading', { name: 'Review' })
+  await expect(heading).toBeVisible()
+
+  // The band: crumb on the left, the pending count with its dot on the right,
+  // above the title rather than beside the bulk button.
+  await expect(page.getByText('Review / Pending')).toBeVisible()
+  const pendingCount = page.getByText(/^\d+ pending$/)
+  await expect(pendingCount).toBeVisible()
+  const countBox = await pendingCount.boundingBox()
+  const headingBox = await heading.boundingBox()
+  expect(countBox!.y).toBeLessThan(headingBox!.y)
+
+  await expect(page.getByRole('tab', { name: /Pending/ })).toHaveAttribute('aria-selected', 'true')
 
   const list = page.getByRole('button', { name: /Draft a weekly summary note/ })
   await expect(list).toBeVisible()
@@ -429,13 +441,51 @@ test('review inbox, list and sticky detail panel', async ({ page }) => {
   // seeded proposals is guarded.
   await expect(page.getByRole('button', { name: /approve all non-guarded \(1\)/i })).toBeVisible()
 
+  // The card: "{agent} · {when}", the state word and the meta line as plain
+  // text, no chips.
+  const first = page.getByRole('button', { name: /Add a body to an empty note/ })
+  await expect(first).toHaveText(/notes\.tidy · (\d\d:\d\d today|yesterday|\d+ days ago)/)
+  await expect(first).toContainText('PENDING')
+  await expect(first).toContainText('64% confident')
+  await expect(list).toContainText('GUARDED')
+  await expect(page.locator('.rounded-full', { hasText: /confident|write|guarded/i })).toHaveCount(0)
+
+  // The panel for the default selection: Current / After, the strip, the
+  // three actions.
+  await expect(page.getByText('Current', { exact: true })).toBeVisible()
+  await expect(page.getByText('After', { exact: true })).toBeVisible()
+  await expect(page.getByText('Recurring: every 3 months.')).toBeVisible()
+  for (const label of ['Confidence', 'Evidence', 'Affects']) {
+    await expect(page.getByText(label, { exact: true })).toBeVisible()
+  }
+  await expect(page.getByRole('button', { name: /^approve$/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Edit' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Dismiss' })).toBeVisible()
+
+  // Edit turns the After cell into an input; Escape puts it back.
+  await page.getByRole('button', { name: 'Edit' }).click()
+  const draft = page.getByRole('textbox', { name: /after/i })
+  await expect(draft).toHaveValue('Recurring: every 3 months.')
+  await expect(page.getByRole('button', { name: /save & approve/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Cancel edit' })).toBeVisible()
+  await draft.press('Escape')
+  await expect(page.getByRole('button', { name: 'Edit' })).toBeVisible()
+
   // Selecting drives the panel; the newest proposal is selected by default, so
-  // the guarded one has to be asked for.
+  // the guarded one has to be asked for. The selection lives in the URL so it
+  // survives the reloads the shot takes.
   await list.click()
+  await expect(page).toHaveURL(/sel=/)
   await expect(page.getByText(/none of them link to each other/i)).toBeVisible()
-  await expect(page.getByText(/approving writes to Notes immediately/i)).toBeVisible()
+  const guarded = page.getByText(/approving writes to Notes immediately/i)
+  await expect(guarded).toBeVisible()
+  await expect(guarded).not.toContainText('is_manual')
 
   await shoot(page, 'review')
+
+  // The tab is a link: it lands on its own URL.
+  await page.getByRole('tab', { name: /Approved/ }).click()
+  await expect(page).toHaveURL(/tab=approved/)
 })
 
 test('approving a proposal runs the tool and moves the row', async ({ page }) => {
@@ -448,10 +498,51 @@ test('approving a proposal runs the tool and moves the row', async ({ page }) =>
 
   await page.goto('/review?tab=approved')
   await expect(page.getByRole('button', { name: /Add a body to an empty note/ })).toBeVisible()
+  // The write stays: reopening would run the tool again, so there is no Undo
+  // here, only the record of what ran.
+  await expect(page.getByText('Approved. notes.write ran.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Undo' })).toHaveCount(0)
 
   // And the write actually happened: approve() calls the module's own tool.
   await page.goto('/notes')
   await expect(page.getByText('Recurring: every 3 months.').first()).toBeVisible()
+})
+
+test('review, dismiss and undo keep the row', async ({ page }) => {
+  await page.goto('/review')
+  const coach = page.getByRole('button', { name: /Add a little weight/ })
+  await coach.click()
+  await page.getByRole('button', { name: 'Dismiss' }).click()
+  await expect(page.getByText('Dismissed', { exact: true })).toBeVisible()
+
+  await page.goto('/review?tab=dismissed')
+  await expect(page.getByText('Dismissed. Undo puts it back in the inbox.')).toBeVisible()
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await expect(page.getByText('Back in the inbox')).toBeVisible()
+
+  await page.goto('/review')
+  await expect(page.getByRole('button', { name: /Add a little weight/ })).toBeVisible()
+})
+
+test('review, inbox clear', async ({ page }) => {
+  // Runs after the approval test, so two guarded proposals are left. Both go,
+  // the empty inbox is shot, both come back.
+  await page.goto('/review')
+  for (const name of [/Draft a weekly summary note/, /Add a little weight/]) {
+    await page.getByRole('button', { name }).click()
+    await page.getByRole('button', { name: 'Dismiss' }).click()
+    await expect(page.getByText('Dismissed', { exact: true })).toBeVisible()
+  }
+  await expect(page.getByText('inbox clear')).toBeVisible()
+  await expect(page.getByText(/after the nightly run at \d\d:\d\d\./)).toBeVisible()
+  await shoot(page, 'review-empty')
+
+  await page.goto('/review?tab=dismissed')
+  for (let i = 0; i < 2; i++) {
+    await page.getByRole('button', { name: 'Undo' }).click()
+    await expect(page.getByText('Back in the inbox')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Undo' })).toHaveCount(1 - i)
+  }
 })
 
 test('settings, agents and mcp', async ({ page }) => {
