@@ -70,6 +70,7 @@ export async function logService(input: {
   costCents: number | null
   vendorId: string | null
   intervalMonths: number
+  notes: string
 }): Promise<ActionResult> {
   await requireOwner()
   try {
@@ -82,6 +83,7 @@ export async function logService(input: {
         what: input.what,
         done_on: input.doneOn,
         cost_cents: input.costCents,
+        notes: input.notes,
       },
       { source: 'ui' },
     )

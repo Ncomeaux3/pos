@@ -93,8 +93,9 @@ export function monthKey(iso: string): string {
 }
 
 /** 'OCT 26', the mono label the design prints on each month. */
+const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+
 export function monthLabel(key: string): string {
-  const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
   const [y, m] = key.split('-').map(Number)
   return `${MONTHS[m - 1]} ${String(y).slice(2)}`
 }
@@ -130,4 +131,40 @@ export function next12Months(jobs: Job[], todayIso: string): Month[] {
       isCurrent: i === 0,
     }
   })
+}
+
+/** 'SEP 2026', the selected month's head and an asset card's next date. */
+export function monthLabelLong(key: string): string {
+  const [y, m] = key.split('-').map(Number)
+  return `${MONTHS[m - 1]} ${y}`
+}
+
+/** How a person says the interval: "yearly", "twice a year", "every 2 years". */
+export function intervalLabel(months: number): string {
+  if (months === 0) return 'one off'
+  if (months === 6) return 'twice a year'
+  if (months === 12) return 'yearly'
+  if (months % 12 === 0) return `every ${months / 12} years`
+  return `every ${months} months`
+}
+
+/** "$2,617", "$21.3k", "$743k": the strip's figures, compact past ten thousand. */
+export function compactMoney(cents: number): string {
+  const dollars = cents / 100
+  if (dollars >= 100_000) return `$${Math.round(dollars / 1000)}k`
+  if (dollars >= 10_000) return `$${(dollars / 1000).toFixed(1)}k`
+  return `$${Math.round(dollars).toLocaleString('en-US')}`
+}
+
+/** '05 SEP 26', the date column in the drawer's service history. */
+export function logDate(iso: string): string {
+  const [y, m, d] = iso.split('-')
+  return `${d} ${MONTHS[Number(m) - 1]} ${y.slice(2)}`
+}
+
+/** 'Jul 2026', when a vendor was last used. */
+export function monthYear(iso: string): string {
+  const [y, m] = iso.split('-').map(Number)
+  const label = MONTHS[m - 1]
+  return `${label[0]}${label.slice(1).toLowerCase()} ${y}`
 }

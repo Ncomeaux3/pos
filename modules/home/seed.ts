@@ -20,7 +20,7 @@ const ASSETS: Asset[] = [
     external_id: 'a-house',
     kind: 'property',
     name: '2412 Example Street',
-    subtitle: 'Austin, TX / 2,140 sq ft / built 1994 / owned since 2019',
+    subtitle: 'Austin, TX · 2,140 sq ft · built 1994 · owned since 2019',
     valueCents: 68_400_000,
     annualCostCents: 1_428_000,
     facts: [
@@ -37,7 +37,7 @@ const ASSETS: Asset[] = [
     external_id: 'a-truck',
     kind: 'vehicle',
     name: '2021 pickup',
-    subtitle: '68,420 mi / owned outright',
+    subtitle: '68,420 mi · owned outright',
     valueCents: 3_480_000,
     annualCostCents: 394_000,
     facts: [
@@ -53,7 +53,7 @@ const ASSETS: Asset[] = [
     external_id: 'a-car',
     kind: 'vehicle',
     name: '2018 hatchback',
-    subtitle: '94,180 mi / second car / owned outright',
+    subtitle: '94,180 mi · second car · owned outright',
     valueCents: 1_420_000,
     annualCostCents: 241_000,
     facts: [
@@ -67,7 +67,7 @@ const ASSETS: Asset[] = [
     external_id: 'a-hvac',
     kind: 'equipment',
     name: 'HVAC, four ton',
-    subtitle: 'Installed 2018 / ten year parts warranty',
+    subtitle: 'Installed 2018 · ten year parts warranty',
     valueCents: 940_000,
     annualCostCents: 62_000,
     facts: [
@@ -81,7 +81,7 @@ const ASSETS: Asset[] = [
     external_id: 'a-mower',
     kind: 'equipment',
     name: 'Mower and blower',
-    subtitle: 'Battery / bought 2022 / five year warranty',
+    subtitle: 'Battery · bought 2022 · five year warranty',
     valueCents: 74_000,
     annualCostCents: 6_000,
     facts: [

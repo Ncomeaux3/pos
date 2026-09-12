@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { addMonths, dueLabel, dueStatus, next12Months, nextDue } from './schedule'
+import {
+  addMonths,
+  compactMoney,
+  dueLabel,
+  dueStatus,
+  intervalLabel,
+  logDate,
+  monthLabelLong,
+  monthYear,
+  next12Months,
+  nextDue,
+} from './schedule'
 
 const service = (over: Partial<Parameters<typeof nextDue>[0]> = {}) => ({
   intervalMonths: 12,
@@ -115,5 +126,31 @@ describe('next12Months', () => {
     const months = next12Months(jobs, '2026-11-08')
     expect(months.map((m) => m.key)).toContain('2027-01')
     expect(months[0].key).toBe('2026-11')
+  })
+})
+
+describe('labels for the screen', () => {
+  it('writes the selected month with its full year', () => {
+    expect(monthLabelLong('2026-09')).toBe('SEP 2026')
+  })
+
+  it('names an interval the way a person says it', () => {
+    expect(intervalLabel(12)).toBe('yearly')
+    expect(intervalLabel(6)).toBe('twice a year')
+    expect(intervalLabel(24)).toBe('every 2 years')
+    expect(intervalLabel(0)).toBe('one off')
+    expect(intervalLabel(3)).toBe('every 3 months')
+  })
+
+  it('compacts money on the strip past ten thousand', () => {
+    expect(compactMoney(261_700)).toBe('$2,617')
+    expect(compactMoney(2_131_000)).toBe('$21.3k')
+    expect(compactMoney(74_314_000)).toBe('$743k')
+    expect(compactMoney(10_000_000)).toBe('$100k')
+  })
+
+  it('dates a log row and a vendor the way the drawer and the rail read them', () => {
+    expect(logDate('2026-09-05')).toBe('05 SEP 26')
+    expect(monthYear('2026-07-12')).toBe('Jul 2026')
   })
 })
