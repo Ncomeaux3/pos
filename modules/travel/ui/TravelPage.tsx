@@ -83,6 +83,7 @@ export default async function TravelPage() {
     })),
     places: places.map((p) => ({
       id: p.id,
+      tripId: p.trip_id,
       name: p.name,
       country: p.country,
       lat: Number(p.lat),

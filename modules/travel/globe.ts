@@ -145,3 +145,40 @@ export function centsPerPoint(cashCents: number, points: number, feesCents = 0):
   if (points <= 0) return null
   return (cashCents - feesCents) / points
 }
+
+/** The globe's radius in viewBox units. The flat map is 2R wide by R tall. */
+export const R = 100
+export const ZOOM_MIN = 1
+export const ZOOM_MAX = 8
+
+/** How far in the drawing is and where it has been pushed: screen = t + zoom * world. */
+export type View = { zoom: number; tx: number; ty: number }
+
+/** Half the width and height of what the svg shows, in viewBox units. */
+export type Half = { x: number; y: number }
+
+/**
+ * Zoom about a point given in viewBox units, so whatever is under the cursor
+ * (or between two fingers) stays there rather than sliding toward the centre.
+ */
+export function zoomAt(view: View, factor: number, px: number, py: number, mode: 'globe' | 'flat', half: Half): View {
+  const zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, view.zoom * factor))
+  const k = zoom / view.zoom
+  return clampView({ zoom, tx: px - k * (px - view.tx), ty: py - k * (py - view.ty) }, mode, half)
+}
+
+/**
+ * Keeps the drawing over the box: an edge of it may be pushed no further than
+ * the box's own edge, so nothing blank is dragged into view. `half` is what
+ * the svg shows, which on a tall phone is more than the flat map's own
+ * height, since the viewBox is letterboxed rather than stretched.
+ */
+export function clampView(view: View, mode: 'globe' | 'flat', half: Half): View {
+  const limitX = Math.max(0, (mode === 'globe' ? R : 2 * R) * view.zoom - half.x)
+  const limitY = Math.max(0, R * view.zoom - half.y)
+  return {
+    zoom: view.zoom,
+    tx: Math.max(-limitX, Math.min(limitX, view.tx)),
+    ty: Math.max(-limitY, Math.min(limitY, view.ty)),
+  }
+}

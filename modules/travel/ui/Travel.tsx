@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { deleteTrip, setTripStatus, type ActionResult } from './actions'
 import { Globe, type Pin } from './Globe'
 import { LoyaltyDrawer } from './LoyaltyDrawer'
+import { PlaceDrawer } from './PlaceDrawer'
 import { TripDrawer } from './TripDrawer'
 
 // The Travel screen, as POS Travel.dc.html draws it: the band, the loyalty
@@ -55,7 +56,7 @@ export type TravelData = {
     plannedCents: number
     actualOverrideCents: number | null
   }[]
-  places: { id: string; name: string; country: string; lat: number; lon: number; visitedOn: string | null }[]
+  places: { id: string; tripId: string | null; name: string; country: string; lat: number; lon: number; visitedOn: string | null }[]
   loyalty: {
     id: string
     name: string
@@ -152,6 +153,7 @@ export function Travel({ data }: { data: TravelData }) {
   ]
 
   const openTrip = data.trips.find((t) => t.id === params.get('trip')) ?? null
+  const openPlace = data.places.find((p) => p.id === params.get('place')) ?? null
   const form = params.get('new') // 'trip' | 'wish' | null
   const loyaltyOpen = params.get('loyalty') === '1'
 
@@ -235,8 +237,12 @@ export function Travel({ data }: { data: TravelData }) {
         <Globe
           pins={pins}
           onPick={(id) => {
-            const trip = id.startsWith('trip-') ? id.slice(5) : id.startsWith('wish-') ? id.slice(5) : null
-            if (trip) setParams({ trip, new: null })
+            // A visited place opens the trip it was part of; one with no
+            // trip, or whose trip is gone, opens as itself.
+            const place = id.startsWith('place-') ? data.places.find((p) => p.id === id.slice(6)) : undefined
+            const trip = place ? place.tripId : id.startsWith('trip-') || id.startsWith('wish-') ? id.slice(5) : null
+            if (trip && data.trips.some((t) => t.id === trip)) setParams({ trip, new: null, place: null })
+            else if (place) setParams({ place: place.id, trip: null, new: null })
           }}
           alert={
             data.alert && (
@@ -386,6 +392,7 @@ export function Travel({ data }: { data: TravelData }) {
           onClose={() => setParams({ trip: null, new: null, tab: null })}
         />
       )}
+      {openPlace && <PlaceDrawer place={openPlace} onClose={() => setParams({ place: null })} />}
       {loyaltyOpen && <LoyaltyDrawer loyalty={data.loyalty} onClose={() => setParams({ loyalty: null })} />}
     </>
   )
