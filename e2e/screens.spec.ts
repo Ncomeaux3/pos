@@ -699,7 +699,8 @@ test('notifications, a rule expanded', async ({ page }) => {
 })
 
 // Pausing turns the button amber, like the artboard, not the teal "selected"
-// treatment other toggles use. Resets itself so later tests see the live state.
+// treatment other toggles use. Persisted in settings, so it survives shoot()'s
+// reloads. Resets itself so later tests see the live state.
 test('notifications, pause all turns amber', async ({ page }) => {
   await page.goto('/notifications')
   await page.getByRole('button', { name: 'Pause all' }).click()
@@ -707,9 +708,26 @@ test('notifications, pause all turns amber', async ({ page }) => {
   const resume = page.getByRole('button', { name: 'Resume all' })
   await expect(resume).toBeVisible()
   await expect(resume).toHaveClass(/border-warn/)
+  await expect(page.getByText(/rules active · \d+ held/)).toBeVisible()
 
-  await resume.click()
+  await shoot(page, 'notifications-paused')
+
+  await page.getByRole('button', { name: 'Resume all' }).click()
   await expect(page.getByRole('button', { name: 'Pause all' })).toBeVisible()
+})
+
+// Inbox zero: the last test in this block, since marking every alert read
+// leaves the fixture that way until the next project's reseed.
+test('notifications, inbox clear', async ({ page }) => {
+  await page.goto('/notifications')
+  await page.getByRole('button', { name: 'Mark all read' }).click()
+
+  await expect(page.getByText('Inbox zero')).toBeVisible()
+  await expect(
+    page.getByText('Everything raised so far has been read.'),
+  ).toBeVisible()
+
+  await shoot(page, 'notifications-empty')
 })
 
 test('agent log, the run accordion and the rail', async ({ page }) => {
