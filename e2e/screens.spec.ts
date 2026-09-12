@@ -470,6 +470,7 @@ test('review inbox, list and sticky detail panel', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Cancel edit' })).toBeVisible()
   await draft.press('Escape')
   await expect(page.getByRole('button', { name: 'Edit' })).toBeVisible()
+  await shoot(page, 'review-first')
 
   // Selecting drives the panel; the newest proposal is selected by default, so
   // the guarded one has to be asked for. The selection lives in the URL so it
@@ -502,6 +503,7 @@ test('approving a proposal runs the tool and moves the row', async ({ page }) =>
   // here, only the record of what ran.
   await expect(page.getByText('Approved. notes.write ran.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Undo' })).toHaveCount(0)
+  await shoot(page, 'review-approved')
 
   // And the write actually happened: approve() calls the module's own tool.
   await page.goto('/notes')
@@ -517,6 +519,7 @@ test('review, dismiss and undo keep the row', async ({ page }) => {
 
   await page.goto('/review?tab=dismissed')
   await expect(page.getByText('Dismissed. Undo puts it back in the inbox.')).toBeVisible()
+  await shoot(page, 'review-dismissed')
   await page.getByRole('button', { name: 'Undo' }).click()
   await expect(page.getByText('Back in the inbox', { exact: true })).toBeVisible()
 

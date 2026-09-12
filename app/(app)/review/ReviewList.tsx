@@ -63,7 +63,7 @@ export function ReviewList({
 
   if (items.length === 0) {
     return (
-      <div className="flex min-h-[420px] items-center justify-center p-10 text-center">
+      <div className="flex min-h-[360px] items-center justify-center p-10 text-center">
         <div>
           <p className="num text-[34px] font-light text-ink-3">
             {status === 'pending' ? 'inbox clear' : `nothing ${status}`}
