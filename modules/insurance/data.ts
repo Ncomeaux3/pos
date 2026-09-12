@@ -1,5 +1,6 @@
 import { db } from '@/core/db'
 import { decrypt } from '@/core/crypto'
+import { remove } from '@/core/files'
 import { maskNumber } from './premium'
 
 // Reads for the screen and the digest. The premium and expiry arithmetic lives
@@ -93,4 +94,50 @@ export async function listDocuments(): Promise<DocumentRow[]> {
 export async function ownerToday(): Promise<string> {
   const { rows } = await db().query<{ today: string }>(`select core.today()::text as today`)
   return rows[0].today
+}
+
+/** The channels the policy renewal rule fires on, or null when it is muted. */
+export async function renewalChannels(): Promise<string[] | null> {
+  const { rows } = await db().query<{ channels: string[]; muted: boolean }>(
+    `select channels, muted from core.notification_rules
+      where module = 'insurance' and key = 'policy_renewal' limit 1`,
+  )
+  const rule = rows[0]
+  return rule && !rule.muted ? rule.channels : null
+}
+
+/**
+ * Remove a policy, its registry row and its documents' files.
+ *
+ * The document rows cascade with the policy; the files in the bucket do not,
+ * so they go first. The registry row goes so the policy stops turning up in
+ * search; its events stay, unlinked, because the log is append only.
+ */
+export async function deletePolicy(id: string): Promise<void> {
+  const { rows } = await db().query<{ file_path: string }>(
+    `select file_path from insurance.document where policy_id = $1 and file_path is not null`,
+    [id],
+  )
+  // Only files under this policy's own prefix: a document row pointing
+  // elsewhere must not delete another policy's file.
+  for (const doc of rows) {
+    if (doc.file_path.startsWith(`${id}/`)) await remove({ module: 'insurance', path: doc.file_path })
+  }
+  await db().query(
+    `delete from core.entities where module = 'insurance' and entity_type = 'policy' and entity_id = $1`,
+    [id],
+  )
+  await db().query(`delete from insurance.policy where id = $1`, [id])
+}
+
+export async function attachDocument(
+  policyId: string,
+  name: string,
+  meta: string,
+  filePath: string,
+): Promise<void> {
+  await db().query(
+    `insert into insurance.document (policy_id, name, meta, file_path) values ($1, $2, $3, $4)`,
+    [policyId, name, meta, filePath],
+  )
 }

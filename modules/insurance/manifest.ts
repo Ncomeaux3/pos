@@ -6,7 +6,7 @@ import { defineModule, defineTool } from '@/core/module-contract'
 import { nightlyDigest } from './jobs/nightly-digest'
 import InsurancePage from './ui/InsurancePage'
 import { annualCents, type Cadence } from './premium'
-import { listPolicies } from './data'
+import { attachDocument, deletePolicy, listPolicies } from './data'
 import { InsuranceTile } from './ui/Tile'
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD')
@@ -34,6 +34,26 @@ const PATCHABLE = [
   'status',
   'notes',
 ] as const
+
+/**
+ * A file can only be attached from under its own policy's prefix, and the path
+ * cannot traverse. Without this an agent could attach any object in the bucket
+ * to a policy, read it through the signed URL, and delete it with the policy.
+ */
+export const ATTACH_INPUT = z
+  .object({
+    policy_id: z.uuid(),
+    name: z.string().min(1).max(200),
+    meta: z.string().max(200).default(''),
+    file_path: z.string().min(1).max(500),
+  })
+  .refine(
+    ({ policy_id, file_path }) =>
+      file_path.startsWith(`${policy_id}/`) &&
+      !file_path.includes('..') &&
+      /^[A-Za-z0-9._-]+$/.test(file_path.slice(policy_id.length + 1)),
+    { message: 'file_path must be a file directly under the policy id' },
+  )
 
 export default defineModule({
   id: 'insurance',
@@ -76,8 +96,9 @@ export default defineModule({
       run: async (input) => {
         const { id, policy_number, ...rest } = input
 
-        const fields = Object.entries(rest).filter(([key]) =>
-          (PATCHABLE as readonly string[]).includes(key),
+        // An optional key that was not sent is undefined, not a write of null.
+        const fields = Object.entries(rest).filter(
+          ([key, value]) => value !== undefined && (PATCHABLE as readonly string[]).includes(key),
         )
         if (policy_number !== undefined) {
           fields.push(['policy_number_encrypted', encrypt(policy_number)])
@@ -144,6 +165,24 @@ export default defineModule({
         return { id, expires_on }
       },
     }),
+
+    delete_policy: defineTool({
+      description: 'Delete a policy, its documents and their files.',
+      input: z.object({ id: z.uuid() }),
+      run: async ({ id }) => {
+        await deletePolicy(id)
+        return { id }
+      },
+    }),
+
+    attach_document: defineTool({
+      description: 'Attach a file already in the insurance bucket to a policy.',
+      input: ATTACH_INPUT,
+      run: async ({ policy_id, name, meta, file_path }) => {
+        await attachDocument(policy_id, name, meta, file_path)
+        return { policy_id }
+      },
+    }),
   },
 
   /**
@@ -152,9 +191,10 @@ export default defineModule({
    * Cover is money and it is a commitment, and a wrong expiry date here is the
    * kind of mistake nobody notices until a claim. An agent proposing a change
    * lands in the Review inbox with the diff on it, which is exactly what that
-   * inbox is for.
+   * inbox is for. Attaching a file is not guarded: it adds a document to the
+   * owner's own row and changes nothing about the cover.
    */
-  guarded: ['write_policy', 'renew_policy'],
+  guarded: ['write_policy', 'renew_policy', 'delete_policy'],
   requires: [],
 
   metrics: {

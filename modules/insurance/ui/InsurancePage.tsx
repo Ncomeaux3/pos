@@ -1,12 +1,13 @@
-import { listDocuments, listPolicies, ownerToday } from '../data'
+import { listDocuments, listPolicies, ownerToday, renewalChannels } from '../data'
 import { type Cadence } from '../premium'
 import { Insurance, type InsuranceData } from './Insurance'
 
 export default async function InsurancePage() {
-  const [policies, documents, todayIso] = await Promise.all([
+  const [policies, documents, todayIso, channels] = await Promise.all([
     listPolicies(),
     listDocuments(),
     ownerToday(),
+    renewalChannels(),
   ])
 
   const data: InsuranceData = {
@@ -37,7 +38,9 @@ export default async function InsurancePage() {
       policyId: d.policy_id,
       name: d.name,
       meta: d.meta,
+      hasFile: d.file_path !== null,
     })),
+    renewalChannels: channels,
   }
 
   return <Insurance data={data} />

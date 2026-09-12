@@ -1,12 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import {
   annualCents,
+  cadenceTag,
+  daysLabel,
   daysUntil,
   expiryLabel,
+  leadsLabel,
   maskNumber,
   nextTermEnd,
+  paymentSchedule,
   policyStatus,
+  reminderMarks,
   remindersDueToday,
+  shortDate,
 } from './premium'
 
 describe('annualCents', () => {
@@ -37,8 +43,8 @@ describe('policyStatus', () => {
 
 describe('maskNumber', () => {
   it('masks the same way however the number is punctuated', () => {
-    expect(maskNumber('918-44-2210-8')).toBe('**** 2108')
-    expect(maskNumber('918442210 8')).toBe('**** 2108')
+    expect(maskNumber('918-44-2210-8')).toBe('•••• 2108')
+    expect(maskNumber('918442210 8')).toBe('•••• 2108')
   })
 
   it('says so rather than masking nothing', () => {
@@ -77,5 +83,73 @@ describe('remindersDueToday', () => {
     // The reminder is for a renewal that has not happened. Once the date has
     // passed, the row on the screen is the message.
     expect(remindersDueToday('2026-09-01', [60, 30, 7], '2026-09-08')).toEqual([])
+  })
+})
+
+describe('the screen strings', () => {
+  const today = '2026-09-11'
+
+  it('shortDate writes the year only when it is not this one', () => {
+    expect(shortDate('2026-10-18', today)).toBe('Oct 18')
+    expect(shortDate('2027-01-02', today)).toBe('Jan 2 2027')
+  })
+
+  it('daysLabel counts down, then counts back', () => {
+    expect(daysLabel('2026-10-18', today)).toBe('37 days')
+    expect(daysLabel('2026-09-11', today)).toBe('today')
+    expect(daysLabel('2026-08-30', today)).toBe('12d ago')
+    expect(daysLabel(null, today)).toBe('no date')
+  })
+
+  it('cadenceTag and leadsLabel', () => {
+    expect(cadenceTag('monthly')).toBe('/mo')
+    expect(cadenceTag('quarterly')).toBe('/3mo')
+    expect(cadenceTag('semiannual')).toBe('/6mo')
+    expect(cadenceTag('annual')).toBe('/yr')
+    expect(leadsLabel([14, 60, 0])).toBe('60d · 14d · day of')
+    expect(leadsLabel([])).toBe('off')
+  })
+})
+
+describe('reminderMarks', () => {
+  it('places each lead on the track from today to the expiry', () => {
+    expect(reminderMarks([60, 14], 113)).toEqual([
+      { lead: 60, at: 46.9, fired: false },
+      { lead: 14, at: 87.6, fired: false },
+    ])
+  })
+
+  it('a lead that has passed sits at the start, fired', () => {
+    expect(reminderMarks([60], 37)).toEqual([{ lead: 60, at: 0, fired: true }])
+  })
+
+  it('an expired policy puts every mark at the start', () => {
+    expect(reminderMarks([30, 0], -5)).toEqual([
+      { lead: 30, at: 0, fired: true },
+      { lead: 0, at: 100, fired: true },
+    ])
+  })
+})
+
+describe('paymentSchedule', () => {
+  it('steps back from the expiry by the cadence: one behind, three ahead', () => {
+    expect(paymentSchedule('2026-10-18', 'monthly', '2026-09-11')).toEqual([
+      { label: 'Last', on: '2026-08-18' },
+      { label: 'Next', on: '2026-09-18' },
+      { label: 'Upcoming', on: '2026-10-18' },
+      { label: 'Upcoming', on: '2026-11-18' },
+    ])
+  })
+
+  it('six months apart for a semiannual policy', () => {
+    expect(paymentSchedule('2027-01-02', 'semiannual', '2026-09-11').map((p) => p.on)).toEqual([
+      '2026-07-02', '2027-01-02', '2027-07-02', '2028-01-02',
+    ])
+  })
+
+  it('keeps the day of month where the month is shorter', () => {
+    expect(paymentSchedule('2026-03-31', 'monthly', '2026-03-01').map((p) => p.on)).toEqual([
+      '2026-02-28', '2026-03-31', '2026-04-30', '2026-05-31',
+    ])
   })
 })
