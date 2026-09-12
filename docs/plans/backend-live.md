@@ -71,7 +71,7 @@ names the phase it unblocks.
 | 3 | Strava, vault, SimpleFIN connected and syncing nightly | low | 4, 5, 6 | Blocked on 2 and owner steps 11 to 13 | |
 | 4 | Health Auto Export webhook writes body metrics | medium | 1, 5, 6 | Not started | |
 | 5 | Cron-silence check | low | 1, 4, 6 | Not started | |
-| 6 | PR #10 skill tree zoom finished and merged | medium | 1, 4, 5 | In progress on `fix/skill-tree-zoom` | #10 |
+| 6 | PR #10 skill tree zoom finished and merged | medium | 1, 4, 5 | #10 merged 2026-09-12; the re-checks continue on `fix/skill-tree-zoom` | #10 |
 
 Parallel-safe means different files; 1, 4, 5 and 6 can run in separate
 worktrees. 2 and 3 are mostly waiting on the owner.
@@ -224,7 +224,7 @@ zoom and double-click still slow, and the centre node opening no card.
 Tasks:
 - [ ] Reproduce each on `localhost:3010/skills` and `/travel` at the branch head; fix what reproduces, in `modules/skills/ui/` and `modules/travel/` only
 - [ ] The branch's e2e wheel tests still pass
-- [ ] Merge when CI is green and the owner has tried it
+- [x] Merge when CI is green and the owner has tried it (merged 2026-09-12 17:05 CDT)
 
 Exit checks:
 - `pnpm test:e2e --grep "skill"` green; CI green; PR merged
