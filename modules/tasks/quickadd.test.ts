@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseQuickAdd } from './quickadd'
+import { dueLabel, parseQuickAdd } from './quickadd'
 
 // The parser has to say what it understood, because the design shows that back
 // before anything is saved. A token it did not recognise stays in the title
@@ -99,5 +99,17 @@ describe('parseQuickAdd', () => {
   it('names the weekday from the date it was given, not from the clock', () => {
     // Tuesday plus two is Thursday, whatever day the suite happens to run on.
     expect(parse('x @thu').parsed).toEqual([{ field: 'Due', value: 'Thu' }])
+  })
+})
+
+describe('dueLabel', () => {
+  it('names the day inside a week and the date past it', () => {
+    const fri = new Date(2026, 8, 11)
+    expect(dueLabel(-1, fri)).toBe('1d overdue')
+    expect(dueLabel(0, fri)).toBe('Today')
+    expect(dueLabel(1, fri)).toBe('Tomorrow')
+    expect(dueLabel(3, fri)).toBe('Mon')
+    expect(dueLabel(12, fri)).toBe('Sep 23')
+    expect(dueLabel(null, fri)).toBe('No date')
   })
 })

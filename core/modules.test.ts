@@ -66,6 +66,14 @@ describe('the module index', () => {
     }
   })
 
+  it('lets only the classifying module name skills', () => {
+    // The names seam exists for the module that writes the links, so a second
+    // provider would be a second tree.
+    const naming = modules.filter((m) => m.skillNames)
+    expect(naming.length).toBeLessThanOrEqual(1)
+    for (const m of naming) expect(m.classifier, `module ${m.id}`).toBeDefined()
+  })
+
   it('gives every job a unique name within its module', () => {
     for (const m of modules) {
       const names = (m.jobs ?? []).map((j) => j.name)

@@ -3,6 +3,7 @@ import { db } from '@/core/db'
 import { defineModule, defineTool } from '@/core/module-contract'
 import SkillTreePage from './ui/SkillTreePage'
 import { classify } from './classify'
+import { loadTree } from './tree'
 import { nightlyDigest } from './jobs/nightly-digest'
 import { reclassify } from './jobs/reclassify'
 import { SkillsTile } from './ui/Tile'
@@ -19,6 +20,7 @@ export default defineModule({
   pages: { '': SkillTreePage },
 
   classifier: classify,
+  skillNames: async () => Object.fromEntries((await loadTree()).map((n) => [n.id, n.name])),
 
   tools: {
     get_digest: defineTool({

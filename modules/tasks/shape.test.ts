@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bucket, columnsFor, loadLabel, slipMeta, type Task } from './shape'
+import { bucket, columnsFor, hoursLabel, loadLabel, remindLabel, slipMeta, type Task } from './shape'
 
 const task = (over: Partial<Task> = {}): Task => ({
   id: Math.random().toString(36).slice(2),
@@ -15,6 +15,7 @@ const task = (over: Partial<Task> = {}): Task => ({
   goalTitle: null,
   estimateMinutes: null,
   remindMinutes: null,
+  skills: [],
   source: 'manual',
   doneDaysAgo: null,
   ...over,
@@ -55,6 +56,24 @@ describe('loadLabel', () => {
   })
 })
 
+describe('hoursLabel', () => {
+  it('reads minutes under an hour and decimal hours over one', () => {
+    expect(hoursLabel(0)).toBe('')
+    expect(hoursLabel(45)).toBe('45m')
+    expect(hoursLabel(250)).toBe('4.2h')
+  })
+})
+
+describe('remindLabel', () => {
+  it('is the lead time, or the time itself for a reminder at the time', () => {
+    expect(remindLabel(null, '17:30')).toBeNull()
+    expect(remindLabel(30, '17:30')).toBe('-30M')
+    expect(remindLabel(1440, null)).toBe('-1D')
+    expect(remindLabel(0, '17:30')).toBe('17:30')
+    expect(remindLabel(0, null)).toBeNull()
+  })
+})
+
 describe('columnsFor', () => {
   it('puts an overdue task in Today, because a slip is today', () => {
     const columns = columnsFor('today', [task({ dueInDays: -3 })], context)
@@ -74,7 +93,7 @@ describe('columnsFor', () => {
       [task({ estimateMinutes: 90 }), task({ estimateMinutes: 40 })],
       context,
     )
-    expect(columns[0].meta).toBe('2 / 2h 10m')
+    expect(columns[0].meta).toBe('2 · 2.2h')
   })
 
   it('counts without a load when nothing is estimated', () => {

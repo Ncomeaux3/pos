@@ -31,6 +31,8 @@ export type Task = {
   estimateMinutes: number | null
   remindMinutes: number | null
   source: string
+  /** What the classifier linked, named by the tree. Empty when nothing matched. */
+  skills: { name: string; confidence: number; by: 'rule' | 'model' | 'manual' }[]
   /** Days ago it was completed. Null while it is open. */
   doneDaysAgo: number | null
 }
@@ -57,7 +59,7 @@ export type Column = {
   empty: string
   tone: 'ink' | 'ink-2' | 'ink-3' | 'warn' | 'ok'
   tasks: Task[]
-  /** "4 / 2h 10m" under the heading. */
+  /** "4 · 4.2h" under the heading. */
   meta: string
 }
 
@@ -68,6 +70,26 @@ export function loadLabel(minutes: number): string {
   const hours = Math.floor(minutes / 60)
   const rest = minutes % 60
   return rest === 0 ? `${hours}h` : `${hours}h ${rest}m`
+}
+
+/** "4.2h", "45m", "". The artboard's column load, hours to one decimal. */
+export function hoursLabel(minutes: number): string {
+  if (minutes === 0) return ''
+  if (minutes < 60) return `${minutes}m`
+  return `${(minutes / 60).toFixed(1)}h`
+}
+
+/**
+ * The reminder chip: "-30M", "-1D", or the time itself for a reminder at the
+ * time. Null when there is no reminder, or one at the time of a task with no
+ * time, which is a reminder that can never fire.
+ */
+export function remindLabel(minutes: number | null, dueAt: string | null): string | null {
+  if (minutes === null) return null
+  if (minutes === 0) return dueAt
+  if (minutes % 1440 === 0) return `-${minutes / 1440}D`
+  if (minutes % 60 === 0) return `-${minutes / 60}H`
+  return `-${minutes}M`
 }
 
 const isOpen = (t: Task) => t.status === 'open'
@@ -94,7 +116,7 @@ export function columnsFor(
     spec: Omit<Column, 'tasks' | 'meta'> & { filter: (t: Task) => boolean },
   ): Column => {
     const list = tasks.filter(spec.filter).sort(order)
-    const load = loadLabel(list.reduce((sum, t) => sum + (t.estimateMinutes ?? 0), 0))
+    const load = hoursLabel(list.reduce((sum, t) => sum + (t.estimateMinutes ?? 0), 0))
     return {
       id: spec.id,
       label: spec.label,
@@ -102,7 +124,7 @@ export function columnsFor(
       empty: spec.empty,
       tone: spec.tone,
       tasks: list,
-      meta: load ? `${list.length} / ${load}` : String(list.length),
+      meta: load ? `${list.length} · ${load}` : String(list.length),
     }
   }
 

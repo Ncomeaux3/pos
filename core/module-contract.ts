@@ -71,6 +71,13 @@ export type ModuleManifest = {
    */
   classifier?: (entityRef: string, text: string, module: string) => Promise<void>
   /**
+   * Skill id to display name, for a module that shows the links the classifier
+   * wrote. Same hole as `classifier`: core.skill_links holds ids, only the
+   * module that owns the tree knows the names, and no module reads another's
+   * files. Absent, links show their ids.
+   */
+  skillNames?: () => Promise<Record<string, string>>
+  /**
    * Numbers this module will compute on request, for a goal to track.
    *
    * This is the whole cross-module read mechanism for a live value, and it

@@ -69,3 +69,14 @@ export async function approveTask(id: string): Promise<ActionResult> {
     return failed(error)
   }
 }
+
+/** Remove a task for good. The row asks before calling this. */
+export async function deleteTask(id: string): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    await callTool('tasks', 'delete', { id }, { source: 'ui' })
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}

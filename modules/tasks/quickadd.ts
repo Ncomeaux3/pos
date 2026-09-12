@@ -19,6 +19,7 @@ export type QuickAdd = {
 }
 
 const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 const NAMED: Record<string, number> = {
   today: 0,
@@ -29,7 +30,7 @@ const NAMED: Record<string, number> = {
 }
 
 /**
- * "Today", "Tomorrow", "Thu", "In 14 days". What the chip under the box says.
+ * "Today", "Tomorrow", "Thu", "Sep 25". What the chip in the box says.
  *
  * `now` is a parameter rather than a call to new Date() inside, so the weekday
  * name is the one the caller is reasoning about. A label that reads the clock
@@ -41,7 +42,9 @@ export function dueLabel(days: number | null, now: Date = new Date()): string {
   if (days === 0) return 'Today'
   if (days === 1) return 'Tomorrow'
   if (days < 7) return DAYS[(now.getDay() + days) % 7].replace(/^./, (c) => c.toUpperCase())
-  return `In ${days} days`
+  const d = new Date(now)
+  d.setDate(d.getDate() + days)
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}`
 }
 
 export function estimateLabel(minutes: number | null): string {

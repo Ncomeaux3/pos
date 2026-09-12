@@ -23,13 +23,21 @@ export type TaskRow = {
   remind_minutes: number | null
   source: string
   completed_at: Date | null
+  /** Days since it was completed, on the owner's calendar. Null while open. */
+  done_days_ago: number | null
 }
 
 const SELECT = `
   select t.id, t.title, t.notes, t.due_on::text, t.due_at::text, t.priority, t.status,
          t.project_id, p.name as project_name,
          t.goal_ref, g.title as goal_title,
-         t.estimated_minutes, t.remind_minutes, t.source, t.completed_at
+         t.estimated_minutes, t.remind_minutes, t.source, t.completed_at,
+         -- On the owner's calendar, in the database, because a completion at
+         -- 20:00 in Chicago is tomorrow in UTC and was showing as yesterday's.
+         case when t.completed_at is null then null
+              else core.today() - (t.completed_at at time zone coalesce(
+                     (select value #>> '{}' from core.settings where key = 'timezone'), 'UTC'))::date
+         end as done_days_ago
     from tasks.task t
     left join tasks.project p on p.id = t.project_id
     -- The goal's title comes from the core registry, so this join works before
@@ -118,4 +126,51 @@ export async function patchTask(id: string, patch: TaskPatch): Promise<void> {
     id,
     ...fields.map((f) => patch[f]),
   ])
+}
+
+export type SkillLinkRow = {
+  task_id: string
+  skill_id: string
+  confidence: string
+  classified_by: string
+  is_manual: boolean
+}
+
+/**
+ * The skills each task is linked to, through the core registry. Read only
+ * here: the links are the classifier's, and the Skill Tree is where they are
+ * corrected.
+ */
+export async function listSkillLinks(): Promise<SkillLinkRow[]> {
+  const { rows } = await db().query<SkillLinkRow>(
+    `select en.entity_id as task_id, sl.skill_id, sl.confidence::text,
+            sl.classified_by, sl.is_manual
+       from core.skill_links sl
+       join core.entities en on en.id = sl.entity_ref
+      where en.module = 'tasks' and en.entity_type = 'task'
+        and sl.classified_by <> 'unclassified'
+      order by sl.confidence desc, sl.skill_id`,
+  )
+  return rows
+}
+
+/** The channels the task reminder rule fires on, or null when it is off. */
+export async function reminderChannels(): Promise<string[] | null> {
+  const { rows } = await db().query<{ channels: string[]; muted: boolean }>(
+    `select channels, muted from core.notification_rules
+      where module = 'tasks' and key = 'task_reminder' limit 1`,
+  )
+  const rule = rows[0]
+  return rule && !rule.muted ? rule.channels : null
+}
+
+export async function deleteTask(id: string): Promise<void> {
+  // The registry row goes with it and its skill links cascade, so the XP a
+  // completed task earned goes too. Its events stay, unlinked, with their own
+  // title snapshot: the log is append only.
+  await db().query(
+    `delete from core.entities where module = 'tasks' and entity_type = 'task' and entity_id = $1`,
+    [id],
+  )
+  await db().query(`delete from tasks.task where id = $1`, [id])
 }

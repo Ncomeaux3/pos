@@ -3,7 +3,7 @@ import { db } from '@/core/db'
 import { ownerToday } from '@/core/today'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
-import { findOrCreateProject, patchTask } from './data'
+import { deleteTask, findOrCreateProject, patchTask } from './data'
 import { nightlyDigest, rollCounts, rollForward } from './jobs/nightly-digest'
 import { loadLabel, slipMeta } from './shape'
 import TasksPage from './ui/TasksPage'
@@ -151,12 +151,22 @@ export default defineModule({
         return { id }
       },
     }),
+
+    delete: defineTool({
+      description: 'Delete a task and its registry row. Its skill links go with it; its events stay.',
+      input: z.object({ id: z.uuid() }),
+      run: async ({ id }) => {
+        await deleteTask(id)
+        return { id }
+      },
+    }),
   },
 
-  // Nothing here moves money or deletes anything. An agent-created task already
-  // lands in review, which is this module's own version of the same guard, and
-  // guarding write as well would put it behind two approvals.
-  guarded: [],
+  // Delete is the one thing here an agent should propose rather than do. An
+  // agent-created task already lands in review, which is this module's own
+  // version of the same guard, and guarding write as well would put it behind
+  // two approvals.
+  guarded: ['delete'],
   requires: [],
 
   // What a goal can point at. Goals never queries the tasks schema; it stores

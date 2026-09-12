@@ -20,6 +20,7 @@ const TASKS: {
   priority: 'P1' | 'P2' | 'P3'
   project: string
   estimate?: number
+  remind?: number
   source?: 'manual' | 'agent'
   status?: 'open' | 'review' | 'done'
   doneDaysAgo?: number
@@ -31,7 +32,7 @@ const TASKS: {
   // project against the same database, so whichever landed first left the
   // other looking at a task that was already done.
   { external_id: 'demo-2b', title: 'Sketch the week ahead', dueInDays: 0, priority: 'P3', project: 'Learning', estimate: 15 },
-  { external_id: 'demo-3', title: 'Lower, deadlift day', dueInDays: 0, at: '17:30', priority: 'P2', project: 'Health', estimate: 60 },
+  { external_id: 'demo-3', title: 'Lower, deadlift day', dueInDays: 0, at: '17:30', priority: 'P2', project: 'Health', estimate: 60, remind: 30 },
   { external_id: 'demo-4', title: 'Pay the Amex statement', dueInDays: 1, at: '09:00', priority: 'P1', project: 'Finance', estimate: 5 },
   { external_id: 'demo-5', title: 'Renew the renters policy', notes: 'Quote saved. Compare against one more carrier.', dueInDays: 3, priority: 'P2', project: 'Home', estimate: 30 },
   { external_id: 'demo-6', title: 'Ship the Search page and the palette', dueInDays: 4, priority: 'P1', project: 'POS', estimate: 180 },
@@ -74,15 +75,16 @@ export async function seed(): Promise<number> {
     const { rows } = await db().query<{ id: string }>(
       `insert into tasks.task
          (title, notes, due_on, due_at, priority, project_id, estimated_minutes,
-          source, external_id, status, completed_at)
+          source, external_id, status, completed_at, remind_minutes)
        values ($1, $2,
                case when $3::int is null then null else core.today() + $3::int end,
                $4, $5, $6, $7, $8, $9, $10,
-               case when $11::int is null then null else now() - ($11::int || ' days')::interval end)
+               case when $11::int is null then null else now() - ($11::int || ' days')::interval end,
+               $12)
        on conflict (source, external_id) do update
          set title = excluded.title, notes = excluded.notes, due_on = excluded.due_on,
              priority = excluded.priority, status = excluded.status,
-             completed_at = excluded.completed_at
+             completed_at = excluded.completed_at, remind_minutes = excluded.remind_minutes
        returning id`,
       [
         task.title,
@@ -96,6 +98,7 @@ export async function seed(): Promise<number> {
         task.external_id,
         status,
         status === 'done' ? (task.doneDaysAgo ?? 0) : null,
+        task.remind ?? null,
       ],
     )
 

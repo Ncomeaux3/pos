@@ -42,6 +42,12 @@ export function getClassifier(): ModuleManifest['classifier'] {
   return found[0]?.classifier
 }
 
+/** The skill names the tree module provides, or nothing when there is no tree. */
+export async function getSkillNames(): Promise<Record<string, string>> {
+  const found = modules.find((m) => m.skillNames)
+  return found?.skillNames ? found.skillNames() : {}
+}
+
 /**
  * Which of these integrations have no connected row yet. Drives the
  * "Connect <provider>" card that stands in for a module's pages.
