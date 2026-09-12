@@ -45,6 +45,9 @@ export default async function NotificationsPage() {
     quietTo: settings.quiet_to,
     urgentOverride: settings.quiet_urgent_override,
     paused: settings.notifications_paused,
+    // The real recipient, not a placeholder: settings.page.tsx already reads
+    // OWNER_EMAIL the same way for display.
+    digestEmail: settings.digest_email || process.env.OWNER_EMAIL || 'not set',
   }
 
   // 'system' has no manifest and never will: the runner's own alerts belong to
@@ -63,7 +66,7 @@ export default async function NotificationsPage() {
   return (
     <div className="space-y-7">
       <PageHeader
-        eyebrow={`Notifications / ${active} rules active / ${held} held`}
+        eyebrow={`Notifications · ${active} rules active · ${held} held`}
         dot={schedule.paused ? 'warn' : 'brand'}
         title="What reaches you, and when"
         lede="Every rule belongs to a module. Digests batch the quiet ones; only urgent rules break quiet hours."

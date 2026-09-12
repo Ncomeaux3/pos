@@ -40,7 +40,7 @@ export function AlertCentre({ alerts }: { alerts: AlertItem[] }) {
     <section className="space-y-3">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
         <Eyebrow dot={unread.length > 0 ? 'warn' : 'ok'}>
-          Alert centre / {unread.length} unread
+          Alert centre · {unread.length} unread
         </Eyebrow>
         <div className="flex gap-2">
           <ActionButton disabled={unread.length === 0} onClick={() => run(readAllAlerts)}>
@@ -66,7 +66,7 @@ export function AlertCentre({ alerts }: { alerts: AlertItem[] }) {
               <StatusDot tone={a.tone} className="mt-2" />
               <div className="min-w-0 flex-1 basis-[180px] space-y-1">
                 <div className="flex flex-wrap items-baseline gap-x-2.5">
-                  <span className="label text-[10px] tracking-[0.12em] text-ok">{a.module}</span>
+                  <span className="label text-[10px] tracking-[0.12em] text-brand">{a.module}</span>
                   <span className="label text-[10px] tracking-[0.1em] text-ink-3">{a.via}</span>
                 </div>
                 <p className="t-body text-ink">{a.title}</p>
@@ -83,7 +83,7 @@ export function AlertCentre({ alerts }: { alerts: AlertItem[] }) {
 
       {showHistory && history.length > 0 && (
         <div className="space-y-2 pt-4">
-          <Eyebrow className="text-[10px] tracking-[0.12em]">History / {history.length}</Eyebrow>
+          <Eyebrow className="text-[10px] tracking-[0.12em]">History · {history.length}</Eyebrow>
           <div>
             {history.map((a) => (
               <div

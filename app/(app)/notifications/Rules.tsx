@@ -5,7 +5,6 @@ import {
   ActionButton,
   Card,
   CardHead,
-  Chip,
   EmptyState,
   Eyebrow,
   PillGroup,
@@ -33,6 +32,7 @@ export type Schedule = {
   quietTo: string
   urgentOverride: boolean
   paused: boolean
+  digestEmail: string
 }
 
 const CHANNELS = [
@@ -62,20 +62,30 @@ function channelLabel(rule: Rule): string {
   const on = CHANNELS.filter((c) => rule.channels.includes(c.value)).map((c) =>
     c.label.toUpperCase(),
   )
-  return on.length > 0 ? on.join(' / ') : 'NONE'
+  return on.length > 0 ? on.join(' · ') : 'NONE'
 }
 
 function timingLabel(rule: Rule): string {
   const base = rule.timing.toUpperCase()
-  return rule.lead_days ? `${base} / ${leadLabel(rule.lead_days)}` : base
+  return rule.lead_days ? `${base} · ${leadLabel(rule.lead_days)}` : base
+}
+
+// Module colour on a live rule's row: accent for most modules, amber for
+// insurance, ink-2 for system, matching the artboard's MODS table. Ink-3 once
+// the rule is not live, whatever the module.
+const MOD_TONE: Record<string, string> = { insurance: 'text-warn', system: 'text-ink-2' }
+function moduleTone(module: string, live: boolean): string {
+  return live ? (MOD_TONE[module] ?? 'text-brand') : 'text-ink-3'
 }
 
 /** What the expander says the rule will actually do, in one sentence. */
 function stateNote(rule: Rule): string {
   if (rule.muted) return 'Muted indefinitely. Still recorded in the alert centre.'
   if (rule.snooze_until && rule.snooze_until > new Date()) {
-    const state = ruleState(rule, false)
-    return `Snoozed for ${state.label.toLowerCase()}, then back on.`
+    // The day count, not the state chip's compact "3D" label: the chip is for
+    // a tag, this sentence needs "3 days".
+    const days = Math.max(1, Math.ceil((rule.snooze_until.getTime() - Date.now()) / 86_400_000))
+    return `Snoozed for ${days} day${days > 1 ? 's' : ''}, then back on.`
   }
   const count = rule.channels.length
   if (count === 0) return 'Active, but no channel is selected, so nothing is sent.'
@@ -128,12 +138,12 @@ export function Notifications({
         <Card className="space-y-4">
           <CardHead
             label="Schedule"
-            meta={`Quiet ${schedule.quietFrom} to ${schedule.quietTo} / ${
+            meta={`Quiet ${schedule.quietFrom}–${schedule.quietTo} · ${
               schedule.urgentOverride ? 'urgent overrides' : 'no overrides'
             }`}
           />
 
-          <div className="grid gap-5 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,210px),1fr))]">
+          <div className="grid gap-[18px] sm:grid-cols-[repeat(auto-fit,minmax(min(100%,210px),1fr))]">
             <div className="space-y-2">
               <p className="t-caption text-ink-3">Morning digest</p>
               <div className="flex items-center gap-2.5">
@@ -236,7 +246,7 @@ export function Notifications({
 
           <div className="label flex flex-wrap gap-x-3 gap-y-1 border-b border-rule-2 px-1 pb-2.5 text-[10px] tracking-[0.12em] text-ink-3">
             <span className="min-w-0 flex-1">Rule</span>
-            <span>Channels / timing / state</span>
+            <span>Channels · timing · state</span>
           </div>
 
           <RowList>
@@ -263,7 +273,7 @@ export function Notifications({
                       <span
                         className={cn(
                           'label text-[10px] tracking-[0.12em]',
-                          live ? 'text-ok' : 'text-ink-3',
+                          moduleTone(rule.module, live),
                         )}
                       >
                         {(moduleLabels[rule.module] ?? rule.module).toUpperCase()}
@@ -354,7 +364,7 @@ export function Notifications({
                       </div>
 
                       <div className="space-y-2.5">
-                        <Eyebrow className="text-[10px] tracking-[0.12em]">Snooze and mute</Eyebrow>
+                        <Eyebrow className="text-[10px] tracking-[0.12em]">Snooze / mute</Eyebrow>
                         <div className="flex flex-wrap gap-1.5">
                           {[1, 7].map((days) => (
                             <ActionButton
@@ -487,7 +497,9 @@ function Preview({
             <p className="t-body text-ink">
               {isMorning ? 'Your morning digest' : 'Evening wrap'}, Thu 7 Sep
             </p>
-            <p className="t-caption text-ink-3">pos@cmxlogic.com / {digestAt}</p>
+            <p className="t-caption text-ink-3">
+              {schedule.digestEmail} · {digestAt}
+            </p>
           </div>
 
           {sections.length === 0 ? (
@@ -502,15 +514,21 @@ function Preview({
               {sections.map((s) => (
                 <div key={s.module} className="space-y-2 px-4 py-3.5">
                   <div className="flex items-baseline justify-between gap-3">
-                    <Eyebrow className="text-[10px] tracking-[0.12em]">{s.module}</Eyebrow>
-                    <Chip tone="quiet">
+                    {/* Plain spans, not Eyebrow/Chip: the artboard's module
+                      * label is flat accent (Eyebrow is fixed ink-3) and its
+                      * count is plain mono text, not a pill. */}
+                    <span className="label text-[10px] tracking-[0.12em] text-brand">
+                      {s.module}
+                    </span>
+                    <span className="num text-[10px] text-ink-3">
                       {s.lines.length} item{s.lines.length > 1 ? 's' : ''}
-                    </Chip>
+                    </span>
                   </div>
                   {s.lines.map((line) => (
-                    <p key={line} className="t-caption text-ink-2">
-                      {line}
-                    </p>
+                    <div key={line} className="flex items-baseline gap-2.5 border-b border-rule py-1.5">
+                      <span aria-hidden className="size-[5px] shrink-0 rounded-full bg-ink-3" />
+                      <p className="t-caption text-ink-2">{line}</p>
+                    </div>
                   ))}
                 </div>
               ))}

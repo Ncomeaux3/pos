@@ -645,11 +645,33 @@ test('notifications, rules table and the alert centre', async ({ page }) => {
   await page.goto('/notifications')
   await expect(page.getByRole('heading', { name: 'What reaches you, and when' })).toBeVisible()
 
+  // The band and schedule card join every generated string with a middle dot,
+  // matching the artboard, not a slash or "to".
+  await expect(page.getByText(/rules active · \d+ held/)).toBeVisible()
+  await expect(page.getByText(/Quiet 22:00–06:30 · /)).toBeVisible()
+
+  // The rules table's column header, and one row's channel/timing strings,
+  // join with the same middle dot. Statement due carries all three channels
+  // and a 3 day lead, so its row spells out both joins at once.
+  await expect(page.getByText('Channels · timing · state')).toBeVisible()
+  await expect(page.getByText('PUSH · EMAIL · IN-APP').first()).toBeVisible()
+  await expect(page.getByText('IMMEDIATE · 3 days')).toBeVisible()
+
+  // A live Insurance rule's module label reads amber, not the flat green
+  // every module used to share. Scoped to the row itself: the filter pill
+  // above the table also renders the word "Insurance".
+  const policyRow = page.getByRole('button', { name: /Policy renewal/ })
+  await expect(policyRow.getByText('INSURANCE', { exact: true })).toHaveClass(/text-warn/)
+
   // The seeded rule set, the schedule above it and the preview rail that
   // follows the selected row. All three are the screen.
   await expect(page.getByText('Statement due')).toBeVisible()
   await expect(page.getByRole('switch', { name: 'Morning digest on' })).toBeVisible()
   await expect(page.getByText('Push, lock screen')).toBeVisible()
+  // The recipient is whatever settings.digest_email or OWNER_EMAIL resolves
+  // to in this database, not a hardcoded literal; assert the shape rather than
+  // a specific address, since the dev database's digest_email is mutable.
+  await expect(page.getByText(/[\w.+-]+@[\w-]+\.\w+/)).toBeVisible()
 
   // Both halves of the alert centre. Counts are not asserted: the dev database
   // carries real alerts from nightly runs alongside the seeded ones, so the
@@ -658,8 +680,20 @@ test('notifications, rules table and the alert centre', async ({ page }) => {
   // The title appears twice on purpose, once as the alert row and once in the
   // push preview of the rule behind it.
   await expect(page.getByText('Chase Sapphire due in 3 days')).toHaveCount(2)
-  await expect(page.getByText(/^History \//)).toBeVisible()
+  await expect(page.getByText(/^Alert centre · \d+ unread/)).toBeVisible()
+  await expect(page.getByText(/^History ·/)).toBeVisible()
   await expect(page.getByText('Backup complete, 30 snapshots kept')).toBeVisible()
+
+  // An unread alert's module label is flat accent, like the artboard, not the
+  // rules table's per-module colour and not the old flat green.
+  const chaseAlert = page.locator('div.bg-brand-soft', { hasText: 'Chase Sapphire due in 3 days' })
+  await expect(chaseAlert.getByText('FINANCE', { exact: true })).toHaveClass(/text-brand/)
+
+  // The email digest's section header is a plain accent label and a plain
+  // item count, not the shared Eyebrow (fixed ink-3) or a Chip pill.
+  const digestCard = page.locator('div.bg-bg-elev', { hasText: 'Your morning digest' })
+  await expect(digestCard.getByText('Finance', { exact: true })).toHaveClass(/text-brand/)
+  await expect(digestCard.getByText('1 item').first()).toBeVisible()
 
   await shoot(page, 'notifications')
 })
@@ -672,8 +706,50 @@ test('notifications, a rule expanded', async ({ page }) => {
   await expect(page.getByRole('radio', { name: 'Immediate' })).toBeVisible()
   await expect(page.getByRole('checkbox', { name: 'Email' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Breaks quiet hours' })).toBeVisible()
+  await expect(page.getByText('Snooze / mute')).toBeVisible()
+
+  // The snoozed note spells out the day count ("7 days"), not the state
+  // chip's compact "7D". Snoozing and then muting/unmuting clears the snooze
+  // again, so the rule is back to ON for later tests and the shot below.
+  await page.getByRole('button', { name: '7d' }).click()
+  await expect(page.getByText('Snoozed for 7 days, then back on.')).toBeVisible()
+  await page.getByRole('button', { name: 'Mute' }).click()
+  await page.getByRole('button', { name: 'Unmute' }).click()
+  await expect(page.getByText('Active. 3 channels.')).toBeVisible()
 
   await shoot(page, 'notifications-rule')
+})
+
+// Pausing turns the button amber, like the artboard, not the teal "selected"
+// treatment other toggles use. Persisted in settings, so it survives shoot()'s
+// reloads. Resets itself so later tests see the live state.
+test('notifications, pause all turns amber', async ({ page }) => {
+  await page.goto('/notifications')
+  await page.getByRole('button', { name: 'Pause all' }).click()
+
+  const resume = page.getByRole('button', { name: 'Resume all' })
+  await expect(resume).toBeVisible()
+  await expect(resume).toHaveClass(/border-warn/)
+  await expect(page.getByText(/rules active · \d+ held/)).toBeVisible()
+
+  await shoot(page, 'notifications-paused')
+
+  await page.getByRole('button', { name: 'Resume all' }).click()
+  await expect(page.getByRole('button', { name: 'Pause all' })).toBeVisible()
+})
+
+// Inbox zero: the last test in this block, since marking every alert read
+// leaves the fixture that way until the next project's reseed.
+test('notifications, inbox clear', async ({ page }) => {
+  await page.goto('/notifications')
+  await page.getByRole('button', { name: 'Mark all read' }).click()
+
+  await expect(page.getByText('Inbox zero')).toBeVisible()
+  await expect(
+    page.getByText('Everything raised so far has been read.'),
+  ).toBeVisible()
+
+  await shoot(page, 'notifications-empty')
 })
 
 test('agent log, the run accordion and the rail', async ({ page }) => {

@@ -15,7 +15,10 @@ export function PauseAll({ paused }: { paused: boolean }) {
 
   return (
     <ActionButton
-      variant={paused ? 'brand' : 'outline'}
+      variant="outline"
+      // The artboard turns this amber while paused, not the teal `brand`
+      // variant a selected control gets elsewhere.
+      className={paused ? 'border-warn text-warn' : undefined}
       disabled={pending}
       onClick={() =>
         start(async () => {
