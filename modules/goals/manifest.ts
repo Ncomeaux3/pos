@@ -4,7 +4,7 @@ import { register } from '@/core/entities'
 import { listMetrics } from '@/core/metrics'
 import { defineModule, defineTool } from '@/core/module-contract'
 import { getModule } from '@/core/modules'
-import { checkIn, measuredGoals, patchGoal } from './data'
+import { checkIn, deleteGoal, measuredGoals, patchGoal } from './data'
 import { nightlyDigest, pullMetrics } from './jobs/nightly-digest'
 import GoalsPage from './ui/GoalsPage'
 import { GoalsTile } from './ui/Tile'
@@ -131,12 +131,21 @@ export default defineModule({
         return { goal_id: input.goal_id, reached: rows[0]?.reached ?? false }
       },
     }),
+
+    delete: defineTool({
+      description: 'Delete a goal, its check-ins and its registry row. Its events stay.',
+      input: z.object({ id: z.uuid() }),
+      run: async ({ id }) => {
+        await deleteGoal(id)
+        return { id }
+      },
+    }),
   },
 
   // Changing a goal is changing what you are aiming at, so an agent proposes it
   // rather than doing it. A check-in is a reading, not a decision, and the
   // nightly metric pull would be unusable behind an approval.
-  guarded: ['write'],
+  guarded: ['write', 'delete'],
   requires: [],
 
   // What Goals contributes to the Weekly Review. A goal that computes itself

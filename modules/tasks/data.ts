@@ -83,6 +83,24 @@ export async function listGoals(): Promise<{ id: string; title: string }[]> {
   return rows
 }
 
+/**
+ * The tasks on one goal, for the Goals drawer through core's `linked` seam.
+ * Days to due are computed on the owner's calendar in the query, so the label
+ * matches what the board says.
+ */
+export async function listByGoal(
+  goalRef: string,
+): Promise<{ title: string; due_in_days: number | null; done: boolean }[]> {
+  const { rows } = await db().query<{ title: string; due_in_days: number | null; done: boolean }>(
+    `select title, (due_on - core.today())::int as due_in_days, status = 'done' as done
+       from tasks.task
+      where goal_ref = $1
+      order by status = 'done', due_on nulls last, priority`,
+    [goalRef],
+  )
+  return rows
+}
+
 export async function findOrCreateProject(name: string): Promise<string> {
   const { rows } = await db().query<{ id: string }>(
     `insert into tasks.project (name) values ($1)

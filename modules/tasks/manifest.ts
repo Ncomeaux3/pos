@@ -3,9 +3,9 @@ import { db } from '@/core/db'
 import { ownerToday } from '@/core/today'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
-import { deleteTask, findOrCreateProject, patchTask } from './data'
+import { deleteTask, findOrCreateProject, listByGoal, patchTask } from './data'
 import { nightlyDigest, rollCounts, rollForward } from './jobs/nightly-digest'
-import { loadLabel, slipMeta } from './shape'
+import { dueLabel, loadLabel, slipMeta } from './shape'
 import TasksPage from './ui/TasksPage'
 import { TasksTile } from './ui/Tile'
 
@@ -166,6 +166,18 @@ export default defineModule({
   // agent-created task already lands in review, which is this module's own
   // version of the same guard, and guarding write as well would put it behind
   // two approvals.
+  // What Goals lists under a goal: its tasks, as the board labels them.
+  linked: async (entityRef) => {
+    const [rows, todayIso] = await Promise.all([listByGoal(entityRef), ownerToday()])
+    const today = new Date(`${todayIso}T12:00:00`)
+    return rows.map((r) => ({
+      title: r.title,
+      meta: r.done ? 'done' : dueLabel(r.due_in_days, today),
+      done: r.done,
+      href: '/tasks?view=goal',
+    }))
+  },
+
   guarded: ['delete'],
   requires: [],
 

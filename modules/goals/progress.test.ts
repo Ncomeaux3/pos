@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatValue, progress, rule, type Goal, type Point } from './progress'
+import { formatValue, historyPaths, progress, rule, ruleLong, type Goal, type Point } from './progress'
 
 // The status rules and the two projections are the whole reason this screen is
 // worth building: they turn a list of numbers into "this one is not going to
@@ -152,5 +152,46 @@ describe('rule', () => {
   it('gives a pace against the pace needed, with the share it is running at', () => {
     const g = goal({ history: points([100, 0], [30, 7], [0, 10]) })
     expect(rule(g, progress(g), '')).toMatch(/Pace 3\/mo against 27\/mo needed, 11 percent of it\./)
+  })
+})
+
+describe('ruleLong', () => {
+  it('writes the needed pace, the recent pace and its share, then the thresholds', () => {
+    const g = goal({ history: points([100, 0], [30, 35], [0, 50]) })
+    const p = progress(g)
+    const text = ruleLong(g, p, '', 'Dec 20')
+    expect(text).toMatch(/^You need [\d.]+\/mo to hit 100 by Dec 20\. Last 30 days you did [\d.]+ per month, which is \d+% of the needed pace\. Under 80% flags at risk; no change for 30 days flags stalled\.$/)
+  })
+
+  it('has a sentence for each kind and for done', () => {
+    const streak = goal({ kind: 'streak', targetValue: 5, history: points([7, 3], [0, 3]) })
+    expect(ruleLong(streak, progress(streak), '/wk', '')).toBe(
+      "Habit goals compare this week's count (3) with the target (5). Under 60% is stalled.",
+    )
+    const ms = goal({ kind: 'milestone', targetValue: 1, history: points([10, 0], [0, 0]) })
+    expect(ruleLong(ms, progress(ms), '', '')).toMatch(/^Milestones are binary/)
+    const done = goal({ history: points([100, 0], [0, 100]) })
+    expect(ruleLong(done, progress(done), '', '')).toBe('Target reached. Archive it or raise the target.')
+  })
+})
+
+describe('historyPaths', () => {
+  it('draws one command per point, the target at the top and the start at the bottom', () => {
+    const g = goal({ history: points([100, 0], [0, 50]) })
+    const h = historyPaths(g, progress(g))
+    expect(h.path.split(' ')).toHaveLength(2)
+    expect(h.path.startsWith('M0.0,100.0')).toBe(true)
+    expect(h.targetY).toBe(10)
+    expect(h.dots).toHaveLength(2)
+    expect(h.dots[1]).toMatchObject({ x: 400, y: 55 })
+    // Half way through the window, the needed pace line has reached the middle.
+    expect(h.paceY2).toBe(55)
+  })
+
+  it('stretches the scale to a value past the target rather than clipping it', () => {
+    const g = goal({ history: points([100, 0], [0, 140]) })
+    const h = historyPaths(g, progress(g))
+    expect(h.targetY).toBeGreaterThan(10)
+    expect(h.dots[1].y).toBe(10)
   })
 })

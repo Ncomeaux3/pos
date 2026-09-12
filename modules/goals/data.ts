@@ -38,17 +38,22 @@ export async function listGoals(includeArchived = true): Promise<GoalRow[]> {
  * entered this evening is zero days ago rather than one.
  */
 export async function historyByGoal(): Promise<Map<string, Point[]>> {
-  const { rows } = await db().query<{ goal_id: string; days_ago: number; value: string }>(
+  const { rows } = await db().query<{
+    goal_id: string
+    days_ago: number
+    value: string
+    is_manual: boolean
+  }>(
     `select goal_id,
             (core.today() - occurred_on)::int as days_ago,
-            value::text
+            value::text, is_manual
        from goals.checkin
       order by occurred_on`,
   )
 
   const map = new Map<string, Point[]>()
   for (const r of rows) {
-    const point = { daysAgo: r.days_ago, value: Number(r.value) }
+    const point = { daysAgo: r.days_ago, value: Number(r.value), manual: r.is_manual }
     map.set(r.goal_id, [...(map.get(r.goal_id) ?? []), point])
   }
   return map
@@ -172,4 +177,53 @@ export async function measuredGoals(): Promise<MeasuredGoal[]> {
       movement: older.length > 0 ? Math.round(now.percent - then.percent) : null,
     }
   })
+}
+
+/** Goal id to its registry row, which is what links, skills and events hang off. */
+export async function entityRefs(): Promise<Map<string, string>> {
+  const { rows } = await db().query<{ entity_id: string; id: string }>(
+    `select entity_id, id from core.entities where module = 'goals' and entity_type = 'goal'`,
+  )
+  return new Map(rows.map((r) => [r.entity_id, r.id]))
+}
+
+/** The skills each goal is linked to, by goal id. Read only here. */
+export async function listSkillLinks(): Promise<{ goal_id: string; skill_id: string }[]> {
+  const { rows } = await db().query<{ goal_id: string; skill_id: string }>(
+    `select en.entity_id as goal_id, sl.skill_id
+       from core.skill_links sl
+       join core.entities en on en.id = sl.entity_ref
+      where en.module = 'goals' and en.entity_type = 'goal'
+        and sl.classified_by <> 'unclassified'
+      order by sl.confidence desc, sl.skill_id`,
+  )
+  return rows
+}
+
+export type PendingProposal = { id: string; goal_id: string; tool: string; title: string }
+
+/**
+ * What an agent wants to change on a goal and has not been allowed to yet. The
+ * proposals table carries no entity column; a goals.write proposal's payload
+ * names the id it would patch, which is the truthful match.
+ */
+export async function pendingProposals(): Promise<PendingProposal[]> {
+  const { rows } = await db().query<PendingProposal>(
+    `select id, payload->>'id' as goal_id, tool,
+            coalesce(reason, payload->>'title', tool) as title
+       from core.proposals
+      where module = 'goals' and status = 'pending' and payload ? 'id'
+      order by created_at desc`,
+  )
+  return rows
+}
+
+export async function deleteGoal(id: string): Promise<void> {
+  // The registry row goes and its skill links cascade; check-ins cascade from
+  // the goal; events stay, unlinked, with their own title snapshot.
+  await db().query(
+    `delete from core.entities where module = 'goals' and entity_type = 'goal' and entity_id = $1`,
+    [id],
+  )
+  await db().query(`delete from goals.goal where id = $1`, [id])
 }

@@ -62,3 +62,14 @@ export async function recordCheckin(
     return failed(error)
   }
 }
+
+/** Remove a goal for good. The drawer asks before calling this. */
+export async function deleteGoal(id: string): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    await callTool('goals', 'delete', { id }, { source: 'ui' })
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}

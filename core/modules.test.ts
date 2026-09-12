@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getModules } from './modules'
+import { getLinked, getModules } from './modules'
 import { renderIndex } from '../scripts/gen-index.mjs'
 
 const modules = getModules()
@@ -72,6 +72,10 @@ describe('the module index', () => {
     const naming = modules.filter((m) => m.skillNames)
     expect(naming.length).toBeLessThanOrEqual(1)
     for (const m of naming) expect(m.classifier, `module ${m.id}`).toBeDefined()
+  })
+
+  it('links nothing to an entity nobody points at', async () => {
+    expect(await getLinked('00000000-0000-0000-0000-000000000000')).toEqual([])
   })
 
   it('gives every job a unique name within its module', () => {

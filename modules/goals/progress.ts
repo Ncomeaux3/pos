@@ -18,7 +18,7 @@ export const STATUS_LABELS: Record<Status, string> = {
 }
 
 /** One check-in: how many days ago, and what the value was. */
-export type Point = { daysAgo: number; value: number }
+export type Point = { daysAgo: number; value: number; manual?: boolean }
 
 export type Goal = {
   kind: GoalKind
@@ -182,3 +182,65 @@ export function rule(goal: Goal, p: Progress, unit: string): string {
   const share = p.neededRate > 0 ? Math.round((p.rate30 / p.neededRate) * 100) : 100
   return `Pace ${pace}/mo against ${needed}/mo needed, ${share} percent of it.`
 }
+
+/**
+ * The drawer's Status rule paragraph: the same arithmetic as rule(), written
+ * out with the thresholds, so the reader can check the status by hand.
+ */
+export function ruleLong(goal: Goal, p: Progress, unit: string, deadlineLabel: string): string {
+  if (p.status === 'done') return 'Target reached. Archive it or raise the target.'
+  if (goal.kind === 'milestone') {
+    return 'Milestones are binary. At risk when under 30 days remain and it is not done.'
+  }
+  if (goal.kind === 'streak') {
+    return `Habit goals compare this week's count (${p.current}) with the target (${goal.targetValue}). Under 60% is stalled.`
+  }
+  const needed = formatValue(p.neededRate * 30, goal.kind, unit)
+  const pace = formatValue(p.rate30 * 30, goal.kind, unit)
+  const share = p.neededRate > 0 ? Math.round((p.rate30 / p.neededRate) * 100) : 100
+  return `You need ${needed}/mo to hit ${formatValue(goal.targetValue, goal.kind, unit)} by ${deadlineLabel}. Last 30 days you did ${pace} per month, which is ${share}% of the needed pace. Under 80% flags at risk; no change for 30 days flags stalled.`
+}
+
+export type HistoryPaths = {
+  path: string
+  area: string
+  dots: { x: number; y: number; manual: boolean }[]
+  targetY: number
+  paceY1: number
+  paceY2: number
+  /** Days ago the chart starts. */
+  spanDays: number
+}
+
+/**
+ * The drawer's history chart in a 400 by 110 box: values scale from the lower
+ * of start and history to the higher of target and history, so a target line
+ * always fits and a value past it stretches the scale instead of clipping.
+ */
+export function historyPaths(goal: Goal, p: Progress): HistoryPaths {
+  const history = [...goal.history].sort((a, b) => b.daysAgo - a.daysAgo)
+  const values = history.map((h) => h.value)
+  const lo = Math.min(goal.startValue, ...values)
+  const hi = Math.max(goal.targetValue, ...values)
+  const spanDays = Math.max(1, history[0]?.daysAgo ?? 1)
+  const Y = (v: number) => round(100 - ((v - lo) / (hi - lo || 1)) * 90)
+  const X = (ago: number) => round(400 - (ago / spanDays) * 400)
+
+  const dots = history.map((h) => ({ x: X(h.daysAgo), y: Y(h.value), manual: h.manual === true }))
+  const path = dots.map((d, i) => `${i ? 'L' : 'M'}${d.x.toFixed(1)},${d.y.toFixed(1)}`).join(' ')
+  const area = dots.length
+    ? `${path} L400,100 L${dots[0].x.toFixed(1)},100 Z`
+    : ''
+  const span = goal.targetValue - goal.startValue
+  return {
+    path,
+    area,
+    dots,
+    targetY: Y(goal.targetValue),
+    paceY1: Y(goal.startValue),
+    paceY2: Y(goal.startValue + span * Math.min(1, p.expectedPercent / 100)),
+    spanDays,
+  }
+}
+
+const round = (n: number) => Math.round(n * 10) / 10

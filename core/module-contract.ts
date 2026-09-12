@@ -48,6 +48,9 @@ export type ModuleJob = {
   run: () => Promise<unknown>
 }
 
+/** One row another module keeps about an entity: a task on a goal. */
+export type LinkedItem = { title: string; meta: string; done: boolean; href?: string }
+
 export type ModuleManifest = {
   /** Postgres schema name and URL segment. Lowercase identifier. */
   id: string
@@ -77,6 +80,12 @@ export type ModuleManifest = {
    * files. Absent, links show their ids.
    */
   skillNames?: () => Promise<Record<string, string>>
+  /**
+   * Rows of this module that point at a registry entity, for the screen that
+   * owns the entity to list. Tasks answers with the tasks on a goal. Core
+   * concatenates every provider; no module reads another's schema.
+   */
+  linked?: (entityRef: string) => Promise<LinkedItem[]>
   /**
    * Numbers this module will compute on request, for a goal to track.
    *

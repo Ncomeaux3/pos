@@ -1,6 +1,6 @@
 import { modules } from '../modules/_index'
 import { db } from './db'
-import type { ModuleManifest } from './module-contract'
+import type { LinkedItem, ModuleManifest } from './module-contract'
 
 // The registry. The contract it implements lives in core/module-contract.ts,
 // which imports nothing, so a manifest can import defineModule without this
@@ -40,6 +40,12 @@ export function getClassifier(): ModuleManifest['classifier'] {
     )
   }
   return found[0]?.classifier
+}
+
+/** Everything any module keeps about an entity, in module order. */
+export async function getLinked(entityRef: string): Promise<LinkedItem[]> {
+  const lists = await Promise.all(modules.filter((m) => m.linked).map((m) => m.linked!(entityRef)))
+  return lists.flat()
 }
 
 /** The skill names the tree module provides, or nothing when there is no tree. */
