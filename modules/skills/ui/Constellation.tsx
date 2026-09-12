@@ -601,9 +601,10 @@ export function Constellation({
             // card's widest at each side.
             left: Math.max(150, Math.min(hover.width - 150, hover.x)),
             top: hover.y,
-            // Above the star instead when it would run off the bottom.
+            // Above the star instead when it would land on the legend, which
+            // sits over the bottom of the canvas: a card is up to 220px tall.
             transform:
-              hover.y > hover.height - 180 ? 'translate(-50%, calc(-100% - 18px))' : 'translate(-50%, 18px)',
+              hover.y > hover.height - 300 ? 'translate(-50%, calc(-100% - 18px))' : 'translate(-50%, 18px)',
           }}
         >
           <div className="flex items-baseline justify-between gap-3 border-b border-white/12 pb-2">
