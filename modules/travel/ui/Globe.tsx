@@ -91,10 +91,11 @@ export function Globe({
     const wheel = (e: WheelEvent) => {
       e.preventDefault()
       const { x, y } = toBox(svg, e.clientX, e.clientY)
-      // Wheel down, or fingers toward you, zooms in. A mouse notch is about a
-      // sixth and a trackpad tick well under a hundredth, so a gesture is
-      // gradual rather than a jump to the limit.
-      setView((v) => zoomAt(v, Math.exp(e.deltaY * 0.0015), x, y, mode, half))
+      // The same sign as the skill tree, so one gesture zooms the whole app
+      // the same way. A mouse notch is about a sixth and a trackpad tick well
+      // under a hundredth, so a gesture is gradual rather than a jump to the
+      // limit.
+      setView((v) => zoomAt(v, Math.exp(-e.deltaY * 0.0015), x, y, mode, half))
     }
     svg.addEventListener('wheel', wheel, { passive: false })
     return () => svg.removeEventListener('wheel', wheel)
@@ -112,19 +113,19 @@ export function Globe({
       const mid = toBox(svg, (e.clientX + other.x) / 2, (e.clientY + other.y) / 2)
       if (before > 0) setView((v) => zoomAt(v, after / before, mid.x, mid.y, mode, half))
     } else {
-      // Pushing the land: drag right and it moves left, drag down and it moves up.
+      // A hand on the globe: the land under the pointer goes where the pointer goes.
       const speed = 0.5 / view.zoom
       const dx = e.clientX - prev.x
       const dy = e.clientY - prev.y
       setRotation((r) => ({
-        lambda: r.lambda - dx * speed,
+        lambda: r.lambda + dx * speed,
         // Clamped, so the globe cannot be tipped past its pole. Flat pans instead.
         phi: mode === 'globe' ? Math.max(-90, Math.min(90, r.phi + dy * speed)) : r.phi,
       }))
       if (mode === 'flat') {
         const was = toBox(svg, prev.x, prev.y)
         const now = toBox(svg, e.clientX, e.clientY)
-        setView((v) => clampView({ ...v, ty: v.ty - (now.y - was.y) }, 'flat', half))
+        setView((v) => clampView({ ...v, ty: v.ty + (now.y - was.y) }, 'flat', half))
       }
     }
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })

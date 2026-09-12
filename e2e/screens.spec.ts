@@ -1694,6 +1694,22 @@ test('travel, the globe is drawn from real coordinates', async ({ page }) => {
   await expect(globe.locator('[data-pin="past"] title').first()).toHaveText(/\w+, \w+/)
   await shoot(page, 'travel-map')
 
+  // A hand on the globe: drag right and the land under it goes right. It used
+  // to go left, while a vertical drag already followed the hand, so the two
+  // axes disagreed.
+  const svg = page.getByTestId('travel-globe').locator('svg')
+  const sbox = (await svg.boundingBox())!
+  // The same pin before and after: which pins are on the near side changes
+  // as the globe turns, so `first()` alone could name a different one.
+  const pinName = (await globe.locator('[data-pin="past"] title').first().textContent()) ?? ''
+  const pin = globe.locator('[data-pin="past"]').filter({ hasText: pinName })
+  const before = (await pin.boundingBox())!.x
+  await page.mouse.move(sbox.x + sbox.width / 2, sbox.y + sbox.height * 0.7)
+  await page.mouse.down()
+  await page.mouse.move(sbox.x + sbox.width / 2 + 40, sbox.y + sbox.height * 0.7, { steps: 4 })
+  await page.mouse.up()
+  await expect.poll(async () => (await pin.boundingBox())!.x).toBeGreaterThan(before)
+
   // Past 2x every pin names itself; two presses of + is 2.25x. The wheel
   // handler is a native non-passive listener, so the page under the globe
   // does not scroll when it zooms.
