@@ -1,11 +1,19 @@
 import Link from 'next/link'
-import { Chip, EmptyState, PageHeader, Row, RowList } from '@/components/pos'
+import { PageHeader } from '@/components/pos'
 import { db } from '@/core/db'
 import { getModule, getModules } from '@/core/modules'
 import { closest, search, type SearchHit } from '@/core/search'
+import { ownerToday } from '@/core/today'
 import { cn } from '@/lib/utils'
+import { QuickSearchButton } from './QuickSearchButton'
 import { Results, type Hit } from './Results'
 import { SearchBox } from './SearchBox'
+
+const daysAgo = (iso: string, todayIso: string) =>
+  Math.max(
+    0,
+    Math.round((new Date(`${todayIso}T12:00:00`).getTime() - new Date(`${iso}T12:00:00`).getTime()) / 86_400_000),
+  )
 
 /**
  * What else is linked to the same skills, for the artboard's Related list.
@@ -66,6 +74,7 @@ function decorate(
   hits: SearchHit[],
   skills: Map<string, string[]>,
   related: Map<string, { id: string; title: string; module: string }[]>,
+  todayIso: string,
 ): Hit[] {
   return hits.map((h) => ({
     id: h.id,
@@ -75,6 +84,7 @@ function decorate(
     title: h.title,
     snippet: h.snippet,
     score: h.score,
+    daysAgo: daysAgo(h.updatedAt, todayIso),
     skills: skills.get(h.id) ?? [],
     related: (related.get(h.id) ?? []).map((r) => ({
       ...r,
@@ -87,13 +97,17 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
   const params = await searchParams
   const query = typeof params.q === 'string' ? params.q : ''
   const scope = typeof params.module === 'string' ? params.module : undefined
+  const open = typeof params.open === 'string' ? params.open : null
 
   // Scope counts come from an unscoped search, so the chips can show what each
   // module holds for this query rather than only the scope you are already in.
-  const result = query ? await search(query, { limit: 100 }) : { hits: [], mode: 'text' as const }
+  const [result, todayIso] = await Promise.all([
+    query ? search(query, { limit: 100 }) : Promise.resolve({ hits: [], mode: 'text' as const }),
+    ownerToday(),
+  ])
   const all = result.hits
   const scoped = scope ? all.filter((h) => h.module === scope) : all
-  const fallback = query && all.length === 0 ? await closest(query) : []
+  const fallback = query && scoped.length === 0 ? await closest(query) : []
 
   // A guessed answer is presented as a guess, whatever it found. The words
   // matched nothing, so these are nearest neighbours, and rendering them as
@@ -105,74 +119,56 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
     skillsFor(shown.map((h) => h.id)),
     relatedFor(shown.map((h) => h.id)),
   ])
-  const hits = decorate(shown, skills, related)
+  const hits = decorate(shown, skills, related, todayIso)
   const top = hits[0]?.score || 1
 
   const counts = new Map<string, number>()
   for (const h of all) counts.set(h.module, (counts.get(h.module) ?? 0) + 1)
+  const chipModules = query ? getModules().filter((m) => counts.has(m.id)) : getModules()
 
   return (
-    <div className="mx-auto max-w-3xl space-y-7">
-      <PageHeader
-        eyebrow="Search"
-        dot={query ? 'brand' : 'idle'}
-        title="Search"
-        lede="Every entity every module has registered, ranked by full text and meaning together. Command K opens this from anywhere."
-      />
+    <div>
+      <PageHeader eyebrow="Search" title="Search" hideTitle search={false} status={<QuickSearchButton />} />
 
-      <SearchBox initial={query} />
+      <div className="mx-auto w-full max-w-[880px]">
+        <SearchBox initial={query} />
 
-      {query && result.mode === 'degraded' && (
-        <p className="t-caption rounded-md border border-warn/40 px-3 py-2 text-warn">
-          Word matches only. Meaning was worth checking here but Voyage was out of requests,
-          which is three a minute on the free tier. Try again in a moment.
-        </p>
-      )}
-
-      {query && counts.size > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          <ScopeChip href={`/search?q=${encodeURIComponent(query)}`} active={!scope}>
-            Everything <span className="text-ink-3">{all.length}</span>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <ScopeChip href={`/search${query ? `?q=${encodeURIComponent(query)}` : ''}`} active={!scope}>
+            Everything
+            {query && <span className="num ml-1.5 text-[10px] opacity-70">{all.length}</span>}
           </ScopeChip>
-          {getModules()
-            .filter((m) => counts.has(m.id))
-            .map((m) => (
-              <ScopeChip
-                key={m.id}
-                href={`/search?q=${encodeURIComponent(query)}&module=${m.id}`}
-                active={scope === m.id}
-              >
-                {m.nav.label} <span className="text-ink-3">{counts.get(m.id)}</span>
-              </ScopeChip>
-            ))}
+          {chipModules.map((m) => (
+            <ScopeChip
+              key={m.id}
+              href={query ? `/search?q=${encodeURIComponent(query)}&module=${m.id}` : '/search'}
+              active={scope === m.id}
+            >
+              {m.nav.label}
+              {query && <span className="num ml-1.5 text-[10px] opacity-70">{counts.get(m.id)}</span>}
+            </ScopeChip>
+          ))}
         </div>
-      )}
 
-      {!query ? (
-        <EmptyState headline="Nothing searched">
-          Type anything. Search reads core.entities, so it covers every module at once and
-          finds a note by what it means as well as by what it says.
-        </EmptyState>
-      ) : guessing && hits.length > 0 ? (
-        <div className="space-y-3">
-          <p className="t-caption text-ink-3">
-            Nothing matched {`"${query}"`}
-            {scope ? ` in ${getModule(scope)?.nav.label ?? scope}` : ''}. Closest matches:
+        {query && result.mode === 'degraded' && (
+          <p className="mt-4 border border-warn/40 px-3 py-2 text-[12px] text-warn">
+            Word matches only. Meaning was worth checking here but Voyage was out of requests,
+            which is three a minute on the free tier. Try again in a moment.
           </p>
-          <RowList>
-            {hits.map((h) => (
-              <Row
-                key={h.id}
-                title={h.title}
-                meta={h.snippet ?? undefined}
-                right={<Chip tone="quiet">{h.entityType}</Chip>}
-              />
-            ))}
-          </RowList>
-        </div>
-      ) : (
-        <Results hits={hits} query={query} top={top} />
-      )}
+        )}
+
+        {query && (
+          <div className="pb-7 pt-[22px]">
+            {guessing && hits.length > 0 && (
+              <p className="mb-3.5 text-[13px] text-ink-3">
+                Nothing matched <span className="text-ink">&ldquo;{query}&rdquo;</span>
+                {scope ? ` in ${getModule(scope)?.nav.label ?? scope}` : ''}. Closest matches:
+              </p>
+            )}
+            <Results hits={hits} query={query} top={top} openId={open} />
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -190,8 +186,8 @@ function ScopeChip({
     <Link
       href={href}
       className={cn(
-        'label inline-flex h-11 items-center gap-2 rounded-full border px-3.5 text-[11px] leading-none tracking-[0.1em] transition-colors duration-150 sm:h-[30px]',
-        active ? 'border-brand bg-brand-soft text-ink' : 'border-rule-2 text-ink-3 hover:text-ink',
+        'inline-flex items-center border px-2.5 py-[5px] text-[12px] leading-none transition-colors duration-150',
+        active ? 'border-ink bg-ink text-bg' : 'border-rule-2 text-ink-3 hover:border-ink hover:text-ink',
       )}
     >
       {children}

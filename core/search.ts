@@ -152,6 +152,8 @@ export type SearchHit = {
   title: string
   snippet: string | null
   score: number
+  /** When the registry row last changed, as an ISO date. */
+  updatedAt: string
 }
 
 export type SearchOptions = {
@@ -286,7 +288,8 @@ async function runSearch(
          full outer join txt on txt.id = vec.id
      )
      select e.id, e.module, e.entity_type as "entityType", e.entity_id as "entityId",
-            e.title, left(e.body, 200) as snippet, fused.score::text as score
+            e.title, left(e.body, 200) as snippet, fused.score::text as score,
+            e.updated_at::date::text as "updatedAt"
        from fused
        join core.entities e on e.id = fused.id
       order by fused.score desc
@@ -349,7 +352,8 @@ export async function closest(query: string, limit = 5): Promise<SearchHit[]> {
 
   const { rows } = await db().query<SearchHit & { score: string }>(
     `select id, module, entity_type as "entityType", entity_id as "entityId",
-            title, left(body, 200) as snippet, '0' as score
+            title, left(body, 200) as snippet, '0' as score,
+            updated_at::date::text as "updatedAt"
        from core.entities
       where title ilike '%' || $1 || '%' or body ilike '%' || $1 || '%'
       order by length(title)

@@ -329,8 +329,11 @@ test('settings, skills', async ({ page }) => {
 
 test('search, empty and with results', async ({ page }) => {
   await page.goto('/search')
-  await expect(page.getByRole('heading', { name: 'Search' })).toBeVisible()
-  await expect(page.getByText(/nothing searched/i)).toBeVisible()
+  // No title block: the band is the crumb and Quick search; the box sits low
+  // on an empty page with every module's chip under it and nothing else.
+  await expect(page.getByRole('button', { name: /Quick search/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Everything', exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Finance', exact: true }).first()).toBeVisible()
   await shoot(page, 'search-empty')
 
   await page.getByLabel(/search everything/i).fill('deadlift')
@@ -338,9 +341,22 @@ test('search, empty and with results', async ({ page }) => {
 
   await expect(page).toHaveURL(/q=deadlift/)
   await expect(page.getByText('Deadlift form check')).toBeVisible()
-  // The scope chips only list modules that actually have a hit.
-  await expect(page.getByRole('link', { name: /^Everything/ })).toBeVisible()
+  // The scope chips carry counts once there is a query, and only list modules
+  // that actually have a hit.
+  await expect(page.getByRole('link', { name: /^Everything \d+$/ })).toBeVisible()
+  // Every row shows how old it is and its match bar.
+  await expect(page.getByText(/\d+ days? ago|today/).first()).toBeVisible()
+  await expect(page.getByText('match').first()).toBeVisible()
   await shoot(page, 'search-results')
+
+  // A row opens the preview drawer, in the URL, with the fields strip.
+  await page.getByRole('button', { name: /Deadlift form check/ }).click()
+  await expect(page).toHaveURL(/open=/)
+  const drawer = page.getByRole('dialog')
+  await expect(drawer.getByText('Module', { exact: true })).toBeVisible()
+  await expect(drawer.getByText('When', { exact: true })).toBeVisible()
+  await expect(drawer.getByRole('button', { name: /Open in/ })).toBeVisible()
+  await shoot(page, 'search-drawer')
 })
 
 test('search falls back to closest matches instead of a dead end', async ({ page }) => {
@@ -360,8 +376,10 @@ test('command palette opens on cmd k and finds an entity', async ({ page }) => {
   await expect(palette).toBeVisible()
 
   // The Go to list is the same nav the sidebar builds, so it is there before
-  // anything is typed.
+  // anything is typed, each row with its G-code.
+  await expect(palette.getByText('Go to')).toBeVisible()
   await expect(palette.getByRole('button', { name: /Settings/ })).toBeVisible()
+  await expect(palette.getByRole('button', { name: /Finance G 02/ })).toBeVisible()
   // Notes left the numbered rail to match the artboard; the palette is where
   // an enabled module with no row on the rail is still one keystroke away.
   await expect(palette.getByRole('button', { name: /^Notes/ })).toBeVisible()

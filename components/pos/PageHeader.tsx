@@ -25,6 +25,7 @@ export function PageHeader({
   actions,
   status,
   hideTitle = false,
+  search = true,
   className,
 }: {
   /** The breadcrumb in band one. "Finance / Overview". */
@@ -41,6 +42,8 @@ export function PageHeader({
    * the reader and the search placeholder, off screen.
    */
   hideTitle?: boolean
+  /** False on the Search page, where the box below is the search. */
+  search?: boolean
   className?: string
 }) {
   return (
@@ -53,12 +56,14 @@ export function PageHeader({
           * artboard search is a 44px button in this band that opens a sheet.
           * The button asks the palette for itself through the same event the
           * field does, so there is still one query in one place. */}
-        <SearchButton className="ml-auto md:hidden" />
-        <BandSearch
-          className="order-last hidden w-full md:order-none md:ml-auto md:flex"
-          placeholder={typeof title === 'string' ? `Search ${title.toLowerCase()}` : undefined}
-        />
-        {status && <div className="flex items-center gap-3 md:order-last">{status}</div>}
+        {search && <SearchButton className="ml-auto md:hidden" />}
+        {search && (
+          <BandSearch
+            className="order-last hidden w-full md:order-none md:ml-auto md:flex"
+            placeholder={typeof title === 'string' ? `Search ${title.toLowerCase()}` : undefined}
+          />
+        )}
+        {status && <div className={cn('flex items-center gap-3 md:order-last', !search && 'ml-auto')}>{status}</div>}
       </div>
 
       {hideTitle ? (

@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 // Cmd K anywhere in the app. Entities as you type, plus the Go to list, which
 // is the nav the sidebar already builds rather than a second hardcoded copy.
 
-type Row = { key: string; label: string; hint: string; go: string }
+type Row = { key: string; label: string; hint: string; go: string; group: 'results' | 'goto' | 'all' }
 
 export function CommandPalette({ nav }: { nav: NavItem[] }) {
   const router = useRouter()
@@ -64,7 +64,7 @@ export function CommandPalette({ nav }: { nav: NavItem[] }) {
 
   const goto: Row[] = nav
     .filter((n) => !query || n.label.toLowerCase().includes(query.toLowerCase()))
-    .map((n) => ({ key: `nav-${n.href}`, label: n.label, hint: `Go ${n.code}`, go: n.href }))
+    .map((n) => ({ key: `nav-${n.href}`, label: n.label, hint: `G ${n.code}`, go: n.href, group: 'goto' as const }))
 
   const fresh = hits.q === query.trim() && query.trim().length >= 2 ? hits.rows : []
   const found: Row[] = fresh.map((h) => ({
@@ -72,6 +72,7 @@ export function CommandPalette({ nav }: { nav: NavItem[] }) {
     label: h.title,
     hint: `${h.moduleLabel} · ${h.entityType}`,
     go: `/${h.module}`,
+    group: 'results' as const,
   }))
 
   const rows: Row[] = [
@@ -84,6 +85,7 @@ export function CommandPalette({ nav }: { nav: NavItem[] }) {
             label: `Search everything for "${query.trim()}"`,
             hint: 'Enter',
             go: `/search?q=${encodeURIComponent(query.trim())}`,
+            group: 'all' as const,
           },
         ]
       : []),
@@ -98,22 +100,37 @@ export function CommandPalette({ nav }: { nav: NavItem[] }) {
     router.push(row.go)
   }
 
+  const rowButton = (row: Row) => {
+    const i = rows.indexOf(row)
+    return (
+      <li key={row.key}>
+        <button
+          type="button"
+          onMouseEnter={() => setCursor(i)}
+          onClick={() => run(row)}
+          className={cn(
+            'flex w-full items-baseline justify-between gap-4 px-3.5 py-[9px] text-left text-[13px] transition-colors duration-100',
+            i === active ? 'bg-brand-soft text-ink' : 'text-ink-2 hover:bg-brand-soft hover:text-ink',
+          )}
+        >
+          <span className="min-w-0 truncate">{row.label}</span>
+          <span className="num shrink-0 text-[11px] text-ink-4">{row.hint}</span>
+        </button>
+      </li>
+    )
+  }
+
   return (
-    <div className="fixed inset-0 z-[70]">
-      <button
-        type="button"
-        aria-label="Close"
-        onClick={() => setOpen(false)}
-        className="absolute inset-0 bg-black/50"
-      />
+    <div className="fixed inset-0 z-[70] flex items-start justify-center pt-[14vh]">
+      <button type="button" aria-label="Close" onClick={() => setOpen(false)} className="absolute inset-0 bg-black/55" />
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
-        className="absolute left-1/2 top-[18vh] w-[min(560px,92vw)] -translate-x-1/2 overflow-hidden rounded-lg border border-rule-2 bg-bg-elev"
+        className="relative w-[min(640px,calc(100%-32px))] duration-200 animate-in fade-in zoom-in-95"
       >
-        <div className="flex items-center gap-3 border-b border-rule px-4">
-          <span aria-hidden className="code text-ink-4">
+        <div className="flex h-[52px] items-center border border-rule-2 bg-bg-elev focus-within:border-brand">
+          <span aria-hidden className="num pl-4 pr-3 text-[13px] text-ink-4">
             &gt;
           </span>
           <input
@@ -139,38 +156,25 @@ export function CommandPalette({ nav }: { nav: NavItem[] }) {
                 run(rows[active])
               }
             }}
-            className="w-full bg-transparent py-3.5 text-[17px] text-ink outline-none placeholder:text-ink-4"
+            className="min-w-0 flex-1 bg-transparent pr-4 text-[16px] text-ink outline-none placeholder:text-ink-4"
           />
         </div>
 
-        <ul className="max-h-[52vh] overflow-y-auto py-1">
-          {rows.map((row, i) => (
-            <li key={row.key}>
-              <button
-                type="button"
-                onMouseEnter={() => setCursor(i)}
-                onClick={() => run(row)}
-                className={cn(
-                  'flex w-full items-baseline justify-between gap-4 px-4 py-2.5 text-left transition-colors duration-100',
-                  i === active ? 'bg-brand-soft text-ink' : 'text-ink-2',
-                )}
-              >
-                <span className="min-w-0 truncate text-[15px]">{row.label}</span>
-                <span className="label shrink-0 text-[10px] tracking-[0.1em] text-ink-3">
-                  {row.hint}
-                </span>
-              </button>
-            </li>
-          ))}
-          {rows.length === 0 && (
-            <li className="px-4 py-3 text-[13px] text-ink-3">Nothing matches yet.</li>
+        <div className="mt-2.5 max-h-[52vh] overflow-y-auto border border-rule-2 bg-bg-elev py-1.5">
+          {found.length > 0 && (
+            <>
+              <div className="px-3.5 py-1.5 text-[11px] text-ink-4">Results</div>
+              <ul>{found.map(rowButton)}</ul>
+            </>
           )}
-        </ul>
-
-        <div className="flex justify-between border-t border-rule px-4 py-2">
-          <span className="label text-[9px] tracking-[0.1em] text-ink-4">
-            Up down move · enter open · esc close
-          </span>
+          {goto.length > 0 && (
+            <>
+              <div className="px-3.5 py-1.5 text-[11px] text-ink-4">Go to</div>
+              <ul>{goto.map(rowButton)}</ul>
+            </>
+          )}
+          {rows.filter((r) => r.group === 'all').length > 0 && <ul>{rows.filter((r) => r.group === 'all').map(rowButton)}</ul>}
+          {rows.length === 0 && <p className="px-3.5 py-3 text-[13px] text-ink-3">Nothing matches yet.</p>}
         </div>
       </div>
     </div>
