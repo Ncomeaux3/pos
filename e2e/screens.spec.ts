@@ -1611,21 +1611,37 @@ test('ideas, the drawer shows the stage, the moves and the Agent card', async ({
 
 test('home, the calendar is worked out from the history', async ({ page }) => {
   await page.goto('/home')
-  await expect(page.getByRole('heading', { name: 'Home and assets' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Home & assets' })).toBeVisible()
 
-  // Every asset kind, biggest first.
-  await expect(page.getByRole('button', { name: /^2412 Example Street/ })).toBeVisible()
-  await expect(page.getByRole('button', { name: /^2021 pickup/ })).toBeVisible()
+  // The band: the crumb on the left, the month's summary with its dot on the
+  // right, and the page's one primary in the title block.
+  await expect(page.getByText('Home / Assets')).toBeVisible()
+  await expect(page.getByText(/\d+ jobs? due this month · \$[\d,]+ estimated/)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Log service' })).toBeVisible()
+
+  // Money on the strip is compact; the full figure is not on the page.
+  await expect(page.getByText('$743k')).toBeVisible()
+  await expect(page.getByText('$743,140')).toHaveCount(0)
+
+  // Every asset kind as a card: kind, state, name, the two cells.
+  await expect(page.getByRole('button', { name: /^PROPERTY.*2412 Example Street/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^VEHICLE.*OVERDUE.*2021 pickup/ })).toBeVisible()
+  await expect(page.getByText('VALUE', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('ANNUAL COST', { exact: true }).first()).toBeVisible()
 
   // The oil change was last done seven months ago on a six month interval, so
   // it is overdue. Nothing stored that: it falls out of the interval and the
   // date it was last done.
   await expect(page.getByText('Oil change and rotation').first()).toBeVisible()
-  await expect(page.getByText('Overdue').first()).toBeVisible()
+  await expect(page.getByText('OVERDUE', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('DUE NOW', { exact: true }).first()).toBeVisible()
 
   // Twelve months, including the empty ones, because an empty month is
-  // information.
+  // information. The selected month is written out in full under them.
   await expect(page.getByRole('button', { name: /^[A-Z]{3} \d\d /  })).toHaveCount(12)
+  await expect(page.getByText(/^[A-Z]{3} \d{4}$/).first()).toBeVisible()
+
+  await expect(page.getByText('COVER · EXPIRES · FILE')).toBeVisible()
 
   await shoot(page, 'home')
 })
@@ -1645,11 +1661,23 @@ test('home, a warranty with no expiry is not a missing date', async ({ page }) =
 
   const deed = page.getByRole('button', { name: /^Deed, survey and permits/ })
   await expect(deed).toBeVisible()
-  await expect(page.getByText('no expiry', { exact: true })).toBeVisible()
+  await expect(page.getByText('NO EXPIRY', { exact: true })).toBeVisible()
 
   // And the drawer carries the paperwork rather than a judgement about it.
   await deed.click()
-  await expect(page.getByText('Recorded Jun 2019')).toBeVisible()
+  const drawer = page.getByRole('dialog')
+  await expect(drawer.getByText('Recorded Jun 2019')).toBeVisible()
+  await expect(drawer.getByRole('button', { name: 'Close', exact: true })).toBeVisible()
+})
+
+test('home, the property card reads cover from Insurance', async ({ page }) => {
+  await page.goto('/home')
+
+  // The premium is Insurance's number, read through the registry, not a copy.
+  // Finance holds no mortgage, so no mortgage is drawn.
+  await expect(page.getByText(/^\$[\d,]+ \/ yr$/)).toBeVisible()
+  await expect(page.getByText('Coverage comes from Insurance.')).toBeVisible()
+  await expect(page.getByText(/Mortgage/)).toHaveCount(0)
 })
 
 test('home, logging service moves the schedule it belongs to', async ({ page }) => {
@@ -1659,10 +1687,11 @@ test('home, logging service moves the schedule it belongs to', async ({ page }) 
   await page.getByLabel('What was done').fill('Gutter clean before the autumn')
   // Three months from today, so the next one lands inside the calendar window
   // where it can be counted.
-  await page.getByRole('radio', { name: '3 months' }).click()
+  await page.getByRole('radio', { name: 'Every 3 mo' }).click()
+  await expect(page.getByText(/The next one lands 3 months out/)).toBeVisible()
   await page.getByRole('button', { name: 'Save service' }).click()
 
-  await expect(page.getByText(/next one is on the calendar/)).toBeVisible()
+  await expect(page.getByText(/Next one scheduled for [A-Z]{3} \d{4}/)).toBeVisible()
 
   // One schedule, not a second one beside it: logging a job that is already on
   // the calendar moves the row it belongs to.

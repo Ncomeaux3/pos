@@ -1,34 +1,39 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState, useTransition } from 'react'
+import { useTransition } from 'react'
 import {
   ActionButton,
   Card,
-  CardHead,
-  Chip,
   EmptyState,
   Eyebrow,
-  MetricStrip,
-  MetricTile,
-  Overlay,
+  PageHeader,
   PillGroup,
-  Row,
-  RowList,
-  StatusChip,
-  fieldClass,
   useToast,
 } from '@/components/pos'
 import { cn } from '@/lib/utils'
-import { dueLabel, monthKey, monthLabel, next12Months, type DueStatus } from '../schedule'
-import { logService, markDone, snoozeService, type ActionResult } from './actions'
+import {
+  addMonths,
+  compactMoney,
+  dueLabel,
+  intervalLabel,
+  money,
+  monthKey,
+  monthLabelLong,
+  monthYear,
+  next12Months,
+  type DueStatus,
+} from '../schedule'
+import { markDone, snoozeService, type ActionResult } from './actions'
+import { AssetDrawer, LogServiceDrawer, WarrantyDrawer } from './Drawers'
 
 export type Fact = { label: string; value: string }
 
 export type HomeData = {
   todayIso: string
-  /** From Finance through the registry, or null when it is not installed. */
-  netWorth: number | null
+  /** Insurance's annual property cover through the registry, or null when it is not installed. */
+  propertyPremium: number | null
   assets: {
     id: string
     kind: string
@@ -82,6 +87,8 @@ export type HomeData = {
   }[]
 }
 
+export type Service = HomeData['services'][number]
+
 const FILTERS = [
   { value: 'all', label: 'All' },
   { value: 'property', label: 'Property' },
@@ -89,26 +96,34 @@ const FILTERS = [
   { value: 'equipment', label: 'Equipment' },
 ]
 
-const money = (cents: number) =>
-  `$${(cents / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}`
-
-const shortDate = (iso: string | null) => {
-  if (!iso) return 'no date'
+const shortDate = (iso: string) => {
   const d = new Date(`${iso}T12:00:00`)
-  return `${d.getDate()} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()]} ${String(d.getFullYear()).slice(2)}`
+  return `${d.getDate()} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()]}`
 }
 
-const STATE: Record<DueStatus, { label: string; tone: 'brand' | 'quiet' | 'warn' | 'bad' }> = {
-  overdue: { label: 'Overdue', tone: 'bad' },
-  due: { label: 'Service due', tone: 'warn' },
-  soon: { label: 'Due soon', tone: 'quiet' },
-  later: { label: 'Good', tone: 'brand' },
-  snoozed: { label: 'Snoozed', tone: 'quiet' },
-  unscheduled: { label: 'Good', tone: 'brand' },
+/** The 6px and 8px dots: what the job's status looks like on the calendar. */
+const DOT: Record<DueStatus, string> = {
+  overdue: 'bg-bad',
+  due: 'bg-warn',
+  soon: 'bg-ink-2',
+  later: 'bg-ink-2',
+  snoozed: 'bg-ink-4',
+  unscheduled: 'bg-ink-2',
 }
 
-/** Worst first, so an asset's chip shows the thing that needs attention. */
-const SEVERITY: DueStatus[] = ['overdue', 'due', 'soon', 'snoozed', 'later', 'unscheduled']
+/** "{asset} · yearly · {vendor}", the line under every job. */
+export function jobMeta(job: Service) {
+  return [
+    job.assetName,
+    intervalLabel(job.intervalMonths),
+    job.vendorName,
+    job.status === 'snoozed' && job.snoozeUntil ? `snoozed until ${shortDate(job.snoozeUntil)}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+}
+
+const MONO = 'label text-[10px] tracking-[0.12em]'
 
 export function Home({ data }: { data: HomeData }) {
   const router = useRouter()
@@ -139,545 +154,458 @@ export function Home({ data }: { data: HomeData }) {
       else if (ok) toast(ok)
     })
 
+  const done = (job: Service) =>
+    run(
+      () => markDone(job.id, job.assetId, job.title),
+      'Marked done. It moves to the service history and reschedules on its interval.',
+    )
+
   const scheduled = data.services.filter((s) => s.dueOn !== null)
   const months = next12Months(
     scheduled.map((s) => ({ dueOn: s.dueOn!, costEstimateCents: s.costEstimateCents })),
     data.todayIso,
   )
   const yearCents = months.reduce((sum, m) => sum + m.costCents, 0)
-  const monthJobs = scheduled.filter((s) => monthKey(s.dueOn!) === month)
+  const yearEnd = monthKey(addMonths(`${monthKey(data.todayIso)}-01`, 11))
+  const inYear = scheduled.filter((s) => monthKey(s.dueOn!) <= yearEnd)
+  const byDue = (a: Service, b: Service) => (a.dueOn! < b.dueOn! ? -1 : 1)
+  const jobsIn = (key: string) => scheduled.filter((s) => monthKey(s.dueOn!) === key).sort(byDue)
+  const monthJobs = jobsIn(month)
   const monthCents = monthJobs.reduce((sum, s) => sum + s.costEstimateCents, 0)
 
-  const attention = data.services.filter((s) => s.status === 'overdue' || s.status === 'due')
-  const nextUp = scheduled
-    .filter((s) => s.status !== 'snoozed')
-    .sort((a, b) => (a.dueOn! < b.dueOn! ? -1 : 1))[0]
+  const attention = data.services
+    .filter((s) => s.status === 'overdue' || s.status === 'due')
+    .sort((a, b) => (a.status === b.status ? byDue(a, b) : a.status === 'overdue' ? -1 : 1))
+  const dueCents = attention.reduce((sum, s) => sum + s.costEstimateCents, 0)
+  const nextUp = scheduled.filter((s) => s.status !== 'snoozed').sort(byDue)[0]
 
   const shownAssets = data.assets.filter((a) => filter === 'all' || a.kind === filter)
   const valueCents = data.assets.reduce((sum, a) => sum + a.valueCents, 0)
   const upkeepCents = data.assets.reduce((sum, a) => sum + a.annualCostCents, 0)
   const property = data.assets.find((a) => a.kind === 'property') ?? null
+  const count = (kind: string) => data.assets.filter((a) => a.kind === kind).length
+  const kinds = [
+    `${count('property')} ${count('property') === 1 ? 'property' : 'properties'}`,
+    `${count('vehicle')} ${count('vehicle') === 1 ? 'vehicle' : 'vehicles'}`,
+    `${count('equipment')} equipment`,
+  ].join(' · ')
 
-  const worstFor = (assetId: string): DueStatus => {
-    const here = data.services.filter((s) => s.assetId === assetId)
-    for (const status of SEVERITY) if (here.some((s) => s.status === status)) return status
-    return 'unscheduled'
-  }
+  /** The soonest job that is not snoozed: what the card's pill and footer read. */
+  const soonestFor = (assetId: string) =>
+    scheduled.filter((s) => s.assetId === assetId && s.status !== 'snoozed').sort(byDue)[0] ?? null
 
-  const nextFor = (assetId: string) =>
-    data.services
-      .filter((s) => s.assetId === assetId && s.dueOn !== null)
-      .sort((a, b) => (a.dueOn! < b.dueOn! ? -1 : 1))[0] ?? null
+  const yearAhead = addMonths(data.todayIso, 12)
+  const expiringSoon = (iso: string | null) => iso !== null && iso <= yearAhead
+
+  const dot = attention.some((s) => s.status === 'overdue')
+    ? 'bad'
+    : attention.length > 0
+      ? 'warn'
+      : 'brand'
 
   return (
-    <div className="space-y-5">
-      <MetricStrip>
-        <MetricTile
-          label="Assets tracked"
-          value={data.assets.length}
-          delta={FILTERS.slice(1)
-            .map((f) => `${data.assets.filter((a) => a.kind === f.value).length} ${f.label.toLowerCase()}`)
-            .join(' / ')}
-        />
-        <MetricTile
-          label="Combined value"
-          value={money(valueCents)}
-          delta="your own estimate"
-          deltaTone="quiet"
-        />
-        <MetricTile label="Annual upkeep" value={money(upkeepCents)} delta="tax and insurance included" />
-        <MetricTile
-          label="Next 12 months"
-          value={money(yearCents)}
-          delta={`${scheduled.length} scheduled jobs, estimated`}
-          deltaTone="quiet"
-        />
-      </MetricStrip>
+    <div className="space-y-[22px]">
+      <PageHeader
+        eyebrow={
+          <>
+            Home <span className="text-ink-4">/</span> Assets
+          </>
+        }
+        title="Home & assets"
+        lede="The house, the vehicles and the equipment worth tracking: what each is worth, what it costs to keep, and what it needs next."
+        status={
+          <Eyebrow dot={dot} className="whitespace-nowrap">
+            {attention.length === 0
+              ? 'Nothing due this month'
+              : `${attention.length} job${attention.length === 1 ? '' : 's'} due this month · ${money(dueCents)} estimated`}
+          </Eyebrow>
+        }
+        actions={
+          <ActionButton
+            variant="accent"
+            className="h-11 px-4 text-[13px] sm:h-10"
+            onClick={() => setParams({ log: '1' })}
+          >
+            Log service
+          </ActionButton>
+        }
+      />
 
-      <div className="flex flex-wrap items-start gap-x-6 gap-y-5">
-        <div className="min-w-0 flex-[1_1_460px] space-y-5">
-          <Card className="space-y-3">
-            <CardHead label="Assets" meta={`${shownAssets.length} shown`} />
-            <PillGroup
-              label="Asset kinds"
-              value={filter}
-              options={FILTERS}
-              onChange={(next) => setParams({ kind: next === 'all' ? null : next, asset: null })}
+      <div className="flex flex-wrap items-start gap-x-[52px] gap-y-7">
+        <div className="min-w-0 flex-[1_1_540px] space-y-7">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,168px),1fr))] gap-2.5">
+            <Kpi name="Assets tracked" value={String(data.assets.length)} note={kinds} />
+            <Kpi
+              name="Combined value"
+              value={compactMoney(valueCents)}
+              note={`${property && valueCents > 0 ? `House at ${Math.round((property.valueCents / valueCents) * 100)}% · ` : ''}your own estimate`}
             />
+            <Kpi name="Annual upkeep" value={compactMoney(upkeepCents)} note="Your own figures" />
+            <Kpi
+              name="Next 12 months"
+              value={compactMoney(yearCents)}
+              note={`${inYear.length} scheduled jobs`}
+              noteClass="text-brand"
+            />
+          </div>
+
+          <section>
+            <div className="flex flex-wrap items-baseline justify-between gap-4">
+              <Eyebrow>Assets</Eyebrow>
+              <PillGroup
+                label="Asset kinds"
+                value={filter}
+                options={FILTERS}
+                onChange={(next) => setParams({ kind: next === 'all' ? null : next, asset: null })}
+              />
+            </div>
 
             {shownAssets.length === 0 ? (
-              <EmptyState headline="Nothing here" className="border-0">
+              <EmptyState headline="Nothing here" className="mt-3.5">
                 Nothing of this kind is tracked yet.
               </EmptyState>
             ) : (
-              <RowList>
+              <div className="mt-3.5 grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] items-stretch gap-3">
                 {shownAssets.map((asset) => {
-                  const status = worstFor(asset.id)
-                  const next = nextFor(asset.id)
+                  const next = soonestFor(asset.id)
+                  const state =
+                    next?.status === 'overdue' ? 'overdue' : next?.status === 'due' ? 'due' : 'good'
                   return (
-                    <Row
+                    <button
                       key={asset.id}
-                      title={asset.name}
-                      meta={asset.subtitle}
-                      selected={openAsset?.id === asset.id}
+                      type="button"
                       onClick={() => setParams({ asset: asset.id })}
-                      right={
-                        <>
-                          <Chip tone="quiet">{asset.kind}</Chip>
-                          <Chip tone={STATE[status].tone}>{STATE[status].label}</Chip>
-                          <span className="num text-[11px] text-ink-2">{money(asset.valueCents)}</span>
-                        </>
-                      }
+                      className={cn(
+                        'block w-full border bg-bg-elev p-[18px] text-left transition-colors duration-150 active:scale-[.985]',
+                        state === 'due' ? 'border-warn' : 'border-rule-2',
+                      )}
                     >
-                      <p className="t-caption text-ink-3">
-                        Annual cost {money(asset.annualCostCents)}
-                        {next ? ` / next: ${next.title}, ${monthLabel(monthKey(next.dueOn!))}` : ' / nothing scheduled'}
-                      </p>
-                    </Row>
+                      <div className="flex items-baseline justify-between gap-2.5">
+                        <span
+                          className={cn(
+                            'label text-[9px] tracking-[0.12em]',
+                            asset.kind === 'equipment' ? 'text-ink-3' : 'text-brand',
+                          )}
+                        >
+                          {asset.kind.toUpperCase()}
+                        </span>
+                        <span
+                          className={cn(
+                            'label border px-1.5 py-[3px] text-[9px] tracking-[0.1em]',
+                            state === 'overdue'
+                              ? 'border-bad text-bad'
+                              : state === 'due'
+                                ? 'border-warn text-warn'
+                                : 'border-rule-2 text-brand',
+                          )}
+                        >
+                          {state === 'overdue' ? 'OVERDUE' : state === 'due' ? 'SERVICE DUE' : 'GOOD'}
+                        </span>
+                      </div>
+                      <div className="mt-3 text-[17px] leading-[1.3] tracking-[-0.01em] text-ink">
+                        {asset.name}
+                      </div>
+                      <div className="mt-[5px] text-[11px] leading-[1.45] text-ink-3">{asset.subtitle}</div>
+                      <div className="mt-4 flex flex-wrap gap-3.5">
+                        <span className="min-w-0 flex-[1_1_90px]">
+                          <span className="label block text-[10px] tracking-[0.1em] text-ink-3">VALUE</span>
+                          <span className="num mt-[5px] block text-[16px] text-ink">{money(asset.valueCents)}</span>
+                        </span>
+                        <span className="min-w-0 flex-[1_1_90px]">
+                          <span className="label block text-[10px] tracking-[0.1em] text-ink-3">ANNUAL COST</span>
+                          <span className="num mt-[5px] block text-[16px] text-ink">{money(asset.annualCostCents)}</span>
+                        </span>
+                      </div>
+                      <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-2 border-t border-rule pt-3">
+                        <span className="min-w-0 flex-[1_1_140px] text-[12px] leading-[1.4] text-ink-2">
+                          {next ? next.title : 'Nothing scheduled'}
+                        </span>
+                        <span
+                          className={cn(
+                            'num shrink-0 text-[10px]',
+                            state === 'good' ? 'text-ink-3' : 'text-warn',
+                          )}
+                        >
+                          {next ? monthLabelLong(monthKey(next.dueOn!)) : 'none'}
+                        </span>
+                      </div>
+                    </button>
                   )
                 })}
-              </RowList>
+              </div>
             )}
-          </Card>
+          </section>
 
-          <Card className="space-y-3">
-            <CardHead
-              label="Maintenance, next 12 months"
-              meta={`${scheduled.length} jobs / ${money(yearCents)} estimated`}
-            />
+          <section>
+            <div className="flex flex-wrap items-baseline justify-between gap-4">
+              <Eyebrow>Maintenance · next 12 months</Eyebrow>
+              <span className="num text-[11px] text-ink-3">
+                {inYear.length} jobs · {money(yearCents)} estimated
+              </span>
+            </div>
 
-            <div className="overflow-x-auto">
-              <div className="grid min-w-[620px] grid-cols-12 gap-px bg-rule">
-                {months.map((m) => (
+            <div className="mt-3.5 grid grid-cols-[repeat(auto-fit,minmax(min(100%,110px),1fr))] gap-2">
+              {months.map((m) => {
+                const selected = m.key === month
+                return (
                   <button
                     key={m.key}
                     type="button"
                     onClick={() => setParams({ month: m.key })}
-                    aria-pressed={m.key === month}
+                    aria-pressed={selected}
                     className={cn(
-                      'space-y-1 px-1.5 py-2 text-left',
-                      m.key === month ? 'bg-brand-soft' : 'bg-bg-elev',
+                      'block w-full border p-3 text-left transition-colors duration-150 active:scale-[.985]',
+                      selected ? 'border-brand bg-brand-soft' : 'border-rule-2 bg-bg-elev',
                     )}
                   >
-                    <span className="label block text-[9px] tracking-[0.1em] text-ink-3">
-                      {m.label}
+                    <span className="flex items-baseline justify-between">
+                      <span className={cn(MONO, selected ? 'text-brand' : 'text-ink-3')}>{m.label}</span>
+                      <span
+                        className={cn(
+                          'num text-[10px]',
+                          m.isCurrent ? 'text-warn' : selected ? 'text-ink' : 'text-ink-3',
+                        )}
+                      >
+                        {m.count}
+                      </span>
                     </span>
-                    <span
-                      className={cn(
-                        'num block text-[13px]',
-                        m.isCurrent ? 'text-brand' : m.count > 0 ? 'text-ink' : 'text-ink-4',
-                      )}
-                    >
-                      {m.count > 0 ? m.count : '0'}
+                    <span className="mt-2.5 flex min-h-1.5 flex-wrap gap-[3px]">
+                      {jobsIn(m.key)
+                        .slice(0, 4)
+                        .map((j) => (
+                          <span key={j.id} className={cn('block size-1.5 rounded-full', DOT[j.status])} />
+                        ))}
                     </span>
-                    <span className="num block text-[10px] text-ink-3">
+                    <span className="mt-2.5 block text-[10px] text-ink-3">
                       {m.costCents > 0 ? money(m.costCents) : 'no cost'}
                     </span>
                   </button>
-                ))}
-              </div>
+                )
+              })}
             </div>
 
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <Eyebrow>{monthLabel(month)}</Eyebrow>
+            <div className="mt-[18px]">
+              <div className="flex flex-wrap items-baseline justify-between gap-3">
+                <span className={cn(MONO, 'text-brand')}>{monthLabelLong(month)}</span>
+                <span className="num text-[10px] text-ink-3">
+                  {monthCents > 0 ? `${money(monthCents)} estimated` : 'no cost'}
+                </span>
+              </div>
+
+              {monthJobs.length === 0 ? (
+                <EmptyState headline="Nothing scheduled" className="mt-3 px-[18px] py-[26px]">
+                  No recurring service falls in this month.
+                </EmptyState>
+              ) : (
+                monthJobs.map((job) => (
+                  <div
+                    key={job.id}
+                    className="flex flex-wrap items-start gap-x-3.5 gap-y-3 border-b border-rule px-3 py-3.5"
+                  >
+                    <span className={cn('mt-1.5 size-2 shrink-0 rounded-full', DOT[job.status])} />
+                    <span className="min-w-0 flex-[1_1_200px]">
+                      <span className="block text-[14px] text-ink">{job.title}</span>
+                      <span className="mt-1 block text-[11px] leading-[1.45] text-ink-3">{jobMeta(job)}</span>
+                    </span>
+                    <span className="flex shrink-0 flex-wrap items-center gap-2">
+                      <span className="num text-[10px] text-ink-3">
+                        {job.costEstimateCents > 0 ? money(job.costEstimateCents) : 'no estimate'}
+                      </span>
+                      <ActionButton className="sm:h-8" onClick={() => done(job)}>
+                        Mark done
+                      </ActionButton>
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+
+          <section>
+            <div className="flex flex-wrap items-baseline justify-between gap-4">
+              <Eyebrow>Warranties & documents</Eyebrow>
               <span className="num text-[11px] text-ink-3">
-                {monthCents > 0 ? `${money(monthCents)} estimated` : 'no cost'}
+                {data.warranties.filter((w) => expiringSoon(w.expiresOn)).length} expiring within a year
               </span>
             </div>
-
-            {monthJobs.length === 0 ? (
-              <EmptyState headline="Nothing scheduled" className="border-0">
-                No recurring service falls in this month.
-              </EmptyState>
-            ) : (
-              <RowList>
-                {monthJobs.map((job) => (
-                  <Row
-                    key={job.id}
-                    title={job.title}
-                    meta={`${job.assetName} / ${job.intervalMonths === 12 ? 'yearly' : job.intervalMonths > 0 ? `every ${job.intervalMonths} months` : 'one off'}${job.vendorName ? ` / ${job.vendorName}` : ''}`}
-                    right={
-                      <>
-                        <span className="num text-[11px] text-ink-2">
-                          {job.costEstimateCents > 0 ? money(job.costEstimateCents) : 'no estimate'}
-                        </span>
-                        <ActionButton
-                          onClick={() =>
-                            run(
-                              () => markDone(job.id, job.assetId, job.title),
-                              'Logged. The next one is scheduled on its interval.',
-                            )
-                          }
-                        >
-                          Mark done
-                        </ActionButton>
-                      </>
-                    }
-                  />
-                ))}
-              </RowList>
-            )}
-          </Card>
-
-          <Card className="space-y-3">
-            <CardHead
-              label="Warranties and documents"
-              meta={`${data.warranties.filter((w) => w.expiresOn !== null).length} with an expiry`}
-            />
-            <RowList>
-              {data.warranties.map((w) => (
-                <Row
-                  key={w.id}
-                  title={w.name}
-                  meta={w.detail}
-                  selected={openWarranty?.id === w.id}
-                  onClick={() => setParams({ warranty: w.id })}
-                  right={
-                    <>
-                      <Chip tone="quiet">{w.cover}</Chip>
-                      <span className="num text-[11px] text-ink-3">
-                        {/* No expiry is a real state for a deed, not a missing date. */}
-                        {w.expiresOn ? shortDate(w.expiresOn) : 'no expiry'}
-                      </span>
-                    </>
-                  }
-                />
-              ))}
-            </RowList>
-          </Card>
+            <div className="label flex flex-wrap gap-3 border-b border-rule-2 px-3 pb-2.5 pt-3.5 text-[10px] tracking-[0.12em] text-ink-3">
+              <span className="min-w-0 flex-[1_1_200px]">ITEM</span>
+              <span className="shrink-0">COVER · EXPIRES · FILE</span>
+            </div>
+            {data.warranties.map((w) => (
+              <button
+                key={w.id}
+                type="button"
+                onClick={() => setParams({ warranty: w.id })}
+                className="flex w-full flex-wrap items-center gap-x-3.5 gap-y-3 border-b border-rule px-3 py-[15px] text-left active:scale-[.985]"
+              >
+                <span className="min-w-0 flex-[1_1_200px]">
+                  <span className="block text-[14px] text-ink">{w.name}</span>
+                  <span className="mt-1 block text-[11px] leading-[1.45] text-ink-3">{w.detail}</span>
+                </span>
+                <span className="flex shrink-0 flex-wrap items-center gap-3">
+                  <span className="label text-[9px] tracking-[0.1em] text-ink-3">{w.cover}</span>
+                  <span
+                    className={cn(
+                      'num text-[10px]',
+                      expiringSoon(w.expiresOn) ? 'text-warn' : 'text-ink-3',
+                    )}
+                  >
+                    {/* No expiry is a real state for a deed, not a missing date. */}
+                    {w.expiresOn ? monthLabelLong(monthKey(w.expiresOn)) : 'NO EXPIRY'}
+                  </span>
+                  <span className="label text-[9px] tracking-[0.08em] text-ink-3">
+                    {w.documentUrl ? 'PDF' : 'NO FILE'}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </section>
         </div>
 
-        <div className="min-w-0 flex-[1_1_320px] space-y-5 md:max-w-[420px]">
-          <Card className="space-y-3">
-            <CardHead label="Needs attention" meta={attention.length > 0 ? `${attention.length}` : ''} />
-
+        <div className="min-w-0 flex-[1_1_320px] space-y-[26px] md:max-w-[352px]">
+          <section>
+            <Eyebrow>Needs attention</Eyebrow>
             {attention.length === 0 ? (
-              <p className="t-caption text-ink-3">
-                Nothing outstanding.{' '}
-                {nextUp
-                  ? `The next scheduled job is ${nextUp.title} in ${monthLabel(monthKey(nextUp.dueOn!))}.`
-                  : 'Nothing is scheduled.'}
+              <p className="mt-3 text-[12px] leading-[1.5] text-ink-3">
+                Nothing outstanding. The next scheduled job is{' '}
+                {nextUp ? `${nextUp.title} in ${monthLabelLong(monthKey(nextUp.dueOn!))}` : 'not scheduled'}.
               </p>
             ) : (
-              <RowList>
-                {attention.map((job) => (
-                  <Row
+              <>
+                {attention.slice(0, 4).map((job) => (
+                  <div
                     key={job.id}
-                    title={job.title}
-                    meta={`${job.assetName} / ${dueLabel(
-                      {
-                        intervalMonths: job.intervalMonths,
-                        lastDoneOn: job.lastDoneOn,
-                        dueOn: job.dueOn,
-                        snoozeUntil: job.snoozeUntil,
-                      },
-                      data.todayIso,
-                    )}`}
-                    right={
-                      <>
-                        <StatusChip tone={job.status === 'overdue' ? 'bad' : 'warn'}>
-                          {STATE[job.status].label}
-                        </StatusChip>
-                        <ActionButton
-                          variant="brand"
-                          onClick={() =>
-                            run(
-                              () => markDone(job.id, job.assetId, job.title),
-                              'Logged. The next one is scheduled on its interval.',
-                            )
-                          }
-                        >
-                          Mark done
-                        </ActionButton>
-                        <ActionButton
-                          onClick={() =>
-                            run(
-                              () => snoozeService(job.id, 30),
-                              'Snoozed 30 days. It comes back, it does not go away.',
-                            )
-                          }
-                        >
-                          Snooze 30d
-                        </ActionButton>
-                      </>
-                    }
-                  />
+                    className={cn(
+                      'mt-2.5 border bg-bg-elev p-3.5',
+                      job.status === 'overdue' ? 'border-bad' : 'border-rule-2',
+                    )}
+                  >
+                    <div className="flex items-baseline justify-between gap-2.5">
+                      <span
+                        className={cn(
+                          'label text-[9px] tracking-[0.12em]',
+                          job.status === 'overdue' ? 'text-bad' : 'text-warn',
+                        )}
+                      >
+                        {job.status === 'overdue' ? 'OVERDUE' : 'DUE NOW'}
+                      </span>
+                      <span className="label text-[10px] tracking-normal text-ink-3">
+                        {dueLabel(job, data.todayIso)}
+                      </span>
+                    </div>
+                    <div className="mt-[7px] text-[14px] leading-[1.4] text-ink">{job.title}</div>
+                    <div className="mt-1 text-[11px] leading-[1.45] text-ink-3">{jobMeta(job)}</div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <ActionButton
+                        className="border-brand px-[13px] text-brand hover:border-brand sm:h-[34px]"
+                        onClick={() => done(job)}
+                      >
+                        Mark done
+                      </ActionButton>
+                      <ActionButton
+                        className="px-[11px] text-[10px] tracking-[0.08em] text-ink-3 sm:h-8"
+                        onClick={() =>
+                          run(
+                            () => snoozeService(job.id, 30),
+                            'Snoozed 30 days. It comes back, it does not go away.',
+                          )
+                        }
+                      >
+                        Snooze 30d
+                      </ActionButton>
+                    </div>
+                  </div>
                 ))}
-              </RowList>
+                {attention.length > 4 && (
+                  <p className="mt-2.5 text-[11px] text-ink-3">+{attention.length - 4} more on the calendar</p>
+                )}
+              </>
             )}
-
-            <ActionButton variant="brand" onClick={() => setParams({ log: '1' })}>
-              Log service
-            </ActionButton>
-          </Card>
+          </section>
 
           {property && (
-            <Card className="space-y-2.5">
-              <CardHead label="Property" meta={property.name} />
+            <section>
+              <Eyebrow>Property</Eyebrow>
               {property.facts.map((f) => (
-                <div key={f.label} className="flex items-baseline justify-between gap-3">
-                  <span className="t-caption text-ink-3">{f.label}</span>
-                  <span className="num text-[11px] text-ink-2">{f.value}</span>
-                </div>
+                <PropertyRow key={f.label} label={f.label} value={f.value} />
               ))}
-              <p className="t-caption border-t border-rule pt-2 text-ink-3">
-                {data.netWorth === null
-                  ? 'Mortgage and escrow live in Finance, coverage in Insurance. Neither is installed, so neither number is shown here rather than kept twice and going stale.'
-                  : 'Mortgage and escrow come from Finance, coverage from Insurance. They are read there rather than copied here, so there is one number and it is the current one.'}
+              {data.propertyPremium !== null && (
+                <PropertyRow label="Insurance" value={`${money(data.propertyPremium * 100)} / yr`} />
+              )}
+              <p className="mt-3 text-[11px] leading-[1.5] text-ink-3">
+                {data.propertyPremium === null ? (
+                  'Coverage lives in Insurance, which is not installed.'
+                ) : (
+                  <>
+                    Coverage comes from{' '}
+                    <Link href="/insurance" className="border-b border-rule-2 text-ink-2">
+                      Insurance
+                    </Link>
+                    .
+                  </>
+                )}
               </p>
-            </Card>
+            </section>
           )}
 
-          <Card className="space-y-2.5">
-            <CardHead label="Vendors" meta={`${data.vendors.length}`} />
-            <RowList>
-              {data.vendors.map((v) => (
-                <Row
-                  key={v.id}
-                  title={v.name}
-                  meta={`${v.trade}${v.contact ? ` / ${v.contact}` : ''}`}
-                  right={
-                    <span className="num text-[11px] text-ink-3">
-                      {v.lastUsedOn
-                        ? `${shortDate(v.lastUsedOn)}${v.lastCostCents !== null ? ` / ${money(v.lastCostCents)}` : ''}`
-                        : 'not used yet'}
-                    </span>
-                  }
-                />
-              ))}
-            </RowList>
-          </Card>
+          <section>
+            <Eyebrow>Vendors</Eyebrow>
+            {data.vendors.map((v) => (
+              <div key={v.id} className="border-b border-rule py-3">
+                <div className="flex items-baseline justify-between gap-2.5">
+                  <span className="text-[13px] text-ink">{v.name}</span>
+                  <span className="label text-[9px] tracking-[0.1em] text-ink-3">{v.trade}</span>
+                </div>
+                <div className="mt-1 text-[11px] text-ink-3">{v.contact}</div>
+                <div className="mt-1 text-[11px] text-ink-3">
+                  {v.lastUsedOn
+                    ? `Last used ${monthYear(v.lastUsedOn)}${v.lastCostCents !== null ? ` · ${money(v.lastCostCents)}` : ''}`
+                    : 'Not used yet'}
+                </div>
+              </div>
+            ))}
+          </section>
         </div>
       </div>
 
-      <Overlay
-        open={openAsset !== null}
+      <AssetDrawer
+        asset={openAsset}
+        log={openAsset ? data.log.filter((l) => l.assetId === openAsset.id) : []}
         onClose={() => setParams({ asset: null })}
-        eyebrow={openAsset?.kind}
-        title={openAsset?.name ?? ''}
-      >
-        {openAsset && (
-          <div className="space-y-4">
-            <p className="t-caption text-ink-3">{openAsset.subtitle}</p>
-
-            <div className="space-y-1.5">
-              {openAsset.facts.map((f) => (
-                <div key={f.label} className="flex items-baseline justify-between gap-3">
-                  <span className="t-caption text-ink-3">{f.label}</span>
-                  <span className="num text-right text-[11px] text-ink-2">{f.value}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-1.5">
-              <Eyebrow>Service history</Eyebrow>
-              {data.log.filter((l) => l.assetId === openAsset.id).length === 0 ? (
-                <p className="t-caption text-ink-3">Nothing logged yet.</p>
-              ) : (
-                <RowList>
-                  {data.log
-                    .filter((l) => l.assetId === openAsset.id)
-                    .map((l) => (
-                      <Row
-                        key={l.id}
-                        title={l.what}
-                        meta={`${shortDate(l.doneOn)}${l.vendorName ? ` / ${l.vendorName}` : ''}`}
-                        right={
-                          <span className="num text-[11px] text-ink-2">
-                            {/* Null is "no receipt to hand", which is not the
-                                same claim as free. */}
-                            {l.costCents === null ? 'no cost recorded' : money(l.costCents)}
-                          </span>
-                        }
-                      />
-                    ))}
-                </RowList>
-              )}
-            </div>
-          </div>
-        )}
-      </Overlay>
-
-      <Overlay
-        open={openWarranty !== null}
-        onClose={() => setParams({ warranty: null })}
-        eyebrow="Warranty"
-        title={openWarranty?.name ?? ''}
-      >
-        {openWarranty && (
-          <div className="space-y-4">
-            <p className="t-caption text-ink-3">{openWarranty.detail}</p>
-            <div className="space-y-1.5">
-              {openWarranty.facts.map((f) => (
-                <div key={f.label} className="flex items-baseline justify-between gap-3">
-                  <span className="t-caption text-ink-3">{f.label}</span>
-                  <span className="num text-right text-[11px] text-ink-2">{f.value}</span>
-                </div>
-              ))}
-            </div>
-            {openWarranty.documentUrl && (
-              <a className="t-caption text-brand" href={openWarranty.documentUrl}>
-                Open the file
-              </a>
-            )}
-          </div>
-        )}
-      </Overlay>
-
-      <LogServiceDrawer
-        open={logging}
-        data={data}
-        onClose={() => setParams({ log: null })}
-        run={run}
       />
+      <WarrantyDrawer warranty={openWarranty} onClose={() => setParams({ warranty: null })} />
+      <LogServiceDrawer open={logging} data={data} onClose={() => setParams({ log: null })} run={run} />
     </div>
   )
 }
 
-function LogServiceDrawer({
-  open,
-  data,
-  onClose,
-  run,
+/** A KPI card: 11px name, 25px number, 10px note. Four separate cards, not the joined strip. */
+function Kpi({
+  name,
+  value,
+  note,
+  noteClass = 'text-ink-3',
 }: {
-  open: boolean
-  data: HomeData
-  onClose: () => void
-  run: (action: () => Promise<ActionResult>, ok?: string) => void
+  name: string
+  value: string
+  note: string
+  noteClass?: string
 }) {
-  const [assetId, setAssetId] = useState(data.assets[0]?.id ?? '')
-  const [what, setWhat] = useState('')
-  const [doneOn, setDoneOn] = useState(data.todayIso)
-  const [cost, setCost] = useState('')
-  const [vendorId, setVendorId] = useState('')
-  const [intervalMonths, setIntervalMonths] = useState('12')
-
-  const submit = () => {
-    run(
-      () =>
-        logService({
-          assetId,
-          what,
-          doneOn,
-          // Empty means the receipt is not to hand, which is not a claim that
-          // it was free. Null rather than zero.
-          costCents: cost.trim() === '' ? null : Math.round(Number(cost) * 100),
-          vendorId: vendorId || null,
-          intervalMonths: Number(intervalMonths),
-        }),
-      Number(intervalMonths) > 0
-        ? 'Logged, and the next one is on the calendar.'
-        : 'Logged to the service history.',
-    )
-    setWhat('')
-    setCost('')
-    onClose()
-  }
-
   return (
-    <Overlay
-      open={open}
-      onClose={onClose}
-      eyebrow="New entry"
-      title="Log service"
-      footer={
-        <div className="flex gap-2">
-          <ActionButton variant="brand" disabled={!what.trim() || !assetId} onClick={submit}>
-            Save service
-          </ActionButton>
-          <ActionButton onClick={onClose}>Cancel</ActionButton>
-        </div>
-      }
-    >
-      <div className="space-y-4">
-        <p className="t-caption text-ink-3">
-          Logs what was done and, if you give it an interval, schedules the next one from this date.
-        </p>
+    <Card className="p-[15px] px-[15px] py-[15px]">
+      <span className="text-[11px] text-ink-3">{name}</span>
+      <div className="num mt-2 text-[25px] font-light leading-none tracking-[-0.02em] text-ink">{value}</div>
+      <div className={cn('num mt-1.5 text-[10px]', noteClass)}>{note}</div>
+    </Card>
+  )
+}
 
-        <label className="block space-y-1.5">
-          <Eyebrow>Asset</Eyebrow>
-          <select
-            value={assetId}
-            aria-label="Asset"
-            onChange={(e) => setAssetId(e.target.value)}
-            className={cn(fieldClass, 'w-full')}
-          >
-            {data.assets.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="block space-y-1.5">
-          <Eyebrow>What was done</Eyebrow>
-          <input
-            value={what}
-            aria-label="What was done"
-            onChange={(e) => setWhat(e.target.value)}
-            placeholder="Gutter clean and reseal"
-            className={cn(fieldClass, 'w-full')}
-          />
-        </label>
-
-        <div className="flex flex-wrap gap-3">
-          <label className="min-w-0 flex-1 space-y-1.5">
-            <Eyebrow>Date</Eyebrow>
-            <input
-              type="date"
-              aria-label="Date"
-              value={doneOn}
-              onChange={(e) => setDoneOn(e.target.value)}
-              className={cn(fieldClass, 'w-full')}
-            />
-          </label>
-          <label className="min-w-0 flex-1 space-y-1.5">
-            <Eyebrow>Cost</Eyebrow>
-            <input
-              inputMode="decimal"
-              aria-label="Cost"
-              value={cost}
-              onChange={(e) => setCost(e.target.value)}
-              placeholder="leave blank if unknown"
-              className={cn(fieldClass, 'w-full')}
-            />
-          </label>
-        </div>
-
-        <label className="block space-y-1.5">
-          <Eyebrow>Vendor</Eyebrow>
-          <select
-            value={vendorId}
-            aria-label="Vendor"
-            onChange={(e) => setVendorId(e.target.value)}
-            className={cn(fieldClass, 'w-full')}
-          >
-            <option value="">Did it myself</option>
-            {data.vendors.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <div className="space-y-1.5">
-          <Eyebrow>Schedule the next one</Eyebrow>
-          <PillGroup
-            label="Interval"
-            value={intervalMonths}
-            options={[
-              { value: '0', label: 'One off' },
-              { value: '3', label: '3 months' },
-              { value: '6', label: '6 months' },
-              { value: '12', label: 'Yearly' },
-              { value: '24', label: '2 years' },
-            ]}
-            onChange={setIntervalMonths}
-          />
-        </div>
-      </div>
-    </Overlay>
+function PropertyRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2 border-b border-rule py-[11px]">
+      <span className="min-w-0 flex-[1_1_130px] text-[13px] text-ink">{label}</span>
+      <span className="num shrink-0 text-[12px] text-ink-2">{value}</span>
+    </div>
   )
 }
