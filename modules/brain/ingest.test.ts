@@ -3,12 +3,12 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vites
 process.env.DATABASE_URL ??= 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
 
 // The outbound layer and every address check it makes have their own suite in
-// fetching.test.ts, including a real server proving the connection is pinned to
+// core/fetching.test.ts, including a real server proving the connection is pinned to
 // the address that was checked. Here it is mocked, so these tests are about
 // what ingestion does with a page once it has one.
 const get = vi.fn()
-vi.mock('./fetching', async () => {
-  const actual = await vi.importActual<typeof import('./fetching')>('./fetching')
+vi.mock('@/core/fetching', async () => {
+  const actual = await vi.importActual<typeof import('@/core/fetching')>('@/core/fetching')
   return { ...actual, get: (...args: unknown[]) => get(...args) }
 })
 

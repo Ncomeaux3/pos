@@ -46,9 +46,9 @@ No model reads the page. A page with no Recipe block is refused rather than
 guessed at; the Python scrapers that read other formats cannot run in the
 Vercel Node runtime, so there is no fallback.
 
-The tool takes the page source rather than fetching it. The checked fetch
-that stops a pasted URL reaching a private address lives in Second Brain and
-is not shared, so until it is, whoever calls this tool fetches first.
+The tool fetches the page through `core/fetching.ts`, the same checked fetch
+Second Brain uses, so a pasted URL cannot reach a private address. An agent
+that already has the page source can pass it as `html` and skip the fetch.
 
 ## Suggest week is a rule, not a model
 

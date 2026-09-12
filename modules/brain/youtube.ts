@@ -1,5 +1,5 @@
 import { decodeEntities } from './extract'
-import { get } from './fetching'
+import { get } from '@/core/fetching'
 
 // YouTube transcripts without yt-dlp.
 //

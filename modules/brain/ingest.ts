@@ -1,12 +1,12 @@
 import { complete, NotConnected, SoftCapExceeded } from '@/core/llm'
 import { extract, looksEmpty } from './extract'
-import { get, normaliseUrl } from './fetching'
+import { get, normaliseUrl } from '@/core/fetching'
 import { fetchTranscript, isYouTube, videoId, videoTitle } from './youtube'
 
 // The outbound checks and the pinned connection live in ./fetching. Re-exported
 // because they are part of this module's surface and several callers reach for
 // them by name.
-export { isPrivateHost, normaliseUrl, Refused } from './fetching'
+export { isPrivateHost, normaliseUrl, Refused } from '@/core/fetching'
 
 // SPEC section 6's ingestion: a URL becomes readable text, a YouTube link
 // becomes a transcript, and the model drafts a summary the owner approves.

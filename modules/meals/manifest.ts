@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { db } from '@/core/db'
+import { get, normaliseUrl } from '@/core/fetching'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
 import { fillWeek } from './fill'
@@ -114,10 +115,10 @@ export default defineModule({
 
     import_recipe: defineTool({
       description:
-        'Read the schema.org Recipe JSON-LD out of a page and file it as a draft for the owner to accept. Pass the page source; a page with no Recipe block is refused rather than guessed at.',
-      input: z.object({ url: z.url(), html: z.string().min(1) }),
+        'Read the schema.org Recipe JSON-LD out of a page and file it as a draft for the owner to accept. The page is fetched through the checked fetch unless its source is passed as html; a page with no Recipe block is refused rather than guessed at.',
+      input: z.object({ url: z.url(), html: z.string().min(1).optional() }),
       run: async ({ url, html }) => {
-        const recipe = parseRecipe(html)
+        const recipe = parseRecipe(html ?? (await get(normaliseUrl(url))).body)
         const { rows } = await db().query<{ id: string }>(
           `insert into meals.recipe
              (name, source_url, servings, time_minutes, kcal, protein_g, carbs_g, fat_g, status)

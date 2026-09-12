@@ -125,7 +125,7 @@ thing this feature could do.
 
 ### The outbound trust boundary is its own file
 
-`fetching.ts`. Ingest takes a URL from a server action, and a server action is
+`core/fetching.ts` (moved out of this module on 2026-09-11 so Meals can import a recipe page through the same check). Ingest takes a URL from a server action, and a server action is
 a public POST endpoint, so everything deciding whether a request may leave the
 deployment lives in one place that knows nothing about notes.
 
