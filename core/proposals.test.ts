@@ -137,6 +137,17 @@ describe('deciding', () => {
     expect((await listProposals('dismissed')).map((p) => p.id)).toEqual([id])
   })
 
+  it('a dismissed proposal is not re-proposed inside its window', async () => {
+    const id = await pending()
+    await dismiss(id)
+
+    const again = await pending()
+
+    expect(again).toBe(id)
+    expect(await countPending()).toBe(0)
+    expect((await listProposals('dismissed')).map((p) => p.id)).toEqual([id])
+  })
+
   it('reopen puts a decided proposal back', async () => {
     const id = await pending()
     await dismiss(id)

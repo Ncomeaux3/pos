@@ -46,6 +46,18 @@ export async function propose(args: {
   affects?: string
   diff?: DiffEntry[]
 }): Promise<string> {
+  // A dismissal holds for DISMISS_DAYS: the same call proposed again inside
+  // the window is the dismissed row, not a new one, so the owner is not asked
+  // twice about a thing they already said no to.
+  const held = await db().query<{ id: string }>(
+    `select id from core.proposals
+      where module = $1 and tool = $2 and payload = $3::jsonb
+        and status = 'dismissed' and dismissed_until > now()
+      limit 1`,
+    [args.module, args.tool, JSON.stringify(args.payload)],
+  )
+  if (held.rows[0]) return held.rows[0].id
+
   const { rows } = await db().query<{ id: string }>(
     `insert into core.proposals
        (module, tool, payload, agent, reason, guarded, title, confidence, evidence, affects, diff)

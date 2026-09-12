@@ -139,8 +139,11 @@ export function MetricTile({
       <Eyebrow>{label}</Eyebrow>
       <p
         className={cn(
-          'num font-light leading-none tracking-[-0.02em] text-ink',
+          'num font-light tracking-[-0.02em] text-ink',
           METRIC_SIZE[size],
+          // After the size: tailwind-merge drops a leading-* that precedes a
+          // text size, since Tailwind's own sizes carry a line-height.
+          'leading-none',
         )}
       >
         {value}

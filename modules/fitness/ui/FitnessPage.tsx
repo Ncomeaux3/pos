@@ -29,9 +29,9 @@ const GOAL_TONE: Record<string, string> = {
 }
 
 /**
- * A tile's number row on its own line box. MetricTile asks for leading-none,
- * but cn() drops it beside text-[34px] (tailwind-merge treats a font size as
- * owning the line height), and the artboard's row is 34px tall, not 51.
+ * A tile's number and its unit on one 34px line box, as the artboard draws
+ * them. (MetricTile's own leading-none was once lost to tailwind-merge; Card
+ * fixed that on 2026-09-12, the wrapper stays for the unit and the 2px nudge.)
  */
 const Num = ({ children }: { children: ReactNode }) => (
   <span className="mt-0.5 block leading-none">{children}</span>
