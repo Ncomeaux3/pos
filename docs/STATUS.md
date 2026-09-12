@@ -3,16 +3,74 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
-Last updated: 2026-09-12, seventeen fidelity passes (Weekly Review, Dashboard,
-Finance, Skill Tree, Travel, Tasks, Goals, Ideas, Health, Settings, Search,
-then two parallel batches: Second Brain, Insurance and Meals; Home, Fitness and
-Review), the rail to PosSidebar, and the Mobile re-check at 402. Branch
-`main`. The third parallel batch (Notifications, Agent Log, Onboarding, Login)
-is merging from the other session. Nothing else in the handoff is unclaimed:
-Finance Options is three alternates of Finance and is not built (Finance
-follows POS Finance.dc.html), Backend Handoff is a document.
+Last updated: 2026-09-12. Every screen in the handoff is matched to its
+artboard: twenty-one fidelity passes (Weekly Review, Dashboard, Finance, Skill
+Tree, Travel, Tasks, Goals, Ideas, Health, Settings, Search, then three
+parallel batches: Second Brain, Insurance and Meals; Home, Fitness and Review;
+Notifications, Agent Log, Onboarding and Login), the rail to PosSidebar, and
+the Mobile re-check at 402. Branch `main`. Nothing in the handoff is
+unclaimed: Finance Options is three alternates of Finance and is not built
+(Finance follows POS Finance.dc.html), Backend Handoff is a document. Step 15,
+deploy, is the only Phase 1 step left.
 
 ## Done
+
+**The fidelity pass, screens eighteen to twenty-one in parallel: Notifications,
+Agent Log, Onboarding, Login.** The third batch on the method below, all core
+screens, so each agent's scope was its route folder alone; Onboarding and
+Login shared one agent. Claimed first with placeholder plan files on main so
+the other session (then on Settings, Search and the phone re-check) could see
+them taken. The builders were stopped by an API rate limit at 09:35 and
+resumed at 11:04 with their context intact and nothing lost. Merges clean.
+Onboarding's first "match" verdicts did not hold up on reading (copy, step
+eyebrows, the Ready step's shape and the category heads all differed) and went
+back twice before they did; every pair is now read by the integrator before it
+reaches Nick. Integrator work after the merge: `WizardShell` takes
+`nextVariant` and `backVariant` (Onboarding's artboard draws an accent primary
+and a bordered Back; the review's defaults stay), and the wizard moved to its
+own route group `app/(onboarding)/` with a layout that has no rail, tab bar or
+palette, since the artboard draws nothing around it but its own six steps.
+
+**Notifications** (docs/plans/notifications-fidelity.md): every generated
+string joins with the artboard's middle dot; a rule's module label is
+coloured per module (accent, amber for Insurance, ink-2 for System); Pause
+all turns amber when paused; the snoozed note spells out the days; the email
+preview reads the real digest recipient from settings or `OWNER_EMAIL`
+instead of a hardcoded address, with plain accent section labels and
+bulleted lines. Kept by decision: one channel per alert row (the schema has
+one column), the app's footer line rather than "Reply STOP" (nothing parses
+replies), the shared 22px empty state, the cron-driven digest time.
+
+**Agent Log** (docs/plans/agent-log-fidelity.md): the band reads "Last run
+{date} {clock} · {n} writes · {m} failed"; the rail is "This run"; the Jobs
+list humanises job names ("nightly_digest" to "Nightly digest") under
+"{Module} / {job}"; filter pills follow nav order. "Retry now" reruns a
+failed job's module through the existing `runNightly({ module })` and only
+appears on a job whose module is real (the seed's one failure is stamped
+`core`, so it is honestly absent there). Not drawn: a header "Undo last run"
+and a second theme button (both settled earlier); "Open" links from an entry
+to its module page were never built and are a candidate for a later list.
+
+**Onboarding** (docs/plans/onboarding-fidelity.md): the six steps carry the
+artboard's copy where true ("STEP 02 / 6", "Choose what it tracks", "Ready
+for the first run", the rail's "Set up in 6 steps" with a sub-line per step).
+Modules is the numbered card grid with a true one-line description per module.
+Connections has the artboard's category heads ("Banks & credit unions", "Feeds
+Finance · balances, transactions", "{n} AVAILABLE"), a global search, NEEDED
+on the two Finance categories nothing computes without, manual add, a greyed
+"{Module} module off" card with "Add {Module} module" when a module is off,
+and only ever "Requested" (nothing connects until Settings). Goals has per-goal
+Target and By when; the app's three generic seeds stay. The Ready step is the
+FIRST RUN card over a SUMMARY table (NAME, MODULES, CONNECTED, GOALS, ALERTS)
+with the computed nightly hour and no source count or backfill claim. One
+Blocked item is left open for a later pass: completing the wizard sets
+`onboarding_completed_at` with no reset path, so the goal-editing e2e checks
+the inputs but does not click Finish.
+
+**Login** (docs/plans/login-fidelity.md): a small corrective pass. The band
+uses middle dots, the input has a generic placeholder, the button an arrow.
+Never built: "Sent via Resend" (the magic link goes through Supabase Auth's
+mailer) and the footer's live job-status dot on a page nobody has signed into.
 
 **The Mobile re-check, 402 against PosPhone.** docs/plans/mobile-recheck-fidelity.md.
 Twelve screens had been rebuilt on the desktop since the 2026-09-10 phone
