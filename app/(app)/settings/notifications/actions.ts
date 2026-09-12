@@ -52,6 +52,25 @@ export async function setModuleChannel(
   }
 }
 
+/** The Channels strip: one channel onto or off every rule there is. */
+export async function setChannelEverywhere(channel: Channel, on: boolean): Promise<ActionResult> {
+  await requireOwner()
+  if (!CHANNELS.includes(channel)) return { ok: false, error: `${channel} is not a channel` }
+
+  try {
+    for (const rule of await listRules()) {
+      const has = rule.channels.includes(channel)
+      if (has === on) continue
+      await patchRule(rule.id, {
+        channels: on ? [...rule.channels, channel] : rule.channels.filter((c) => c !== channel),
+      })
+    }
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}
+
 /**
  * Batching for a whole module. On means the morning digest, because that is the
  * one every module has; a rule that should land in the evening is set on the

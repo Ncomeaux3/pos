@@ -49,25 +49,20 @@ export function ChannelGrid({ rows, paused }: { rows: ModuleRow[]; paused: boole
   return (
     <div className="overflow-x-auto">
       <div className="min-w-[520px]">
-        <div className="label grid grid-cols-[1.2fr_repeat(3,48px)_1.6fr] items-center gap-x-3.5 border-b border-rule-2 pb-2 text-[10px] tracking-[0.08em] text-ink-3">
-          <span>Module</span>
-          <span className="text-center">Digest</span>
-          <span className="text-center">Push</span>
-          <span className="text-center">In-app</span>
-          <span>What triggers it</span>
+        <div className="mt-2 grid grid-cols-[1.2fr_repeat(3,48px)_1.6fr] items-center gap-x-3.5 border-b border-rule-2 py-2 text-[10px] tracking-[0.08em] text-ink-3">
+          <span>MODULE</span>
+          <span className="text-center">DIGEST</span>
+          <span className="text-center">PUSH</span>
+          <span className="text-center">IN-APP</span>
+          <span>WHAT TRIGGERS IT</span>
         </div>
 
         {rows.map((row) => (
           <div
             key={row.id}
-            className="grid grid-cols-[1.2fr_repeat(3,48px)_1.6fr] items-center gap-x-3.5 border-b border-rule py-2.5 last:border-b-0"
+            className="grid grid-cols-[1.2fr_repeat(3,48px)_1.6fr] items-center gap-x-3.5 border-b border-rule py-2.5 text-[13px]"
           >
-            <div className="min-w-0">
-              <p className={cn('t-caption', paused ? 'text-ink-3' : 'text-ink')}>{row.label}</p>
-              <p className="t-caption text-ink-3">
-                {row.liveCount} of {row.ruleCount} live
-              </p>
-            </div>
+            <span className={cn('min-w-0 truncate', paused ? 'text-ink-3' : 'text-ink')}>{row.label}</span>
 
             {cell(row, row.digest, 'Digest', (on) =>
               run(
@@ -90,7 +85,7 @@ export function ChannelGrid({ rows, paused }: { rows: ModuleRow[]; paused: boole
               ),
             )}
 
-            <p className="t-caption min-w-0 text-ink-3">{row.triggers}</p>
+            <p className="min-w-0 text-[11px] text-ink-3">{row.triggers}</p>
           </div>
         ))}
       </div>

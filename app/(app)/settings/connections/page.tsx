@@ -130,6 +130,8 @@ export default async function ConnectionsPage({ searchParams }: PageProps<'/sett
   )
   const unbacked = requested.filter((r) => !manifests.some((m) => m.id === r.integration_id))
   const origin = await getOrigin()
+  // Read once here, outside render, so the card's arithmetic is pure.
+  const now = new Date()
 
   // Only used to decide whether a webhook secret exists, never rendered raw
   // except for the webhook secret the owner has to paste into the sender.
@@ -156,6 +158,7 @@ export default async function ConnectionsPage({ searchParams }: PageProps<'/sett
             secret={webhookSecrets[manifest.id] ?? null}
             origin={origin}
             timezone={String(timezone)}
+            now={now}
           />
         ))}
       </div>
@@ -190,6 +193,7 @@ function ProviderCard({
   secret,
   origin,
   timezone,
+  now,
 }: {
   manifest: IntegrationManifest
   /** null when nothing has ever been saved. */
@@ -197,13 +201,14 @@ function ProviderCard({
   secret: string | null
   origin: string
   timezone: string
+  now: Date
 }) {
   const feeds = usedBy(manifest.id)
   const connected = Boolean(status?.connected)
   const rejected = status?.status === 'error'
   const since = status?.createdAt ? new Date(status.createdAt) : null
   const expires = status?.expiresAt ? new Date(status.expiresAt) : null
-  const hoursLeft = expires ? Math.round((expires.getTime() - Date.now()) / 3_600_000) : null
+  const hoursLeft = expires ? Math.round((expires.getTime() - now.getTime()) / 3_600_000) : null
 
   return (
     <div className="flex flex-col border border-rule bg-bg-elev px-5 py-[18px] transition-colors duration-150 hover:border-rule-2">

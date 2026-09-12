@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ActionButton, Eyebrow, Overlay } from '@/components/pos'
+import { ActionButton, Overlay } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { logVisit, recordUrl, setAppointmentStatus, type ActionResult } from './actions'
 import {

@@ -308,16 +308,16 @@ test('skill tree, the constellation hovers, selects, pans and zooms', async ({ p
 
 test('settings, skills', async ({ page }) => {
   await page.goto('/settings/skills')
-  await expect(page.getByRole('heading', { name: 'Skills' })).toBeVisible()
-  await expect(page.getByRole('switch', { name: 'Show deleted skills' })).toBeVisible()
-  await expect(page.getByText('Hiding deleted')).toBeVisible()
+  // One title on every tab; the tab is the crumb and carries its count.
+  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
+  await expect(page.getByRole('link', { name: /^Skills \d+$/ })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByText('Engineering · Coding')).toBeVisible()
   await shoot(page, 'settings-skills')
 
-  // Renaming, then deleting, then restoring: the three writes the tab exists
-  // for, each through the module's own tool.
-  await page.getByRole('button', { name: 'Rename TypeScript' }).click()
-  await page.getByRole('textbox').first().fill('TS')
-  await page.getByRole('textbox').first().press('Enter')
+  // Renaming, then resetting: the writes the tab exists for, each through the
+  // module's own tool. The name is the artboard's transparent input.
+  await page.getByRole('textbox', { name: 'Rename TypeScript' }).fill('TS')
+  await page.getByRole('textbox', { name: 'Rename TypeScript' }).press('Enter')
   await expect(page.getByText('was TypeScript')).toBeVisible()
 
   // Reset drops every override, so the tab returns to the committed yaml. Two
@@ -377,12 +377,28 @@ test('command palette opens on cmd k and finds an entity', async ({ page }) => {
 test('settings', async ({ page }) => {
   await page.goto('/settings')
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
+  const mobile = (page.viewportSize()?.width ?? 0) < 720
+  if (!mobile) await expect(page.getByText(/\d+ of \d+ connected/)).toBeVisible()
+
+  // The cap is the artboard's slider; the nightly strip reads the cron on the
+  // owner's clock and counts the jobs the app holds, not backups it does not.
+  await expect(page.getByRole('slider', { name: 'Cap per month' })).toBeVisible()
+  await expect(page.getByText(/0 9 \* \* \* UTC · \d\d:\d\d \w+/)).toBeVisible()
+  await expect(page.getByText('Jobs registered')).toBeVisible()
   await shoot(page, 'settings')
 })
 
 test('settings, connections', async ({ page }) => {
   await page.goto('/settings/connections')
-  await expect(page.getByRole('heading', { name: /connections/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
+  await expect(page.getByRole('link', { name: /^Connections \d+$/ })).toHaveAttribute('aria-current', 'page')
+
+  // One card per provider with its auth kind and a status mark; a connected
+  // one carries the last test and when it was connected.
+  await expect(page.getByText('CONNECTED', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Last test').first()).toBeVisible()
+  await expect(page.getByText(/^(Connected since|Token expires)$/).first()).toBeVisible()
+  await expect(page.getByText('NOT CONNECTED').first()).toBeVisible()
   await shoot(page, 'connections')
 })
 
@@ -550,18 +566,19 @@ test('review, inbox clear', async ({ page }) => {
 
 test('settings, agents and mcp', async ({ page }) => {
   await page.goto('/settings/agents')
-  await expect(page.getByRole('heading', { name: /agents and mcp/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
 
-  // The command is the whole point of the screen: it is what you paste.
+  // The command is the whole point of the screen: it is what you paste, with
+  // the token masked inline until asked for.
   await expect(page.getByText(/claude mcp add --transport http pos/)).toBeVisible()
+  await expect(page.getByText(/Bearer ••••••••/)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Reveal token' })).toBeVisible()
+  await expect(page.getByText(/LIVE · \d+ TOOLS/)).toBeVisible()
 
-  // The token is masked until asked for, so it is not sitting in the HTML of a
-  // screen left open.
-  await expect(page.getByText('••••••••••••••••')).toBeVisible()
-
-  // Every tool the endpoint actually serves is listed, read and write marked.
-  await expect(page.getByText('notes.get_digest')).toBeVisible()
-  await expect(page.getByText('core.search')).toBeVisible()
+  // Reads collapse to one open row; every write is listed with its mode.
+  await expect(page.getByText('*.get_digest · *.query · core.search')).toBeVisible()
+  await expect(page.getByText('GUARDED').first()).toBeVisible()
+  await expect(page.getByText('finance.write')).toBeVisible()
 
   await shoot(page, 'settings-agents')
 })
@@ -686,11 +703,15 @@ test('agent log, undo reverts a write and offers a redo', async ({ page }) => {
 
 test('settings, notifications', async ({ page }) => {
   await page.goto('/settings/notifications')
-  await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
 
-  // The coarse grid: one row per module, three rollup switches each.
+  // The channel strip and the coarse grid: one row per module, three rollup
+  // switches each, and what triggers them.
+  await expect(page.getByRole('switch', { name: 'Email digest' })).toBeVisible()
   await expect(page.getByRole('switch', { name: 'Digest for Finance' })).toBeVisible()
   await expect(page.getByRole('switch', { name: 'In-app for System' })).toBeVisible()
+  await expect(page.getByText('WHAT TRIGGERS IT')).toBeVisible()
+  await expect(page.getByText('No push between')).toBeVisible()
   await expect(page.getByRole('button', { name: /breaks through/i })).toBeVisible()
 
   await shoot(page, 'settings-notifications')
