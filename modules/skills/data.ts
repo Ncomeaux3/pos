@@ -59,10 +59,28 @@ export type SkillTreeData = {
 
 const DAY = 24 * 60 * 60 * 1000
 
+/**
+ * What the owner is aiming at, by skill: the sum of weight * confidence over
+ * the skill links of goals. Through core.entities rather than the goals
+ * schema: this module reads no other module's tables, and a fork with no
+ * Goals gets zero weights rather than a missing relation. Read by the page
+ * and by the nightly digest.
+ */
+export async function goalWeightBySkill(): Promise<Map<string, number>> {
+  const { rows } = await db().query<{ skill_id: string; weight: string }>(
+    `select sl.skill_id, sum(sl.weight * sl.confidence)::text as weight
+       from core.skill_links sl
+       join core.entities en on en.id = sl.entity_ref
+      where en.module = 'goals'
+      group by sl.skill_id`,
+  )
+  return new Map(rows.map((r) => [r.skill_id, Number(r.weight)]))
+}
+
 export async function loadSkillTree(): Promise<SkillTreeData> {
   const nodes = await loadTree()
 
-  const [{ rows: xpRows }, { rows: eventRows }, { rows: goalRows }] = await Promise.all([
+  const [{ rows: xpRows }, { rows: eventRows }, ownWeight] = await Promise.all([
     db().query<{ skill_id: string; xp: string; last_event_at: string | null }>(
       `select skill_id, xp::text, last_event_at::text from skills.xp`,
     ),
@@ -91,19 +109,9 @@ export async function loadSkillTree(): Promise<SkillTreeData> {
        where e.occurred_at >= now() - interval '90 days'
        order by e.occurred_at desc`,
     ),
-    // What the owner is aiming at, by skill. Through core.entities rather than
-    // the goals schema: this module reads no other module's tables, and a fork
-    // with no Goals gets zero weights rather than a missing relation.
-    db().query<{ skill_id: string; weight: string }>(
-      `select sl.skill_id, sum(sl.weight * sl.confidence)::text as weight
-         from core.skill_links sl
-         join core.entities en on en.id = sl.entity_ref
-        where en.module = 'goals'
-        group by sl.skill_id`,
-    ),
+    goalWeightBySkill(),
   ])
 
-  const ownWeight = new Map(goalRows.map((r) => [r.skill_id, Number(r.weight)]))
   const ownXp = new Map(xpRows.map((r) => [r.skill_id, Number(r.xp)]))
   const lastEvent = new Map(xpRows.map((r) => [r.skill_id, r.last_event_at]))
 

@@ -1,4 +1,6 @@
 import { db } from '@/core/db'
+import { goalWeightBySkill } from '../data'
+import { underGoalPressure, type Pressured } from '../pressure'
 import { loadTree } from '../tree'
 import { level } from '../xp'
 
@@ -15,11 +17,11 @@ export type SkillsDigest = {
   /** Linked at some point, nothing in 60 days; idleDays as of the run. */
   stagnant: { skillId: string; name: string; lastEventAt: string | null; idleDays: number }[]
   /**
-   * SPEC also asks for skills with high goal weight and low activity. Goals
-   * does not exist yet and nothing else supplies a goal weight, so this stays
-   * empty rather than carrying a number nobody computed.
+   * SPEC's third bullet: skills a goal points at that gained nothing in 30
+   * days, heaviest goal weight first. The rule is modules/skills/pressure.ts,
+   * shared with the page's column of the same name.
    */
-  underGoalPressure: never[]
+  underGoalPressure: Pressured[]
 }
 
 type Row = {
@@ -38,7 +40,7 @@ const DAY = 24 * 60 * 60 * 1000
  * the skills schema.
  */
 export async function nightlyDigest(): Promise<SkillsDigest> {
-  const nodes = await loadTree()
+  const [nodes, goalWeight] = await Promise.all([loadTree(), goalWeightBySkill()])
   const nameOf = (id: string) => nodes.find((n) => n.id === id)?.name ?? id
 
   const { rows } = await db().query<Row>(
@@ -104,6 +106,16 @@ export async function nightlyDigest(): Promise<SkillsDigest> {
         lastEventAt: r.last_event_at,
         idleDays: Math.round((Date.now() - Date.parse(r.last_event_at!)) / DAY),
       })),
-    underGoalPressure: [],
+    // From the goal weights, not from rows: a linked skill with no event at
+    // all is missing from rows, and it is the one most under pressure.
+    underGoalPressure: underGoalPressure(
+      [...goalWeight].map(([skillId, weight]) => ({
+        skillId,
+        name: nameOf(skillId),
+        goalWeight: weight,
+        gained30d: Number(rows.find((r) => r.skill_id === skillId)?.gained_30d ?? 0),
+      })),
+      5,
+    ),
   }
 }

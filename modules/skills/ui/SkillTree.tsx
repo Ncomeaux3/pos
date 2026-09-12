@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation'
 import { useCallback, useMemo, useState, useTransition } from 'react'
 import { BandSearch, Chip, EmptyState, Radar, SearchButton } from '@/components/pos'
 import type { SkillEvent, SkillTreeData } from '../data'
+import { underGoalPressure } from '../pressure'
 import { reassignEvent } from './actions'
 import { Constellation, toneFor } from './Constellation'
 import { WeeklyBars } from './WeeklyBars'
@@ -105,14 +106,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
   )
 
   /** Goals point here, and nothing has happened. Weight first, then quiet. */
-  const aimed = useMemo(
-    () =>
-      leaves
-        .filter((s) => s.goalWeight > 0 && s.gained30d <= 0)
-        .sort((a, b) => b.goalWeight - a.goalWeight)
-        .slice(0, 4),
-    [leaves],
-  )
+  const aimed = useMemo(() => underGoalPressure(leaves, 4), [leaves])
 
   const stat = selected ? statById.get(selected) : undefined
   const children = data.stats.filter((s) => s.parent === selected)
