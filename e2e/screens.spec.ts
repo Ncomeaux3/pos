@@ -609,11 +609,18 @@ test('settings, notifications', async ({ page }) => {
 
 test('tasks, the board and the quick add parser', async ({ page }) => {
   await page.goto('/tasks')
-  await expect(page.getByRole('heading', { name: 'Tasks' })).toBeVisible()
+  // No title block: the band carries the crumb with the view, and the count.
+  await expect(page.getByText('Tasks / Today')).toBeVisible()
+  await expect(page.getByText(/\d+ open · \d+ done today/)).toBeVisible()
 
   // Today holds what is due today and what slipped, because a slip is today.
+  await expect(page.getByText(/^Today · \w{3} \w{3} \d+$/)).toBeVisible()
   await expect(page.getByText('Recurring detection tests')).toBeVisible()
   await expect(page.getByText('Read DDIA ch. 5, Replication')).toBeVisible()
+
+  // The tabs in the artboard's order, Calendar before Review.
+  const tabs = page.getByRole('tab')
+  await expect(tabs).toHaveText([/Today/, /This week/, /By goal/, /By project/, /Calendar/, /Review/, /Done/])
 
   // The parser says what it understood before anything is saved.
   const line = page.getByLabel('Add a task')
@@ -627,8 +634,35 @@ test('tasks, the board and the quick add parser', async ({ page }) => {
   await expect(chips.getByText('P1')).toBeVisible()
   await expect(chips.getByText('Home')).toBeVisible()
   await expect(chips.getByText('15m')).toBeVisible()
+  await line.fill('')
 
   await shoot(page, 'tasks')
+})
+
+test('tasks, a row expands in place and EDIT opens the form drawer', async ({ page }) => {
+  await page.goto('/tasks')
+
+  // One click opens the band under the row: notes, goal, skills, source.
+  await page.getByRole('button', { name: /^Recurring detection tests/ }).click()
+  const row = page.locator('article').filter({ hasText: 'Recurring detection tests' })
+  await expect(row.getByText('Source:')).toBeVisible()
+  await expect(row.getByText('Skills:')).toBeVisible()
+  await expect(row.getByText('Same merchant, amount within 10 percent')).toBeVisible()
+  await shoot(page, 'tasks-expanded')
+
+  // EDIT opens the drawer, whose state is the URL so the shot survives.
+  await page.getByRole('button', { name: 'Edit Recurring detection tests' }).click()
+  await expect(page).toHaveURL(/task=/)
+  const drawer = page.getByRole('dialog')
+  await expect(drawer.getByText('Tasks / Edit')).toBeVisible()
+  await expect(drawer.getByText('Linked skills')).toBeVisible()
+  await shoot(page, 'tasks-drawer')
+
+  // Edits hold until Save, then land as one write.
+  await drawer.getByLabel('Estimate · min').fill('95')
+  await drawer.getByRole('button', { name: /^Save/ }).click()
+  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(page.locator('article').filter({ hasText: 'Recurring detection tests' }).getByText('95m')).toBeVisible()
 })
 
 test('tasks, the six views and the month grid', async ({ page }) => {
@@ -638,6 +672,7 @@ test('tasks, the six views and the month grid', async ({ page }) => {
   // until it is accepted.
   await page.getByRole('tab', { name: /Review/ }).click()
   await expect(page.getByText('Test the bank sync against three months of history')).toBeVisible()
+  await expect(page.getByText('AGENT · REVIEW').first()).toBeVisible()
   // The view is in the URL, which is what lets it survive the reload shoot()
   // does to switch themes. Without it the shot would show Today and the test
   // would still pass.
@@ -656,6 +691,7 @@ test('tasks, the six views and the month grid', async ({ page }) => {
   // button beside them.
   await page.getByRole('tab', { name: 'Calendar' }).click()
   await expect(page.getByRole('button', { name: 'Previous month' })).toBeVisible()
+  await expect(page.getByText(/\d+ open · \d+ with reminders/)).toBeVisible()
   await expect(page).toHaveURL(/month=1/)
   await shoot(page, 'tasks-calendar')
   await expect(page.getByRole('button', { name: 'Previous month' })).toBeVisible()
@@ -669,6 +705,27 @@ test('tasks, completing one emits the event that earns XP', async ({ page }) => 
 
   await page.getByRole('tab', { name: /Done/ }).click()
   await expect(page.getByText('Read DDIA ch. 5, Replication')).toBeVisible()
+})
+
+test('tasks, Delete asks and then removes the row', async ({ page }) => {
+  await page.goto('/tasks')
+
+  // Its own row, added on the line and removed from the band, so no other
+  // test loses the one it was written against.
+  const line = page.getByLabel('Add a task')
+  await line.fill('Throw away this row @today')
+  await line.press('Enter')
+  await expect(page.getByText('Added. Throw away this row')).toBeVisible()
+
+  await page.getByRole('button', { name: /^Throw away this row/ }).click()
+  page.once('dialog', (d) => d.accept())
+  await page
+    .locator('article')
+    .filter({ hasText: 'Throw away this row' })
+    .getByRole('button', { name: 'Delete' })
+    .click()
+  await expect(page.getByText('Deleted')).toBeVisible()
+  await expect(page.locator('article').filter({ hasText: 'Throw away this row' })).toHaveCount(0)
 })
 
 test('goals, progress by area with the rule behind each status', async ({ page }) => {

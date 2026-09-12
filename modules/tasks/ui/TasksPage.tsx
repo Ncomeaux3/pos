@@ -1,8 +1,17 @@
-import { PageHeader } from '@/components/pos'
+import { Eyebrow, PageHeader } from '@/components/pos'
 import { ownerToday } from '@/core/today'
-import { listGoals, listProjects, listTasks, type TaskRow } from '../data'
-import { bucket, type Task } from '../shape'
-import { Board } from './Board'
+import { getSkillNames } from '@/core/modules'
+import {
+  listGoals,
+  listProjects,
+  listSkillLinks,
+  listTasks,
+  reminderChannels,
+  type SkillLinkRow,
+  type TaskRow,
+} from '../data'
+import type { Task } from '../shape'
+import { Board, BoardCrumb } from './Board'
 
 /**
  * Days from today, at day granularity. Both sides are floored to local
@@ -15,7 +24,12 @@ function daysFrom(today: Date, iso: string): number {
   return Math.round((then.getTime() - from.getTime()) / 86_400_000)
 }
 
-function toTask(row: TaskRow, today: Date): Task {
+function toTask(
+  row: TaskRow,
+  today: Date,
+  links: SkillLinkRow[],
+  names: Record<string, string>,
+): Task {
   return {
     id: row.id,
     title: row.title,
@@ -32,18 +46,25 @@ function toTask(row: TaskRow, today: Date): Task {
     estimateMinutes: row.estimated_minutes,
     remindMinutes: row.remind_minutes,
     source: row.source,
-    doneDaysAgo:
-      row.completed_at === null
-        ? null
-        : -daysFrom(today, new Date(row.completed_at).toISOString().slice(0, 10)),
+    skills: links
+      .filter((l) => l.task_id === row.id)
+      .map((l) => ({
+        name: names[l.skill_id] ?? l.skill_id,
+        confidence: Number(l.confidence),
+        by: l.is_manual ? 'manual' : l.classified_by === 'rule' ? 'rule' : 'model',
+      })),
+    doneDaysAgo: row.done_days_ago === null ? null : Number(row.done_days_ago),
   }
 }
 
 export default async function TasksPage() {
-  const [rows, projects, goals, todayIso] = await Promise.all([
+  const [rows, projects, goals, links, names, channels, todayIso] = await Promise.all([
     listTasks(),
     listProjects(),
     listGoals(),
+    listSkillLinks(),
+    getSkillNames(),
+    reminderChannels(),
     // The owner's day, from the database, not this server's. Between 19:00 in
     // Chicago and midnight in UTC the two are different dates, and a board that
     // disagreed with its own queries put today's work in tomorrow's column.
@@ -52,25 +73,23 @@ export default async function TasksPage() {
 
   const [y, m, d] = todayIso.split('-').map(Number)
   const today = new Date(y, m - 1, d)
-  const tasks = rows.map((r) => toTask(r, today))
+  const tasks = rows.map((r) => toTask(r, today, links, names))
 
-  const open = tasks.filter((t) => t.status === 'open')
-  const overdue = open.filter((t) => bucket(t.dueInDays) === 'overdue').length
-  const dueToday = open.filter((t) => bucket(t.dueInDays) === 'today').length
-  const waiting = tasks.filter((t) => t.status === 'review').length
+  const open = tasks.filter((t) => t.status === 'open').length
+  const doneToday = tasks.filter((t) => t.status === 'done' && t.doneDaysAgo === 0).length
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-[18px]">
+      {/* The artboard has no title block: the band, then the line you type a
+        * task on. The eyebrow's view label is the board's, so it lives there. */}
       <PageHeader
-        eyebrow={`Tasks / ${open.length} open / ${waiting} waiting on you`}
-        dot={overdue > 0 ? 'bad' : dueToday > 0 ? 'brand' : 'ok'}
+        eyebrow={<BoardCrumb />}
         title="Tasks"
-        lede="Six views over one list. Drag a card between columns to change what it belongs to, and type a whole task on one line: the parser shows you what it understood before anything is saved."
-        actions={
-          <span className="num text-[11px] text-ink-3">
-            {overdue > 0 ? `${overdue} overdue · ` : ''}
-            {dueToday} due today
-          </span>
+        hideTitle
+        status={
+          <Eyebrow dot="brand" className="whitespace-nowrap">
+            {open} open · {doneToday} done today
+          </Eyebrow>
         }
       />
 
@@ -78,6 +97,7 @@ export default async function TasksPage() {
         tasks={tasks}
         projects={projects.map((p) => ({ id: p.id, name: p.name }))}
         goals={goals}
+        reminderChannels={channels}
         // Passed in rather than read in the browser, so the server and the
         // client agree about what day it is and the first paint does not
         // flicker onto a different one.

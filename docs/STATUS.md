@@ -3,8 +3,8 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
-Last updated: 2026-09-11, the Weekly Review, Dashboard, Finance, Skill Tree and
-Travel fidelity passes and the rail to PosSidebar. Branch `main`.
+Last updated: 2026-09-11, the Weekly Review, Dashboard, Finance, Skill Tree,
+Travel and Tasks fidelity passes and the rail to PosSidebar. Branch `main`.
 
 ## Done
 
@@ -24,6 +24,23 @@ bundle landed 2026-09-07 and steps 0, 7.5 and 8 to 14 followed.
 | 13 | `pnpm setup` and `pnpm setup:demo`, both idempotent |
 | 14 | CI and backup workflows, restore drilled |
 | 16 | Docs squared up: README quickstart, connections registry, the notes module README |
+
+**The fidelity pass, screen six: Tasks.** docs/plans/tasks-fidelity.md.
+The artboard's page with no title block: the band carries "Tasks / {view}"
+and "{open} open · {done today} done today"; the quick add row as drawn
+(New task opens the form drawer, the parsed chips in the token's colour,
+ADD ↵); the DS tab row (now the shared `TabBar` style: 1px underline, 13px,
+touching tabs) with Calendar before Review; columns on `--bg-elev` with the
+eyebrow head and "{n} · {h}h"; rows with the 16px box (dashed amber for an
+agent row), OVERDUE and AGENT · REVIEW marks, the ⏰ reminder chip, the EDIT
+mini; a row expands in place with notes, Goal, Skills (read only from
+`core.skill_links`, named through the new `skillNames` contract seam the
+Skills module fills), Source, Edit, Approve, the → moves and Delete. The
+drawer at 480px is the artboard's form and holds edits until Save; New task
+is the same form with Create. New guarded tool `delete`. The Done column now
+counts on the owner's calendar (it was UTC, so an evening completion was
+yesterday's). Not drawn for want of a source: the XP toast, the goal
+suggested from the project, the add-a-skill select and learned rules.
 
 **The fidelity pass, screen five: Travel.** docs/plans/travel-fidelity.md.
 The artboard's page: band with the summary, the loyalty strip with Manage
