@@ -3,10 +3,11 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
-Last updated: 2026-09-11, the Weekly Review, Dashboard, Finance, Skill Tree,
-Travel, Tasks and Goals fidelity passes and the rail to PosSidebar. Branch
-`main`. Insurance, Meals and Second Brain are in flight in another session
-(`.worktrees/insurance`, `meals`, `brain`, branched from `6f5dd33`).
+Last updated: 2026-09-11, ten fidelity passes (Weekly Review, Dashboard,
+Finance, Skill Tree, Travel, Tasks, Goals, then Second Brain, Insurance and
+Meals as the first parallel batch) and the rail to PosSidebar. Branch `main`.
+Seventeen screens remain: Fitness, Health, Home, Ideas, Review, Notifications,
+Agent Log, Settings, Search, Login, Onboarding, Mobile and the phone views.
 
 ## Done
 
@@ -26,6 +27,67 @@ bundle landed 2026-09-07 and steps 0, 7.5 and 8 to 14 followed.
 | 13 | `pnpm setup` and `pnpm setup:demo`, both idempotent |
 | 14 | CI and backup workflows, restore drilled |
 | 16 | Docs squared up: README quickstart, connections registry, the notes module README |
+
+**The fidelity pass, screens eight to ten in parallel: Second Brain,
+Insurance, Meals.** Plan: `~/.claude/plans/great-rigth-now-tasks-partitioned-pike.md`
+(the batch method), then docs/plans/brain-fidelity.md, insurance-fidelity.md,
+meals-fidelity.md. Three agents, one per screen, in `.worktrees/<screen>` on
+`fidelity/<screen>` branched from `6f5dd33` with their own dev ports (3011 to
+3013) and one shared local database. Two phases: each agent captured and
+measured its artboard and returned a "Decisions with Nick" list; Nick answered
+all three at once; then each built to its plan with the same proof loop as the
+serial passes (failing e2e asserts, build, side-by-side pairs, typecheck, lint,
+unit, its own screen's e2e under a `mkdir` lock). Agents could edit only their
+module folder, their plan and their own test block; shared pieces were the
+integrator's, done once after the merge. What the batch cost: no merge
+conflicts (the test blocks are disjoint), one security finding (the new
+`attach_document` tool took any bucket path; fixed in the branch with a test),
+one agent killing every dev server by name (killed by port from then on), one
+seed leaving rows another tree's reseed tripped on (fixed in the module seed).
+Sixteen commits over three branches plus two integrator commits. The merge
+cost is what the plan assumed, so the next batches run the same way, three at
+a time.
+
+**Second Brain** (docs/plans/brain-fidelity.md): the band with the folder
+crumb, "{n} notes" and "Ingest →"; filled folder chips with Inbox and Reading
+list; two panes, the list (title, days ago, source host and word count, KIND,
+DRAFT, FINISHED · date) and the note. A draft: Discard, Edit, "Accept →", the
+Source and Draft summary cards with skill chips and how they were classified.
+A note: its path, body as paragraphs, lists and clickable wikilinks, Linked
+skills, Backlinks, a Vault cell (path, sha and pull time for a pulled note,
+"Not in the vault. Nothing here writes to it." otherwise) and Links to write.
+Ingest is a 480px drawer with URL, YouTube, Book and Note. New guarded
+`delete`; `ingest` takes a `kind`; `publish` emits `note_approved` plus
+`book_finished` or `article_read`, because adding a book or article means it
+was read (Nick): no finished column, no button. Not built: in-list semantic
+search, PDF, depth and prices, any copy claiming a commit to the vault.
+
+**Insurance** (docs/plans/insurance-fidelity.md): the "Insurance / Policies"
+band with "{n} policies · {m} expiring soon", four tiles, the five column
+table with masked numbers and the expiry-coloured pill; the policy drawer
+with three cells, an inferred payment schedule that never says "Paid", a
+reminder track from the leads, documents with "+ Attach PDF" (new
+`attach_document`, path locked to the policy's own prefix, signed URLs), the
+agent card, Edit, "Mark renewed · {date}" and a new guarded `delete_policy`;
+the edit form holds until Save and reads the reminder channels from the
+`policy_renewal` rule; the upload drawer says what happens (one Haiku call,
+not local extraction). `post_to_finance` stays a recorded intent and the
+screen says so. Both adequacy disclaimers went; the module still judges
+nothing. `write_policy` no longer nulls fields it was not sent.
+
+**Meals** (docs/plans/meals-fidelity.md): the band summary ("19 / 28 planned ·
+100g protein avg"), Grocery list and "Suggest week →", Week and Recipes tabs
+with the week stepper, a Today strip (slot toggles, a label-only "Ate
+something else?" log, macros against the one target the app has), the Monday
+to Sunday grid with cost and time on every cell and a totals row, four week
+cells, recipe cards with drafts first, and three drawers: Pick, Grocery
+(grouped by recipe, quantities as written) and Recipe. New tools:
+`import_recipe` (schema.org JSON-LD, filed as a draft, no model, no fallback;
+the page is fetched through `core/fetching.ts`, moved there from Second Brain
+for this) and `fill_week` (deterministic, favourites first). Not drawn for
+want of a source: protein, carbs and fat targets, XP amounts, the Nutrition
+and Groceries budget links, pantry staples, drag and drop. Cook mode stays
+behind "Cook" in the drawer.
 
 **The fidelity pass, screen seven: Goals.** docs/plans/goals-fidelity.md.
 The band's "{active} active · {n} at risk · {n} stalled" with the worst
