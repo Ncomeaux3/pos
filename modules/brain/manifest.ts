@@ -1,8 +1,9 @@
 import { z } from 'zod'
 import { db } from '@/core/db'
 import { register } from '@/core/entities'
+import { emit } from '@/core/events'
 import { defineModule, defineTool } from '@/core/module-contract'
-import { resolveDanglingLinks, syncLinks, uniqueSlug } from './data'
+import { deleteNote, resolveDanglingLinks, syncLinks, uniqueSlug } from './data'
 import { nightlyDigest, resolveLinks } from './jobs/nightly-digest'
 import { pullVault } from './jobs/pull-vault'
 import { ingestUrl } from './ingest'
@@ -26,8 +27,8 @@ export default defineModule({
     ingest: defineTool({
       description:
         'Read a URL or a YouTube video and draft a note from it. Spends money: one Haiku call per ingest.',
-      input: z.object({ url: z.string().min(4).max(2000) }),
-      run: async ({ url }) => {
+      input: z.object({ url: z.string().min(4).max(2000), kind: kind.optional() }),
+      run: async ({ url, kind: folder }) => {
         const found = await ingestUrl(url)
         const slug = await uniqueSlug(found.title)
 
@@ -43,7 +44,7 @@ export default defineModule({
             found.title,
             found.summary,
             slug,
-            found.kind,
+            folder ?? found.kind,
             found.sourceUrl,
             found.sourceText,
             found.note.slice(0, 300),
@@ -154,24 +155,38 @@ export default defineModule({
         if (rows.length === 0) throw new Error(`No note ${id}`)
 
         if (publish) {
-          await register({
+          const entityRef = await register({
             module: 'brain',
             entityType: 'note',
             entityId: id,
             title: rows[0].title,
-            // Finishing a book is the medium weight SPEC names, and it is worth
-            // more than approving any other draft.
-            eventType: rows[0].kind === 'book' ? 'book_finished' : 'note_approved',
+            eventType: 'note_approved',
           })
+          // Adding a book or an article here means it was read (decision
+          // 2026-09-11): accepting one is finishing it, which is the skill
+          // event SPEC names. Emitted directly so the classifier runs once.
+          const finished = { book: 'book_finished', article: 'article_read' }[rows[0].kind]
+          if (finished) {
+            await emit({ module: 'brain', entityRef, eventType: finished, titleSnapshot: rows[0].title })
+          }
         }
 
         return { id, status: publish ? 'published' : 'draft' }
       },
     }),
+
+    delete: defineTool({
+      description: 'Discard a draft, or remove a note the app holds. Never touches the vault.',
+      input: z.object({ id: z.uuid() }),
+      run: async ({ id }) => {
+        await deleteNote(id)
+        return { id }
+      },
+    }),
   },
 
   /**
-   * Ingest is guarded. Nothing else in this module is.
+   * Ingest and delete are guarded. Nothing else in this module is.
    *
    * The original reasoning still holds for every other tool: the draft state
    * already is the review step, so an agent cannot publish anything. `write`
@@ -185,7 +200,7 @@ export default defineModule({
    * be inside the monthly cap and still wrong. The owner pasting a URL is the
    * approval; an agent asking lands in the Review inbox.
    */
-  guarded: ['ingest'],
+  guarded: ['ingest', 'delete'],
 
   requires: ['github_vault'],
 

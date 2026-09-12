@@ -122,8 +122,8 @@ describe('ingestUrl', () => {
 describe('the ingest tool', () => {
   const run = (url: string) => manifest.tools.ingest.run({ url }, { source: 'ui' })
 
-  it('is guarded, because it is the one thing here that spends money', () => {
-    expect(manifest.guarded).toEqual(['ingest'])
+  it('is guarded, because it spends money; delete is, because it removes', () => {
+    expect(manifest.guarded).toEqual(['ingest', 'delete'])
   })
 
   // Every other write tool publishes for the owner and drafts for an agent.

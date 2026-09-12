@@ -1091,65 +1091,114 @@ test('onboarding, requesting a provider records it without pretending', async ({
 
 test('second brain, the inbox holds a draft beside its source', async ({ page }) => {
   await page.goto('/brain')
-  await expect(page.getByRole('heading', { name: 'Second Brain' })).toBeVisible()
 
-  // A draft is a proposal about a note, not a note. It waits here.
-  await expect(page.getByText('Why solo builders ship one module at a time')).toBeVisible()
-  await page.getByText('Why solo builders ship one module at a time').click()
+  // POS Second Brain.dc.html: the band alone (the h1 is for the reader), the
+  // folder row of chips in the artboard's order, no tab row.
+  await expect(page.getByRole('heading', { name: 'Second Brain', level: 1 })).toHaveClass(/sr-only/)
+  await expect(page.getByRole('tablist')).toHaveCount(0)
+  await expect(page.getByText(/^Second Brain\s*\/\s*Inbox$/)).toBeVisible()
+  // The count sits in the band from md up; the phone band has no room for it.
+  if ((page.viewportSize()?.width ?? 0) >= 720) {
+    await expect(page.getByText(/^\d+ notes$/)).toBeVisible()
+  }
+  await expect(page.getByRole('button', { name: /^Ingest/ })).toBeVisible()
+  const folders = page.getByTestId('brain-folders').getByRole('button')
+  await expect(folders).toHaveText(
+    [/^Inbox/, /^Reading list/, /^articles/, /^books/, /^videos/, /^notes/, /^projects/, /^people/, /^daily/],
+  )
+  await expect(page.getByText('Inbox · drafts')).toBeVisible()
+  await expect(page.getByText(/^\d+ awaiting$/)).toBeVisible()
 
-  // The source sits beside the summary, not behind it: a draft is judged
-  // against what it was drawn from rather than taken on trust.
+  // The first row is open without a click, as the artboard has it. A draft is
+  // a proposal about a note, not a note, and it waits here beside the text it
+  // was drawn from rather than being taken on trust.
+  await expect(page.getByText('Draft · awaiting your approval')).toBeVisible()
+  await page.getByRole('button', { name: /Why solo builders ship one module at a time/ }).click()
   await expect(page.getByText(/The itch to start module two/)).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Accept' })).toBeVisible()
+  await expect(page.getByText('Source', { exact: true })).toBeVisible()
+  await expect(page.getByText('Draft summary')).toBeVisible()
+  for (const name of ['Discard', 'Edit', /^Accept/]) {
+    await expect(page.getByRole('button', { name })).toBeVisible()
+  }
 
   await shoot(page, 'second-brain')
 })
 
 // SPEC section 6's ingestion. The fetch itself needs the network, so what is
-// checked here is the control being where a draft would arrive, and the
-// refusal that happens before any request goes out.
+// checked here is the drawer being where a draft would start, and the refusal
+// that happens before any request goes out.
 test('second brain, a URL can be read into a draft', async ({ page }) => {
   await page.goto('/brain')
+  await page.getByRole('button', { name: /^Ingest/ }).click()
 
-  const url = page.getByLabel('URL to read')
+  const drawer = page.getByRole('dialog')
+  await expect(drawer.getByText(/^Second Brain\s*\/\s*Ingest$/)).toBeVisible()
+  await expect(drawer.getByTestId('brain-ingest-kinds').getByRole('button')).toHaveText([
+    'URL',
+    'YouTube',
+    'Book',
+    'Note',
+  ])
+  const url = drawer.getByLabel('URL', { exact: true })
   await expect(url).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Read it' })).toBeDisabled()
+  await expect(drawer.getByRole('button', { name: /^Draft summary/ })).toBeDisabled()
 
   // A private address is refused before anything is fetched: this runs in a
   // server action, so the request would go out from inside the deployment.
   await url.fill('http://169.254.169.254/latest/meta-data/')
-  await page.getByRole('button', { name: 'Read it' }).click()
+  await drawer.getByRole('button', { name: /^Draft summary/ }).click()
   await expect(page.getByText(/private network/)).toBeVisible()
 
+  // The drawer lives in the URL, so it survives the two reloads of shoot().
+  await expect(page).toHaveURL(/ingest=1/)
   await shoot(page, 'second-brain-ingest')
 })
 
 test('second brain, links resolve both ways and a dangling one is kept', async ({ page }) => {
-  await page.goto('/brain?folder=note')
+  await page.goto('/brain?folder=note&note=reciprocal-rank-fusion')
 
-  // Two notes point at each other, so each is a backlink of the other.
-  await page.getByText('Reciprocal rank fusion').first().click()
-  await expect(page.getByText('Pointing here')).toBeVisible()
-  await expect(page.getByText('Hybrid search').first()).toBeVisible()
+  // The path eyebrow, and two notes that point at each other.
+  await expect(page.getByText(/^notes\s*\/\s*reciprocal-rank-fusion\.md$/)).toBeVisible()
+  await expect(page.getByText('Backlinks')).toBeVisible()
+  await expect(page.getByRole('button', { name: '[[Hybrid search]]' })).toBeVisible()
+  await expect(page.getByText('Links to write')).toHaveCount(0)
 
-  // And one link points at a note nobody has written. It is kept and offered,
-  // because that is usually the best idea of what to write next.
-  await expect(page.getByText('Links with nothing behind them')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'build order' })).toBeVisible()
+  // And one link points at a note nobody has written. It is kept and offered
+  // on that note, because it is usually the best idea of what to write next.
+  await page.goto('/brain?folder=article&note=the-boring-technology-club')
+  await expect(page.getByText('Links to write')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'build order', exact: true })).toBeVisible()
 
+  await page.goto('/brain?folder=note&note=reciprocal-rank-fusion')
   await shoot(page, 'second-brain-links')
 })
 
-test('second brain, accepting a draft moves it into the vault', async ({ page }) => {
-  await page.goto('/brain')
+test('second brain, the reading list is what was finished', async ({ page }) => {
+  await page.goto('/brain?folder=reading')
 
-  await page.getByText('Postgres full text search, briefly').click()
-  await page.getByRole('button', { name: 'Accept' }).click()
+  // Adding a book or an article here means it was read, so every accepted one
+  // carries the date it was accepted and there is no button to press.
+  await expect(page.getByText('Reading list', { exact: true }).nth(1)).toBeVisible()
+  await expect(page.getByText(/^\d+ finished$/)).toBeVisible()
+  const row = page.getByRole('button', { name: /Designing Data-Intensive Applications, ch\. 5/ })
+  await expect(row).toContainText(/FINISHED · \w{3} \d+/)
+  await expect(page.getByRole('button', { name: /Mark finished/ })).toHaveCount(0)
+
+  await shoot(page, 'second-brain-reading')
+})
+
+test('second brain, accepting a draft moves it into the vault', async ({ page }) => {
+  await page.goto('/brain?note=postgres-full-text-search-briefly')
+
+  await page.getByRole('button', { name: /^Accept/ }).click()
   await expect(page.getByText('Accepted')).toBeVisible()
 
-  // Out of the inbox and into its kind.
+  // Out of the inbox and into its kind, and finished by being there.
   await page.goto('/brain?folder=article')
-  await expect(page.getByText('Postgres full text search, briefly')).toBeVisible()
+  const row = page.getByRole('button', { name: /Postgres full text search, briefly/ })
+  await expect(row).toBeVisible()
+  await expect(row).toContainText(/FINISHED · \w{3} \d+/)
+  await expect(page.getByRole('button', { name: 'Send back to the inbox' })).toHaveCount(0)
 })
 
 test('travel, trips with confirmed spend only', async ({ page }) => {

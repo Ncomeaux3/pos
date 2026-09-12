@@ -14,9 +14,15 @@ called with `source: 'agent'` produces a draft whatever it asks for, and
 `publish` is reached from the inbox, so an agent cannot put anything in the
 vault by any path.
 
-That is also why nothing in this module is guarded. The draft state already is
-the guard, and guarding on top of it would put one decision behind two
-approvals.
+That is also why almost nothing in this module is guarded. The draft state
+already is the guard, and guarding on top of it would put one decision behind
+two approvals. The two exceptions are `ingest`, which spends money, and
+`delete`, which removes.
+
+Accepting a book or an article is finishing it (decision 2026-09-11): adding one
+here means it was read, so `publish` emits `book_finished` or `article_read`
+beside `note_approved`, and the Reading list shows the accepted date on each.
+There is no separate finished state.
 
 The source text is stored and shown **beside** the summary, not behind a
 disclosure. A draft is judged against what it was drawn from, not taken on
@@ -101,8 +107,8 @@ the page, a transcript out of a YouTube link, and a summary the model drafts
 from whichever it got. The source is stored beside the summary, as every draft's
 is, so it is judged against what it was drawn from.
 
-**It is the one guarded tool in this module.** Everything else here is
-unguarded because the draft state already is the review step. Ingest is
+**It is guarded, with `delete`.** Everything else here is unguarded because the
+draft state already is the review step. Ingest is
 different for the reason Ideas guards research: it spends money on every call,
 and the draft state does not guard against that. An agent that decided to read
 forty links one night would be inside the monthly cap and still wrong. The owner

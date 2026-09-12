@@ -14,6 +14,9 @@ export type NoteRow = {
   source_url: string
   source_text: string
   source_meta: string
+  source: string
+  external_id: string | null
+  vault_sha: string
   committed_sha: string
   updated_at: Date
 }
@@ -21,7 +24,7 @@ export type NoteRow = {
 export async function listNotes(filter?: { status?: string; kind?: string }): Promise<NoteRow[]> {
   const { rows } = await db().query<NoteRow>(
     `select id, title, body, slug, kind, status, source_url, source_text, source_meta,
-            committed_sha, updated_at
+            source, external_id, vault_sha, committed_sha, updated_at
        from brain.note
       where ($1::text is null or status = $1)
         and ($2::text is null or kind = $2)
@@ -124,4 +127,29 @@ export async function uniqueSlug(title: string, excludeId?: string): Promise<str
     if (!taken.has(`${base}-${n}`)) return `${base}-${n}`
   }
   return `${base}-${Date.now()}`
+}
+
+export type SkillLinkRow = {
+  note_id: string
+  skill_id: string
+  confidence: string
+  classified_by: string | null
+  is_manual: boolean
+}
+
+/** Every skill link on a note, for the chips under a draft and beside a note. */
+export async function listSkillLinks(): Promise<SkillLinkRow[]> {
+  const { rows } = await db().query<SkillLinkRow>(
+    `select en.entity_id as note_id, sl.skill_id, sl.confidence::text,
+            sl.classified_by, sl.is_manual
+       from core.skill_links sl
+       join core.entities en on en.id = sl.entity_ref
+      where en.module = 'brain' and en.entity_type = 'note'
+      order by sl.confidence desc, sl.skill_id`,
+  )
+  return rows
+}
+
+export async function deleteNote(id: string): Promise<void> {
+  await db().query(`delete from brain.note where id = $1`, [id])
 }

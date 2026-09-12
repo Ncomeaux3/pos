@@ -19,6 +19,8 @@ const NOTES: {
   sourceMeta?: string
   sourceUrl?: string
   sourceText?: string
+  /** A note pulled from the vault: its file path, and the blob sha it was read at. */
+  vault?: { path: string; sha: string }
 }[] = [
   {
     external_id: 'demo-rrf',
@@ -50,6 +52,33 @@ const NOTES: {
     sourceText: 'Transcript excerpt: so if you take the keyword result list and the vector result list, and for each document add one over sixty plus its rank in each, you get a fused score that is surprisingly hard to beat.',
   },
   {
+    // Pulled from the vault, so the Vault cell has a path and a sha to show
+    // and the Edit button has a note to stay away from.
+    external_id: 'demo-boring',
+    title: 'The boring technology club',
+    kind: 'article',
+    status: 'published',
+    body: [
+      'Every new technology costs innovation tokens. Spend them on the product, not',
+      'the stack.',
+      '',
+      'The POS stack is deliberately boring: Postgres, Next.js, one cron. The order it',
+      'is built in is [[Build order]].',
+    ].join('\n'),
+    vault: { path: 'Articles/The boring technology club.md', sha: 'a1f9c2e4b7d0' },
+  },
+  {
+    external_id: 'demo-mom-test',
+    title: 'The Mom Test',
+    kind: 'book',
+    status: 'published',
+    body: [
+      'Ask about their life, not your idea. Talk about specifics in the past, not',
+      'generics about the future.',
+    ].join('\n'),
+    sourceMeta: 'Book notes, by hand',
+  },
+  {
     external_id: 'demo-ddia',
     title: 'Designing Data-Intensive Applications, ch. 5',
     kind: 'book',
@@ -68,10 +97,10 @@ const NOTES: {
     title: 'Why solo builders ship one module at a time',
     kind: 'article',
     status: 'draft',
+    // A summary the way Haiku writes one: paragraphs, no hard wraps, so the
+    // draft card's pre-wrap shows it as it would arrive.
     body: [
-      'Scope creep is the default state of a side project. The fix is structure, not',
-      'discipline: pick one module, define done before starting, ship it to the point',
-      'of daily use, then start the next.',
+      'Scope creep is the default state of a side project. The fix is structure, not discipline: pick one module, define done before starting, ship it to the point of daily use, then start the next.',
       '',
       'Three rules worth keeping:',
       '1. Never have two modules at twenty percent.',
@@ -90,12 +119,7 @@ const NOTES: {
     title: 'Postgres full text search, briefly',
     kind: 'article',
     status: 'draft',
-    body: [
-      'tsvector plus a GIN index covers the exact match cases a vector misses:',
-      'identifiers, names, error strings. It costs nothing per query, which is the',
-      'argument for running it first and only paying for meaning when words find',
-      'nothing.',
-    ].join('\n'),
+    body: 'tsvector plus a GIN index covers the exact match cases a vector misses: identifiers, names, error strings. It costs nothing per query, which is the argument for running it first and only paying for meaning when words find nothing.',
     sourceMeta: 'URL, 900 words',
     sourceUrl: 'https://example.com/postgres-fts',
     sourceText:
@@ -110,8 +134,8 @@ export async function seed(): Promise<number> {
     const { rows } = await db().query<{ id: string }>(
       `insert into brain.note
          (title, body, slug, kind, status, source_url, source_text, source_meta,
-          source, external_id)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, 'demo', $9)
+          source, external_id, vault_sha)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        on conflict (source, external_id) do update
          set title = excluded.title, body = excluded.body, status = excluded.status
        returning id`,
@@ -124,7 +148,9 @@ export async function seed(): Promise<number> {
         note.sourceUrl ?? '',
         note.sourceText ?? '',
         note.sourceMeta ?? '',
-        note.external_id,
+        note.vault ? 'vault' : 'demo',
+        note.vault ? note.vault.path : note.external_id,
+        note.vault?.sha ?? '',
       ],
     )
 
