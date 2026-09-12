@@ -31,6 +31,7 @@ const TRIPS = [
       { kind: 'activity' as const, title: 'Museum tickets, 2', detail: 'E-tickets attached', day: 3, at: '14:00', cents: 5_600, status: 'pending' as const, confidence: 0.88 },
     ],
     packing: ['Passport', 'Rail pass', 'Rain shell', 'Layers', 'Walking shoes', 'Power adapter'],
+    lines: [['Flights', 1650], ['Lodging', 1400], ['Food', 900], ['Transit', 250], ['Activities', 600]],
   },
   {
     external_id: 'trip-denver',
@@ -47,6 +48,7 @@ const TRIPS = [
       { kind: 'flight' as const, title: 'SFO to DEN', detail: 'Group of 4', day: 0, at: '07:40', cents: 39_800, status: 'confirmed' as const },
     ],
     packing: ['Ski pants', 'Goggles', 'Base layers', 'Season pass'],
+    lines: [['Flights', 500], ['Lodging', 900], ['Food', 300], ['Transit', 100], ['Activities', 100]],
   },
   {
     external_id: 'trip-reykjavik',
@@ -61,6 +63,7 @@ const TRIPS = [
     status: 'idea' as const,
     items: [],
     packing: [],
+    lines: [],
   },
 ]
 
@@ -141,6 +144,17 @@ export async function seed(): Promise<number> {
         `insert into travel.packing_item (trip_id, label, packed, position)
          values ($1, $2, $3, $4)`,
         [tripId, label, i < 2, i],
+      )
+    }
+
+    // Budget lines, planned per category, as the drawer's Budget tab has them.
+    // Upserted on (trip, category) so a re-seed keeps an edited planned figure.
+    for (const [i, [category, dollars]] of (trip.lines as [string, number][]).entries()) {
+      await db().query(
+        `insert into travel.budget_line (trip_id, category, planned_cents, position)
+         values ($1, $2, $3, $4)
+         on conflict (trip_id, category) do nothing`,
+        [tripId, category, dollars * 100, i],
       )
     }
 
