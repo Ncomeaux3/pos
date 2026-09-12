@@ -62,6 +62,9 @@ jobs:
       # counts as fired; the dashboard already surfaces single job failures.
       # After the commit, so the dump still lands when this goes red; a failed
       # scheduled run is what GitHub emails the owner about.
+      # ponytail: any trigger counts, so a run by hand hides a dead cron for a
+      # day. Add "and trigger_source = 'cron'" once the production cron has
+      # fired; before that the filter would be red every morning.
       - name: Check the nightly fired
         env:
           PGURL: ${{ secrets.BACKUP_DATABASE_URL }}

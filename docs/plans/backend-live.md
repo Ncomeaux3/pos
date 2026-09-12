@@ -70,7 +70,7 @@ names the phase it unblocks.
 | 2 | Production live: first real nightly | low (code), owner-heavy | 4, 5, 6 | Blocked on owner steps 2 to 7 | |
 | 3 | Strava, vault, SimpleFIN connected and syncing nightly | low | 4, 5, 6 | Blocked on 2 and owner steps 11 to 13 | |
 | 4 | Health Auto Export webhook writes body metrics | medium | 1, 5, 6 | Not started | |
-| 5 | Cron-silence check | low | 1, 4, 6 | Not started | |
+| 5 | Cron-silence check | low | 1, 4, 6 | Done 2026-09-12: red and green paths proven on the real workflow | |
 | 6 | PR #10 skill tree zoom finished and merged | medium | 1, 4, 5 | #10 merged 2026-09-12; the re-checks continue on `fix/skill-tree-zoom` | #10 |
 
 Parallel-safe means different files; 1, 4, 5 and 6 can run in separate
@@ -205,8 +205,10 @@ orchestrator already surface single job failures. Nothing new is public, no
 new secret, no new route.
 
 Tasks:
-- [ ] `.github/workflows/backup.yml`: the step, after the dump so the backup still lands when the check fails; it prints the count
-- [ ] docs/SETUP-SUPABASE.md "What is not covered here": one sentence saying the backup workflow doubles as the cron check
+- [x] `.github/workflows/backup.yml`: the step, after the dump so the backup still lands when the check fails; it prints the count
+- [x] docs/SETUP-SUPABASE.md "What is not covered here": one sentence saying the backup workflow doubles as the cron check
+
+Done 2026-09-12. Local query returned 2. Red path: scratch branch at `1 minute`, run 34726591398 failed at the check with count 0 after the dump had committed; branch deleted. Green path: run 34726598717 on the phase branch against production, count 1 (production already had a finished run inside the window, so the "after Phase 2" check is met early). Still to verify once by the owner: the GitHub notification setting for failed scheduled runs.
 
 Exit checks:
 - `psql "$DATABASE_URL" -Atc` with the step's query against the local database returns the run count
