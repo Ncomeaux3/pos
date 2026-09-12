@@ -91,3 +91,38 @@ export function load(workouts: { kind: string; durationS: number }[]): number {
     workouts.reduce((sum, w) => sum + (w.durationS / 60) * (INTENSITY[w.kind] ?? 1), 0),
   )
 }
+
+/** "TODAY", "YESTERDAY", then "SEP 04": when a set happened, for a tile's sub-line. */
+export function whenLabel(iso: string, todayIso: string): string {
+  const day = iso.slice(0, 10)
+  const today = new Date(`${todayIso}T00:00:00Z`)
+  const days = Math.round((today.getTime() - new Date(`${day}T00:00:00Z`).getTime()) / 86_400_000)
+  if (days === 0) return 'TODAY'
+  if (days === 1) return 'YESTERDAY'
+  const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+  return `${MONTHS[Number(day.slice(5, 7)) - 1]} ${day.slice(8, 10)}`
+}
+
+/** "2H 41M", "51M": the week's training time as the tile sub-line prints it. */
+export function hoursLabel(minutes: number): string {
+  if (minutes < 60) return `${minutes}M`
+  return `${Math.floor(minutes / 60)}H ${String(minutes % 60).padStart(2, '0')}M`
+}
+
+/** "8 STRAVA · 2 BY HAND": where the rows shown came from. Zeros are left out. */
+export function sourcesLabel(rows: { source: string }[]): string {
+  const strava = rows.filter((r) => r.source === 'strava').length
+  const hand = rows.length - strava
+  return [strava > 0 && `${strava} STRAVA`, hand > 0 && `${hand} BY HAND`]
+    .filter(Boolean)
+    .join(' · ')
+}
+
+/**
+ * Which screen the page draws. A missing provider is a banner, not a wall:
+ * any workout at all, whatever its source, means the overview.
+ */
+export function screenState(args: { workouts: number; connected: boolean }): 'setup' | 'setup-connected' | 'live' {
+  if (args.workouts > 0) return 'live'
+  return args.connected ? 'setup-connected' : 'setup'
+}
