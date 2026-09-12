@@ -1069,7 +1069,10 @@ test('second brain, the inbox holds a draft beside its source', async ({ page })
   await expect(page.getByRole('heading', { name: 'Second Brain', level: 1 })).toHaveClass(/sr-only/)
   await expect(page.getByRole('tablist')).toHaveCount(0)
   await expect(page.getByText(/^Second Brain\s*\/\s*Inbox$/)).toBeVisible()
-  await expect(page.getByText(/^\d+ notes$/)).toBeVisible()
+  // The count sits in the band from md up; the phone band has no room for it.
+  if ((page.viewportSize()?.width ?? 0) >= 720) {
+    await expect(page.getByText(/^\d+ notes$/)).toBeVisible()
+  }
   await expect(page.getByRole('button', { name: /^Ingest/ })).toBeVisible()
   const folders = page.getByTestId('brain-folders').getByRole('button')
   await expect(folders).toHaveText(

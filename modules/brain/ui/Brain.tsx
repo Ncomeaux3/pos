@@ -139,7 +139,7 @@ export function Brain({ data }: { data: BrainData }) {
               type="button"
               onClick={() => setParams({ folder: f.id === 'inbox' ? null : f.id, note: null })}
               className={cn(
-                'inline-flex items-center gap-2 border px-2.5 py-[5px] text-[12px] transition-colors duration-150',
+                'inline-flex min-h-11 items-center gap-2 border px-2.5 py-[5px] text-[12px] transition-colors duration-150 md:min-h-0',
                 on ? 'border-ink bg-ink text-bg' : 'border-rule-2 text-ink-3 hover:border-ink hover:text-ink',
                 i === 2 && 'ml-2.5',
               )}

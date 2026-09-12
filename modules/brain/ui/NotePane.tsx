@@ -11,8 +11,9 @@ import { isFinished, type BrainNote, type SetParams } from './Brain'
 // The right pane of POS Second Brain.dc.html: a draft beside the text it was
 // drawn from, or a note with its skills, backlinks and vault cell.
 
+// 44px on a phone, the artboard's 30 from md up: the shell's touch rule.
 const MINI =
-  'whitespace-nowrap border border-rule-2 px-2.5 py-[5px] text-[11px] text-ink-3 transition-colors duration-150'
+  'min-h-11 whitespace-nowrap border border-rule-2 px-2.5 py-[5px] text-[11px] text-ink-3 transition-colors duration-150 md:min-h-0'
 const CELL = 'border border-rule px-3.5 py-3'
 const CHIP =
   'label inline-flex items-center gap-1.5 border border-rule-2 px-[7px] py-[2px] text-[10px] tracking-[0.08em] text-ink-2'
@@ -224,7 +225,7 @@ export function NotePane({ note, setParams, run }: { note: BrainNote; setParams:
                 key={b.id}
                 type="button"
                 onClick={() => setParams({ note: b.slug })}
-                className="border-b border-rule py-1.5 text-left text-[12px] text-ink-2 transition-colors duration-150 hover:text-ok"
+                className="min-h-11 border-b border-rule py-1.5 text-left text-[12px] text-ink-2 transition-colors duration-150 hover:text-ok md:min-h-0"
               >
                 [[{b.title}]]
               </button>

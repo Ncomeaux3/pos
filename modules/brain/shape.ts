@@ -72,6 +72,6 @@ export function folderLabel(kind: string): string {
 /** "AUG 12": the date a book or article was accepted, which is when it was finished. */
 export function finishedOn(iso: string): string {
   return new Date(iso)
-    .toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+    .toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     .toUpperCase()
 }

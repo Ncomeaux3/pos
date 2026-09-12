@@ -102,7 +102,7 @@ export function IngestDrawer({ setParams }: { setParams: SetParams }) {
               type="button"
               onClick={() => pick(k)}
               className={cn(
-                'px-1.5 py-[9px] text-[12px] transition-colors duration-150',
+                'min-h-11 px-1.5 py-[9px] text-[12px] transition-colors duration-150 md:min-h-0',
                 kind === k ? 'bg-ink text-bg' : 'bg-bg text-ink-3 hover:text-ink',
               )}
             >
