@@ -1071,46 +1071,93 @@ test('travel, trips with confirmed spend only', async ({ page }) => {
   await page.goto('/travel')
   await expect(page.getByRole('heading', { name: 'Travel' })).toBeVisible()
 
-  await expect(page.getByText('Tokyo, November')).toBeVisible()
-  // A pending booking is a guess about an email, so it does not move a budget.
-  await expect(page.getByText('confirmed only').first()).toBeVisible()
-  await expect(page.getByText('2 waiting')).toBeVisible()
-
+  // POS Travel.dc.html: no page tabs; the loyalty strip under the band with
+  // Manage; Upcoming, Past and Wishlist sections; a card that counts its
+  // bookings; the globe's four controls.
+  await expect(page.getByRole('tablist')).toHaveCount(0)
+  await expect(page.getByTestId('travel-loyalty').getByRole('button', { name: /manage/i })).toBeVisible()
+  for (const head of ['Upcoming', 'Past', 'Wishlist']) {
+    await expect(page.getByTestId('travel-sections').getByText(head, { exact: true })).toBeVisible()
+  }
+  const tokyo = page.getByRole('button', { name: /Tokyo/ }).first()
+  await expect(tokyo).toBeVisible()
+  await expect(tokyo).toContainText(/\d\/4 booked/)
+  // A pending booking is a guess about an email, so it does not move a budget:
+  // the card's figure is confirmed spend against the plan.
+  await expect(tokyo).toContainText(/\$[\d,]+ \/ \$[\d,]+/)
+  for (const name of ['Zoom in', 'Zoom out', 'Reset view', /Flat|Globe/]) {
+    await expect(page.getByTestId('travel-globe').getByRole('button', { name })).toBeVisible()
+  }
   await shoot(page, 'travel')
+
+  // The drawer opens from the card; the Budget tab has the planned total.
+  await page.waitForLoadState('networkidle')
+  await tokyo.click()
+  await expect(page).toHaveURL(/trip=/)
+  await page.getByRole('tab', { name: 'Budget' }).click()
+  await expect(page.getByText('Planned · total')).toBeVisible()
+  await shoot(page, 'travel-budget')
 })
 
 test('travel, the globe is drawn from real coordinates', async ({ page }) => {
-  await page.goto('/travel?tab=map')
+  await page.goto('/travel')
 
-  // Hand rolled orthographic projection, no d3 and no world-atlas download.
+  // Hand rolled orthographic projection, no d3 and no world-atlas download;
+  // the land is a committed list of points.
   const globe = page.getByRole('img', { name: /Globe showing \d+ places/ })
   await expect(globe).toBeVisible()
 
-  // Only the near side is drawn, so the count on screen is fewer than the six
-  // seeded places spread across four continents.
-  const dots = globe.locator('circle').filter({ hasNotText: '' })
-  expect(await dots.count()).toBeGreaterThan(1)
+  // Only the near side is drawn, so the pins on screen are fewer than the six
+  // seeded places spread across four continents, and the land is many dots.
+  const pins = globe.locator('[data-pin]')
+  expect(await pins.count()).toBeGreaterThan(1)
+  // One path for the land, a dash per point: thousands of them on the near side.
+  const dashes = await globe.locator('[data-land]').getAttribute('d')
+  expect((dashes?.match(/M/g) ?? []).length).toBeGreaterThan(500)
 
-  // Twice on purpose: the list row and the dot's own tooltip, which is what
-  // makes a dot on a wireframe globe identifiable at all.
-  await expect(page.getByText('Cape Town', { exact: true })).toBeVisible()
+  // The pin's own tooltip is what makes a dot identifiable at all.
   await expect(page.getByText('Cape Town, South Africa')).toBeAttached()
   await shoot(page, 'travel-map')
 })
 
-test('travel, a parsed booking waits to be accepted', async ({ page }) => {
-  await page.goto('/travel?tab=inbox')
+test('travel, a parsed booking waits in the trip inbox', async ({ page }) => {
+  await page.goto('/travel')
+  await page.waitForLoadState('networkidle')
+  await page.getByRole('button', { name: /Tokyo/ }).first().click()
+  await page.getByRole('tab', { name: /Inbox/ }).click()
 
   await expect(page.getByText('Check in, Kyoto')).toBeVisible()
-  await expect(page.getByText('94%')).toBeVisible()
+  await expect(page.getByText(/confidence 94%/)).toBeVisible()
   await shoot(page, 'travel-inbox')
 
-  await page.getByRole('button', { name: 'Accept' }).first().click()
+  await page.getByRole('button', { name: 'Add', exact: true }).first().click()
   await expect(page.getByText('Added to the trip')).toBeVisible()
 })
 
+test('travel, packing and budget lines are edited in the drawer', async ({ page }) => {
+  await page.goto('/travel')
+  await page.waitForLoadState('networkidle')
+  await page.getByRole('button', { name: /Tokyo/ }).first().click()
+
+  await page.getByRole('tab', { name: 'Packing' }).click()
+  const packed = page.getByText(/\d+ \/ \d+ packed/)
+  const before = (await packed.textContent()) ?? ''
+  await page.getByPlaceholder('Add an item').fill('Travel adapter')
+  await page.getByRole('button', { name: 'Add', exact: true }).click()
+  await expect(page.getByText('Travel adapter')).toBeVisible()
+  await expect(packed).not.toHaveText(before)
+  await shoot(page, 'travel-packing')
+
+  await page.getByRole('tab', { name: 'Budget' }).click()
+  await page.getByPlaceholder(/Add a category/).fill('Gifts 200')
+  await page.getByRole('button', { name: 'Add', exact: true }).click()
+  await expect(page.getByText('Gifts', { exact: true })).toBeVisible()
+})
+
 test('travel, cents per point uses only numbers you supply', async ({ page }) => {
-  await page.goto('/travel?tab=loyalty')
+  await page.goto('/travel')
+  await page.waitForLoadState('networkidle')
+  await page.getByTestId('travel-loyalty').getByRole('button', { name: /manage/i }).click()
 
   await page.getByLabel('Cash fare in dollars').fill('640')
   await page.getByLabel('Points required').fill('35000')
@@ -1121,6 +1168,7 @@ test('travel, cents per point uses only numbers you supply', async ({ page }) =>
 
   await page.getByLabel('Points required').fill('60000')
   await expect(page.getByText('pay cash', { exact: true })).toBeVisible()
+  await shoot(page, 'travel-loyalty')
 })
 
 test('fitness, workouts with pace derived rather than stored', async ({ page }) => {

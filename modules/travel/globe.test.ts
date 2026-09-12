@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { graticule, project, visible, type Rotation } from './globe'
+import { flat, graticule, landPath, project, visible, type Rotation } from './globe'
 
 // An orthographic projection, hand rolled.
 //
@@ -87,5 +87,24 @@ describe('graticule', () => {
     const seam = graticule({ lambda: -180, phi: 0 })
     expect(seam.some((d) => d.lastIndexOf('M') > 0)).toBe(true)
     expect(graticule(NONE).every((d) => d.lastIndexOf('M') === 0)).toBe(true)
+  })
+})
+
+describe('flat and landPath', () => {
+  it('flat puts the equator on the middle line and wraps the antimeridian', () => {
+    expect(flat(0, 0, { lambda: 0, phi: 0 })).toEqual({ x: 0, y: -0 })
+    expect(flat(90, 0, { lambda: 0, phi: 0 }).x).toBeCloseTo(0.5)
+    expect(flat(170, 0, { lambda: 20, phi: 0 }).x).toBeCloseTo(-170 / 180)
+    expect(flat(0, 45, { lambda: 0, phi: 0 }).y).toBeCloseTo(-0.25)
+  })
+
+  it('landPath draws a dash per visible point and all of them flat', () => {
+    const dots: [number, number][] = [
+      [0, 0],
+      [0, 180],
+    ]
+    const front = { lambda: 0, phi: 0 }
+    expect(landPath(dots, front, 'globe').match(/M/g)?.length).toBe(1)
+    expect(landPath(dots, front, 'flat').match(/M/g)?.length).toBe(2)
   })
 })

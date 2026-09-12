@@ -1,11 +1,10 @@
 // An orthographic projection, hand rolled. No imports.
 //
-// ponytail: graticule instead of coastlines. The plan budgeted for d3-geo,
-// topojson-client and a ~100kB world-atlas file, which buy country outlines.
-// The dots are the information here and the sphere is context for them, so this
-// draws a lat/lon grid and costs nothing. If coastlines ever matter, that is
-// where the dependency goes, and `project` is already the function d3 would be
-// replacing.
+// The land is modules/travel/land.json, a few thousand points sampled once
+// from Natural Earth by scripts/land-dots.mts and drawn here as a dot matrix,
+// which is how POS Travel.dc.html draws the continents. d3-geo, topojson and
+// world-atlas stay out of the bundle (2026-09-07); `project` is the function
+// d3 would be replacing.
 
 export type Rotation = {
   /** Degrees the globe is turned about its axis. Negative moves east into view. */
@@ -50,6 +49,37 @@ export function visible(lon: number, lat: number, rotation: Rotation): boolean {
   const z =
     Math.sin(phi) * Math.sin(p) + Math.cos(phi) * Math.cos(p) * Math.cos(l)
   return z >= 0
+}
+
+/**
+ * The flat map: equirectangular into a 2 by 1 box, x in [-1, 1] and y in
+ * [-0.5, 0.5], screen y down. `lambda` pans it the way it turns the globe.
+ */
+export function flat(lon: number, lat: number, rotation: Rotation): { x: number; y: number } {
+  let l = lon + rotation.lambda
+  while (l > 180) l -= 360
+  while (l < -180) l += 360
+  return { x: l / 180, y: -lat / 180 }
+}
+
+/**
+ * The land as one SVG path: a zero-length dash per visible point, drawn with
+ * round caps so each reads as a dot. One node however many points, which is
+ * what keeps a drag smooth; a circle per point was thousands of elements a
+ * frame.
+ */
+export function landPath(
+  dots: [number, number][],
+  rotation: Rotation,
+  mode: 'globe' | 'flat',
+): string {
+  let d = ''
+  for (const [lat, lon] of dots) {
+    if (mode === 'globe' && !visible(lon, lat, rotation)) continue
+    const { x, y } = mode === 'globe' ? project(lon, lat, rotation) : flat(lon, lat, rotation)
+    d += `M${x.toFixed(4)},${y.toFixed(4)}h0`
+  }
+  return d
 }
 
 /** Degrees between grid lines. Ten would be a mesh, thirty is a globe. */

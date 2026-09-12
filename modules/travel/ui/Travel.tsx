@@ -107,7 +107,7 @@ export function Travel({ data }: { data: TravelData }) {
         * the lists under it are the detail. */}
       {data.places.length > 0 && (
         <div className="grid h-[clamp(240px,38vh,420px)] place-items-center border border-rule bg-bg-elev p-3">
-          <Globe places={data.places} className="h-full" />
+          <Globe pins={data.places.map((p) => ({ ...p, kind: 'past' as const }))} className="h-full" />
         </div>
       )}
 
