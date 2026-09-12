@@ -3,7 +3,7 @@ import { db } from '@/core/db'
 import { getModules } from '@/core/modules'
 import { listMetrics } from '@/core/metrics'
 import { getSettings } from '@/core/settings'
-import { ownerToday } from '@/core/today'
+import { nightlyRunAt, ownerToday } from '@/core/today'
 import { Onboarding, type SetupData } from './Onboarding'
 
 export default async function OnboardingPage() {
@@ -37,6 +37,10 @@ export default async function OnboardingPage() {
     metrics: listMetrics(),
     hasGoals: modules.some((m) => m.id === 'goals'),
     todayIso,
+    // The real hour, not a hardcoded "04:00": the cron fires at a fixed UTC
+    // hour, which lands at a different local time in Chicago's summer and
+    // winter, same as the Review pass computes it.
+    nightlyAt: nightlyRunAt(settings.timezone),
     schedule: {
       morningAt: settings.digest_morning_at,
       morningEnabled: settings.digest_morning_enabled,

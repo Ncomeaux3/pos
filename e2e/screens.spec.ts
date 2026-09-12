@@ -1222,7 +1222,34 @@ test('onboarding, a starter goal only points at a metric that exists', async ({ 
   await expect(page.getByText('computed').first()).toBeVisible()
   await expect(page.getByText('Read twelve books this year')).toBeVisible()
 
+  // No check-in cadence control anywhere: nothing in goals.write stores one.
+  await expect(page.getByRole('button', { name: 'Weekly', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Quarterly', exact: true })).toHaveCount(0)
+
   await shoot(page, 'onboarding-goals')
+})
+
+test("onboarding, a goal's target and deadline are editable", async ({ page }) => {
+  await page.goto('/onboarding?step=goals')
+
+  // Picking a goal reveals its own Target and By when inputs, holding what
+  // is typed. "Read twelve books this year" is the third and last of the
+  // three starter goals.
+  //
+  // The round trip through Finish is not exercised here: finish() marks
+  // core.settings.onboarding_completed_at permanently, and nothing in this
+  // screen's scope (no core/settings.ts, no e2e/seed.mts) can clear it back
+  // for the tests that run after, including this file's own next one, which
+  // needs the wizard rather than the "you are set up" screen. Reported as a
+  // Blocked item rather than left silently short of the plan.
+  await page.getByRole('button', { name: 'Add', exact: true }).nth(2).click()
+  const targetInput = page.getByLabel('Read twelve books this year target')
+  await targetInput.fill('7')
+  await expect(targetInput).toHaveValue('7')
+
+  const dateInput = page.getByLabel('Read twelve books this year deadline')
+  await dateInput.fill('2030-03-01')
+  await expect(dateInput).toHaveValue('2030-03-01')
 })
 
 test('onboarding, requesting a provider records it without pretending', async ({ page }) => {
@@ -1235,6 +1262,21 @@ test('onboarding, requesting a provider records it without pretending', async ({
   // It lands in Settings as requested, which is the honest half of the claim.
   await page.goto('/settings/connections')
   await expect(page.getByText('Ally')).toBeVisible()
+})
+
+test('onboarding, first run copy names no source count', async ({ page }) => {
+  await page.goto('/onboarding?step=ready')
+
+  const copy = page.getByText(/writes each module a digest/)
+  await expect(copy).toBeVisible()
+  await expect(copy).not.toContainText(/backfills 90 days/i)
+  await expect(copy).not.toContainText(/pulls \d+ source/i)
+  // A real, computed hour (HH:MM), not a hardcoded one.
+  await expect(copy).toContainText(/tonight at \d\d:\d\d/i)
+
+  // Each summary row jumps back to the step it summarises.
+  await page.getByRole('button', { name: 'Change' }).first().click()
+  await expect(page.getByRole('heading', { name: /what should it call you/i })).toBeVisible()
 })
 
 test('second brain, the inbox holds a draft beside its source', async ({ page }) => {

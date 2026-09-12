@@ -46,6 +46,7 @@ export type SetupData = {
   metrics: Metric[]
   hasGoals: boolean
   todayIso: string
+  nightlyAt: string
   schedule: {
     morningAt: string
     morningEnabled: boolean
@@ -116,6 +117,44 @@ const STEPS: { key: StepKey; name: string; kicker: string; question: string; hel
 const NEEDED_CATEGORY_IDS = ['bank', 'broker']
 
 /**
+ * Three quiet-hours shortcuts. There is no per-rule loudness setting to
+ * pick between (core.settings has only the two digest toggles and one quiet
+ * window), so each preset only ever writes the quiet-hours width and the
+ * urgent override, the same two fields the panel below already saves. No
+ * per-day notification count is shown: nothing here counts real rules, so a
+ * number would be invented.
+ */
+const NOTIFY_PRESETS = [
+  {
+    id: 'quiet',
+    tag: 'LIGHTEST',
+    name: 'Digest only',
+    note: 'Everything batches into the morning and evening digest. Nothing interrupts.',
+    quietFrom: '00:00',
+    quietTo: '23:59',
+    override: false,
+  },
+  {
+    id: 'balanced',
+    tag: 'RECOMMENDED',
+    name: 'Money and deadlines',
+    note: 'Quiet hours hold the rest; an urgent rule still breaks through.',
+    quietFrom: '22:00',
+    quietTo: '06:30',
+    override: true,
+  },
+  {
+    id: 'all',
+    tag: 'LOUDEST',
+    name: 'Tell me everything',
+    note: 'No quiet hours at all. Useful for the first week, then trim it.',
+    quietFrom: '00:00',
+    quietTo: '00:00',
+    override: true,
+  },
+] as const
+
+/**
  * Goals a fresh install can start from.
  *
  * Each one names a metric it would like. Whether that metric exists is decided
@@ -175,6 +214,9 @@ export function Onboarding({ data }: { data: SetupData }) {
     data.modules.filter((m) => m.enabled).map((m) => m.id),
   )
   const [picked, setPicked] = useState<string[]>([])
+  const [goalCfg, setGoalCfg] = useState<Record<string, { target?: string; deadline?: string }>>(
+    {},
+  )
   const [openCategory, setOpenCategory] = useState<string | null>(null)
   const [connectSearch, setConnectSearch] = useState('')
   const [manualOpen, setManualOpen] = useState(false)
@@ -203,25 +245,30 @@ export function Onboarding({ data }: { data: SetupData }) {
     run(() => saveSetting('modules_enabled', next))
   }
 
+  // A year out, so a starter goal has room to be wrong about its date without
+  // being overdue on the day it is created. The default the TARGET and BY
+  // WHEN inputs show, and what a goal falls back to if left blank or typed
+  // as something that does not parse.
+  const [defaultYear, defaultMonth, defaultDay] = data.todayIso.split('-').map(Number)
+  const defaultDeadline = `${defaultYear + 1}-${String(defaultMonth).padStart(2, '0')}-${String(defaultDay).padStart(2, '0')}`
+
   const finishUp = () =>
     start(async () => {
-      // A year out, so a starter goal has room to be wrong about its date
-      // without being overdue on the day it is created.
-      const [year, month, day] = data.todayIso.split('-').map(Number)
-      const deadline = `${year + 1}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-
       if (picked.length > 0 && data.hasGoals) {
-        const goals = STARTER_GOALS.filter((g) => picked.includes(g.title)).map((g) => ({
-          title: g.title,
-          area: g.area,
-          kind: g.kind,
-          unit: g.unit,
-          target_value: g.target_value,
-          deadline,
-          // Only when something really provides it. A goal pointed at a metric
-          // that does not exist would sit at zero forever looking broken.
-          metric_source: g.wants && metricIds.has(g.wants) ? g.wants : null,
-        }))
+        const goals = STARTER_GOALS.filter((g) => picked.includes(g.title)).map((g) => {
+          const typedTarget = Number((goalCfg[g.title]?.target ?? '').replace(/[^0-9.-]/g, ''))
+          return {
+            title: g.title,
+            area: g.area,
+            kind: g.kind,
+            unit: g.unit,
+            target_value: Number.isFinite(typedTarget) && typedTarget > 0 ? typedTarget : g.target_value,
+            deadline: goalCfg[g.title]?.deadline || defaultDeadline,
+            // Only when something really provides it. A goal pointed at a metric
+            // that does not exist would sit at zero forever looking broken.
+            metric_source: g.wants && metricIds.has(g.wants) ? g.wants : null,
+          }
+        })
         const seeded = await seedGoals(goals)
         if (!seeded.ok) toast(seeded.error)
       }
@@ -539,12 +586,15 @@ export function Onboarding({ data }: { data: SetupData }) {
             <RowList>
               {STARTER_GOALS.map((g) => {
                 const computable = g.wants !== null && metricIds.has(g.wants)
+                const on = picked.includes(g.title)
+                const setCfg = (key: 'target' | 'deadline', value: string) =>
+                  setGoalCfg((prev) => ({ ...prev, [g.title]: { ...prev[g.title], [key]: value } }))
                 return (
                   <Row
                     key={g.title}
                     title={g.title}
                     meta={g.blurb}
-                    selected={picked.includes(g.title)}
+                    selected={on}
                     right={
                       <>
                         {g.wants && (
@@ -553,20 +603,40 @@ export function Onboarding({ data }: { data: SetupData }) {
                           </Chip>
                         )}
                         <ActionButton
-                          variant={picked.includes(g.title) ? 'brand' : 'outline'}
+                          variant={on ? 'brand' : 'outline'}
                           onClick={() =>
-                            setPicked(
-                              picked.includes(g.title)
-                                ? picked.filter((t) => t !== g.title)
-                                : [...picked, g.title],
-                            )
+                            setPicked(on ? picked.filter((t) => t !== g.title) : [...picked, g.title])
                           }
                         >
-                          {picked.includes(g.title) ? 'Picked' : 'Add'}
+                          {on ? 'Picked' : 'Add'}
                         </ActionButton>
                       </>
                     }
-                  />
+                  >
+                    {on && (
+                      <div className="mt-3.5 flex flex-wrap gap-3.5 border-t border-rule pt-3.5">
+                        <label className="flex min-w-[130px] flex-1 flex-col gap-1.5">
+                          <Eyebrow>Target ({g.unit})</Eyebrow>
+                          <input
+                            aria-label={`${g.title} target`}
+                            defaultValue={String(g.target_value)}
+                            onChange={(e) => setCfg('target', e.target.value)}
+                            className={cn(fieldClass, 'w-full')}
+                          />
+                        </label>
+                        <label className="flex min-w-[150px] flex-1 flex-col gap-1.5">
+                          <Eyebrow>By when</Eyebrow>
+                          <input
+                            type="date"
+                            aria-label={`${g.title} deadline`}
+                            defaultValue={goalCfg[g.title]?.deadline ?? defaultDeadline}
+                            onChange={(e) => setCfg('deadline', e.target.value)}
+                            className={cn(fieldClass, 'w-full')}
+                          />
+                        </label>
+                      </div>
+                    )}
+                  </Row>
                 )
               })}
             </RowList>
@@ -580,7 +650,35 @@ export function Onboarding({ data }: { data: SetupData }) {
       )}
 
       {step === 'notify' && (
-        <div className="grid gap-5 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,210px),1fr))]">
+        <div className="space-y-5">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,210px),1fr))] gap-3.5">
+            {NOTIFY_PRESETS.map((p) => (
+              <Card key={p.id} className="p-0">
+                <button
+                  type="button"
+                  onClick={() =>
+                    run(async () => {
+                      const results = await Promise.all([
+                        saveSetting('quiet_from', p.quietFrom),
+                        saveSetting('quiet_to', p.quietTo),
+                        saveSetting('quiet_urgent_override', p.override),
+                      ])
+                      return results.find((r) => !r.ok) ?? { ok: true }
+                    })
+                  }
+                  className="w-full p-4 text-left"
+                >
+                  <Eyebrow>{p.tag}</Eyebrow>
+                  <span className="mt-3 block text-[16px] tracking-[-0.01em] text-ink">
+                    {p.name}
+                  </span>
+                  <span className="mt-2 block text-[12px] leading-[1.5] text-ink-3">{p.note}</span>
+                </button>
+              </Card>
+            ))}
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,210px),1fr))]">
           <div className="space-y-2">
             <Eyebrow>Morning digest</Eyebrow>
             <div className="flex items-center gap-2.5">
@@ -621,6 +719,7 @@ export function Onboarding({ data }: { data: SetupData }) {
             <Eyebrow>Quiet hours</Eyebrow>
             <div className="flex flex-wrap items-center gap-2">
               <input
+                key={data.schedule.quietFrom}
                 type="time"
                 aria-label="Quiet hours start"
                 defaultValue={data.schedule.quietFrom}
@@ -629,6 +728,7 @@ export function Onboarding({ data }: { data: SetupData }) {
               />
               <span className="t-caption text-ink-3">to</span>
               <input
+                key={data.schedule.quietTo}
                 type="time"
                 aria-label="Quiet hours end"
                 defaultValue={data.schedule.quietTo}
@@ -645,37 +745,60 @@ export function Onboarding({ data }: { data: SetupData }) {
               {data.schedule.urgentOverride ? 'Urgent breaks through' : 'Nothing breaks through'}
             </ActionButton>
           </div>
+          </div>
         </div>
       )}
 
       {step === 'ready' && (
         <div className="space-y-4">
           <RowList>
-            <Row title="Called" meta="What the app calls you" right={<span className="t-caption text-ink-2">{data.ownerName || 'not set'}</span>} />
-            <Row title="Timezone" meta="Decides what today means" right={<span className="t-caption text-ink-2">{data.timezone}</span>} />
-            <Row
-              title="Modules"
-              meta="Visible in the nav"
-              right={<span className="t-caption text-ink-2">{enabled.length} of {data.modules.length}</span>}
-            />
-            <Row
-              title="Connections"
-              meta="Recorded as requests until authorised"
-              right={<span className="t-caption text-ink-2">{data.requested.length}</span>}
-            />
-            <Row
-              title="Goals"
-              meta="Written when you finish"
-              right={<span className="t-caption text-ink-2">{picked.length}</span>}
-            />
+            {(
+              [
+                { title: 'Called', meta: 'What the app calls you', value: data.ownerName || 'not set', jump: 'you' },
+                { title: 'Timezone', meta: 'Decides what today means', value: data.timezone, jump: 'you' },
+                {
+                  title: 'Modules',
+                  meta: 'Visible in the nav',
+                  value: `${enabled.length} of ${data.modules.length}`,
+                  jump: 'modules',
+                },
+                {
+                  title: 'Connections',
+                  meta: 'Recorded as requests until authorised',
+                  value: String(data.requested.length),
+                  jump: 'connect',
+                },
+                {
+                  title: 'Goals',
+                  meta: 'Written when you finish',
+                  value: String(picked.length),
+                  jump: 'goals',
+                },
+              ] as const
+            ).map((row) => (
+              <Row
+                key={row.title}
+                title={row.title}
+                meta={row.meta}
+                right={
+                  <>
+                    <span className="t-caption text-ink-2">{row.value}</span>
+                    <ActionButton variant="quiet" onClick={() => setStep(row.jump)}>
+                      Change
+                    </ActionButton>
+                  </>
+                }
+              />
+            ))}
           </RowList>
 
           <div className="space-y-2 rounded-md border border-rule-2 p-3.5">
             <StatusChip tone="brand">What happens next</StatusChip>
             <p className="t-caption text-ink-3">
-              Finishing writes the goals you picked and marks first run done. The nightly job then
-              runs on its own schedule: it snapshots what it can reach, writes each module a digest,
-              and sends one email. Nothing here is permanent.
+              Finishing writes the goals you picked and marks first run done. Tonight at{' '}
+              {data.nightlyAt}, the nightly job writes each module a digest and sends one email.
+              A requested connection does not sync until you authorise it at Settings. Nothing
+              here is permanent.
             </p>
           </div>
         </div>
