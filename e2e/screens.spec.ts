@@ -309,6 +309,12 @@ test('skill tree, a trackpad burst zooms smoothly and the main stars are blue', 
   expect(ratio).toBeLessThan(Math.exp(240 * 0.0015) * 1.02)
   expect(await page.evaluate(() => window.scrollY)).toBe(0)
 
+  // The svg is absolutely positioned, as the artboard's is. In flow with a
+  // percentage height, every transform write dirtied layout up to the page
+  // and each zoom frame laid out the whole app: 55 long tasks in a one
+  // second gesture on a Retina 120Hz screen, none once it was absolute.
+  expect(await svg.evaluate((el) => getComputedStyle(el).position)).toBe('absolute')
+
   // The artboard paints the centre and the five attributes pale blue; accent
   // is a leaf gaining fast, nothing else.
   for (const id of ['__you', 'engineering']) {

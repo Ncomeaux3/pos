@@ -238,13 +238,19 @@ export function Constellation({
   )
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col">
+    <div className="relative flex min-h-[320px] flex-1 flex-col">
+      {/* Absolutely positioned, as the artboard's is, and not for the look:
+        * an svg in normal flow with a percentage height dirties layout up its
+        * containing-block chain whenever its own layout is invalidated, and
+        * every transform write is such an invalidation. In flow, each zoom
+        * frame laid out the whole page (about 60ms on a Retina 120Hz screen,
+        * 55 long tasks in a one second gesture); absolute, none. */}
       <svg
         ref={svg}
         role="img"
         aria-label="Skill constellation"
         viewBox={`${-VIEW_W / 2} ${-VIEW_H / 2} ${VIEW_W} ${VIEW_H}`}
-        className="h-full min-h-[320px] w-full cursor-grab touch-none select-none active:cursor-grabbing"
+        className="absolute inset-0 h-full w-full cursor-grab touch-none select-none active:cursor-grabbing"
         onPointerDown={(e) => {
           const { pan } = view.current
           drag.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y, panning: false }
