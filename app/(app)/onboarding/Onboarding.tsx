@@ -108,6 +108,14 @@ const STEPS: { key: StepKey; name: string; kicker: string; question: string; hel
 ]
 
 /**
+ * Categories with nothing requested that leave a real tile empty: the
+ * dashboard's net worth and the runway goal both read Finance's balances.
+ * Named here rather than added to config/connectors.yaml, since a plain
+ * array of the ids that already exist there is the smaller, in-scope change.
+ */
+const NEEDED_CATEGORY_IDS = ['bank', 'broker']
+
+/**
  * Goals a fresh install can start from.
  *
  * Each one names a metric it would like. Whether that metric exists is decided
@@ -168,6 +176,9 @@ export function Onboarding({ data }: { data: SetupData }) {
   )
   const [picked, setPicked] = useState<string[]>([])
   const [openCategory, setOpenCategory] = useState<string | null>(null)
+  const [connectSearch, setConnectSearch] = useState('')
+  const [manualOpen, setManualOpen] = useState(false)
+  const [manualValue, setManualValue] = useState('')
   const [done, setDone] = useState(data.completedAt !== '')
   const [pending, start] = useTransition()
   const toast = useToast()
@@ -340,66 +351,183 @@ export function Onboarding({ data }: { data: SetupData }) {
         </div>
       )}
 
-      {step === 'connect' && (
-        <div className="space-y-3">
-          {data.categories.length === 0 ? (
-            <EmptyState headline="Nothing to connect">
-              None of the modules you kept read from an outside provider. You can still enter
-              everything by hand.
-            </EmptyState>
-          ) : (
-            data.categories.map((category) => (
-              <Card key={category.id} className="space-y-3">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setOpenCategory(openCategory === category.id ? null : category.id)
-                  }
-                  className="w-full text-left"
-                >
-                  <CardHead
-                    label={category.name}
-                    meta={openCategory === category.id ? 'Hide' : `${category.providers.length}`}
-                  />
-                  <p className="t-caption mt-1 text-ink-3">Gives you {category.data}.</p>
-                </button>
+      {step === 'connect' && (() => {
+        const connectQuery = connectSearch.trim().toLowerCase()
+        const searchResults = connectQuery
+          ? data.categories
+              .flatMap((category) =>
+                category.providers
+                  .filter((p) => p.toLowerCase().includes(connectQuery))
+                  .map((provider) => ({ provider, category })),
+              )
+              .slice(0, 12)
+          : []
 
-                {openCategory === category.id && (
+        const neededMissing = data.categories.filter(
+          (c) =>
+            NEEDED_CATEGORY_IDS.includes(c.id) && !c.providers.some((p) => requested.has(p)),
+        )
+
+        const requestedList = data.requested.map((name) => ({
+          name,
+          categoryLabel: data.categories.find((c) => c.providers.includes(name))?.name ?? 'Other',
+        }))
+
+        const providerButton = (provider: string, categoryId: string) => {
+          const on = requested.has(provider)
+          return (
+            <ActionButton
+              key={provider}
+              variant={on ? 'brand' : 'outline'}
+              onClick={() =>
+                run(
+                  () => (on ? removeProvider(provider) : requestProvider(provider, categoryId)),
+                  on ? undefined : `${provider} noted`,
+                )
+              }
+            >
+              {provider}
+              {supported.has(provider) ? ' *' : ''}
+            </ActionButton>
+          )
+        }
+
+        return (
+          <div className="space-y-3">
+            <input
+              value={connectSearch}
+              onChange={(e) => setConnectSearch(e.target.value)}
+              aria-label="Search every connector"
+              placeholder="Search every connector, Chase, Amex, Delta, Whoop..."
+              className={cn(fieldClass, 'w-full')}
+            />
+
+            {connectQuery && (
+              <Card className="space-y-2">
+                <Eyebrow>Matches · {searchResults.length}</Eyebrow>
+                {searchResults.length === 0 ? (
+                  <p className="t-caption text-ink-3">
+                    Nothing matches. Open the closest category below and add it manually.
+                  </p>
+                ) : (
                   <div className="flex flex-wrap gap-1.5">
-                    {category.providers.map((provider) => {
-                      const on = requested.has(provider)
-                      return (
-                        <ActionButton
-                          key={provider}
-                          variant={on ? 'brand' : 'outline'}
-                          onClick={() =>
-                            run(
-                              () =>
-                                on
-                                  ? removeProvider(provider)
-                                  : requestProvider(provider, category.id),
-                              on ? undefined : `${provider} noted`,
-                            )
-                          }
-                        >
-                          {provider}
-                          {supported.has(provider) ? ' *' : ''}
-                        </ActionButton>
-                      )
-                    })}
+                    {searchResults.map(({ provider, category }) =>
+                      providerButton(provider, category.id),
+                    )}
                   </div>
                 )}
               </Card>
-            ))
-          )}
+            )}
 
-          <p className="t-caption text-ink-3">
-            A star means a real integration exists and can sync it once you authorise it at
-            Settings. Everything else is recorded as a request, so it is written down and nothing
-            pretends to be connected.
-          </p>
-        </div>
-      )}
+            {requestedList.length > 0 && (
+              <Card className="space-y-2 border-brand bg-brand-soft">
+                <Eyebrow>Requested · {requestedList.length}</Eyebrow>
+                <div className="flex flex-wrap gap-1.5">
+                  {requestedList.map(({ name }) => (
+                    <ActionButton
+                      key={name}
+                      variant="brand"
+                      onClick={() => run(() => removeProvider(name))}
+                    >
+                      {name}
+                    </ActionButton>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {data.categories.length === 0 ? (
+              <EmptyState headline="Nothing to connect">
+                None of the modules you kept read from an outside provider. You can still enter
+                everything by hand.
+              </EmptyState>
+            ) : (
+              data.categories.map((category) => {
+                const needed =
+                  NEEDED_CATEGORY_IDS.includes(category.id) &&
+                  !category.providers.some((p) => requested.has(p))
+                const open = openCategory === category.id
+                return (
+                  <Card key={category.id} className="space-y-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenCategory(open ? null : category.id)
+                        setManualOpen(false)
+                      }}
+                      className="w-full text-left"
+                    >
+                      <CardHead
+                        label={
+                          <>
+                            {category.name}
+                            {needed && (
+                              <span className="label ml-2 border border-amber px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-amber">
+                                Needed
+                              </span>
+                            )}
+                          </>
+                        }
+                        meta={open ? 'Hide' : `${category.providers.length}`}
+                      />
+                      <p className="t-caption mt-1 text-ink-3">Gives you {category.data}.</p>
+                    </button>
+
+                    {open && (
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap gap-1.5">
+                          {category.providers.map((provider) => providerButton(provider, category.id))}
+                        </div>
+
+                        {manualOpen ? (
+                          <div className="flex flex-wrap gap-2">
+                            <input
+                              value={manualValue}
+                              onChange={(e) => setManualValue(e.target.value)}
+                              aria-label="Name of the institution"
+                              placeholder="Name of the institution"
+                              className={cn(fieldClass, 'flex-1')}
+                            />
+                            <ActionButton
+                              variant="solid"
+                              onClick={() => {
+                                const name = manualValue.trim()
+                                if (!name) return
+                                run(() => requestProvider(name, category.id), `${name} noted`)
+                                setManualValue('')
+                                setManualOpen(false)
+                              }}
+                            >
+                              Add
+                            </ActionButton>
+                          </div>
+                        ) : (
+                          <ActionButton variant="outline" onClick={() => setManualOpen(true)}>
+                            Add manually
+                          </ActionButton>
+                        )}
+                      </div>
+                    )}
+                  </Card>
+                )
+              })
+            )}
+
+            {neededMissing.length > 0 && (
+              <p className="t-caption text-ink-3">
+                {neededMissing.map((c) => c.name).join(' and ')} carry the numbers behind Finance
+                and Goals. Without at least one in each, those tiles open empty.
+              </p>
+            )}
+
+            <p className="t-caption text-ink-3">
+              A star means a real integration exists and can sync it once you authorise it at
+              Settings. Everything else is recorded as a request, so it is written down and nothing
+              pretends to be connected.
+            </p>
+          </div>
+        )
+      })()}
 
       {step === 'goals' && (
         <div className="space-y-3">

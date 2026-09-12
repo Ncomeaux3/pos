@@ -1181,6 +1181,35 @@ test('onboarding, six steps that write as they go', async ({ page }) => {
   // everything else is honestly a request.
   await page.getByRole('button', { name: '03 Connections' }).click()
   await expect(page.getByText(/nothing pretends to be connected/)).toBeVisible()
+
+  // A category that carries Finance and Goals' real numbers says so until
+  // something in it is requested.
+  await expect(page.getByRole('button', { name: /Banks and credit unions/ })).toContainText('Needed')
+
+  // The global search narrows every category's providers by name.
+  await page.getByLabel('Search every connector').fill('wells fargo')
+  await expect(page.getByText('Matches · 1')).toBeVisible()
+  await page.getByLabel('Search every connector').fill('')
+
+  // Requesting a listed provider clears the Needed flag and lists it as
+  // Requested; a name with no integration is recorded the same way, through
+  // the manual add.
+  await page.getByRole('button', { name: /Banks and credit unions/ }).click()
+  await page.getByRole('button', { name: 'Chase', exact: true }).click()
+  await expect(page.getByText('Requested · 1')).toBeVisible()
+  await expect(page.getByRole('button', { name: /Banks and credit unions/ })).not.toContainText('Needed')
+
+  await page.getByRole('button', { name: 'Add manually' }).click()
+  await page.getByLabel('Name of the institution').fill('Local Credit Union')
+  await page.getByRole('button', { name: 'Add', exact: true }).click()
+  await expect(page.getByText('Local Credit Union noted')).toBeVisible()
+  await expect(page.getByText('Requested · 2')).toBeVisible()
+
+  // Clean up: leave connections as this test found them for whatever runs next.
+  await page.getByRole('button', { name: 'Local Credit Union', exact: true }).click()
+  await page.getByRole('button', { name: 'Chase', exact: true }).first().click()
+  await expect(page.getByText(/Requested ·/)).toHaveCount(0)
+
   await shoot(page, 'onboarding-connections')
 })
 
