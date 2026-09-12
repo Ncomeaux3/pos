@@ -6,12 +6,31 @@ in a fresh session, then `docs/plans/design-build.md` for what comes next.
 Last updated: 2026-09-12, seventeen fidelity passes (Weekly Review, Dashboard,
 Finance, Skill Tree, Travel, Tasks, Goals, Ideas, Health, Settings, Search,
 then two parallel batches: Second Brain, Insurance and Meals; Home, Fitness and
-Review) and the rail to PosSidebar. Branch `main`. In flight in the third
-parallel batch: Notifications, Agent Log, Onboarding, Login. Remaining after
-those: the Mobile artboard re-check. Finance Options is three alternates of
-Finance and is not built (Finance follows POS Finance.dc.html).
+Review), the rail to PosSidebar, and the Mobile re-check at 402. Branch
+`main`. The third parallel batch (Notifications, Agent Log, Onboarding, Login)
+is merging from the other session. Nothing else in the handoff is unclaimed:
+Finance Options is three alternates of Finance and is not built (Finance
+follows POS Finance.dc.html), Backend Handoff is a document.
 
 ## Done
+
+**The Mobile re-check, 402 against PosPhone.** docs/plans/mobile-recheck-fidelity.md.
+Twelve screens had been rebuilt on the desktop since the 2026-09-10 phone
+pass, so every route was measured again at 402x874 (padding, lede, tab rows,
+horizontal overflow) and read by eye. The shell held on 23 of 24. Fixed: the
+weekly review shell's 28px negative margin (the page was 412 wide), the
+skills settings rows (the keyword column squeezed the name to two letters;
+it now drops to its own line), toasts under the 91px tab bar, and drawers.
+PosPhone opens every detail as a bottom sheet and the 2026-09-07 decision
+said so, but the geometry sat behind a prop no caller passed, so at 402 each
+drawer was a full height right slide. Below md every Overlay is now the
+sheet: 74vh max, a handle, 18px sides, a 20px title, the 34px inset; the
+desktop is unchanged. Not built, unchanged from 2026-09-10: per-screen
+reflow to the four phone screens, the quick add button, the six tile phone
+dashboard, gestures. The Overlay keeps its 56px header band on the phone
+where the artboard stacks the eyebrow and title tighter; it is the one drawer
+header on every screen. The other session's screens get the sheet through
+Overlay without an edit on their side.
 
 **Phase 1 is done except the deploy.** Steps 1 to 14 and 16 of 16. Steps 1 to 7 shipped 2026-09-05; the design
 bundle landed 2026-09-07 and steps 0, 7.5 and 8 to 14 followed.
