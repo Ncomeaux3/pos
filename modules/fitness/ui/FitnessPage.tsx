@@ -149,6 +149,8 @@ export default async function FitnessPage() {
             onSync={syncFitness}
           />
         }
+        // The setup state is the card alone: its own h1 is inside it.
+        hideTitle={state !== 'live'}
         title="Fitness"
         lede="Workouts, what they came to, and the body metrics behind them. The coach reads the week and proposes plan changes into Review; nothing here changes the plan itself."
         actions={

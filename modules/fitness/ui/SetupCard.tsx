@@ -32,7 +32,7 @@ export function SetupCard({
     })
 
   return (
-    <div className="grid-bg -mx-[18px] flex flex-1 items-center justify-center px-7 py-10 md:-mx-7">
+    <div className="grid-bg -mx-[18px] mt-0 flex flex-1 items-center justify-center px-7 py-10 md:-mx-7">
       <div className="w-full max-w-[560px] border border-rule-2 bg-bg-elev p-9">
         <Eyebrow>Module not connected</Eyebrow>
         <h2 className="mt-3.5 text-[30px] font-normal leading-[1.05] tracking-[-0.03em] text-ink">
@@ -83,7 +83,7 @@ export function SetupCard({
         </div>
 
         <div className="mt-[22px] flex flex-wrap items-center justify-between gap-3 border-t border-rule pt-4">
-          <span className="text-[12px] text-ink-3">
+          <span className="min-w-0 flex-1 text-[12px] text-ink-3">
             Credentials are encrypted at rest. Manage later in{' '}
             <Link href="/settings/connections" className="text-ink-2 hover:text-brand">
               Settings › Connections
