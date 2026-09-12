@@ -35,6 +35,26 @@ const PATCHABLE = [
   'notes',
 ] as const
 
+/**
+ * A file can only be attached from under its own policy's prefix, and the path
+ * cannot traverse. Without this an agent could attach any object in the bucket
+ * to a policy, read it through the signed URL, and delete it with the policy.
+ */
+export const ATTACH_INPUT = z
+  .object({
+    policy_id: z.uuid(),
+    name: z.string().min(1).max(200),
+    meta: z.string().max(200).default(''),
+    file_path: z.string().min(1).max(500),
+  })
+  .refine(
+    ({ policy_id, file_path }) =>
+      file_path.startsWith(`${policy_id}/`) &&
+      !file_path.includes('..') &&
+      /^[A-Za-z0-9._-]+$/.test(file_path.slice(policy_id.length + 1)),
+    { message: 'file_path must be a file directly under the policy id' },
+  )
+
 export default defineModule({
   id: 'insurance',
   nav: { label: 'Insurance', icon: 'shield', order: 90 },
@@ -76,8 +96,9 @@ export default defineModule({
       run: async (input) => {
         const { id, policy_number, ...rest } = input
 
-        const fields = Object.entries(rest).filter(([key]) =>
-          (PATCHABLE as readonly string[]).includes(key),
+        // An optional key that was not sent is undefined, not a write of null.
+        const fields = Object.entries(rest).filter(
+          ([key, value]) => value !== undefined && (PATCHABLE as readonly string[]).includes(key),
         )
         if (policy_number !== undefined) {
           fields.push(['policy_number_encrypted', encrypt(policy_number)])
@@ -156,12 +177,7 @@ export default defineModule({
 
     attach_document: defineTool({
       description: 'Attach a file already in the insurance bucket to a policy.',
-      input: z.object({
-        policy_id: z.uuid(),
-        name: z.string().min(1).max(200),
-        meta: z.string().max(200).default(''),
-        file_path: z.string().min(1).max(500),
-      }),
+      input: ATTACH_INPUT,
       run: async ({ policy_id, name, meta, file_path }) => {
         await attachDocument(policy_id, name, meta, file_path)
         return { policy_id }

@@ -1497,6 +1497,8 @@ test('insurance, a policy number is revealed only when asked for', async ({ page
 
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByText('•••• 7730')).toBeVisible()
+  // The drawer is in the URL, so it survives the reloads.
+  await shoot(page, 'insurance-drawer')
   await dialog.getByRole('button', { name: /REVEAL/ }).click()
   await expect(dialog.getByText('LMD-48211-7730')).toBeVisible()
 
@@ -1527,6 +1529,37 @@ test('insurance, renewing keeps the same row', async ({ page }) => {
   await page.getByRole('button', { name: /Mark renewed · \w{3} \d+ \d{4}/ }).click()
   await expect(page.getByText(/Same row, so the history stays together/)).toBeVisible()
   await expect(page.getByRole('button', { name: /Apartment, renters/ })).toHaveCount(before)
+})
+
+test('insurance, the edit form holds changes until Save', async ({ page }) => {
+  await page.goto('/insurance')
+  await page.getByRole('button', { name: /Apartment, renters/ }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Edit' }).click()
+  await expect(page.getByText('Insurance / Edit')).toBeVisible()
+  await shoot(page, 'insurance-edit')
+
+  const dialog = page.getByRole('dialog')
+  await dialog.getByLabel('Premium', { exact: true }).fill('15')
+  await dialog.getByRole('button', { name: /^Save/ }).click()
+  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(page.getByRole('button', { name: /Apartment, renters/ })).toContainText('$15')
+
+  // Put it back, so the fixture is the same for the next run.
+  await page.getByRole('dialog').getByRole('button', { name: 'Edit' }).click()
+  await page.getByRole('dialog').getByLabel('Premium', { exact: true }).fill('14')
+  await page.getByRole('dialog').getByRole('button', { name: /^Save/ }).click()
+  await expect(page.getByRole('button', { name: /Apartment, renters/ })).toContainText('$14')
+})
+
+test('insurance, new policy and upload drawers', async ({ page }) => {
+  await page.goto('/insurance?policy=new&edit=1')
+  await expect(page.getByText('Insurance / New policy')).toBeVisible()
+  await shoot(page, 'insurance-new')
+
+  await page.goto('/insurance?upload=1')
+  await expect(page.getByText('Drop a policy PDF')).toBeVisible()
+  await expect(page.getByText('Declarations pages work best.')).toBeVisible()
+  await shoot(page, 'insurance-upload')
 })
 
 test('insurance, delete asks first and removes the row', async ({ page }) => {

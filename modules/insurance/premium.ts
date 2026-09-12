@@ -122,10 +122,10 @@ export function remindersDueToday(
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-/** "Oct 18", or "Jan 2 2027" when the year is not this one. */
-export function shortDate(iso: string, todayIso: string): string {
+/** "Oct 18", or "Jan 2 2027" when the year is not this one. Without a today, the year is always written. */
+export function shortDate(iso: string, todayIso?: string): string {
   const [y, m, d] = iso.split('-').map(Number)
-  return `${MONTHS[m - 1]} ${d}${y === Number(todayIso.slice(0, 4)) ? '' : ` ${y}`}`
+  return `${MONTHS[m - 1]} ${d}${todayIso && y === Number(todayIso.slice(0, 4)) ? '' : ` ${y}`}`
 }
 
 /** "37 days", "today", "12d ago", "no date". The table's and the drawer's big figure. */
@@ -193,4 +193,12 @@ export function paymentSchedule(
     { label: 'Upcoming', on: at(k + 2) },
     { label: 'Upcoming', on: at(k + 3) },
   ]
+}
+
+/** "$7,901.88", "$14", "$13.49": cents shown only when there are some. */
+export function money(cents: number): string {
+  return `$${(cents / 100).toLocaleString('en-US', {
+    minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`
 }

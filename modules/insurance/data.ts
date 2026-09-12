@@ -118,7 +118,11 @@ export async function deletePolicy(id: string): Promise<void> {
     `select file_path from insurance.document where policy_id = $1 and file_path is not null`,
     [id],
   )
-  for (const doc of rows) await remove({ module: 'insurance', path: doc.file_path })
+  // Only files under this policy's own prefix: a document row pointing
+  // elsewhere must not delete another policy's file.
+  for (const doc of rows) {
+    if (doc.file_path.startsWith(`${id}/`)) await remove({ module: 'insurance', path: doc.file_path })
+  }
   await db().query(
     `delete from core.entities where module = 'insurance' and entity_type = 'policy' and entity_id = $1`,
     [id],
