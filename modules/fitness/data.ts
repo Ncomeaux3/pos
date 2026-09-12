@@ -9,6 +9,7 @@ export type WorkoutRow = {
   name: string
   detail: string
   kind: string
+  source: string
   started_at: Date
   duration_s: number
   distance_m: number
@@ -28,7 +29,7 @@ export type WorkoutRow = {
  */
 export async function listWorkouts(limit = 40): Promise<WorkoutRow[]> {
   const { rows } = await db().query<WorkoutRow>(
-    `select w.id, w.name, w.detail, w.kind, w.started_at, w.duration_s,
+    `select w.id, w.name, w.detail, w.kind, w.source, w.started_at, w.duration_s,
             w.distance_m, w.avg_hr,
             (select count(*)::text from fitness.set_entry s where s.workout_id = w.id)
               as set_count,
@@ -187,14 +188,6 @@ export async function workoutSpan(): Promise<{ count: number; firstYear: number 
     count: Number(rows[0].count),
     firstYear: rows[0].first ? new Date(rows[0].first).getUTCFullYear() : null,
   }
-}
-
-/** Whether the Strava sync has ever written a row. Drives "Run first import". */
-export async function stravaImported(): Promise<boolean> {
-  const { rows } = await db().query<{ any: boolean }>(
-    `select exists(select 1 from fitness.workout where source = 'strava') as any`,
-  )
-  return rows[0].any
 }
 
 /**

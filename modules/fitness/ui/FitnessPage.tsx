@@ -1,21 +1,69 @@
+import type { ReactNode } from 'react'
 import { MetricStrip, MetricTile, PageHeader, SyncBand } from '@/components/pos'
+import { getConnectionStatuses } from '@/core/integrations'
+import { getSkillNames } from '@/core/modules'
 import { listProposals } from '@/core/proposals'
 import { syncState } from '@/core/sync'
-import { activePlan, latestMetrics, listExercises, listPlanItems, listWorkouts, thisWeek } from '../data'
-import { load, mass } from '../units'
+import { ownerToday } from '@/core/today'
+import {
+  activePlan,
+  fitnessGoal,
+  latestMetrics,
+  listExercises,
+  listPlanItems,
+  listWorkouts,
+  skillsByWorkout,
+  thisWeek,
+  workoutSpan,
+} from '../data'
+import { hoursLabel, load, mass, monthDay, screenState, whenLabel } from '../units'
 import { Fitness, type FitnessData } from './Fitness'
+import { SetupCard } from './SetupCard'
 import { syncFitness } from './sync'
 
+const GOAL_TONE: Record<string, string> = {
+  stalled: 'text-bad',
+  at_risk: 'text-warn',
+  on_track: 'text-ok',
+  done: 'text-ok',
+}
+
+/**
+ * A tile's number row on its own line box. MetricTile asks for leading-none,
+ * but cn() drops it beside text-[34px] (tailwind-merge treats a font size as
+ * owning the line height), and the artboard's row is 34px tall, not 51.
+ */
+const Num = ({ children }: { children: ReactNode }) => (
+  <span className="mt-0.5 block leading-none">{children}</span>
+)
+
+/** The 14px grey unit beside a tile's 34px number. */
+const Unit = ({ children }: { children: string }) => (
+  <span className="text-[14px] text-ink-3">{children}</span>
+)
+
+/** The mono 11px line under a tile's number. */
+const Sub = ({ children }: { children: string }) => (
+  <span className="num mt-2 block text-[11px] font-normal tracking-normal text-ink-3">{children}</span>
+)
+
 export default async function FitnessPage() {
-  const [workouts, week, metrics, exercises, plan, pending, sync] = await Promise.all([
-    listWorkouts(),
-    thisWeek(),
-    latestMetrics(),
-    listExercises(),
-    activePlan(),
-    listProposals('pending'),
-    syncState('fitness'),
-  ])
+  const [workouts, week, metrics, exercises, plan, pending, sync, span, skills, names, goal, todayIso, connections] =
+    await Promise.all([
+      listWorkouts(),
+      thisWeek(),
+      latestMetrics(),
+      listExercises(),
+      activePlan(),
+      listProposals('pending'),
+      syncState('fitness'),
+      workoutSpan(),
+      skillsByWorkout(),
+      getSkillNames(),
+      fitnessGoal(),
+      ownerToday(),
+      getConnectionStatuses(),
+    ])
 
   const items = plan ? await listPlanItems(plan.id) : []
 
@@ -26,6 +74,9 @@ export default async function FitnessPage() {
       detail: w.detail,
       kind: w.kind,
       startedAt: new Date(w.started_at).toISOString(),
+      source: w.source,
+      // Names through the tree module's seam; an id with no name stays an id.
+      skills: (skills.get(w.id) ?? []).map((id) => names[id] ?? id),
       durationS: w.duration_s,
       distanceM: w.distance_m,
       avgHr: w.avg_hr,
@@ -75,19 +126,18 @@ export default async function FitnessPage() {
       .map((p) => p.title ?? 'A suggestion is waiting'),
   }
 
-  // The heaviest thing lifted, whatever it was. A KPI worth having only when
-  // there is something to put in it.
+  // The heaviest set on file, by weight then reps, with the workout it was in.
   const heaviest = data.workouts
-    .map((w) => w.best)
-    .filter((b): b is NonNullable<typeof b> => b !== null)
-    .sort((a, b) => b.weightG - a.weightG)[0]
+    .filter((w) => w.best !== null)
+    .sort((a, b) => b.best!.weightG - a.best!.weightG || b.best!.reps - a.best!.reps)[0]
 
   const weight = data.metrics.find((m) => m.kind === 'weight')
+  const state = screenState({ workouts: span.count, connected: sync.connected })
 
   return (
-    <div className="space-y-7">
+    <div className="flex min-h-full flex-col space-y-7">
       <PageHeader
-        eyebrow={`Fitness / ${data.weekWorkouts} this week / ${data.workouts.length} logged`}
+        eyebrow={`Fitness / ${state === 'live' ? 'Overview' : 'Setup'}`}
         // The artboard names the source and when it last pulled, with the
         // button that pulls now, in the first band.
         status={
@@ -99,37 +149,111 @@ export default async function FitnessPage() {
             onSync={syncFitness}
           />
         }
-        dot={data.weekWorkouts > 0 ? 'brand' : 'idle'}
         title="Fitness"
-        lede="Workouts, what they came to, and the body metrics behind them. Training load is duration weighted by kind, which is a crude measure and says so."
+        lede="Workouts, what they came to, and the body metrics behind them. The coach reads the week and proposes plan changes into Review; nothing here changes the plan itself."
+        actions={
+          state === 'live' && (
+            <span className="num text-[11px] tracking-[0.08em] text-ink-3">
+              {span.count} WORKOUTS · {span.firstYear} → TODAY
+            </span>
+          )
+        }
       />
 
-      <MetricStrip>
-        <MetricTile
-          label="This week"
-          value={data.weekWorkouts}
-          delta={`${data.weekMinutes} minutes`}
+      {state !== 'live' ? (
+        <SetupCard
+          connected={sync.connected}
+          detail={connections.strava?.lastTestDetail ?? null}
         />
-        <MetricTile
-          label="Load"
-          value={data.weekLoad}
-          delta="duration by kind"
-          deltaTone="quiet"
-        />
-        <MetricTile
-          label="Heaviest set"
-          value={heaviest ? mass(heaviest.weightG) : '--'}
-          delta={heaviest ? `${heaviest.exercise} for ${heaviest.reps}` : 'nothing lifted yet'}
-        />
-        <MetricTile
-          label="Body weight"
-          value={weight ? mass(weight.value) : '--'}
-          delta={weight ? `measured ${weight.measuredOn}` : 'no reading'}
-          deltaTone="quiet"
-        />
-      </MetricStrip>
+      ) : (
+        <>
+          <MetricStrip className="border-rule bg-rule">
+            <MetricTile
+              size="lg"
+              className="bg-bg px-5 py-4"
+              label="This week"
+              value={
+                <>
+                  <Num>
+                    {data.weekWorkouts} <Unit>workouts</Unit>
+                  </Num>
+                  <Sub>{`${hoursLabel(data.weekMinutes)} · LOAD ${data.weekLoad}`}</Sub>
+                </>
+              }
+            />
+            <MetricTile
+              size="lg"
+              className="bg-bg px-5 py-4"
+              label={heaviest ? `${heaviest.best!.exercise} · best set` : 'Best set'}
+              value={
+                heaviest ? (
+                  <>
+                    <Num>
+                      {mass(heaviest.best!.weightG).replace(' lb', '')}{' '}
+                      <Unit>{`×${heaviest.best!.reps}`}</Unit>
+                    </Num>
+                    <Sub>{`${whenLabel(heaviest.startedAt, todayIso)} · ${heaviest.name.toUpperCase()}`}</Sub>
+                  </>
+                ) : (
+                  <>
+                    <Num>
+                      <span className="text-ink-3">--</span>
+                    </Num>
+                    <Sub>NOTHING LIFTED YET</Sub>
+                  </>
+                )
+              }
+            />
+            <MetricTile
+              size="lg"
+              className="bg-bg px-5 py-4"
+              label={goal ? goal.title : 'Fitness goal'}
+              value={
+                goal ? (
+                  <>
+                    <Num>
+                      <span className={GOAL_TONE[goal.status] ?? ''}>{goal.current}</span>{' '}
+                      <Unit>{`/ ${goal.target}`}</Unit>
+                    </Num>
+                    <Sub>{`${goal.status.replace('_', ' ').toUpperCase()} · ${goal.percent}%`}</Sub>
+                  </>
+                ) : (
+                  <>
+                    <Num>
+                      <span className="text-ink-3">--</span>
+                    </Num>
+                    <Sub>NO FITNESS GOAL</Sub>
+                  </>
+                )
+              }
+            />
+            <MetricTile
+              size="lg"
+              className="bg-bg px-5 py-4"
+              label="Body metrics"
+              value={
+                weight ? (
+                  <>
+                    <Num>
+                      {mass(weight.value).replace(' lb', '')} <Unit>lb</Unit>
+                    </Num>
+                    <Sub>{`MEASURED ${monthDay(weight.measuredOn)}`}</Sub>
+                  </>
+                ) : (
+                  <>
+                    <Num>
+                      <span className="text-ink-3">--</span>
+                    </Num>
+                    <Sub>NO READINGS YET</Sub>
+                  </>
+                )
+              }
+            />
+          </MetricStrip>
 
-      <Fitness data={data} />
+          <Fitness data={data} />
+        </>
+      )}
     </div>
   )
 }

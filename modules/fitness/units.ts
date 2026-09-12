@@ -99,8 +99,14 @@ export function whenLabel(iso: string, todayIso: string): string {
   const days = Math.round((today.getTime() - new Date(`${day}T00:00:00Z`).getTime()) / 86_400_000)
   if (days === 0) return 'TODAY'
   if (days === 1) return 'YESTERDAY'
-  const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
-  return `${MONTHS[Number(day.slice(5, 7)) - 1]} ${day.slice(8, 10)}`
+  return monthDay(day)
+}
+
+const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+
+/** "SEP 04" from a date or timestamp string. */
+export function monthDay(iso: string): string {
+  return `${MONTHS[Number(iso.slice(5, 7)) - 1]} ${iso.slice(8, 10)}`
 }
 
 /** "2H 41M", "51M": the week's training time as the tile sub-line prints it. */
