@@ -24,6 +24,7 @@ export function PageHeader({
   lede,
   actions,
   status,
+  hideTitle = false,
   className,
 }: {
   /** The breadcrumb in band one. "Finance / Overview". */
@@ -35,10 +36,15 @@ export function PageHeader({
   actions?: ReactNode
   /** Sync state or a count, right of band one. Falls back to nothing. */
   status?: ReactNode
+  /**
+   * The band alone. Tasks and Skill Tree draw no title block; the h1 stays for
+   * the reader and the search placeholder, off screen.
+   */
+  hideTitle?: boolean
   className?: string
 }) {
   return (
-    <div className={cn('space-y-5', className)}>
+    <div className={cn(!hideTitle && 'space-y-5', className)}>
       {/* The negative margins cancel `main`'s padding, which is 18px on a
         * phone and 28 from md up. */}
       <div className="-mx-[18px] -mt-[18px] flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-rule px-[18px] py-3.5 md:-mx-7 md:-mt-7 md:h-14 md:flex-nowrap md:px-7 md:py-0">
@@ -55,6 +61,9 @@ export function PageHeader({
         {status && <div className="flex items-center gap-3 md:order-last">{status}</div>}
       </div>
 
+      {hideTitle ? (
+        <h1 className="sr-only">{title}</h1>
+      ) : (
       <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
         <div className="min-w-0 space-y-2">
           <h1 className="t-headline text-ink">{title}</h1>
@@ -67,6 +76,7 @@ export function PageHeader({
             their own line, which they do as soon as the lede is long. */}
         {actions && <div className="ml-auto flex flex-wrap items-center gap-2">{actions}</div>}
       </header>
+      )}
     </div>
   )
 }

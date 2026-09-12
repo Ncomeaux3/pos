@@ -5,22 +5,36 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { useSwipe } from './gestures'
 
-export type Tab<T extends string> = { value: T; label: ReactNode; count?: number }
+export type Tab<T extends string> = {
+  value: T
+  label: ReactNode
+  count?: number
+  /** Amber for a count that is waiting on the owner: Review's agent tasks. */
+  countTone?: 'warn'
+}
 
+// The DS tab, as every artboard draws it: 13px, a 1px underline sitting on the
+// row's rule, 8px over and 12px under, the tabs touching with their own side
+// padding. Only that padding varies between screens (10 to 16), which is what
+// `tabClassName` is for.
 const TAB_BASE =
-  'flex shrink-0 items-center gap-2 border-b-2 pb-2.5 pt-1 text-sm transition-colors duration-150'
+  '-mb-px flex shrink-0 items-center border-b px-2.5 pb-3 pt-2 text-[13px] whitespace-nowrap transition-colors duration-150'
 const TAB_ON = 'border-brand text-ink'
-const TAB_OFF = 'border-transparent text-ink-3 hover:text-ink-2'
+const TAB_OFF = 'border-transparent text-ink-3 hover:text-ink'
 const TAB_SOON = 'border-transparent text-ink-4 cursor-not-allowed'
 // Scrolls rather than wraps. Five tabs at 402px wrapped onto two lines with
 // the underline of the first row cutting through the second, where the phone
 // artboard runs its segmented control off the edge of the screen instead.
 const TAB_ROW =
-  '-mb-px flex gap-6 overflow-x-auto border-b border-rule [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex-wrap md:overflow-visible'
+  'flex overflow-x-auto border-b border-rule [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex-wrap md:overflow-visible'
 
-function TabCount({ count }: { count?: number }) {
+function TabCount({ count, tone }: { count?: number; tone?: 'warn' }) {
   if (count === undefined) return null
-  return <span className="num text-[10px] tracking-[0.1em] text-ink-3">{count}</span>
+  return (
+    <span className={cn('num ml-1.5 text-[10px]', tone === 'warn' ? 'text-warn' : 'text-ink-3')}>
+      {count}
+    </span>
+  )
 }
 
 /**
@@ -34,12 +48,14 @@ export function TabBar<T extends string>({
   onChange,
   label,
   className,
+  tabClassName,
 }: {
   tabs: Tab<T>[]
   value: T
   onChange: (next: T) => void
   label: string
   className?: string
+  tabClassName?: string
 }) {
   // Swiping the tab row moves one tab, which is the gesture every phone app
   // has and the reason the row is reachable with a thumb at all. Bounded at
@@ -62,10 +78,10 @@ export function TabBar<T extends string>({
             role="tab"
             aria-selected={on}
             onClick={() => onChange(t.value)}
-            className={cn(TAB_BASE, on ? TAB_ON : TAB_OFF)}
+            className={cn(TAB_BASE, on ? TAB_ON : TAB_OFF, tabClassName)}
           >
             {t.label}
-            <TabCount count={t.count} />
+            <TabCount count={t.count} tone={t.countTone} />
           </button>
         )
       })}
@@ -104,7 +120,7 @@ export function TabLinks({
         t.soon ? (
           <span key={t.href} className={cn(TAB_BASE, TAB_SOON)}>
             {t.label}
-            <span className="label text-[9px] tracking-[0.1em] text-ink-4">soon</span>
+            <span className="label ml-1.5 text-[9px] tracking-[0.1em] text-ink-4">soon</span>
           </span>
         ) : (
           <Link

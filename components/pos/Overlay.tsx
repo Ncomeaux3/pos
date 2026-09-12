@@ -22,6 +22,7 @@ export function Overlay({
   onClose,
   side = 'right',
   wide = false,
+  narrow = false,
   eyebrow,
   title,
   lede,
@@ -33,9 +34,12 @@ export function Overlay({
   side?: 'right' | 'bottom'
   /** 560px instead of 520: the Travel artboard's trip drawer. */
   wide?: boolean
+  /** 480px: the Tasks artboard's task drawer. */
+  narrow?: boolean
   /** The crumb in the band: "Finance / Accounts / Checking". */
   eyebrow?: ReactNode
-  title: ReactNode
+  /** Absent, the body starts 22px under the band: the Tasks form drawer. */
+  title?: ReactNode
   /** One line under the title, 13px ink-3. */
   lede?: ReactNode
   /** Sticky action bar at the bottom of the panel. */
@@ -90,7 +94,9 @@ export function Overlay({
         ref={panel}
         role="dialog"
         aria-modal="true"
-        aria-label={typeof title === 'string' ? title : undefined}
+        aria-label={
+          typeof title === 'string' ? title : typeof eyebrow === 'string' ? eyebrow : undefined
+        }
         tabIndex={-1}
         className={cn(
           'absolute flex flex-col bg-bg-elev outline-none',
@@ -98,7 +104,7 @@ export function Overlay({
           side === 'right'
             ? cn(
                 'right-0 top-0 h-full border-l border-rule-2 shadow-[-24px_0_48px_rgba(0,0,0,.35)] slide-in-from-right',
-                wide ? 'w-[min(560px,100%)]' : 'w-[min(520px,100%)]',
+                wide ? 'w-[min(560px,100%)]' : narrow ? 'w-[min(480px,100%)]' : 'w-[min(520px,100%)]',
               )
             : 'bottom-0 left-0 max-h-[74vh] w-full rounded-t-xl border-t border-rule-2 slide-in-from-bottom',
         )}
@@ -118,12 +124,23 @@ export function Overlay({
           </button>
         </div>
 
-        <div className="shrink-0 px-6 pt-[22px]">
-          <h2 className="text-[26px] font-normal leading-none tracking-[-0.03em] text-ink">{title}</h2>
-          {lede && <p className="mt-2 text-[13px] leading-[1.5] text-ink-3">{lede}</p>}
-        </div>
+        {title !== undefined && (
+          <div className="shrink-0 px-6 pt-[22px]">
+            <h2 className="text-[26px] font-normal leading-none tracking-[-0.03em] text-ink">
+              {title}
+            </h2>
+            {lede && <p className="mt-2 text-[13px] leading-[1.5] text-ink-3">{lede}</p>}
+          </div>
+        )}
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6 pt-[18px]">{children}</div>
+        <div
+          className={cn(
+            'min-h-0 flex-1 overflow-y-auto px-6 pb-6',
+            title === undefined ? 'pt-[22px]' : 'pt-[18px]',
+          )}
+        >
+          {children}
+        </div>
 
         {footer && (
           <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-rule px-6 py-4">
