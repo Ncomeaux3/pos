@@ -171,6 +171,15 @@ export async function seed(): Promise<number> {
   // day is a constraint. Nothing registers a plan entry in core.entities, so
   // there is nothing to orphan by deleting these.
   await db().query(`delete from meals.plan_entry where source = 'demo'`)
+  // The screen tests plan into empty slots around the fixture week, and one
+  // thing per slot per day is a constraint: a row they left behind would
+  // collide with the fixture on the next seed.
+  await db().query(
+    `delete from meals.plan_entry
+      where source = 'manual'
+        and on_date between date_trunc('week', core.today())::date - 7
+                        and date_trunc('week', core.today())::date + 14`,
+  )
 
   // Days since Monday, so the week reads the same whichever day it is seeded.
   const { rows } = await db().query<{ idx: number }>(
