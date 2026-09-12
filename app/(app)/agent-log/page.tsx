@@ -1,10 +1,11 @@
 import { Card, CardHead, Chip, Eyebrow, MetricTile, PageHeader, StatusChip } from '@/components/pos'
-import { getModule } from '@/core/modules'
+import { getModule, getModules } from '@/core/modules'
 import { getSetting } from '@/core/settings'
 import { clockIn, dayIn } from '@/core/today'
 import { listRuns, listUndone } from '@/core/writelog'
 import { duration, summarise, type Entry, type Job, type Run } from '@/core/writelog-shape'
 import { AutonomyPicker } from '../settings/agents/AutonomyPicker'
+import { jobLabel } from './format'
 import { RunLog } from './RunLog'
 
 function label(id: string): string {
@@ -68,12 +69,22 @@ export default async function AgentLogPage() {
     [...new Set(entries.map((e) => e.module))].map((id) => [id, label(id)]),
   )
 
+  // Nav order, not first-seen order, so the filter row reads the way the
+  // sidebar does. Doubles as the set of modules a failed job can honestly
+  // retry: `runNightly({ module })` only knows the ids in this list, and a
+  // job stamped with anything else (a core stage, for instance) would rerun
+  // nothing at all if a button pretended otherwise.
+  const registeredModules = getModules().map((m) => m.id)
+
+  const writeWord = (n: number) => `write${n === 1 ? '' : 's'}`
+  const jobWord = (n: number) => `job${n === 1 ? '' : 's'}`
+
   return (
     <div className="space-y-7">
       <PageHeader
         eyebrow={
           last
-            ? `Last run ${last.date} ${last.clock} / ${last.writes} writes / ${failures} failed`
+            ? `Last run ${last.date} ${last.clock} · ${last.writes} ${writeWord(last.writes)} · ${failures} ${jobWord(failures)} failed`
             : 'No run yet'
         }
         dot={!last ? 'idle' : failures > 0 ? 'warn' : 'ok'}
@@ -83,12 +94,12 @@ export default async function AgentLogPage() {
 
       <div className="flex flex-wrap items-start gap-x-8 gap-y-7">
         <div className="min-w-0 flex-[1_1_520px]">
-          <RunLog runs={shaped} moduleLabels={moduleLabels} />
+          <RunLog runs={shaped} moduleLabels={moduleLabels} registeredModules={registeredModules} />
         </div>
 
         <aside className="flex min-w-0 flex-[1_1_320px] flex-col gap-6 md:max-w-[400px]">
           <section className="space-y-3">
-            <Eyebrow>{last ? `Run ${last.date} ${last.clock}` : 'No run yet'}</Eyebrow>
+            <Eyebrow>{last ? 'This run' : 'No run yet'}</Eyebrow>
             <div className="grid grid-cols-2 gap-2.5">
               <MetricTile label="Writes" value={last?.writes ?? 0} />
               <MetricTile
@@ -118,7 +129,7 @@ export default async function AgentLogPage() {
                       className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-rule py-2.5"
                     >
                       <span className="t-caption min-w-0 flex-1 basis-[130px] text-ink-2">
-                        {label(j.module)} / {j.name}
+                        {label(j.module)} / {jobLabel(j.name)}
                       </span>
                       <span className="label text-[10px] text-ink-3">
                         {duration(j.durationMs)}

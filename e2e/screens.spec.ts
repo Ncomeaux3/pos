@@ -658,6 +658,10 @@ test('agent log, the run accordion and the rail', async ({ page }) => {
   await page.goto('/agent-log')
   await expect(page.getByRole('heading', { name: 'What the agent did while you slept' })).toBeVisible()
 
+  // The band names the run with the artboard's punctuation: a middle dot
+  // between the write count and the failure count, both pluralised honestly.
+  await expect(page.getByText(/Last run .+ · \d+ writes? · \d+ jobs? failed/)).toBeVisible()
+
   // The accordion opens on the newest run that wrote something, skipping past
   // however many empty Run now records an earlier test left behind. No click
   // needed, and that is the point being asserted.
@@ -667,9 +671,27 @@ test('agent log, the run accordion and the rail', async ({ page }) => {
   // A failed job shows the raw provider message, not a paraphrase.
   await expect(page.getByText(/auth_expired: refresh token rejected/)).toBeVisible()
 
-  // The rail: run KPIs, the job list, undo history and the autonomy selector.
+  // Its module is 'core', which has no registered jobs to rerun: Retry now
+  // only ever appears on a failed job whose module is real, so it is honestly
+  // absent here rather than a button that would run nothing.
+  await expect(page.getByRole('button', { name: 'Retry now' })).toHaveCount(0)
+
+  // The Jobs rail humanises a snake or dash case job name rather than
+  // inventing artboard prose it does not run.
+  await expect(page.getByText('Notes / Nightly digest')).toBeVisible()
+
+  // The rail: run KPIs (headed "This run", the artboard's wording), the job
+  // list, undo history and the autonomy selector.
+  await expect(page.getByText('This run', { exact: true })).toBeVisible()
   await expect(page.getByText('Undo history / 0')).toBeVisible()
   await expect(page.getByRole('radiogroup', { name: 'Agent autonomy' })).toBeVisible()
+
+  // The filter pills read in the sidebar's module order (Notes is order 10,
+  // Skill Tree and Tasks are order 20), not the order entries happened to be
+  // written in.
+  const pills = page.getByRole('radiogroup', { name: 'Filter the log by module' }).getByRole('radio')
+  const labels = await pills.allTextContents()
+  expect(labels.indexOf('Notes')).toBeLessThan(labels.indexOf('Skill Tree'))
 
   await shoot(page, 'agent-log')
 })
