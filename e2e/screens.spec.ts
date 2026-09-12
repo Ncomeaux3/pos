@@ -1327,40 +1327,78 @@ test('meals, a plan is not a log', async ({ page }) => {
   await page.goto('/meals')
   await expect(page.getByRole('heading', { name: 'Meals' })).toBeVisible()
 
-  // Planned and eaten are separate totals of the same rows, side by side.
-  // Conflating them makes both useless.
-  await expect(page.getByText('Planned', { exact: true })).toBeVisible()
-  await expect(page.getByText('ticked only')).toBeVisible()
+  // The band: how much of the week is planned and the protein average.
+  await expect(page.getByText(/\d+ \/ 28 planned · \d+g protein avg/)).toBeVisible()
 
-  // The calorie target comes from Fitness through the registry, and is
-  // labelled an estimate rather than presented as a prescription.
-  await expect(page.getByText(/fifteen calories a pound/)).toBeVisible()
+  // Two tabs. The grocery list is a drawer and drafts sit in the recipe grid.
+  const tabs = page.getByRole('tab')
+  await expect(tabs).toHaveText([/^Week/, /^Recipes/])
+
+  // Monday to Sunday as columns, slots as rows, a totals row under them.
+  await expect(page.getByText('MON', { exact: true })).toBeVisible()
+  await expect(page.getByText('SUN', { exact: true })).toBeVisible()
+  await expect(page.getByText('TOTAL', { exact: true })).toBeVisible()
+
+  // Today: what was eaten, against the one target the app has. A plan is not
+  // a log until the meal is ticked.
+  await expect(page.getByText('Eaten so far')).toBeVisible()
+  await expect(page.getByText('Calories', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Mark eaten' }).first()).toBeVisible()
+
+  // The week cells. The calorie target comes from Fitness through the
+  // registry and is labelled an estimate rather than a prescription.
+  await expect(page.getByText('Week · kcal / day')).toBeVisible()
+  await expect(page.getByText('Week · protein / day')).toBeVisible()
+  await expect(page.getByText('Week · cost')).toBeVisible()
+  await expect(page.getByText('Cooked', { exact: true })).toBeVisible()
+  await expect(page.getByText(/15 kcal a pound/)).toBeVisible()
 
   await shoot(page, 'meals')
 })
 
 test('meals, the grocery list lists quantities rather than adding them', async ({ page }) => {
-  await page.goto('/meals?tab=grocery')
+  await page.goto('/meals?drawer=grocery')
 
-  // Chicken thigh appears in one planned recipe; garlic in the same. The point
-  // is the explanation under the list, which is the honest half.
-  await expect(page.getByText('Chicken thigh')).toBeVisible()
-  await expect(page.getByText(/Grams and cloves and splashes do not sum/)).toBeVisible()
+  // Grouped by recipe, quantities as written. The point is the sentence
+  // under the list, which is the honest half.
+  const drawer = page.getByRole('dialog')
+  await expect(drawer.getByText('Grocery list')).toBeVisible()
+  await expect(drawer.getByText('Chicken thigh')).toBeVisible()
+  await expect(drawer.getByText('600 g')).toBeVisible()
+  await expect(drawer.getByText(/Quantities are as written and are not added up/)).toBeVisible()
 
   await shoot(page, 'meals-grocery')
 })
 
 test('meals, an imported recipe waits in the inbox', async ({ page }) => {
-  await page.goto('/meals?tab=inbox')
+  await page.goto('/meals?tab=recipes')
 
+  // A draft is a card at the top of the grid, tagged, with the decision on it.
   await expect(page.getByText('Sheet pan salmon')).toBeVisible()
-  await expect(page.getByText('Draft')).toBeVisible()
+  await expect(page.getByText('draft', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Accept' }).first().click()
   await expect(page.getByText('Added to the library')).toBeVisible()
+  await expect(page.getByText('draft', { exact: true })).toHaveCount(0)
+})
 
-  await page.goto('/meals?tab=recipes')
-  await expect(page.getByText('Sheet pan salmon')).toBeVisible()
+test('meals, a slot is picked, swapped and cleared from the drawer', async ({ page }) => {
+  await page.goto('/meals')
+
+  // An empty slot opens the pick list, favourites first.
+  await page.getByRole('button', { name: 'Plan a meal' }).first().click()
+  const drawer = page.getByRole('dialog')
+  await expect(drawer.getByText('Pick a recipe')).toBeVisible()
+  await drawer.getByRole('button', { name: /Lentil soup/ }).click()
+  await expect(drawer).toHaveCount(0)
+
+  // A planned cell opens its recipe with the plan actions in the footer.
+  await page.getByRole('button', { name: /^Turkey chili/ }).first().click()
+  await expect(drawer.getByRole('heading', { name: 'Turkey chili' })).toBeVisible()
+  await expect(drawer.getByText('Serves 6 · per-serving values')).toBeVisible()
+  await expect(drawer.getByRole('button', { name: 'Cook' })).toBeVisible()
+  await drawer.getByRole('button', { name: 'Remove from plan' }).click()
+  await expect(drawer).toHaveCount(0)
 })
 
 test('ideas, the board sorts by quadrant and keeps what was killed', async ({ page }) => {
@@ -1515,8 +1553,8 @@ test('insurance, renewing keeps the same row', async ({ page }) => {
 
 test('meals, cook mode scales what can be scaled and says what cannot', async ({ page }) => {
   await page.goto('/meals?tab=recipes')
-  await page.getByRole('button', { name: /Turkey chili/ }).click()
-  await page.getByRole('button', { name: 'Cook this' }).click()
+  await page.getByRole('button', { name: /^Turkey chili/ }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Cook' }).click()
 
   // One step at a time, in type you can read from across a kitchen.
   await expect(page.getByText('Cooking / step 1 of 3')).toBeVisible()
