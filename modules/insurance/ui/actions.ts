@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireOwner } from '@/core/auth'
 import { db } from '@/core/db'
-import { remove } from '@/core/files'
+import { remove, signedUrl, upload } from '@/core/files'
 import { callTool } from '@/core/tools'
 import { revealNumber } from '../data'
 import { draftFromPdf } from '../extract'
@@ -188,5 +188,62 @@ export async function createFromDraft(input: {
     return done()
   } catch (error) {
     return failed(error)
+  }
+}
+
+export async function deletePolicy(id: string): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    await callTool('insurance', 'delete_policy', { id }, { source: 'ui' })
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+/**
+ * Attach a PDF to a policy that already exists. The file goes to the module's
+ * private bucket and a document row points at it; nothing is read out of it.
+ */
+export async function attachDocument(form: FormData): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    const policyId = String(form.get('policyId') ?? '')
+    const file = form.get('file')
+    if (!(file instanceof File)) throw new Error('No file was sent')
+    if (file.type !== 'application/pdf') throw new Error('That is not a PDF')
+
+    const stored = await upload(
+      'insurance',
+      `${policyId}/${Date.now()}-${file.name.replace(/[^A-Za-z0-9._-]/g, '_')}`,
+      Buffer.from(await file.arrayBuffer()),
+      'application/pdf',
+    )
+    const now = new Date()
+    const meta = `${Math.max(1, Math.round(file.size / 1024))} KB · ${now.toLocaleString('en-US', { month: 'short' })} ${now.getFullYear()}`
+    await callTool(
+      'insurance',
+      'attach_document',
+      { policy_id: policyId, name: file.name, meta, file_path: stored.path },
+      { source: 'ui' },
+    )
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+/** A short lived URL for one document's file. Nothing in the bucket is public. */
+export async function documentUrl(id: string): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  await requireOwner()
+  try {
+    const { rows } = await db().query<{ file_path: string | null }>(
+      `select file_path from insurance.document where id = $1`,
+      [id],
+    )
+    if (!rows[0]?.file_path) throw new Error('This document has no file behind it')
+    return { ok: true, url: await signedUrl({ module: 'insurance', path: rows[0].file_path }) }
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'Failed' }
   }
 }

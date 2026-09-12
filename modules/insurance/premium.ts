@@ -72,7 +72,7 @@ export const STATUS_LABELS: Record<PolicyStatus, string> = {
 export function maskNumber(policyNumber: string): string {
   const clean = policyNumber.replace(/[^A-Za-z0-9]/g, '')
   if (clean.length === 0) return 'not on file'
-  return `**** ${clean.slice(-4)}`
+  return `•••• ${clean.slice(-4)}`
 }
 
 /**
@@ -83,8 +83,12 @@ export function maskNumber(policyNumber: string): string {
  * owner types the real date when the carrier says something different.
  */
 export function nextTermEnd(expiresOn: string, cadence: Cadence): string {
-  const months = cadence === 'semiannual' ? 6 : 12
-  const [y, m, d] = expiresOn.split('-').map(Number)
+  return addMonths(expiresOn, cadence === 'semiannual' ? 6 : 12)
+}
+
+/** The same day of month `months` on, clamped to the month's last day. */
+function addMonths(iso: string, months: number): string {
+  const [y, m, d] = iso.split('-').map(Number)
   const target = new Date(Date.UTC(y, m - 1 + months, 1))
   const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate()
   target.setUTCDate(Math.min(d, lastDay))
@@ -114,4 +118,79 @@ export function remindersDueToday(
   const days = daysUntil(expiresOn, todayIso)
   if (days === null || days < 0) return []
   return leads.filter((lead) => lead === days)
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/** "Oct 18", or "Jan 2 2027" when the year is not this one. */
+export function shortDate(iso: string, todayIso: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  return `${MONTHS[m - 1]} ${d}${y === Number(todayIso.slice(0, 4)) ? '' : ` ${y}`}`
+}
+
+/** "37 days", "today", "12d ago", "no date". The table's and the drawer's big figure. */
+export function daysLabel(expiresOn: string | null, todayIso: string): string {
+  const days = daysUntil(expiresOn, todayIso)
+  if (days === null) return 'no date'
+  if (days === 0) return 'today'
+  if (days < 0) return `${Math.abs(days)}d ago`
+  return `${days} days`
+}
+
+const CADENCE_TAGS: Record<Cadence, string> = {
+  monthly: '/mo',
+  quarterly: '/3mo',
+  semiannual: '/6mo',
+  annual: '/yr',
+}
+
+export function cadenceTag(cadence: Cadence): string {
+  return CADENCE_TAGS[cadence]
+}
+
+/** "60d · 14d · day of", longest lead first; "off" when there are none. */
+export function leadsLabel(leads: number[]): string {
+  if (leads.length === 0) return 'off'
+  return leads
+    .slice()
+    .sort((a, b) => b - a)
+    .map((l) => (l === 0 ? 'day of' : `${l}d`))
+    .join(' · ')
+}
+
+/**
+ * Where each reminder sits on a track from today (0) to the expiry (100), as
+ * a percentage to one decimal, and whether it has already fired.
+ */
+export function reminderMarks(leads: number[], days: number): { lead: number; at: number; fired: boolean }[] {
+  const span = Math.max(days, 1)
+  return leads.map((lead) => ({
+    lead,
+    at: Math.round(Math.max(0, Math.min(100, (1 - lead / span) * 100)) * 10) / 10,
+    fired: lead >= days,
+  }))
+}
+
+/**
+ * Billing dates stepped back from the expiry by the cadence: the term ends on
+ * the expiry, so a monthly policy expiring on the 18th bills on the 18th. One
+ * date behind today and three ahead. These are inferred dates, not payments:
+ * the app records none, so nothing here is ever labelled paid.
+ */
+export function paymentSchedule(
+  expiresOn: string,
+  cadence: Cadence,
+  todayIso: string,
+): { label: 'Last' | 'Next' | 'Upcoming'; on: string }[] {
+  const months = { monthly: 1, quarterly: 3, semiannual: 6, annual: 12 }[cadence]
+  const at = (k: number) => addMonths(expiresOn, k * months)
+  // Walk back until the date is on or before today: that is "Last".
+  let k = 0
+  while (at(k) > todayIso) k--
+  return [
+    { label: 'Last', on: at(k) },
+    { label: 'Next', on: at(k + 1) },
+    { label: 'Upcoming', on: at(k + 2) },
+    { label: 'Upcoming', on: at(k + 3) },
+  ]
 }
