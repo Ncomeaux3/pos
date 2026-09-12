@@ -56,3 +56,6 @@ playwright-report/
 # Local agent tooling. .codex/config.toml carries the pos MCP bearer token.
 .codex/
 .agents/
+
+# Codex workspace file, not part of the template (decision 2026-09-12).
+AGENTS.md

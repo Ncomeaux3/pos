@@ -1,7 +1,7 @@
 # Status
 
 Where the build actually is. Updated at the end of each step. Read this first
-in a fresh session, then `docs/plans/design-build.md` for what comes next.
+in a fresh session, then `docs/plans/backend-live.md` for what comes next.
 
 Last updated: 2026-09-12. Every screen in the handoff is matched to its
 artboard: twenty-one fidelity passes (Weekly Review, Dashboard, Finance, Skill
@@ -11,7 +11,11 @@ Notifications, Agent Log, Onboarding and Login), the rail to PosSidebar, and
 the Mobile re-check at 402. Branch `main`. Nothing in the handoff is
 unclaimed: Finance Options is three alternates of Finance and is not built
 (Finance follows POS Finance.dc.html), Backend Handoff is a document. Step 15,
-deploy, is the only Phase 1 step left.
+deploy, is the only Phase 1 step left, and it is now the plan in
+`docs/plans/backend-live.md` (adopted 2026-09-12): a hygiene phase with the
+production login fix, production live, the integrations, the Apple Health
+webhook, a cron-silence check, and PR #10. The owner's ordered steps are in
+`docs/OWNER-TODO.md`.
 
 ## Done
 
