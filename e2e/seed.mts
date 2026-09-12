@@ -47,6 +47,12 @@ const goalCount = await seedGoals()
 // The inline add test creates this goal on every run; without this the Life
 // ops group grows by one card a run.
 await db().query(`delete from goals.goal where title = 'Swim 2km without stopping'`)
+// The health log a visit test files this record on every run.
+await db().query(
+  `delete from core.entities where module = 'health' and entity_type = 'record'
+      and entity_id in (select id::text from health.record where title = 'Ferritin')`,
+)
+await db().query(`delete from health.record where title = 'Ferritin'`)
 // Tasks seed before goals exist, so the links between them are drawn here:
 // the Goals drawer lists a goal's tasks and the card names the next one.
 for (const [task, goal] of [

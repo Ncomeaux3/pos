@@ -42,6 +42,7 @@ export async function listMedications(): Promise<
     name: string
     dose: string
     schedule: string
+    started_on: string | null
     refill_on: string | null
     ended_on: string | null
     taken: string[]
@@ -52,11 +53,12 @@ export async function listMedications(): Promise<
     name: string
     dose: string
     schedule: string
+    started_on: string | null
     refill_on: string | null
     ended_on: string | null
     taken: string[] | null
   }>(
-    `select m.id, m.name, m.dose, m.schedule, m.refill_on::text, m.ended_on::text,
+    `select m.id, m.name, m.dose, m.schedule, m.started_on::text, m.refill_on::text, m.ended_on::text,
             array_agg(l.taken_on::text order by l.taken_on desc)
               filter (where l.taken_on is not null) as taken
        from health.medication m

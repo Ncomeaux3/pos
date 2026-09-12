@@ -1342,62 +1342,87 @@ test('fitness, the exercise index and body metrics read in their own units', asy
   await shoot(page, 'fitness-body')
 })
 
-test('health, screenings show every state including never', async ({ page }) => {
-  await page.goto('/health?tab=screenings')
+test('health, one page with the artboard\'s panes and the status in the band', async ({ page }) => {
+  await page.goto('/health')
   await expect(page.getByRole('heading', { name: 'Health' })).toBeVisible()
+  const mobile = (page.viewportSize()?.width ?? 0) < 720
+  if (!mobile) await expect(page.getByText(/(\d+ screenings? overdue|Nothing overdue) · (next visit|nothing booked)/)).toBeVisible()
 
-  // 'never' is its own state, not folded into overdue: a screening you have
-  // never had is a different conversation from one you are late for, and
-  // showing it as decades overdue would invent a history.
-  await expect(page.getByText('never had one')).toBeVisible()
-  // Days under two months, months past it. The seeded physical is 35 days
-  // late, which is the form that reads usefully at that distance.
-  await expect(page.getByText(/\d+ days overdue/)).toBeVisible()
+  // Body weight belongs to Fitness and the tile says so; clinical readings show
+  // where they came from, and a delta only against a real previous reading.
+  await expect(page.getByText('FITNESS', { exact: true })).toBeVisible()
+  await expect(page.getByText('118/74')).toBeVisible()
+  await expect(page.getByText(/-8 · since \w{3} \d{4}/)).toBeVisible()
 
-  await shoot(page, 'health-screenings')
+  // Appointments as month-day cards with the status tag; Upcoming and History
+  // are pills, not a page tab.
+  await expect(page.getByRole('tab', { name: 'Upcoming' })).toBeVisible()
+  const physical = page.getByRole('button', { name: /Annual physical/ }).first()
+  await expect(physical).toBeVisible()
+  await expect(physical.getByText('confirmed')).toBeVisible()
+  await page.getByRole('tab', { name: 'History' }).click()
+  await expect(page.getByRole('button', { name: /Eye exam/ }).first()).toBeVisible()
+  await page.getByRole('tab', { name: 'Upcoming' }).click()
+
+  // Records carry their type, date and whether a file is behind them.
+  await expect(page.getByText('RECORD', { exact: true })).toBeVisible()
+  await expect(page.getByText('NO FILE').first()).toBeVisible()
+
+  await shoot(page, 'health')
 })
 
-test('health, the rail says what is owed and what cover costs', async ({ page }) => {
+test('health, the rail says what is owed with the app\'s own actions', async ({ page }) => {
   await page.goto('/health')
 
-  // Three things that are true whichever tab is open.
-  await expect(page.getByText('Due and overdue')).toBeVisible()
-  await expect(page.getByText('Insurance and cost')).toBeVisible()
+  // Never is its own state, not folded into overdue: a screening you have
+  // never had is a different conversation from one you are late for.
+  await expect(page.getByText('NEVER DONE', { exact: true })).toBeVisible()
+  // A screening whose appointment is booked reads SCHEDULED and opens it.
+  await expect(page.getByText('SCHEDULED').first()).toBeVisible()
+  await page.getByRole('button', { name: 'View appointment' }).first().click()
+  await expect(page.getByRole('dialog').getByText('PREP', { exact: true })).toBeVisible()
+  await expect(page.getByRole('dialog').getByText(/Fast twelve hours/)).toBeVisible()
+  await expect(page).toHaveURL(/appt=/)
+  await shoot(page, 'health-drawer')
 
   // The cost comes from the Insurance module's digest, not from a number
   // copied into Health, so there is one figure and it is the current one.
   await expect(page.getByText('Premiums a year')).toBeVisible()
 })
 
-test('health, an appointment carries what to do beforehand', async ({ page }) => {
+test('health, marking a medication moves the count', async ({ page }) => {
   await page.goto('/health')
-
-  // The part that is useless the day after and vital the day before, and it is
-  // only shown while the appointment is still ahead.
-  await expect(page.getByText(/Fast twelve hours/)).toBeVisible()
-  await shoot(page, 'health')
+  await expect(page.getByText(/^0 of 2 marked today\./)).toBeVisible()
+  await page.getByRole('button', { name: 'Taken today, Vitamin D' }).click()
+  await expect(page.getByText(/^1 of 2 marked today\./)).toBeVisible()
+  await page.getByRole('button', { name: 'Taken today, Vitamin D' }).click()
+  await expect(page.getByText(/^0 of 2 marked today\./)).toBeVisible()
 })
 
-test('health, body weight is read from Fitness rather than kept twice', async ({ page }) => {
-  await page.goto('/health?tab=vitals')
+test('health, log a visit files a past date under records', async ({ page }) => {
+  await page.goto('/health')
+  await page.getByRole('button', { name: 'Log a visit' }).click()
+  await expect(page.getByRole('dialog').getByText('New entry')).toBeVisible()
+  await expect(page).toHaveURL(/new=1/)
+  // Shot first: shoot() reloads, and what is typed in the form does not
+  // survive that. The open drawer does, because it is in the URL.
+  await shoot(page, 'health-form')
 
-  // Clinical readings are stored here; body weight belongs to Fitness and is
-  // resolved through the metric registry, which the tile says out loud.
-  await expect(page.getByText('Blood pressure')).toBeVisible()
-  await expect(page.getByText('118/74')).toBeVisible()
-  await expect(page.getByText('from Fitness')).toBeVisible()
+  const drawer = page.getByRole('dialog')
+  await drawer.getByRole('radio', { name: 'Lab' }).click()
+  await drawer.getByPlaceholder('Annual physical').fill('Ferritin')
+  await drawer.getByLabel('DATE').fill('2026-06-01')
+  await drawer.getByPlaceholder('$40 copay').fill('$12')
+  await expect(drawer.getByText('Past date: this files under Records.')).toBeVisible()
+  await drawer.getByRole('button', { name: 'Save entry' }).click()
+  await expect(page.getByText('Saved to records.')).toBeVisible()
 
-  await shoot(page, 'health-vitals')
-})
-
-test('health, marking a medication does not break the streak on an unmarked today', async ({ page }) => {
-  await page.goto('/health?tab=medications')
-
-  // Six days marked ending yesterday. Today unmarked must not zero it: it is
-  // not the end of the day.
-  await expect(page.getByText(/6 day run/).first()).toBeVisible()
-  await page.getByRole('switch', { name: 'Taken today, Vitamin D' }).click()
-  await expect(page.getByText(/7 day run/).first()).toBeVisible()
+  // first(): the desktop and mobile projects share the database, so the
+  // second run finds the first run's row as well.
+  const row = page.getByRole('button', { name: /Ferritin/ }).first()
+  await expect(row).toBeVisible()
+  await row.click()
+  await expect(page.getByRole('dialog').getByText('$12')).toBeVisible()
 })
 
 test('meals, a plan is not a log', async ({ page }) => {

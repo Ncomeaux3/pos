@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/pos'
+import { Eyebrow, PageHeader } from '@/components/pos'
 import { getDigest } from '@/core/digests'
 import { readMetric } from '@/core/metrics'
 import { ownerToday } from '@/core/today'
@@ -10,7 +10,10 @@ import {
   listRecords,
   listScreenings,
 } from '../data'
-import { Health, type HealthData } from './Health'
+import { screeningStatus } from '../screening'
+import { Health, LogVisitButton, type HealthData } from './Health'
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 export default async function HealthPage() {
   const [
@@ -66,15 +69,19 @@ export default async function HealthPage() {
       location: a.location,
       status: a.status,
       prep: a.prep,
+      notes: a.notes,
       costCents: a.cost_estimate_cents,
+      providerId: a.provider_id,
       provider: a.provider_name,
       providerRole: a.provider_role,
+      providerAddress: a.provider_address,
     })),
     medications: medications.map((m) => ({
       id: m.id,
       name: m.name,
       dose: m.dose,
       schedule: m.schedule,
+      startedOn: m.started_on,
       refillOn: m.refill_on,
       ended: m.ended_on !== null,
       taken: m.taken,
@@ -85,6 +92,8 @@ export default async function HealthPage() {
       valueText: v.value_text,
       measuredAt: new Date(v.measured_at).toISOString(),
       provenance: v.provenance,
+      prevValue: v.prev_value === null ? null : Number(v.prev_value),
+      prevMeasuredAt: v.prev_measured_at === null ? null : new Date(v.prev_measured_at).toISOString(),
     })),
     records: records.map((r) => ({
       id: r.id,
@@ -92,7 +101,8 @@ export default async function HealthPage() {
       kind: r.kind,
       takenOn: r.taken_on,
       summary: r.summary,
-      hasFile: r.file_path !== null,
+      fields: r.fields,
+      file: r.file_path === null ? null : /\.(png|jpe?g|webp|heic|gif)$/i.test(r.file_path) ? 'IMAGE' : 'PDF',
     })),
     screenings: screenings.map((s) => ({
       id: s.id,
@@ -106,24 +116,30 @@ export default async function HealthPage() {
       name: p.name,
       role: p.role,
       phone: p.phone,
+      address: p.address,
       notes: p.notes,
     })),
   }
 
-  const next = data.appointments.find((a) => new Date(a.startsAt) >= new Date())
+  const now = new Date()
+  const next = data.appointments.find((a) => new Date(a.startsAt) >= now && a.status !== 'cancelled')
+  const overdue = data.screenings.filter((s) => screeningStatus(s, todayIso) === 'overdue').length
+  const nextLabel = next
+    ? `next visit ${new Date(next.startsAt).getDate()} ${MONTHS[new Date(next.startsAt).getMonth()]}`
+    : 'nothing booked'
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-[22px]">
       <PageHeader
-        eyebrow={`Health / ${data.medications.filter((m) => !m.ended).length} medications / ${data.screenings.length} screenings`}
-        dot={next ? 'brand' : 'idle'}
-        title="Health"
-        lede="Appointments, prescriptions, screenings and records. Every reading shows where it came from, and nothing here offers an opinion about what a number means."
-        actions={
-          <span className="num text-[11px] text-ink-3">
-            {data.records.length} record{data.records.length === 1 ? '' : 's'}
-          </span>
+        eyebrow="Health / Overview"
+        status={
+          <Eyebrow dot={overdue > 0 ? 'bad' : 'brand'} className="whitespace-nowrap">
+            {overdue > 0 ? `${overdue} screening${overdue === 1 ? '' : 's'} overdue` : 'Nothing overdue'} · {nextLabel}
+          </Eyebrow>
         }
+        title="Health"
+        lede="Appointments, medications, vitals and documents in one place. Vitals that Fitness already reads are pulled in rather than typed twice."
+        actions={<LogVisitButton />}
       />
       <Health data={data} />
     </div>

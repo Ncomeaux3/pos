@@ -60,8 +60,11 @@ export async function seed(): Promise<number> {
       `insert into health.appointment
          (provider_id, what, starts_at, location, status, prep, cost_estimate_cents,
           source, external_id)
-       values ($1, $2, (core.today() + $3::int)::timestamptz + $4::time, $5, $6, $7, $8,
-               'demo', $9)
+       values ($1, $2,
+               -- The time is the owner's, not the database's: 09:30 in Chicago.
+               ((core.today() + $3::int)::text || ' ' || $4)::timestamp
+                 at time zone coalesce((select value #>> '{}' from core.settings where key = 'timezone'), 'UTC'),
+               $5, $6, $7, $8, 'demo', $9)
        on conflict (source, external_id) do update
          set starts_at = excluded.starts_at, status = excluded.status
        returning id`,
@@ -108,6 +111,9 @@ export async function seed(): Promise<number> {
     )
   }
 
+  // Measured at a day relative to today, so every reseed on a new day would
+  // add a row; the demo history is exactly this list.
+  await db().query(`delete from health.vital where source = 'demo'`)
   for (const v of VITALS) {
     await db().query(
       `insert into health.vital
