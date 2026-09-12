@@ -5,14 +5,15 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Card,
   CardHead,
-  Chip,
+  DataRow,
+  DataTable,
   EmptyState,
   Eyebrow,
   Row,
   RowList,
   TabBar,
 } from '@/components/pos'
-import { distance, duration, mass, pace } from '../units'
+import { distance, duration, mass, pace, sourcesLabel } from '../units'
 
 // Two views over one list, plus the exercise index. The view is in the URL, so
 // it survives a refresh and can be linked to.
@@ -23,6 +24,9 @@ export type FitnessData = {
     name: string
     detail: string
     kind: string
+    source: string
+    /** Skill names from the classifier's links, most confident first. The row shows the first. */
+    skills: string[]
     startedAt: string
     durationS: number
     distanceM: number
@@ -57,6 +61,28 @@ export type FitnessData = {
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+const right = (label: string) => (
+  <span key={label} className="block text-right">
+    {label}
+  </span>
+)
+
+/**
+ * What sits after the name: the notes, then the best set for a lift or the
+ * distance and pace for anything measured in metres. Pace is a ratio of two
+ * stored numbers rather than a stored one, so it can never disagree with them.
+ */
+function detailOf(w: FitnessData['workouts'][number]): string {
+  return [
+    w.detail,
+    w.best ? `${w.best.exercise} ${mass(w.best.weightG)} × ${w.best.reps}` : '',
+    w.distanceM > 0 ? `${distance(w.distanceM)} at ${pace(w.distanceM, w.durationS)}` : '',
+    w.avgHr ? `${w.avgHr} bpm` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ')
+}
 
 const shortDate = (iso: string) => {
   const d = new Date(iso)
@@ -113,34 +139,26 @@ export function Fitness({ data }: { data: FitnessData }) {
             Every workout links to a Health skill and earns XP on the Skill Tree.
           </EmptyState>
         ) : (
-          <RowList>
-            {data.workouts.map((w) => (
-              <Row
-                key={w.id}
-                title={w.name}
-                meta={[
-                  shortDate(w.startedAt),
-                  w.detail,
-                  // Pace is a ratio of two stored numbers rather than a stored
-                  // one, so it can never disagree with them.
-                  w.distanceM > 0 ? `${distance(w.distanceM)} at ${pace(w.distanceM, w.durationS)}` : '',
-                  w.avgHr ? `${w.avgHr} bpm` : '',
-                ]
-                  .filter(Boolean)
-                  .join(' / ')}
-                right={
-                  <>
-                    {w.best && (
-                      <Chip tone="brand">
-                        {w.best.exercise} {mass(w.best.weightG)} × {w.best.reps}
-                      </Chip>
-                    )}
-                    <span className="label text-[10px] text-ink-3">{duration(w.durationS)}</span>
-                  </>
-                }
-              />
-            ))}
-          </RowList>
+          <Card className="py-3.5">
+            <CardHead label="Recent workouts" meta={sourcesLabel(data.workouts)} className="mb-1" />
+            <DataTable
+              head={['Date', 'Workout', right('Time'), right('Skill')]}
+              cols="72px minmax(0,1fr) auto auto"
+            >
+              {data.workouts.map((w) => (
+                <DataRow key={w.id} className="py-[9px] text-[13px]">
+                  <span className="num text-[12px] text-ink-3">{shortDate(w.startedAt)}</span>
+                  <span className="min-w-0 text-ink">
+                    {w.name} <span className="text-[12px] text-ink-3">{detailOf(w)}</span>
+                  </span>
+                  <span className="num text-right text-ink">{duration(w.durationS)}</span>
+                  <span className="text-right text-[12px] text-ink-2">
+                    {w.skills[0] ?? <span className="text-ink-4">unlinked</span>}
+                  </span>
+                </DataRow>
+              ))}
+            </DataTable>
+          </Card>
         ))}
 
       {tab === 'exercises' &&

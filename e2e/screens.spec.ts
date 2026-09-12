@@ -1336,7 +1336,7 @@ test('fitness, workouts with pace derived rather than stored', async ({ page }) 
     // Load lives in the This week sub-line now, not a tile of its own, and
     // XP is not drawn: the weight lives in the skills schema.
     await expect(page.getByText('duration by kind')).toHaveCount(0)
-    await expect(page.locator('[data-table-head] span')).toHaveText(['DATE', 'WORKOUT', 'TIME', 'SKILL'])
+    await expect(page.locator('[data-table-head] > span')).toHaveText(['Date', 'Workout', 'Time', 'Skill'])
   }
 
   // The recent workouts card: the sources of the rows shown, and the first
