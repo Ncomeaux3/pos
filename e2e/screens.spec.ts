@@ -406,7 +406,13 @@ test('login, signed out', async ({ page, context }) => {
   await context.clearCookies()
   await page.goto('/login')
   await expect(page.getByLabel(/owner email/i)).toBeVisible()
+  await expect(page.getByLabel(/owner email/i)).toHaveAttribute('placeholder', /.+/)
   await expect(page.getByText(/link expires in 15 min/i)).toBeVisible()
+  // The install band uses middots, matching the artboard; a page crumb like
+  // "Review / Pending" is the only place this app uses a plain slash.
+  await expect(page.getByText(/POS · single owner · v0\.1/i)).toBeVisible()
+  // The arrow glyph is aria-hidden, so the accessible name stays plain.
+  await expect(page.getByRole('button', { name: /^send sign-in link$/i })).toBeVisible()
   await shoot(page, 'login')
 })
 
@@ -417,7 +423,23 @@ test('login, link sent', async ({ page, context }) => {
   await page.goto('/login?sent=1&email=owner%40example.com')
   await expect(page.getByRole('heading', { name: /check your inbox/i })).toBeVisible()
   await expect(page.getByText(/expires/i)).toBeVisible()
+  // No "Sent via Resend" cell: the magic link goes out through Supabase
+  // Auth's own mailer, not the Resend integration digests use.
+  await expect(page.getByText(/resend ·/i)).toHaveCount(0)
+  await expect(page.getByText('noreply@cmxlogic.com')).toHaveCount(0)
   await shoot(page, 'login-sent')
+})
+
+test('login, resend restarts the countdown', async ({ page, context }) => {
+  await context.clearCookies()
+  await page.goto('/login?sent=1&email=owner%40example.com')
+
+  // Let the countdown tick down from 15:00 before asking for it again.
+  await page.waitForTimeout(1200)
+  await expect(page.getByText('14:5', { exact: false })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Resend' }).click()
+  await expect(page.getByText('15:00')).toBeVisible()
 })
 
 test('login rejects a malformed address without clearing it', async ({ page, context }) => {
