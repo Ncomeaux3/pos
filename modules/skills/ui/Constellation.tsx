@@ -1,34 +1,15 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import type { SkillStat } from '../data'
 import type { SkillNode } from '../tree'
 import { layout, nodeRadius, ROOT_ID, VIEW_H, VIEW_W, type Placed } from './layout'
+import { FLY_MS, flyAt, labelScale, viewPoint, zoomBy, zoomStep, ZOOM_MAX, type View } from './view'
 
 // Obsidian style, but placed rather than simulated: see ./layout.ts.
 
-const ZOOM_MIN = 0.4
-const ZOOM_MAX = 3
-
-/**
- * The pointer in viewBox units, and the pixels-per-unit that got it there.
- *
- * The svg is fitted xMidYMid meet, so the viewBox is scaled by the *smaller*
- * side and centred in the larger one. Dividing by the width alone, which is
- * what the pan used to do, makes a drag move the canvas at the wrong rate on
- * any box that is not square, and this one never is.
- */
-function viewPoint(svg: SVGSVGElement, clientX: number, clientY: number) {
-  const box = svg.getBoundingClientRect()
-  const scale = Math.min(box.width / VIEW_W, box.height / VIEW_H)
-
-  return {
-    scale,
-    x: (clientX - box.left - (box.width - VIEW_W * scale) / 2) / scale - VIEW_W / 2,
-    y: (clientY - box.top - (box.height - VIEW_H * scale) / 2) / scale - VIEW_H / 2,
-  }
-}
+const HOME: View = { zoom: 1, pan: { x: 0, y: 0 } }
 
 export type Tone = 'gaining' | 'active' | 'stagnant'
 
@@ -60,6 +41,20 @@ const LABEL_SIZE: Record<string, number> = {
   attribute: 12,
   category: 10.5,
   leaf: 9.5,
+}
+
+/**
+ * A label's size and offset from the zoom, in CSS rather than in render.
+ *
+ * `--ts` is written on the group once per frame (see `apply`): the font grows
+ * by it, and the offset by it only past 1, so zooming out never pulls a label
+ * into its star.
+ */
+function labelStyle(offset: number, size: number) {
+  return {
+    fontSize: `calc(${size}px * var(--ts, 1))`,
+    transform: `translateY(calc(${offset}px * max(1, var(--ts, 1))))`,
+  }
 }
 
 /** The blurred bloom behind a node. Accent only when it is gaining. */
@@ -120,8 +115,63 @@ export function Constellation({
   const placed = useMemo(() => layout(nodes), [nodes])
   const statById = useMemo(() => new Map(stats.map((s) => [s.id, s])), [stats])
 
-  const [zoom, setZoom] = useState(1)
-  const [pan, setPan] = useState({ x: 0, y: 0 })
+  /**
+   * Pan and zoom never touch React state.
+   *
+   * A trackpad sends many wheel events per frame. When these were state, the
+   * wheel effect that depended on them was torn down and re-attached after
+   * every commit, so every event that landed before the commit read the old
+   * zoom and the burst collapsed to one step: the jump. And each event
+   * re-rendered a hundred blurred stars: the stutter. Now the view lives in a
+   * ref, the group is written once per animation frame, and nothing else
+   * re-renders on a zoom.
+   */
+  const view = useRef<View>(HOME)
+  const group = useRef<SVGGElement>(null)
+  const frame = useRef(0)
+  const still = useRef(0)
+  const apply = useCallback(() => {
+    if (frame.current) return
+    frame.current = requestAnimationFrame(() => {
+      frame.current = 0
+      const g = group.current
+      if (!g) return
+      const { zoom, pan } = view.current
+      g.setAttribute('transform', `scale(${zoom}) translate(${pan.x} ${pan.y})`)
+      g.style.setProperty('--ts', String(labelScale(zoom)))
+      // Zoomed out far enough that a leaf's own name is already crowding its
+      // neighbours, the second line comes off (a CSS rule on this attribute).
+      g.toggleAttribute('data-far', zoom < 0.91)
+      // The glow filters cost 25ms a frame at Retina scale, against 8ms
+      // without them, so they come off while the view is in motion (a CSS
+      // rule on this attribute) and back the moment it has been still.
+      g.setAttribute('data-moving', '')
+      clearTimeout(still.current)
+      still.current = window.setTimeout(() => g.removeAttribute('data-moving'), 120)
+    })
+  }, [])
+  /** A double-click flies rather than cuts: the view eased to a target over
+   * FLY_MS, one frame at a time. Any wheel or drag cancels it. */
+  const flight = useRef(0)
+  const fly = useCallback(
+    (to: View) => {
+      cancelAnimationFrame(flight.current)
+      const from = view.current
+      const began = performance.now()
+      const step = (now: number) => {
+        const t = (now - began) / FLY_MS
+        view.current = flyAt(from, to, t)
+        apply()
+        flight.current = t < 1 ? requestAnimationFrame(step) : 0
+      }
+      flight.current = requestAnimationFrame(step)
+    },
+    [apply],
+  )
+  const settle = useCallback(() => {
+    cancelAnimationFrame(flight.current)
+    flight.current = 0
+  }, [])
   const [hover, setHover] = useState<{ node: Placed; x: number; y: number } | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   // A drag only becomes a pan once the pointer has actually moved. Until then
@@ -138,7 +188,7 @@ export function Constellation({
   const svg = useRef<SVGSVGElement>(null)
 
   /**
-   * Wheel to zoom, on a listener of our own.
+   * Wheel to zoom, on a listener of our own, attached once.
    *
    * React attaches onWheel passively, so a handler there cannot stop the page
    * scrolling behind the canvas: zooming in would also walk the page down,
@@ -151,42 +201,30 @@ export function Constellation({
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
-
-      // Exponential in the delta, so a step is symmetric: in then out returns
-      // exactly where you were, which z * 1.1 and z * 0.9 do not (they
-      // compound to 0.99 and drift smaller). Proportional too, so a trackpad's
-      // many small deltas and a wheel's few large ones cover the same ground.
-      const lines = e.deltaMode === 1 ? 16 : 1
-      const next = Math.min(
-        ZOOM_MAX,
-        Math.max(ZOOM_MIN, zoom * Math.exp(-e.deltaY * lines * 0.0015)),
-      )
-      if (next === zoom) return
-
-      // Anchor on the cursor. The group is scale(z) translate(p), so the point
-      // under the pointer holds still when p moves by c(1/z' - 1/z).
-      const at = viewPoint(el, e.clientX, e.clientY)
-      const shift = 1 / next - 1 / zoom
-      setPan({ x: pan.x + at.x * shift, y: pan.y + at.y * shift })
-      setZoom(next)
+      settle()
+      view.current = zoomStep(view.current, e.deltaY, e.deltaMode, viewPoint(el, e.clientX, e.clientY))
+      apply()
     }
 
     el.addEventListener('wheel', onWheel, { passive: false })
-    return () => el.removeEventListener('wheel', onWheel)
-  }, [zoom, pan])
+    return () => {
+      el.removeEventListener('wheel', onWheel)
+      cancelAnimationFrame(frame.current)
+      frame.current = 0
+      settle()
+      clearTimeout(still.current)
+    }
+  }, [apply, settle])
 
   const edges = placed.filter((p) => p.id !== ROOT_ID)
   const positionOf = (id: string) => placed.find((p) => p.id === id)
 
   // The band owns the Reset view button, as the artboard has it, so the reset
-  // arrives as a changed token rather than a click in here. Tracked as state
-  // so the comparison happens in render without touching a ref there.
-  const [seenReset, setSeenReset] = useState(resetToken)
-  if (seenReset !== resetToken) {
-    setSeenReset(resetToken)
-    setZoom(1)
-    setPan({ x: 0, y: 0 })
-  }
+  // arrives as a changed token rather than a click in here.
+  useEffect(() => {
+    view.current = HOME
+    apply()
+  }, [resetToken, apply])
 
   const hovered = hover ? statById.get(hover.node.id) : undefined
   const branches = hover ? stats.filter((s) => s.parent === hover.node.id) : []
@@ -231,27 +269,23 @@ export function Constellation({
     [placed],
   )
 
-  /**
-   * How much bigger a label is drawn as you zoom in.
-   *
-   * Labels live inside the scaled group, so at zoom 2 they would double with
-   * everything else and the tree would read as one word per screen. The
-   * artboard scales text by scale^0.7 against a viewBox, which comes out here
-   * as zoom^-0.7: on screen a label still grows, but by a third of the zoom
-   * rather than all of it.
-   */
-  const ts = Math.min(1.6, Math.max(0.6, Math.pow(1 / zoom, 0.7)))
-  const lift = Math.max(1, ts)
-
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col">
+    <div className="relative flex min-h-[320px] flex-1 flex-col">
+      {/* Absolutely positioned, as the artboard's is, and not for the look:
+        * an svg in normal flow with a percentage height dirties layout up its
+        * containing-block chain whenever its own layout is invalidated, and
+        * every transform write is such an invalidation. In flow, each zoom
+        * frame laid out the whole page (about 60ms on a Retina 120Hz screen,
+        * 55 long tasks in a one second gesture); absolute, none. */}
       <svg
         ref={svg}
         role="img"
         aria-label="Skill constellation"
         viewBox={`${-VIEW_W / 2} ${-VIEW_H / 2} ${VIEW_W} ${VIEW_H}`}
-        className="h-full min-h-[320px] w-full cursor-grab touch-none select-none active:cursor-grabbing"
+        className="absolute inset-0 h-full w-full cursor-grab touch-none select-none active:cursor-grabbing"
         onPointerDown={(e) => {
+          settle()
+          const { pan } = view.current
           drag.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y, panning: false }
           panned.current = false
         }}
@@ -271,8 +305,12 @@ export function Constellation({
 
           // Screen pixels to translate units: through the fitted scale, then
           // through the zoom the group applies after the translate.
-          const units = 1 / (viewPoint(e.currentTarget, 0, 0).scale * zoom)
-          setPan({ x: drag.current.panX + dx * units, y: drag.current.panY + dy * units })
+          const units = 1 / (viewPoint(e.currentTarget, 0, 0).scale * view.current.zoom)
+          view.current = {
+            zoom: view.current.zoom,
+            pan: { x: drag.current.panX + dx * units, y: drag.current.panY + dy * units },
+          }
+          apply()
         }}
         onPointerUp={(e) => {
           if (drag.current?.panning) e.currentTarget.releasePointerCapture(e.pointerId)
@@ -291,12 +329,7 @@ export function Constellation({
           onSelect(null)
         }}
         onDoubleClick={(e) => {
-          const next = Math.min(ZOOM_MAX, zoom * 1.5)
-          if (next === zoom) return
-          const at = viewPoint(e.currentTarget, e.clientX, e.clientY)
-          const shift = 1 / next - 1 / zoom
-          setPan({ x: pan.x + at.x * shift, y: pan.y + at.y * shift })
-          setZoom(next)
+          fly(zoomBy(view.current, 1.5, viewPoint(e.currentTarget, e.clientX, e.clientY)))
         }}
       >
         <defs>
@@ -336,7 +369,7 @@ export function Constellation({
           <circle key={i} cx={n.x} cy={n.y} r={210} fill="url(#skill-neb)" />
         ))}
 
-        <g transform={`scale(${zoom}) translate(${pan.x} ${pan.y})`}>
+        <g ref={group} className="skill-view" transform="scale(1) translate(0 0)">
           {edges.map((node) => {
             const from = positionOf(node.parent ?? ROOT_ID)
             if (!from) return null
@@ -372,7 +405,10 @@ export function Constellation({
             const isRoot = node.id === ROOT_ID
             const level = isRoot ? characterLevel : (stat?.level ?? 0)
             const r = nodeRadius(node.ring, level)
-            const tone = isRoot ? 'gaining' : toneFor(stat, now)
+            // Accent is a leaf gaining fast, nothing else: the artboard's rule
+            // is `n.leaf && d30 >= 50`, and its root and attributes are the
+            // same pale blue as every other star.
+            const tone = node.ring === 'leaf' ? toneFor(stat, now) : 'active'
             const isSelected = selected === node.id
             const isDrop = dropTarget === node.id
             const isHovered = hover?.node.id === node.id
@@ -402,14 +438,17 @@ export function Constellation({
                     panned.current = false
                     return
                   }
-                  if (!isRoot) onSelect(isSelected ? null : node.id)
+                  onSelect(isSelected ? null : node.id)
                 }}
                 // The artboard's double-click: fly to the node rather than
                 // zooming wherever the pointer happens to be.
                 onDoubleClick={(e) => {
                   e.stopPropagation()
-                  setPan({ x: -node.x, y: -node.y })
-                  setZoom((z) => Math.min(ZOOM_MAX, Math.max(1.6, z * 1.5)))
+                  const z = view.current.zoom
+                  fly({
+                    zoom: Math.min(ZOOM_MAX, Math.max(1.6, z * 1.5)),
+                    pan: { x: -node.x, y: -node.y },
+                  })
                 }}
                 onDragOver={(e) => {
                   if (isRoot || !onReassign) return
@@ -435,7 +474,7 @@ export function Constellation({
                   * Sizes are the design bundle's ratios, not invented. */}
                 <circle
                   r={r * 3.2}
-                  fill={isRoot ? 'var(--accent)' : HALO_COLOR[tone]}
+                  fill={HALO_COLOR[tone]}
                   filter="url(#skill-glow-big)"
                   opacity={
                     dim
@@ -471,7 +510,7 @@ export function Constellation({
                   * to it. */}
                 <circle
                   r={r * (isHovered ? 1.3 : 1)}
-                  fill={isRoot ? 'var(--accent)' : TONE_FILL[tone]}
+                  fill={TONE_FILL[tone]}
                   filter="url(#skill-glow)"
                   opacity={dim ? 0.35 : 1}
                   className="transition-[r,opacity] duration-200"
@@ -487,23 +526,19 @@ export function Constellation({
                   * glance: without it the tree is a field of unlabelled dots
                   * and every reading of it needs a click. */}
                 <text
-                  y={(r + (isRoot ? 18 : 15)) * lift}
                   textAnchor="middle"
                   className="pointer-events-none transition-colors duration-200"
                   fill={dim ? '#3d4b5c' : isRoot || node.ring === 'attribute' ? '#ffffff' : '#cfe6ff'}
-                  style={{ fontSize: LABEL_SIZE[node.ring] * ts }}
+                  style={labelStyle(r + (isRoot ? 18 : 15), LABEL_SIZE[node.ring])}
                 >
                   {isRoot ? 'You' : (stat?.name ?? node.id)}
                 </text>
                 <text
-                  y={(r + (isRoot ? 30 : 26)) * lift}
                   textAnchor="middle"
-                  className="label pointer-events-none"
+                  className={cn('label pointer-events-none', node.ring === 'leaf' && 'skill-far-hide')}
                   fill="#8fa3b8"
-                  // Zoomed out far enough that a leaf's own name is already
-                  // crowding its neighbours, the second line comes off.
-                  opacity={node.ring === 'leaf' && zoom < 0.91 ? 0 : dim ? 0.35 : 1}
-                  style={{ fontSize: 8.5 * ts }}
+                  opacity={dim ? 0.35 : 1}
+                  style={labelStyle(r + (isRoot ? 30 : 26), 8.5)}
                 >
                   LV {level}
                   {!isRoot && (stat?.gained30d ?? 0) > 0
