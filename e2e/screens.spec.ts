@@ -1320,9 +1320,33 @@ test('fitness, workouts with pace derived rather than stored', async ({ page }) 
   // The heaviest set is shown as what happened, not as a one rep max estimate.
   await expect(page.getByText(/Deadlift 355 lb × 1/)).toBeVisible()
 
-  // Load is duration weighted by kind, and the tile says as much rather than
-  // implying a sports science model.
-  await expect(page.getByText('duration by kind')).toBeVisible()
+  if ((page.viewportSize()?.width ?? 0) >= 720) {
+    // The band's crumb, the mono span beside the title, and the tiles in the
+    // artboard's shape: the week, the heaviest set with when it happened, the
+    // fitness goal from the Goals digest in its status colour, the body weight.
+    await expect(page.getByText('Fitness / Overview')).toBeVisible()
+    await expect(page.getByText(/\d+ WORKOUTS · \d{4} → TODAY/i)).toBeVisible()
+    await expect(page.getByText(/\d+ workouts$/).first()).toBeVisible()
+    await expect(page.getByText(/\d+H \d{2}M · LOAD \d+/i)).toBeVisible()
+    await expect(page.getByText('Leg press · best set')).toBeVisible()
+    await expect(page.getByText(/360 ×10/)).toBeVisible()
+    await expect(page.getByText(/YESTERDAY · LOWER/i)).toBeVisible()
+    await expect(page.getByText(/340 \/ 405/)).toBeVisible()
+    await expect(page.getByText(/STALLED · \d+%/i)).toBeVisible()
+    // Load lives in the This week sub-line now, not a tile of its own, and
+    // XP is not drawn: the weight lives in the skills schema.
+    await expect(page.getByText('duration by kind')).toHaveCount(0)
+    await expect(page.locator('[data-table-head] span')).toHaveText(['DATE', 'WORKOUT', 'TIME', 'SKILL'])
+  }
+
+  // The recent workouts card: the sources of the rows shown, and the first
+  // row's date, name, best set, time and skill.
+  await expect(page.getByText('Recent workouts')).toBeVisible()
+  await expect(page.getByText(/10 BY HAND/i)).toBeVisible()
+  await expect(page.getByText(/^\w{3} \d{2}$/).first()).toBeVisible()
+  await expect(page.getByText(/Leg press 360 lb × 10/)).toBeVisible()
+  await expect(page.getByText('58m', { exact: true })).toBeVisible()
+  await expect(page.getByText('Strength', { exact: true }).first()).toBeVisible()
 
   await shoot(page, 'fitness')
 })
@@ -1338,6 +1362,10 @@ test('fitness, the exercise index and body metrics read in their own units', asy
   await expect(page.getByText('Weight', { exact: true })).toBeVisible()
   await expect(page.getByText('Sleep', { exact: true })).toBeVisible()
   await expect(page.getByText('7h 08m')).toBeVisible()
+
+  // The Body metrics tile reads the latest weight and when it was measured.
+  await expect(page.getByText(/^\d+ lb$/).first()).toBeVisible()
+  await expect(page.getByText(/MEASURED \w{3} \d{2}/i)).toBeVisible()
 
   await shoot(page, 'fitness-body')
 })
