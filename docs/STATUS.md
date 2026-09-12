@@ -78,6 +78,27 @@ Evidence / Affects strip, the 51px "Approve →", Undo on a dismissal only
 does: no "is_manual = true", no "marked manual"; the empty inbox names the
 nightly hour from the cron in the owner's zone.
 
+**The fidelity pass, screen thirteen: Settings.** docs/plans/settings-fidelity.md.
+One header on every tab ("Settings", the lede, the tab as the crumb,
+"{n} of {m} connected" in the band), the DS tab row at the artboard's
+padding. Connections: a grid of provider cards with the auth chip, "used
+by" from `requires`, a status dot (CONNECTED / REJECTED / NOT CONNECTED),
+a two-cell strip (Last test, Connected since or Token expires), a masked
+webhook secret with REVEAL, and Test / Reauthorize / Disconnect; a
+connected card has no replace field (disconnect, then connect). General:
+Owner (name, the real OWNER_EMAIL read only, timezone, digest hour), the
+cap as a slider with the spend bar, the nightly strip (the cron on the
+owner's clock, last run, jobs registered), Save with "SAVED · core.settings".
+Agents & MCP: LIVE · n TOOLS, the command with the token masked inline
+and Reveal, Autonomy as a card, the tools list with reads collapsed to one
+OPEN row and each write GUARDED or OPEN. Notifications: the Channels strip
+with switches that write a channel onto or off every rule, the per-module
+grid, quiet hours as one line, Devices below. Skills: one card per branch
+("Engineering · Coding"), transparent inline name inputs, CUSTOM and "was"
+marks, the keyword mark (editable), the dashed add line, Show deleted (n),
+the text Reset. Not drawn for want of a source: per-provider usage figures,
+Rotate token, a quiet-hours off switch, backups.
+
 **The fidelity pass, screen twelve: Health.** docs/plans/health-fidelity.md.
 The shared band carries "{n} screenings overdue · next visit {D Mon}" above
 the artboard's title block and Log a visit. Left pane: vitals tiles with
