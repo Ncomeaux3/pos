@@ -7,9 +7,9 @@ import { register } from '@/core/entities'
 // screen never offers an opinion about any of them.
 
 const PROVIDERS = [
-  { external_id: 'gp', name: 'Dr Alvarez', role: 'Primary care', phone: '555 0142', notes: 'Referrals go through the portal.' },
-  { external_id: 'dentist', name: 'Riverside Dental', role: 'Dentist', phone: '555 0177', notes: '' },
-  { external_id: 'optom', name: 'Clearview Optical', role: 'Optometrist', phone: '555 0198', notes: '' },
+  { external_id: 'gp', name: 'Dr Alvarez', role: 'Primary care', phone: '555 0142', address: 'Main clinic, Suite 210', notes: 'Referrals go through the portal.' },
+  { external_id: 'dentist', name: 'Riverside Dental', role: 'Dentist', phone: '555 0177', address: 'Riverside', notes: '' },
+  { external_id: 'optom', name: 'Clearview Optical', role: 'Optometrist', phone: '555 0198', address: 'Clearview', notes: '' },
 ]
 
 const APPOINTMENTS = [
@@ -27,6 +27,8 @@ const MEDICATIONS = [
 const VITALS = [
   { metric: 'blood_pressure', value: 118, text: '118/74', daysAgo: 48, provenance: 'lab' },
   { metric: 'ldl', value: 96, text: '96 mg/dL', daysAgo: 48, provenance: 'lab' },
+  // A reading before the current one, so the tile can show a delta.
+  { metric: 'ldl', value: 104, text: '104 mg/dL', daysAgo: 412, provenance: 'lab' },
   { metric: 'hdl', value: 58, text: '58 mg/dL', daysAgo: 48, provenance: 'lab' },
   { metric: 'a1c', value: 5.2, text: '5.2%', daysAgo: 48, provenance: 'lab' },
 ]
@@ -44,11 +46,11 @@ export async function seed(): Promise<number> {
   const providers = new Map<string, string>()
   for (const p of PROVIDERS) {
     const { rows } = await db().query<{ id: string }>(
-      `insert into health.provider (name, role, phone, notes, source, external_id)
-       values ($1, $2, $3, $4, 'demo', $5)
-       on conflict (source, external_id) do update set name = excluded.name
+      `insert into health.provider (name, role, phone, address, notes, source, external_id)
+       values ($1, $2, $3, $4, $5, 'demo', $6)
+       on conflict (source, external_id) do update set name = excluded.name, address = excluded.address
        returning id`,
-      [p.name, p.role, p.phone, p.notes, p.external_id],
+      [p.name, p.role, p.phone, p.address, p.notes, p.external_id],
     )
     providers.set(p.external_id, rows[0].id)
   }
@@ -117,10 +119,20 @@ export async function seed(): Promise<number> {
   }
 
   await db().query(
-    `insert into health.record (title, kind, taken_on, summary, source, external_id)
+    `insert into health.record (title, kind, taken_on, summary, fields, source, external_id)
      values ('Annual lab panel', 'lab', core.today() - 48,
-             'Lipids, metabolic panel, thyroid. Filed as received.', 'demo', 'record-labs')
-     on conflict (source, external_id) do update set taken_on = excluded.taken_on`,
+             'Lipids, metabolic panel, thyroid. Filed as received.',
+             '{"Ordered by": "Dr Alvarez", "LDL": "96 mg/dL", "HDL": "58 mg/dL", "A1c": "5.2%"}'::jsonb,
+             'demo', 'record-labs')
+     on conflict (source, external_id) do update set taken_on = excluded.taken_on, fields = excluded.fields`,
+  )
+  await db().query(
+    `insert into health.record (title, kind, taken_on, summary, fields, source, external_id)
+     values ('Eye exam prescription', 'vision', core.today() - 48,
+             'Unchanged from last year.',
+             '{"Provider": "Clearview Optical", "Valid until": "two years from the exam"}'::jsonb,
+             'demo', 'record-eyes')
+     on conflict (source, external_id) do update set taken_on = excluded.taken_on, fields = excluded.fields`,
   )
 
   for (const s of SCREENINGS) {

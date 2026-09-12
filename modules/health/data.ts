@@ -11,14 +11,18 @@ export type AppointmentRow = {
   status: string
   cost_estimate_cents: number | null
   prep: string
+  notes: string
+  provider_id: string | null
   provider_name: string | null
   provider_role: string | null
+  provider_address: string | null
 }
 
 export async function listAppointments(): Promise<AppointmentRow[]> {
   const { rows } = await db().query<AppointmentRow>(
     `select a.id, a.what, a.starts_at, a.location, a.status, a.cost_estimate_cents, a.prep,
-            p.name as provider_name, p.role as provider_role
+            a.notes, a.provider_id,
+            p.name as provider_name, p.role as provider_role, p.address as provider_address
        from health.appointment a
        left join health.provider p on p.id = a.provider_id
       order by
@@ -70,30 +74,41 @@ export type VitalRow = {
   value_text: string
   measured_at: Date
   provenance: string
+  /** The reading before this one, for the tile's delta. Null when it is the first. */
+  prev_value: string | null
+  prev_measured_at: Date | null
 }
 
-/** The latest reading of each clinical metric. */
+/** The latest reading of each clinical metric, with the one before it. */
 export async function latestVitals(): Promise<VitalRow[]> {
   const { rows } = await db().query<VitalRow>(
-    `select distinct on (metric) metric, value::text, value_text, measured_at, provenance
-       from health.vital
-      order by metric, measured_at desc`,
+    `with ranked as (
+       select metric, value, value_text, measured_at, provenance,
+              lag(value) over (partition by metric order by measured_at) as prev_value,
+              lag(measured_at) over (partition by metric order by measured_at) as prev_measured_at,
+              row_number() over (partition by metric order by measured_at desc) as n
+         from health.vital)
+     select metric, value::text, value_text, measured_at, provenance,
+            prev_value::text, prev_measured_at
+       from ranked where n = 1 order by metric`,
   )
   return rows
 }
 
-export async function listRecords(): Promise<
-  { id: string; title: string; kind: string; taken_on: string; summary: string; file_path: string | null }[]
-> {
-  const { rows } = await db().query<{
-    id: string
-    title: string
-    kind: string
-    taken_on: string
-    summary: string
-    file_path: string | null
-  }>(
-    `select id, title, kind, taken_on::text, summary, file_path
+export type RecordRow = {
+  id: string
+  title: string
+  kind: string
+  taken_on: string
+  summary: string
+  fields: Record<string, string>
+  file_path: string | null
+  appointment_id: string | null
+}
+
+export async function listRecords(): Promise<RecordRow[]> {
+  const { rows } = await db().query<RecordRow>(
+    `select id, title, kind, taken_on::text, summary, fields, file_path, appointment_id
        from health.record order by taken_on desc limit 60`,
   )
   return rows
@@ -116,14 +131,15 @@ export async function listScreenings(): Promise<
 }
 
 export async function listProviders(): Promise<
-  { id: string; name: string; role: string; phone: string; notes: string }[]
+  { id: string; name: string; role: string; phone: string; address: string; notes: string }[]
 > {
   const { rows } = await db().query<{
     id: string
     name: string
     role: string
     phone: string
+    address: string
     notes: string
-  }>(`select id, name, role, phone, notes from health.provider order by role, name`)
+  }>(`select id, name, role, phone, address, notes from health.provider order by role, name`)
   return rows
 }

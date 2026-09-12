@@ -31,6 +31,7 @@ export default defineModule({
         prep: z.string().max(1000).optional(),
         notes: z.string().max(2000).optional(),
         cost_estimate_cents: z.number().int().min(0).nullable().optional(),
+        provider_id: z.uuid().nullable().optional(),
       }),
       run: async (input) => {
         if (input.id) {
@@ -70,8 +71,8 @@ export default defineModule({
 
         const { rows } = await db().query<{ id: string }>(
           `insert into health.appointment
-             (what, starts_at, location, status, prep, notes, cost_estimate_cents)
-           values ($1, $2, $3, $4, $5, $6, $7)
+             (what, starts_at, location, status, prep, notes, cost_estimate_cents, provider_id)
+           values ($1, $2, $3, $4, $5, $6, $7, $8)
            returning id`,
           [
             input.what,
@@ -81,6 +82,7 @@ export default defineModule({
             input.prep ?? '',
             input.notes ?? '',
             input.cost_estimate_cents ?? null,
+            input.provider_id ?? null,
           ],
         )
 
@@ -92,6 +94,45 @@ export default defineModule({
           text: input.prep,
         })
 
+        return { id: rows[0].id }
+      },
+    }),
+
+    write_record: defineTool({
+      description:
+        'File a record: a lab, a visit summary, imaging, dental, vision or an immunisation, with whatever the document carried.',
+      input: z.object({
+        title: z.string().min(1).max(300),
+        kind: z.enum(['lab', 'visit', 'imaging', 'dental', 'vision', 'immunisation']).default('visit'),
+        taken_on: date,
+        summary: z.string().max(2000).default(''),
+        /** Whatever the document said, as written: "LDL": "118 mg/dL". */
+        fields: z.record(z.string().max(80), z.string().max(400)).default({}),
+        file_path: z.string().max(400).nullable().optional(),
+        appointment_id: z.uuid().nullable().optional(),
+      }),
+      run: async (input) => {
+        const { rows } = await db().query<{ id: string }>(
+          `insert into health.record (title, kind, taken_on, summary, fields, file_path, appointment_id)
+           values ($1, $2, $3, $4, $5, $6, $7)
+           returning id`,
+          [
+            input.title,
+            input.kind,
+            input.taken_on,
+            input.summary,
+            JSON.stringify(input.fields),
+            input.file_path ?? null,
+            input.appointment_id ?? null,
+          ],
+        )
+        await register({
+          module: 'health',
+          entityType: 'record',
+          entityId: rows[0].id,
+          title: input.title,
+          text: input.summary,
+        })
         return { id: rows[0].id }
       },
     }),
@@ -212,5 +253,5 @@ export default defineModule({
   tile: HealthTile,
 
   jobs: [{ name: 'nightly_digest', run: nightlyDigest }],
-  entityTypes: ['appointment', 'screening'],
+  entityTypes: ['appointment', 'screening', 'record'],
 })
