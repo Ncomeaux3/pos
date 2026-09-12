@@ -150,6 +150,17 @@ export function listToolNames(): string[] {
   return registerTools({ registerTool: () => undefined })
 }
 
+/** The tools with the description each one shows an agent, for the Settings screen. */
+export function listTools(): { name: string; description: string }[] {
+  const tools: { name: string; description: string }[] = []
+  registerTools({
+    registerTool: (name, config) => {
+      tools.push({ name, description: config.description ?? '' })
+    },
+  })
+  return tools
+}
+
 /** Which tools land in the review inbox when an agent calls them. */
 export function guardedToolNames(): string[] {
   return getModules().flatMap((m) => (m.guarded ?? []).map((t) => toolName(m.id, t)))

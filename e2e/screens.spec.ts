@@ -518,7 +518,7 @@ test('review, dismiss and undo keep the row', async ({ page }) => {
   await expect(page.getByText('Dismissed', { exact: true })).toBeVisible()
 
   await page.goto('/review?tab=dismissed')
-  await expect(page.getByText('Dismissed. Undo puts it back in the inbox.')).toBeVisible()
+  await expect(page.getByText('Dismissed. The agent will not re-propose this for 30 days. Undo puts it back in the inbox.')).toBeVisible()
   await shoot(page, 'review-dismissed')
   await page.getByRole('button', { name: 'Undo' }).click()
   await expect(page.getByText('Back in the inbox', { exact: true })).toBeVisible()

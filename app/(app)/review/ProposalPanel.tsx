@@ -177,7 +177,7 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
           <span className="text-[13px] text-ink-3">
             {item.status === 'approved'
               ? `Approved. ${item.module}.${item.tool} ran.`
-              : 'Dismissed. Undo puts it back in the inbox.'}
+              : 'Dismissed. The agent will not re-propose this for 30 days. Undo puts it back in the inbox.'}
           </span>
           {/* Only a dismissal comes back: reopening an approved proposal would
             * run its tool a second time, and the write it made stays. */}

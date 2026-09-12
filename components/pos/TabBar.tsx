@@ -107,18 +107,20 @@ export function TabLinks({
   current,
   label,
   className,
+  tabClassName,
 }: {
   tabs: TabLink[]
   /** The href of the active tab. */
   current: string
   label: string
   className?: string
+  tabClassName?: string
 }) {
   return (
     <nav aria-label={label} className={cn(TAB_ROW, className)}>
       {tabs.map((t) =>
         t.soon ? (
-          <span key={t.href} className={cn(TAB_BASE, TAB_SOON)}>
+          <span key={t.href} className={cn(TAB_BASE, TAB_SOON, tabClassName)}>
             {t.label}
             <span className="label ml-1.5 text-[9px] tracking-[0.1em] text-ink-4">soon</span>
           </span>
@@ -127,7 +129,7 @@ export function TabLinks({
             key={t.href}
             href={t.href}
             aria-current={t.href === current ? 'page' : undefined}
-            className={cn(TAB_BASE, t.href === current ? TAB_ON : TAB_OFF)}
+            className={cn(TAB_BASE, t.href === current ? TAB_ON : TAB_OFF, tabClassName)}
           >
             {t.label}
             <TabCount count={t.count} />
