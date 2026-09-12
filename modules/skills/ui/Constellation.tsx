@@ -367,7 +367,10 @@ export function Constellation({
             const isRoot = node.id === ROOT_ID
             const level = isRoot ? characterLevel : (stat?.level ?? 0)
             const r = nodeRadius(node.ring, level)
-            const tone = isRoot ? 'gaining' : toneFor(stat, now)
+            // Accent is a leaf gaining fast, nothing else: the artboard's rule
+            // is `n.leaf && d30 >= 50`, and its root and attributes are the
+            // same pale blue as every other star.
+            const tone = node.ring === 'leaf' ? toneFor(stat, now) : 'active'
             const isSelected = selected === node.id
             const isDrop = dropTarget === node.id
             const isHovered = hover?.node.id === node.id
@@ -434,7 +437,7 @@ export function Constellation({
                   * Sizes are the design bundle's ratios, not invented. */}
                 <circle
                   r={r * 3.2}
-                  fill={isRoot ? 'var(--accent)' : HALO_COLOR[tone]}
+                  fill={HALO_COLOR[tone]}
                   filter="url(#skill-glow-big)"
                   opacity={
                     dim
@@ -470,7 +473,7 @@ export function Constellation({
                   * to it. */}
                 <circle
                   r={r * (isHovered ? 1.3 : 1)}
-                  fill={isRoot ? 'var(--accent)' : TONE_FILL[tone]}
+                  fill={TONE_FILL[tone]}
                   filter="url(#skill-glow)"
                   opacity={dim ? 0.35 : 1}
                   className="transition-[r,opacity] duration-200"
