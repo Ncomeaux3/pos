@@ -24,10 +24,22 @@ export async function saveNote(input: {
   title?: string
   body?: string
   kind?: string
-}): Promise<ActionResult> {
+}): Promise<ActionResult & { slug?: string }> {
   await requireOwner()
   try {
-    await callTool('brain', 'write', input, { source: 'ui' })
+    const call = await callTool('brain', 'write', input, { source: 'ui' })
+    const slug = call.status === 'done' ? (call.result as { slug?: string }).slug : undefined
+    return { ...done(), slug }
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+/** Discard a draft. Guarded like every delete; from the UI the owner is the approval. */
+export async function deleteNote(id: string): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    await callTool('brain', 'delete', { id }, { source: 'ui' })
     return done()
   } catch (error) {
     return failed(error)
@@ -47,18 +59,19 @@ export async function saveNote(input: {
  */
 export async function ingestFromUrl(
   url: string,
-): Promise<ActionResult & { id?: string; note?: string }> {
+  kind?: string,
+): Promise<ActionResult & { id?: string; slug?: string; note?: string }> {
   await requireOwner()
   try {
-    const call = await callTool('brain', 'ingest', { url }, { source: 'ui' })
+    const call = await callTool('brain', 'ingest', { url, kind }, { source: 'ui' })
     // A UI call is pre-approved, so this is always 'done'. Handled rather than
     // asserted, because the day the guard changes this should not silently
     // report success for a note that does not exist yet.
     if (call.status === 'proposed') {
       return { ...done(), note: 'That went to the Review inbox for approval.' }
     }
-    const result = call.result as { id: string; note: string }
-    return { ...done(), id: result.id, note: result.note }
+    const result = call.result as { id: string; slug: string; note: string }
+    return { ...done(), id: result.id, slug: result.slug, note: result.note }
   } catch (error) {
     return failed(error)
   }

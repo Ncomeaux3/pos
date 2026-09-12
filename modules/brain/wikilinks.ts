@@ -80,3 +80,45 @@ export function renderPreview(body: string): string {
 
   return out + body.slice(cursor)
 }
+
+export type Block =
+  | { kind: 'p'; parts: (string | { link: string; label: string })[] }
+  | { kind: 'ul'; items: string[] }
+
+/**
+ * The note body as the artboard renders it: paragraphs on blank lines, a
+ * paragraph of "- " or "1. " lines as a list, and [[links]] as links.
+ *
+ * ponytail: the artboard's three rules and nothing else. Headings, emphasis
+ * and the rest of markdown stay plain text; a renderer comes when a vault
+ * note needs one.
+ */
+export function blocks(body: string): Block[] {
+  const masked = maskCode(body)
+
+  return body
+    .split(/\n[ \t]*\n/)
+    .filter((para) => para.trim() !== '')
+    .map((para) => {
+      if (/^(- |\d+\. )/m.test(para)) {
+        return {
+          kind: 'ul' as const,
+          items: para
+            .split('\n')
+            .filter((l) => l.trim() !== '')
+            .map((l) => l.replace(/^(- |\d+\. )/, '')),
+        }
+      }
+
+      const start = body.indexOf(para)
+      const parts: (string | { link: string; label: string })[] = []
+      let cursor = 0
+      for (const match of masked.slice(start, start + para.length).matchAll(LINK)) {
+        if (match.index > cursor) parts.push(para.slice(cursor, match.index))
+        parts.push({ link: slugify(match[1].trim()), label: (match[2] ?? match[1]).trim() })
+        cursor = match.index + match[0].length
+      }
+      if (cursor < para.length) parts.push(para.slice(cursor))
+      return { kind: 'p' as const, parts }
+    })
+}

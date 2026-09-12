@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extractLinks, slugify, renderPreview } from './wikilinks'
+import { blocks, extractLinks, slugify, renderPreview } from './wikilinks'
 
 // A vault's links are its structure. Getting the parser wrong does not throw,
 // it quietly loses the connection between two notes, which is the one thing a
@@ -94,5 +94,29 @@ describe('renderPreview', () => {
 
   it('leaves code alone, the same as the parser does', () => {
     expect(renderPreview('Write `[[like this]]`.')).toBe('Write `[[like this]]`.')
+  })
+})
+
+describe('blocks', () => {
+  it('splits paragraphs on a blank line and links inside them', () => {
+    expect(blocks('First.\n\nSee [[Hybrid search|the video]] and [[RRF]].')).toEqual([
+      { kind: 'p', parts: ['First.'] },
+      {
+        kind: 'p',
+        parts: ['See ', { link: 'hybrid-search', label: 'the video' }, ' and ', { link: 'rrf', label: 'RRF' }, '.'],
+      },
+    ])
+  })
+
+  it('turns dashed and numbered lines into a list without their markers', () => {
+    expect(blocks('Rules:\n\n- one\n- two\n\n1. first\n2. second')).toEqual([
+      { kind: 'p', parts: ['Rules:'] },
+      { kind: 'ul', items: ['one', 'two'] },
+      { kind: 'ul', items: ['first', 'second'] },
+    ])
+  })
+
+  it('leaves a link inside code as text', () => {
+    expect(blocks('Use `[[x]]` here.')).toEqual([{ kind: 'p', parts: ['Use `[[x]]` here.'] }])
   })
 })
