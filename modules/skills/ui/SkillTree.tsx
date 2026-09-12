@@ -14,6 +14,8 @@ const DAY = 24 * 60 * 60 * 1000
 const WEEKS = 13
 
 const round = (n: number) => Math.round(n).toLocaleString()
+/** The most rows the events list draws. */
+const EVENT_ROWS = 100
 
 /** Mirrors modules/skills/xp.ts. Kept here so the panel does not import pg. */
 const levelOf = (xp: number) => Math.min(99, Math.floor(Math.sqrt(Math.max(xp, 0) / 100)))
@@ -461,7 +463,10 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
                       <div className="flex items-baseline justify-between gap-3">
                         <span className="eyebrow text-ink-3">Events &middot; 30 days</span>
                         <span className="num text-[11px] text-ink-3">
-                          {recent.length} &middot; drag to reassign
+                          {recent.length > EVENT_ROWS
+                            ? `latest ${EVENT_ROWS} of ${recent.length}`
+                            : recent.length}{' '}
+                          &middot; drag to reassign
                         </span>
                       </div>
                       {recent.length === 0 ? (
@@ -470,10 +475,12 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
                           a keyword below.
                         </p>
                       ) : (
-                        // Capped and scrolled rather than run down the page: a
-                        // month under a busy skill is a hundred rows.
+                        // Capped in rows as well as height. A busy month is a
+                        // hundred rows; the seed's is five thousand, and every
+                        // hover on the constellation paid to lay them out
+                        // (105ms to first paint against 35ms with a hundred).
                         <ul className="mt-1 max-h-[420px] overflow-y-auto pr-1">
-                          {recent.map((e) => (
+                          {recent.slice(0, EVENT_ROWS).map((e) => (
                             <EventRow key={`${e.entityRef}-${e.skillId}-${e.occurredAt}`} event={e} now={now} />
                           ))}
                         </ul>

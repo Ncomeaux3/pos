@@ -36,6 +36,14 @@ const TONE_FILL: Record<Tone, string> = {
 }
 
 /** Label sizes by ring, off the artboard. */
+/** The XP at which the next level starts. Mirrors modules/skills/xp.ts. */
+const nextXp = (level: number) => (level + 1) * (level + 1) * 100
+/** How far through the current level, for the card's bar. */
+const levelPercent = (xp: number, level: number) => {
+  const floor = level * level * 100
+  return Math.max(0, Math.min(100, ((xp - floor) / (nextXp(level) - floor)) * 100))
+}
+
 const LABEL_SIZE: Record<string, number> = {
   root: 13,
   attribute: 12,
@@ -172,7 +180,7 @@ export function Constellation({
     cancelAnimationFrame(flight.current)
     flight.current = 0
   }, [])
-  const [hover, setHover] = useState<{ node: Placed; x: number; y: number } | null>(null)
+  const [hover, setHover] = useState<{ node: Placed; x: number; y: number; width: number; height: number } | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   // A drag only becomes a pan once the pointer has actually moved. Until then
   // the press is a click on whatever is under it, which is what makes clicking
@@ -452,6 +460,8 @@ export function Constellation({
                     node,
                     x: star.x + star.width / 2 - (box?.x ?? 0),
                     y: star.y + star.height / 2 - (box?.y ?? 0),
+                    width: box?.width ?? 0,
+                    height: box?.height ?? 0,
                   })
                 }}
                 onPointerLeave={() => setHover((h) => (h?.node.id === node.id ? null : h))}
@@ -575,62 +585,86 @@ export function Constellation({
         </g>
       </svg>
 
-      {/* The hover card floats; the legend does not.
+      {/* The hover card, as the artboard draws it: centred under the star,
+        * 18px below it, and only ever on demand. The legend is a normal block
+        * under the svg, so nothing else overlays the tree.
         *
-        * Both used to be absolutely positioned over the graph, which is why
-        * the legend sat on top of Endurance, Strength and Negotiation. The
-        * legend is a normal block under the svg now and cannot collide with
-        * anything. Only the card, which appears on demand and is small,
-        * overlays, and it sits in a corner the tree does not reach. */}
+        * A leaf shows its XP against the next level with a bar, the month,
+        * and its goal weight, then its keywords. A parent lists its children
+        * and their levels instead. */}
       {hovered && hover && (
         <div
-          className="pointer-events-none absolute z-20 w-[236px] border border-white/18 bg-[#060a10] shadow-[0_12px_32px_rgba(0,0,0,.55)]"
+          data-testid="skill-hover-card"
+          className="pointer-events-none absolute z-20 min-w-[220px] max-w-[300px] animate-[skill-fadein_.12s_both] border border-white/18 bg-[rgba(6,10,16,.92)] px-3.5 py-3 backdrop-blur-[6px]"
           style={{
-            // Beside the star, and flipped to the other side near an edge so
-            // the card never hangs off the canvas.
-            left: hover.x + 18,
-            top: hover.y + 14,
-            transform: `translate(${hover.x > 620 ? '-100%' : '0'}, ${hover.y > 300 ? '-100%' : '0'})`,
+            // Centred on the star, but never past the canvas edge: half the
+            // card's widest at each side.
+            left: Math.max(150, Math.min(hover.width - 150, hover.x)),
+            top: hover.y,
+            // Above the star instead when it would run off the bottom.
+            transform:
+              hover.y > hover.height - 180 ? 'translate(-50%, calc(-100% - 18px))' : 'translate(-50%, 18px)',
           }}
         >
-          <div className="flex items-baseline justify-between gap-3 border-b border-white/12 px-3 py-2">
-            <span className="truncate text-[13px] text-white">{hovered.name}</span>
+          <div className="flex items-baseline justify-between gap-3 border-b border-white/12 pb-2">
+            <span className="truncate text-[14px] text-white">{hovered.name}</span>
             <span className="num shrink-0 text-[11px] text-[#8fa3b8]">
               Lv {hovered.level}
               {branches.length > 0 &&
-                ` · ${branches.length} ${branches.length === 1 ? 'branch' : 'branches'}`}
+                hover.node.id !== ROOT_ID &&
+                ` · ${branches.length} ${hover.node.ring === 'attribute' ? 'branches' : 'skills'}`}
             </span>
           </div>
 
-          {/* What is under it, which is what makes hovering an attribute worth
-            * doing: the levels of its children without opening anything. */}
           {branches.length > 0 ? (
-            <div className="px-3 py-1.5">
-              {branches.slice(0, 6).map((b) => (
-                <div key={b.id} className="flex items-baseline justify-between gap-3 py-[3px]">
-                  <span className="truncate text-[12px] text-[#cfe6ff]">{b.name}</span>
-                  <span className="num shrink-0 text-[11px] text-[#8fa3b8]">
-                    Lv {b.level} ({Math.round(b.xp).toLocaleString()})
+            <>
+              <div className="mt-2 flex flex-col gap-[5px]">
+                {branches.map((b) => (
+                  <div key={b.id} className="flex justify-between gap-3 text-[12px] text-[#cfe6ff]">
+                    <span className="truncate">{b.name}</span>
+                    <span className={cn('num shrink-0', b.gained30d > 0 ? 'text-white' : 'text-[#8fa3b8]')}>
+                      Lv {b.level} ({Math.round(b.xp).toLocaleString()})
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="label mt-2 text-[10px] tracking-[0.06em] text-[#6f8399]">
+                {hovered.gained30d > 0
+                  ? `+${Math.round(hovered.gained30d).toLocaleString()} XP IN 30 DAYS`
+                  : 'NO XP IN 30 DAYS'}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mt-2 flex flex-col gap-[5px] text-[12px] text-[#cfe6ff]">
+                <div className="flex justify-between gap-3">
+                  <span>XP</span>
+                  <span className="num text-white">
+                    {Math.round(hovered.xp).toLocaleString()} / {nextXp(hovered.level).toLocaleString()}
                   </span>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="px-3 py-1.5">
-              <div className="flex items-baseline justify-between gap-3 py-[3px]">
-                <span className="text-[12px] text-[#cfe6ff]">Total</span>
-                <span className="num text-[11px] text-[#8fa3b8]">
-                  {Math.round(hovered.xp).toLocaleString()} XP
-                </span>
+                <div className="flex justify-between gap-3">
+                  <span>Last 30 days</span>
+                  <span className={cn('num', hovered.gained30d > 0 ? 'text-[var(--accent)]' : 'text-warn')}>
+                    {hovered.gained30d > 0 ? `+${Math.round(hovered.gained30d).toLocaleString()}` : 'idle'}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span>Goal weight</span>
+                  <span className="num">{hovered.goalWeight.toFixed(1)}</span>
+                </div>
               </div>
-            </div>
+              <div className="mt-2.5 h-0.5 bg-white/12">
+                <div
+                  className="h-full bg-[var(--accent)]"
+                  style={{ width: `${levelPercent(hovered.xp, hovered.level)}%` }}
+                />
+              </div>
+              <div className="label mt-2 text-[10px] tracking-[0.06em] text-[#6f8399]">
+                {hovered.keywords.slice(0, 4).join(' · ').toUpperCase()}
+              </div>
+            </>
           )}
-
-          <div className="label border-t border-white/12 px-3 py-1.5 text-[10px] tracking-[0.08em] text-[#6f8399]">
-            {hovered.gained30d > 0
-              ? `+${Math.round(hovered.gained30d).toLocaleString()} XP in 30 days`
-              : 'Nothing in 30 days'}
-          </div>
         </div>
       )}
 
