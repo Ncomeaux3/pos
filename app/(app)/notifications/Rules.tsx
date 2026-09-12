@@ -5,7 +5,6 @@ import {
   ActionButton,
   Card,
   CardHead,
-  Chip,
   EmptyState,
   Eyebrow,
   PillGroup,
@@ -498,7 +497,9 @@ function Preview({
             <p className="t-body text-ink">
               {isMorning ? 'Your morning digest' : 'Evening wrap'}, Thu 7 Sep
             </p>
-            <p className="t-caption text-ink-3">pos@cmxlogic.com / {digestAt}</p>
+            <p className="t-caption text-ink-3">
+              {schedule.digestEmail} · {digestAt}
+            </p>
           </div>
 
           {sections.length === 0 ? (
@@ -513,15 +514,21 @@ function Preview({
               {sections.map((s) => (
                 <div key={s.module} className="space-y-2 px-4 py-3.5">
                   <div className="flex items-baseline justify-between gap-3">
-                    <Eyebrow className="text-[10px] tracking-[0.12em]">{s.module}</Eyebrow>
-                    <Chip tone="quiet">
+                    {/* Plain spans, not Eyebrow/Chip: the artboard's module
+                      * label is flat accent (Eyebrow is fixed ink-3) and its
+                      * count is plain mono text, not a pill. */}
+                    <span className="label text-[10px] tracking-[0.12em] text-brand">
+                      {s.module}
+                    </span>
+                    <span className="num text-[10px] text-ink-3">
                       {s.lines.length} item{s.lines.length > 1 ? 's' : ''}
-                    </Chip>
+                    </span>
                   </div>
                   {s.lines.map((line) => (
-                    <p key={line} className="t-caption text-ink-2">
-                      {line}
-                    </p>
+                    <div key={line} className="flex items-baseline gap-2.5 border-b border-rule py-1.5">
+                      <span aria-hidden className="size-[5px] shrink-0 rounded-full bg-ink-3" />
+                      <p className="t-caption text-ink-2">{line}</p>
+                    </div>
                   ))}
                 </div>
               ))}

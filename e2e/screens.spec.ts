@@ -658,8 +658,20 @@ test('notifications, rules table and the alert centre', async ({ page }) => {
   // The title appears twice on purpose, once as the alert row and once in the
   // push preview of the rule behind it.
   await expect(page.getByText('Chase Sapphire due in 3 days')).toHaveCount(2)
-  await expect(page.getByText(/^History \//)).toBeVisible()
+  await expect(page.getByText(/^Alert centre · \d+ unread/)).toBeVisible()
+  await expect(page.getByText(/^History ·/)).toBeVisible()
   await expect(page.getByText('Backup complete, 30 snapshots kept')).toBeVisible()
+
+  // An unread alert's module label is flat accent, like the artboard, not the
+  // rules table's per-module colour and not the old flat green.
+  const chaseAlert = page.locator('div.bg-brand-soft', { hasText: 'Chase Sapphire due in 3 days' })
+  await expect(chaseAlert.getByText('FINANCE', { exact: true })).toHaveClass(/text-brand/)
+
+  // The email digest's section header is a plain accent label and a plain
+  // item count, not the shared Eyebrow (fixed ink-3) or a Chip pill.
+  const digestCard = page.locator('div.bg-bg-elev', { hasText: 'Your morning digest' })
+  await expect(digestCard.getByText('Finance', { exact: true })).toHaveClass(/text-brand/)
+  await expect(digestCard.getByText('1 item').first()).toBeVisible()
 
   await shoot(page, 'notifications')
 })
