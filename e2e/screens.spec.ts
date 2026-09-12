@@ -259,6 +259,64 @@ test('skill tree, constellation and the selected skill panel', async ({ page }) 
   await shoot(page, 'skills-leaf')
 })
 
+test('skill tree, a trackpad burst zooms smoothly and the main stars are blue', async ({ page }) => {
+  await page.goto('/skills')
+  await page.waitForLoadState('networkidle')
+
+  const svg = page.getByRole('img', { name: 'Skill constellation' })
+  const box = (await svg.boundingBox())!
+  const at = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+  const group = svg.locator('> g').last()
+  const scaleOf = async () =>
+    Number(/scale\(([\d.]+)\)/.exec((await group.getAttribute('transform')) ?? '')?.[1])
+  const burst = (el: SVGSVGElement, at: { x: number; y: number; n: number }) => {
+    for (let i = 0; i < at.n; i++) {
+      el.dispatchEvent(
+        new WheelEvent('wheel', {
+          deltaY: -8,
+          deltaMode: 0,
+          clientX: at.x,
+          clientY: at.y,
+          bubbles: true,
+          cancelable: true,
+        }),
+      )
+    }
+  }
+
+  // The listener is attached by the client component after hydration, which
+  // is later than networkidle. One event at a time until the canvas answers.
+  await page.mouse.move(at.x, at.y)
+  await expect
+    .poll(async () => {
+      await svg.evaluate(burst, { ...at, n: 1 })
+      return scaleOf()
+    })
+    .toBeGreaterThan(1)
+  const base = await scaleOf()
+
+  // A trackpad sends many small deltas inside one frame. Thirty of them,
+  // dispatched back to back with no chance for React to commit in between,
+  // must land where the sum of the deltas says: base * exp(240 * 0.0015). A
+  // handler that reads a stale zoom applies every one of them to the same
+  // base and lands one step up instead, which is the jump you feel.
+  await svg.evaluate(burst, { ...at, n: 30 })
+  await expect.poll(scaleOf).toBeGreaterThan(base)
+  await page.waitForTimeout(200)
+
+  const ratio = (await scaleOf()) / base
+  expect(ratio).toBeGreaterThan(Math.exp(240 * 0.0015) * 0.98)
+  expect(ratio).toBeLessThan(Math.exp(240 * 0.0015) * 1.02)
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+
+  // The artboard paints the centre and the five attributes pale blue; accent
+  // is a leaf gaining fast, nothing else.
+  for (const id of ['__you', 'engineering']) {
+    const body = page.locator(`g[data-skill="${id}"] > circle`).nth(2)
+    await expect(body).toHaveAttribute('fill', '#9fd1ff')
+  }
+})
+
 test('skill tree, the constellation hovers, selects, pans and zooms', async ({ page }) => {
   await page.goto('/skills')
   await page.waitForLoadState('networkidle')

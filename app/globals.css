@@ -312,6 +312,12 @@
 }
 
 @layer components {
+  /* Zoomed out past 0.91 the constellation sets data-far on its group and a
+   * leaf's level line comes off: its name is already crowding its neighbours. */
+  .skill-view[data-far] .skill-far-hide {
+    opacity: 0;
+  }
+
   /* The slow pulse on a skill that is gaining, from the design bundle. Off
    * under reduced motion, which the bundle asks for by name: "Reduced motion
    * should disable the scale-on-tap and the constellation animation." */
