@@ -44,6 +44,29 @@ const notes = await seed()
 // tasks no longer existed.
 const taskCount = await seedTasks()
 const goalCount = await seedGoals()
+// The inline add test creates this goal on every run; without this the Life
+// ops group grows by one card a run.
+await db().query(`delete from goals.goal where title = 'Swim 2km without stopping'`)
+// Tasks seed before goals exist, so the links between them are drawn here:
+// the Goals drawer lists a goal's tasks and the card names the next one.
+for (const [task, goal] of [
+  ['demo-1', 'demo-4'],
+  ['demo-6', 'demo-4'],
+  ['demo-14', 'demo-4'],
+  ['demo-4', 'demo-1'],
+  ['demo-10', 'demo-1'],
+  ['demo-3', 'demo-2'],
+  ['demo-2', 'demo-3'],
+]) {
+  await db().query(
+    `update tasks.task t set goal_ref = en.id
+       from goals.goal g
+       join core.entities en on en.module = 'goals' and en.entity_type = 'goal' and en.entity_id = g.id::text
+      where g.source = 'demo' and g.external_id = $2
+        and t.source = 'demo' and t.external_id = $1`,
+    [task, goal],
+  )
+}
 const txCount = await seedFinance()
 const brainCount = await seedBrain()
 const travelCount = await seedTravel()

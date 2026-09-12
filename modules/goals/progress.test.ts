@@ -151,7 +151,7 @@ describe('rule', () => {
 
   it('gives a pace against the pace needed, with the share it is running at', () => {
     const g = goal({ history: points([100, 0], [30, 7], [0, 10]) })
-    expect(rule(g, progress(g), '')).toMatch(/Pace 3\/mo against 27\/mo needed, 11 percent of it\./)
+    expect(rule(g, progress(g), '')).toMatch(/Pace 3\/mo vs 27\/mo needed \(11%\)\./)
   })
 })
 

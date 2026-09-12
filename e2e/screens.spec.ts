@@ -731,39 +731,59 @@ test('tasks, Delete asks and then removes the row', async ({ page }) => {
 test('goals, progress by area with the rule behind each status', async ({ page }) => {
   await page.goto('/goals')
   await expect(page.getByRole('heading', { name: 'Goals' })).toBeVisible()
+  // The band's summary, with the dot in the worst colour on the page.
+  await expect(page.getByText(/\d+ active · \d+ at risk · \d+ stalled/)).toBeVisible()
 
-  // Grouped by life area, and every status carries the sentence that produced
-  // it rather than only a colour.
-  await expect(page.getByText('Net worth $300k')).toBeVisible()
+  // Grouped by life area, each group counting what is on track, and every
+  // status carries the sentence that produced it rather than only a colour.
+  await expect(page.getByText(/^\d+ goals? · \d+ on track$/).first()).toBeVisible()
+  const netWorth = page.locator('article').filter({ hasText: 'Net worth $300k' })
+  await expect(netWorth.getByText('$247,200')).toBeVisible()
+  await expect(netWorth.getByText('/ $300,000')).toBeVisible()
   await expect(page.getByText('No change in 40 days.')).toBeVisible()
-  await expect(page.getByText(/Pace .* against .* needed, \d+ percent of it\./).first()).toBeVisible()
+  await expect(page.getByText(/Pace .* vs .* needed \(\d+%\)\./).first()).toBeVisible()
 
   // The demo history is shaped so every rule is on screen at once.
-  await expect(page.getByText('Stalled').first()).toBeVisible()
-  await expect(page.getByText('At risk').first()).toBeVisible()
-  await expect(page.getByText('On track').first()).toBeVisible()
+  await expect(page.getByText('STALLED').first()).toBeVisible()
+  await expect(page.getByText('AT RISK').first()).toBeVisible()
+  await expect(page.getByText('ON TRACK').first()).toBeVisible()
+
+  // The card names the next linked task, which Tasks answers through core.
+  await expect(netWorth.getByText(/^Next: /)).toBeVisible()
 
   await shoot(page, 'goals')
 })
 
-test('goals, the drawer shows both projections and the metric picker', async ({ page }) => {
+test('goals, the drawer shows the rule, both projections and what is linked', async ({ page }) => {
   await page.goto('/goals')
   await page.getByRole('button', { name: /Net worth \$300k/ }).click()
 
+  const drawer = page.getByRole('dialog')
+  await expect(drawer.getByText('Status rule')).toBeVisible()
+  await expect(drawer.getByText('Days left', { exact: true })).toBeVisible()
   // Two projections, labelled, because they disagree exactly when it matters.
-  await expect(page.getByText('At the last 30 days')).toBeVisible()
-  await expect(page.getByText('At the lifetime pace')).toBeVisible()
-
-  // The picker lists what modules actually register, so Tasks metrics appear
-  // here without Goals knowing anything about the tasks schema.
-  await expect(page.getByRole('radio', { name: 'Tasks completed this week' })).toBeVisible()
-  await expect(page.getByRole('radio', { name: 'Check in by hand' })).toBeVisible()
+  await expect(drawer.getByText('Projected · last 30d pace')).toBeVisible()
+  await expect(drawer.getByText('Projected · all history')).toBeVisible()
+  // Linked tasks come from Tasks through the contract, not from a join.
+  await expect(drawer.getByText('Linked tasks')).toBeVisible()
+  await expect(drawer.getByText('Pay the Amex statement')).toBeVisible()
+  await expect(drawer.getByText('Linked skills')).toBeVisible()
 
   // The open goal is in the URL, which is what lets it survive the reload
   // shoot() does to switch themes. Without it the shot would show the list.
   await expect(page).toHaveURL(/goal=/)
   await shoot(page, 'goals-drawer')
-  await expect(page.getByText('At the last 30 days')).toBeVisible()
+
+  // Edit turns the drawer into a form; the picker lists what modules actually
+  // register, so Tasks metrics appear here without Goals knowing its schema.
+  await page.getByRole('dialog').getByRole('button', { name: 'Edit', exact: true }).click()
+  await expect(page).toHaveURL(/edit=1/)
+  const form = page.getByRole('dialog')
+  await expect(form.getByText('Goals / Edit')).toBeVisible()
+  await expect(form.getByLabel('Metric source')).toBeVisible()
+  await expect(form.locator('option', { hasText: 'Tasks completed this week' })).toHaveCount(1)
+  await expect(form.getByRole('button', { name: /^Save/ })).toBeVisible()
+  await shoot(page, 'goals-edit')
 })
 
 test('goals, adding one inline from the page', async ({ page }) => {
@@ -772,7 +792,7 @@ test('goals, adding one inline from the page', async ({ page }) => {
 
   // The form is in the URL, which is what lets a half typed goal survive the
   // reload the theme toggle does.
-  await page.getByRole('link', { name: 'New goal' }).click()
+  await page.getByRole('button', { name: '+ Add a goal inline' }).click()
   await expect(page).toHaveURL(/new=1/)
 
   // Scoped to the form: "Goal" also names a field in the drawer behind it.
@@ -786,18 +806,26 @@ test('goals, adding one inline from the page', async ({ page }) => {
   await expect(
     page.getByRole('button', { name: /Swim 2km without stopping/ }).first(),
   ).toBeVisible()
+
+  // And Delete takes it away again, after asking.
+  await page.getByRole('button', { name: /Swim 2km without stopping/ }).first().click()
+  page.once('dialog', (d) => d.accept())
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
+  await expect(page.getByText('Deleted')).toBeVisible()
+  await expect(page.locator('article').filter({ hasText: 'Swim 2km without stopping' })).toHaveCount(0)
 })
 
 test('goals, a check-in moves the goal', async ({ page }) => {
   await page.goto('/goals')
   await page.getByRole('button', { name: /Deadlift 405/ }).click()
 
-  await page.getByLabel('Check in on Deadlift 405').fill('355')
-  await page.getByRole('button', { name: 'Record' }).click()
+  const drawer = page.getByRole('dialog')
+  await drawer.getByLabel('Check in on Deadlift 405').fill('355')
+  await drawer.getByRole('button', { name: 'Check in' }).click()
   await expect(page.getByText('Checked in')).toBeVisible()
 
-  // Twice on purpose: the card summary behind the drawer and the drawer's own
-  // Now figure, both re-read from the database after the write.
+  // Twice on purpose: the card behind the drawer and the drawer's own Now
+  // figure, both re-read from the database after the write.
   await expect(page.getByText('355 lb')).toHaveCount(2)
 
   // Stalled was the whole point of that goal's history; a fresh reading clears

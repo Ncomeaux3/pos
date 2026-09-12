@@ -1,10 +1,10 @@
-import Link from 'next/link'
-import { PageHeader } from '@/components/pos'
+import { Eyebrow, PageHeader } from '@/components/pos'
 import { listMetrics } from '@/core/metrics'
+import { getLinked, getSkillNames } from '@/core/modules'
 import { ownerToday } from '@/core/today'
-import { historyByGoal, listGoals } from '../data'
+import { entityRefs, historyByGoal, listGoals, listSkillLinks, pendingProposals } from '../data'
 import { progress, rule, type Goal as Shape, type Status } from '../progress'
-import { GoalList, type GoalCard } from './GoalList'
+import { GoalList, GoalsCrumb, NewGoalButton, type GoalCard } from './GoalList'
 
 const days = (fromIso: string, toIso: string) =>
   Math.round(
@@ -13,11 +13,26 @@ const days = (fromIso: string, toIso: string) =>
   )
 
 export default async function GoalsPage() {
-  const [rows, history, todayIso] = await Promise.all([
+  const [rows, history, todayIso, refs, links, names, proposals] = await Promise.all([
     listGoals(),
     historyByGoal(),
     ownerToday(),
+    entityRefs(),
+    listSkillLinks(),
+    getSkillNames(),
+    pendingProposals(),
   ])
+
+  // What other modules keep about each goal, through the registry: today that
+  // is Tasks answering with the tasks whose goal_ref is the goal.
+  const linked = new Map(
+    await Promise.all(
+      rows.map(async (row) => {
+        const ref = refs.get(row.id)
+        return [row.id, ref ? await getLinked(ref) : []] as const
+      }),
+    ),
+  )
 
   const cards: GoalCard[] = rows.map((row) => {
     const shape: Shape = {
@@ -43,42 +58,42 @@ export default async function GoalsPage() {
       startValue: shape.startValue,
       targetValue: shape.targetValue,
       deadline: row.deadline,
+      ageInDays: shape.ageInDays,
       metricSource: row.metric_source,
       archived: row.archived,
       history: shape.history,
       progress: p,
       rule: rule(shape, p, row.unit),
+      tasks: linked.get(row.id) ?? [],
+      skills: links
+        .filter((l) => l.goal_id === row.id)
+        .map((l) => ({ id: l.skill_id, name: names[l.skill_id] ?? l.skill_id })),
+      proposals: proposals
+        .filter((pr) => pr.goal_id === row.id)
+        .map((pr) => ({ id: pr.id, from: `goals.${pr.tool}`, title: pr.title })),
     }
   })
 
   const live = cards.filter((c) => !c.archived)
   const count = (s: Status) => live.filter((c) => c.progress.status === s).length
-
   const atRisk = count('at_risk')
   const stalled = count('stalled')
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-[18px]">
       <PageHeader
-        eyebrow={`Goals / ${count('on_track')} on track / ${atRisk} at risk / ${stalled} stalled`}
-        dot={stalled > 0 ? 'bad' : atRisk > 0 ? 'warn' : 'ok'}
-        title="Goals"
-        lede="Progress against a deadline, grouped by life area. A goal with a metric source computes itself nightly; the rest you check in on. Every status says the rule behind it rather than only showing a colour."
-        actions={
-          <>
-            <span className="num text-[11px] text-ink-3">
-              {live.length} active / {cards.length - live.length} archived
-            </span>
-            {/* A link, because the form it opens lives in the URL. That is what
-              * lets a half typed goal survive the theme toggle's reload. */}
-            <Link
-              href="/goals?new=1"
-              className="inline-flex h-11 shrink-0 items-center border border-brand bg-brand px-[22px] text-[14px] text-white transition-[filter] duration-150 hover:brightness-110 sm:h-[46px]"
-            >
-              New goal
-            </Link>
-          </>
+        eyebrow={<GoalsCrumb />}
+        status={
+          <Eyebrow
+            dot={stalled > 0 ? 'bad' : atRisk > 0 ? 'warn' : 'ok'}
+            className="whitespace-nowrap"
+          >
+            {live.length} active · {atRisk} at risk · {stalled} stalled
+          </Eyebrow>
         }
+        title="Goals"
+        lede="Progress is computed from a metric when one exists, otherwise from check-ins. Status: at risk when pace is under 80% of what the deadline needs; stalled after 30 days without change."
+        actions={<NewGoalButton />}
       />
 
       <GoalList

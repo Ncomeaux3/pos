@@ -180,7 +180,7 @@ export function rule(goal: Goal, p: Progress, unit: string): string {
   const pace = formatValue(p.rate30 * 30, goal.kind, unit)
   const needed = formatValue(p.neededRate * 30, goal.kind, unit)
   const share = p.neededRate > 0 ? Math.round((p.rate30 / p.neededRate) * 100) : 100
-  return `Pace ${pace}/mo against ${needed}/mo needed, ${share} percent of it.`
+  return `Pace ${pace}/mo vs ${needed}/mo needed (${share}%).`
 }
 
 /**
