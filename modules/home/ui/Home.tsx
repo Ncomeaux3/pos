@@ -223,7 +223,7 @@ export function Home({ data }: { data: HomeData }) {
         actions={
           <ActionButton
             variant="accent"
-            className="h-10 px-4 text-[13px]"
+            className="h-11 px-4 text-[13px] sm:h-10"
             onClick={() => setParams({ log: '1' })}
           >
             Log service
@@ -411,7 +411,7 @@ export function Home({ data }: { data: HomeData }) {
                       <span className="num text-[10px] text-ink-3">
                         {job.costEstimateCents > 0 ? money(job.costEstimateCents) : 'no estimate'}
                       </span>
-                      <ActionButton className="h-8 sm:h-8" onClick={() => done(job)}>
+                      <ActionButton className="sm:h-8" onClick={() => done(job)}>
                         Mark done
                       </ActionButton>
                     </span>
@@ -498,13 +498,13 @@ export function Home({ data }: { data: HomeData }) {
                     <div className="mt-1 text-[11px] leading-[1.45] text-ink-3">{jobMeta(job)}</div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <ActionButton
-                        className="h-[34px] border-brand px-[13px] text-brand hover:border-brand sm:h-[34px]"
+                        className="border-brand px-[13px] text-brand hover:border-brand sm:h-[34px]"
                         onClick={() => done(job)}
                       >
                         Mark done
                       </ActionButton>
                       <ActionButton
-                        className="h-8 px-[11px] text-[10px] tracking-[0.08em] text-ink-3 sm:h-8"
+                        className="px-[11px] text-[10px] tracking-[0.08em] text-ink-3 sm:h-8"
                         onClick={() =>
                           run(
                             () => snoozeService(job.id, 30),

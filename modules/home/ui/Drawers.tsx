@@ -31,7 +31,7 @@ function FactRows({ facts }: { facts: Fact[] }) {
 }
 
 const closeFooter = (onClose: () => void) => (
-  <ActionButton variant="accent" className="h-10 px-4 text-[13px]" onClick={onClose}>
+  <ActionButton variant="accent" className="h-11 px-4 text-[13px] sm:h-10" onClick={onClose}>
     Close
   </ActionButton>
 )
@@ -186,10 +186,10 @@ export function LogServiceDrawer({
       lede="Logs what was done and, if you pick an interval, schedules the next one on the calendar."
       footer={
         <div className="flex gap-2.5">
-          <ActionButton variant="accent" className="h-10 px-4 text-[13px]" onClick={submit}>
+          <ActionButton variant="accent" className="h-11 px-4 text-[13px] sm:h-10" onClick={submit}>
             Save service
           </ActionButton>
-          <ActionButton className="label h-10 px-4 text-[11px] tracking-[0.12em] sm:h-10" onClick={onClose}>
+          <ActionButton className="label h-11 px-4 text-[11px] tracking-[0.12em] sm:h-10" onClick={onClose}>
             Cancel
           </ActionButton>
         </div>
