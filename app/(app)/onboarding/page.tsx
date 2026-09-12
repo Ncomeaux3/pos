@@ -1,4 +1,4 @@
-import { categoriesForModules, supportedProviders } from '@/core/connectors'
+import { loadCategories, supportedProviders } from '@/core/connectors'
 import { db } from '@/core/db'
 import { getModules } from '@/core/modules'
 import { listMetrics } from '@/core/metrics'
@@ -49,7 +49,10 @@ export default async function OnboardingPage() {
       note: MODULE_NOTES[m.id] ?? `${m.nav.label} module`,
       enabled: enabled.includes(m.id),
     })),
-    categories: categoriesForModules(enabled),
+    // Every category, not only the enabled ones: a category whose module is
+    // off still renders, greyed, with an inline way to turn that module on
+    // (the artboard's own shape), rather than disappearing.
+    categories: loadCategories(),
     supported: [...supportedProviders()],
     requested: requested.map((r) => r.integration_id),
     // Enumerated from the manifests, so a seeded goal can point at something

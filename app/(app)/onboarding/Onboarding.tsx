@@ -6,7 +6,6 @@ import { useState, useTransition } from 'react'
 import {
   ActionButton,
   Card,
-  CardHead,
   Chip,
   EmptyState,
   Eyebrow,
@@ -120,6 +119,14 @@ const STEPS: { key: StepKey; name: string; hint: string; question: string; helpe
  * array of the ids that already exist there is the smaller, in-scope change.
  */
 const NEEDED_CATEGORY_IDS = ['bank', 'broker']
+
+/** "Banks and credit unions" to "Banks & credit unions", the artboard's own style. */
+const withAmpersand = (name: string) => name.replace(/ and /g, ' & ')
+
+/** "balances and transactions" to "balances, transactions": the category's
+ * true `data` field, rephrased into the artboard's comma list shape rather
+ * than prose, without adding an item it does not actually give. */
+const listify = (data: string) => data.replace(/ and /g, ', ')
 
 /**
  * Three quiet-hours shortcuts. There is no per-rule loudness setting to
@@ -412,7 +419,8 @@ export function Onboarding({ data }: { data: SetupData }) {
             })}
           </div>
           <p className="t-caption text-ink-3">
-            {enabled.length} of {data.modules.length} on. {data.categories.length} connector
+            {enabled.length} of {data.modules.length} on.{' '}
+            {data.categories.filter((c) => enabled.includes(c.module)).length} connector
             categories unlock on the next step; the rest stay visible but greyed.
           </p>
         </div>
@@ -432,7 +440,9 @@ export function Onboarding({ data }: { data: SetupData }) {
 
         const neededMissing = data.categories.filter(
           (c) =>
-            NEEDED_CATEGORY_IDS.includes(c.id) && !c.providers.some((p) => requested.has(p)),
+            NEEDED_CATEGORY_IDS.includes(c.id) &&
+            enabled.includes(c.module) &&
+            !c.providers.some((p) => requested.has(p)),
         )
 
         const requestedList = data.requested.map((name) => ({
@@ -510,10 +520,37 @@ export function Onboarding({ data }: { data: SetupData }) {
               </EmptyState>
             ) : (
               data.categories.map((category) => {
-                const needed =
-                  NEEDED_CATEGORY_IDS.includes(category.id) &&
-                  !category.providers.some((p) => requested.has(p))
+                const moduleOn = enabled.includes(category.module)
+                const moduleLabel = data.modules.find((m) => m.id === category.module)?.label ?? category.module
+                const displayName = withAmpersand(category.name)
+                const subLine = `Feeds ${moduleLabel} · ${listify(category.data)}`
+
+                // A category whose module is off stays visible, greyed, with
+                // an inline way to turn that module on, rather than
+                // disappearing or opening.
+                if (!moduleOn) {
+                  return (
+                    <Card key={category.id} className="border-dashed bg-transparent">
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                        <span className="text-[15px] text-ink-3">{displayName}</span>
+                        <span className="flex items-center gap-2.5">
+                          <span className="label text-[9px] tracking-[0.1em] text-ink-3">
+                            {moduleLabel} module off
+                          </span>
+                          <ActionButton variant="outline" onClick={() => toggleModule(category.module)}>
+                            Add {moduleLabel} module
+                          </ActionButton>
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[11px] text-ink-3">{subLine}</p>
+                    </Card>
+                  )
+                }
+
+                const requestedCount = category.providers.filter((p) => requested.has(p)).length
+                const needed = NEEDED_CATEGORY_IDS.includes(category.id) && requestedCount === 0
                 const open = openCategory === category.id
+
                 return (
                   <Card key={category.id} className="space-y-3">
                     <button
@@ -524,20 +561,30 @@ export function Onboarding({ data }: { data: SetupData }) {
                       }}
                       className="w-full text-left"
                     >
-                      <CardHead
-                        label={
-                          <>
-                            {category.name}
-                            {needed && (
-                              <span className="label ml-2 border border-amber px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-amber">
-                                Needed
-                              </span>
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                        <span className="flex items-baseline gap-2">
+                          <span className="text-[15px] text-ink">{displayName}</span>
+                          {needed && (
+                            <span className="label border border-amber px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-amber">
+                              Needed
+                            </span>
+                          )}
+                        </span>
+                        <span className="flex items-center gap-2">
+                          <span
+                            className={cn(
+                              'label text-[9px] tracking-[0.1em]',
+                              requestedCount > 0 ? 'text-brand' : 'text-ink-3',
                             )}
-                          </>
-                        }
-                        meta={open ? 'Hide' : `${category.providers.length}`}
-                      />
-                      <p className="t-caption mt-1 text-ink-3">Gives you {category.data}.</p>
+                          >
+                            {requestedCount > 0
+                              ? `${requestedCount} requested`
+                              : `${category.providers.length} available`}
+                          </span>
+                          <span className="text-ink-3">{open ? '▴' : '▾'}</span>
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[11px] text-ink-3">{subLine}</p>
                     </button>
 
                     {open && (
@@ -582,7 +629,7 @@ export function Onboarding({ data }: { data: SetupData }) {
 
             <p className="t-caption text-ink-3">
               {neededMissing.length > 0
-                ? `${neededMissing.map((c) => c.name).join(' and ')} carry the numbers behind Finance and Goals. Without at least one in each, those tiles open empty.`
+                ? `${neededMissing.map((c) => withAmpersand(c.name)).join(' and ')} carry the numbers behind Finance and Goals. Without at least one in each, those tiles open empty.`
                 : `${requested.size} requested across ${data.categories.filter((c) => c.providers.some((p) => requested.has(p))).length} categories. Add the rest any time from Settings, Connections.`}
             </p>
 

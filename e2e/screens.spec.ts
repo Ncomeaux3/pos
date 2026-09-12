@@ -1198,14 +1198,26 @@ test('onboarding, six steps that write as they go', async ({ page }) => {
   await expect(page.getByRole('button', { name: /01[\s\S]*ON[\s\S]*Finance/ })).toBeVisible()
   await expect(page.getByText(/connector categories unlock/)).toBeVisible()
 
+  // Turn a module off here so its categories render greyed on the next step,
+  // rather than disappearing.
+  await page.getByRole('button', { name: /Travel/ }).click()
+
   // Connections records intent. A provider with a real integration is starred;
   // everything else is honestly a request.
   await page.getByRole('button', { name: '03 Connections' }).click()
   await expect(page.getByText(/nothing pretends to be connected/)).toBeVisible()
 
+  // A category whose module is off stays visible, greyed, with a way to turn
+  // the module back on, rather than disappearing.
+  const airlineCategory = page.getByText('Airline loyalty').locator('..')
+  await expect(airlineCategory).toContainText('Travel module off')
+  await shoot(page, 'onboarding-connections-module-off')
+  await airlineCategory.getByRole('button', { name: 'Add Travel module' }).click()
+  await expect(page.getByText('Travel module off')).toHaveCount(0)
+
   // A category that carries Finance and Goals' real numbers says so until
   // something in it is requested.
-  await expect(page.getByRole('button', { name: /Banks and credit unions/ })).toContainText('Needed')
+  await expect(page.getByRole('button', { name: /Banks & credit unions/ })).toContainText('Needed')
 
   // The global search narrows every category's providers by name.
   await page.getByLabel('Search every connector').fill('wells fargo')
@@ -1215,10 +1227,10 @@ test('onboarding, six steps that write as they go', async ({ page }) => {
   // Requesting a listed provider clears the Needed flag and lists it as
   // Requested; a name with no integration is recorded the same way, through
   // the manual add.
-  await page.getByRole('button', { name: /Banks and credit unions/ }).click()
+  await page.getByRole('button', { name: /Banks & credit unions/ }).click()
   await page.getByRole('button', { name: 'Chase', exact: true }).click()
   await expect(page.getByText('Requested · 1')).toBeVisible()
-  await expect(page.getByRole('button', { name: /Banks and credit unions/ })).not.toContainText('Needed')
+  await expect(page.getByRole('button', { name: /Banks & credit unions/ })).not.toContainText('Needed')
 
   await page.getByRole('button', { name: 'Add manually' }).click()
   await page.getByLabel('Name of the institution').fill('Local Credit Union')
@@ -1276,7 +1288,7 @@ test("onboarding, a goal's target and deadline are editable", async ({ page }) =
 test('onboarding, requesting a provider records it without pretending', async ({ page }) => {
   await page.goto('/onboarding?step=connect')
 
-  await page.getByRole('button', { name: /Banks and credit unions/ }).click()
+  await page.getByRole('button', { name: /Banks & credit unions/ }).click()
   await page.getByRole('button', { name: 'Ally', exact: true }).click()
   await expect(page.getByText('Ally noted')).toBeVisible()
 
