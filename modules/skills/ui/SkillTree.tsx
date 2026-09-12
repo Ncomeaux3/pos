@@ -344,7 +344,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
           <div className="px-[22px] pt-[18px]">
             <span className="eyebrow text-ink-3">Attributes</span>
             <div className="mx-auto mt-1.5 flex max-w-[240px] justify-center">
-              <Radar axes={attributes.map((a) => ({ label: a.name, value: a.level }))} size={240} />
+              <Radar axes={attributes.map((a) => ({ label: a.name, value: a.level }))} size={200} />
             </div>
           </div>
 

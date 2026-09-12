@@ -3,8 +3,8 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
-Last updated: 2026-09-11, the Weekly Review, Dashboard and Finance fidelity
-passes and the rail to PosSidebar. Branch `main`.
+Last updated: 2026-09-11, the Weekly Review, Dashboard, Finance and Skill Tree
+fidelity passes and the rail to PosSidebar. Branch `main`.
 
 ## Done
 
@@ -24,6 +24,13 @@ bundle landed 2026-09-07 and steps 0, 7.5 and 8 to 14 followed.
 | 13 | `pnpm setup` and `pnpm setup:demo`, both idempotent |
 | 14 | CI and backup workflows, restore drilled |
 | 16 | Docs squared up: README quickstart, connections registry, the notes module README |
+
+**The fidelity pass, screen four: Skill Tree.** docs/plans/skill-tree-fidelity.md.
+Two flush halves split by one rule under a 56px band (crumb, scoped search,
+Reset view); the character, the six-letter pips, the hints and the legend in
+the sky's corners; the columns under it; the detail pane at the artboard's
+margins with the full crumb path and the pinned formula. Opens on the
+top-gaining leaf. Closes Task 5 of the older fidelity plan.
 
 **The fidelity pass, screen three: Finance.** docs/plans/finance-fidelity.md.
 One overview on the desktop (the tab row is the phone's, for PosPhone's
