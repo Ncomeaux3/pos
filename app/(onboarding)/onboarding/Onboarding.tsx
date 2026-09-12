@@ -342,6 +342,8 @@ export function Onboarding({ data }: { data: SetupData }) {
       onSkip={index < STEPS.length - 1 ? () => setStep(STEPS[index + 1].key) : undefined}
       onNext={index === STEPS.length - 1 ? finishUp : () => setStep(STEPS[index + 1].key)}
       nextLabel={index === STEPS.length - 1 ? 'Open the dashboard' : 'Continue'}
+      nextVariant="accent"
+      backVariant="outline"
       footnote={
         pending
           ? 'Saving.'
