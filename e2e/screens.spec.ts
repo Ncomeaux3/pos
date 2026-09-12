@@ -1327,8 +1327,10 @@ test('meals, a plan is not a log', async ({ page }) => {
   await page.goto('/meals')
   await expect(page.getByRole('heading', { name: 'Meals' })).toBeVisible()
 
-  // The band: how much of the week is planned and the protein average.
-  await expect(page.getByText(/\d+ \/ 28 planned · \d+g protein avg/)).toBeVisible()
+  // The band: how much of the week is planned and the protein average. The
+  // phone band has no room for it, as on every other screen.
+  const mobile = (page.viewportSize()?.width ?? 0) < 720
+  if (!mobile) await expect(page.getByText(/\d+ \/ 28 planned · \d+g protein avg/)).toBeVisible()
 
   // Two tabs. The grocery list is a drawer and drafts sit in the recipe grid.
   const tabs = page.getByRole('tab')
@@ -1354,6 +1356,12 @@ test('meals, a plan is not a log', async ({ page }) => {
   await expect(page.getByText(/15 kcal a pound/)).toBeVisible()
 
   await shoot(page, 'meals')
+
+  // A week paged to is read from the URL and has no Today strip.
+  await page.goto('/meals?week=-1')
+  await expect(page.getByText(/Last week · /)).toBeVisible()
+  await expect(page.getByText('Eaten so far')).toHaveCount(0)
+  await shoot(page, 'meals-week-last')
 })
 
 test('meals, the grocery list lists quantities rather than adding them', async ({ page }) => {
@@ -1381,6 +1389,12 @@ test('meals, an imported recipe waits in the inbox', async ({ page }) => {
   await page.getByRole('button', { name: 'Accept', exact: true }).first().click()
   await expect(page.getByText('Added to the library')).toBeVisible()
   await expect(page.getByText('draft', { exact: true })).toHaveCount(0)
+
+  // The filter is in the URL. Favourites is the one that is not a tag.
+  await page.goto('/meals?tab=recipes&tag=favorites')
+  await expect(page.getByText('Overnight oats')).toHaveCount(0)
+  await expect(page.getByText('Turkey chili')).toBeVisible()
+  await shoot(page, 'meals-recipes-favorites')
 })
 
 test('meals, a slot is picked, swapped and cleared from the drawer', async ({ page }) => {
@@ -1557,6 +1571,8 @@ test('insurance, renewing keeps the same row', async ({ page }) => {
 test('meals, cook mode scales what can be scaled and says what cannot', async ({ page }) => {
   await page.goto('/meals?tab=recipes')
   await page.getByRole('button', { name: /^Turkey chili/ }).click()
+  await expect(page.getByRole('dialog').getByText(/Use "Add to" above/)).toBeVisible()
+  await shoot(page, 'meals-recipe-library')
   await page.getByRole('dialog').getByRole('button', { name: 'Cook' }).click()
 
   // One step at a time, in type you can read from across a kitchen.

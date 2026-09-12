@@ -272,7 +272,7 @@ export function Meals({ data }: { data: MealsData }) {
                 })}
                 {firstEmptyToday && (
                   <form
-                    className="flex gap-1"
+                    className="flex min-w-0 max-w-full gap-1"
                     onSubmit={(e) => {
                       e.preventDefault()
                       const label = adhoc.trim()
@@ -285,7 +285,7 @@ export function Meals({ data }: { data: MealsData }) {
                       value={adhoc}
                       onChange={(e) => setAdhoc(e.target.value)}
                       placeholder="Ate something else? e.g. burrito"
-                      className="w-[280px] max-w-full border border-rule-2 bg-bg px-2.5 py-1.5 text-[12px] text-ink outline-none focus:border-brand"
+                      className="w-[280px] min-w-0 max-w-full border border-rule-2 bg-bg px-2.5 py-1.5 text-[12px] text-ink outline-none focus:border-brand"
                     />
                     <button type="submit" className={MINI}>
                       Log

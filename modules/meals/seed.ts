@@ -89,11 +89,17 @@ const RECIPES: Recipe[] = [
 ]
 
 /**
- * The current week, Monday to Sunday, mostly planned, plus two entries next
- * week. Days before today are ticked except one lunch, and today's breakfast
- * is ticked, so the screen shows a plan and a log that differ.
+ * The current week, Monday to Sunday, mostly planned, plus most of last week
+ * and two entries next week. Days before today are ticked except one lunch,
+ * and today's breakfast is ticked, so the screen shows a plan and a log that
+ * differ.
  */
 const PLAN: [day: number, slot: string, recipe: string][] = [
+  [-7, 'breakfast', 'r-yogurt'], [-7, 'lunch', 'r-bowl'], [-7, 'dinner', 'r-chili'],
+  [-6, 'breakfast', 'r-oats'], [-6, 'lunch', 'r-lentil'], [-6, 'dinner', 'r-chili'],
+  [-5, 'breakfast', 'r-yogurt'], [-5, 'lunch', 'r-bowl'], [-5, 'dinner', 'r-lentil'],
+  [-4, 'breakfast', 'r-oats'], [-4, 'dinner', 'r-chili'],
+  [-3, 'breakfast', 'r-yogurt'], [-3, 'lunch', 'r-bowl'], [-3, 'dinner', 'r-lentil'],
   [0, 'breakfast', 'r-yogurt'], [0, 'lunch', 'r-bowl'], [0, 'dinner', 'r-chili'],
   [1, 'breakfast', 'r-oats'], [1, 'lunch', 'r-bowl'], [1, 'dinner', 'r-lentil'],
   [2, 'breakfast', 'r-yogurt'], [2, 'dinner', 'r-chili'],
