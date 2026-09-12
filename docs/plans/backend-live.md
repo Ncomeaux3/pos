@@ -91,7 +91,7 @@ Tasks:
 - [x] `.gitignore`: `AGENTS.md`
 
 Exit checks:
-- PR on `docs/adopt-planning`, CI green
+- PR on `docs/adopt-planning`, CI green. Result 2026-09-12: `check` green, `screens` red with the 7 pre-existing failures moved into Phase 1; merged as the one exception to the red-check rule, logged in decisions/log.md
 
 Out of scope: any application code.
 
@@ -104,12 +104,13 @@ Tasks:
 - [ ] Move `fieldClass` out of `components/pos/edit.tsx` into a leaf module with no `'use client'` and no imports (pattern: `core/owner.ts`); re-export from `components/pos/index.ts` so every importer keeps working; `edit.tsx` imports it back
 - [ ] `.github/workflows/ci.yml`: `pnpm build` after `pnpm typecheck` in the `check` job. If the build needs a value the synthetic `.env` lacks, add it the way the VAPID keys were
 - [ ] `.env.example`: `RESEND_FROM=` with its comment (optional, defaults to onboarding@resend.dev)
+- [ ] The `screens` CI job goes green. The e2e suite first ran in CI on 2026-09-12 (every earlier run died at `setup:demo` for want of VAPID keys) and 7 of 185 fail because they assume the owner's laptop: `settings, connections` wants a CONNECTED card the CI database has none of; `settings notifications, push says what it needs` wants "Push is not configured" while CI now sets VAPID keys; `dashboard shell` wants the Finance, Tasks, Goals and Skill Tree tiles; `tasks, completing one emits the event` hits a strict-mode duplicate on mobile; `skill tree, a trackpad burst zooms smoothly` is a timing assertion on a slow runner. Each test asserts the state the CI seed and `.env` actually produce, or the seed produces the state; no assertion is loosened to pass
 - [ ] `digest_morning_at`: the Notifications page schedule card (`app/(app)/notifications/page.tsx`, `Rules.tsx`) and the Onboarding step show the cron time in the owner's zone as a read-only line, reusing the helper `app/(app)/settings/page.tsx` has for "0 9 * * * UTC · 04:00 CDT". The key stays in `core/settings.ts` so stored rows still parse; nothing writes it; the two action allow-list entries go
 
 Exit checks:
 - `pnpm typecheck && pnpm lint && pnpm test` pass
 - `pnpm build` succeeds locally, and a fetch of `/login` from `pnpm start` shows the input's class beginning `w-full rounded-md`
-- CI green including the new build step
+- CI green including the new build step and the `screens` job, the first fully green run on `main`
 - `pnpm test:e2e --grep "login|onboarding"` green
 
 Depends on: nothing. Out of scope: the cron-silence step, Apple Health.
