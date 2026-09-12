@@ -1461,6 +1461,14 @@ test('meals, an imported recipe waits in the inbox', async ({ page }) => {
   // A draft is a card at the top of the grid, tagged, with the decision on it.
   await expect(page.getByText('Sheet pan salmon')).toBeVisible()
   await expect(page.getByText('draft', { exact: true })).toBeVisible()
+
+  // A pasted URL is read for its Recipe JSON-LD. A private address is refused
+  // before anything is fetched: the fetch runs from inside the deployment.
+  const url = page.getByPlaceholder('Paste a recipe URL to ingest')
+  await expect(url).toBeVisible()
+  await url.fill('http://169.254.169.254/latest/meta-data/')
+  await page.getByRole('button', { name: 'Ingest', exact: true }).click()
+  await expect(page.getByText(/private network/)).toBeVisible()
   await shoot(page, 'meals-recipes')
 
   await page.getByRole('button', { name: 'Accept', exact: true }).first().click()

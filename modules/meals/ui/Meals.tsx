@@ -16,7 +16,7 @@ import {
 import { cn } from '@/lib/utils'
 import { standing, total, type Macros } from '../macros'
 import { scaleQuantity, servingFactor } from '../scale'
-import { decideRecipe, fillWeek, logAdhoc, markEaten, setFavourite, type ActionResult } from './actions'
+import { decideRecipe, fillWeek, importRecipe, logAdhoc, markEaten, setFavourite, type ActionResult } from './actions'
 import { GroceryDrawer, PickDrawer, RecipeDrawer } from './Drawers'
 
 export type MealsData = {
@@ -143,6 +143,8 @@ export function Meals({ data }: { data: MealsData }) {
   const eatenToday = total(todayEntries.filter((e): e is Entry => e !== undefined), true)
   const firstEmptyToday = SLOTS.find((s, i) => !todayEntries[i])
   const [adhoc, setAdhoc] = useState('')
+  const [ingestUrl, setIngestUrl] = useState('')
+  const [ingesting, setIngesting] = useState(false)
 
   const cooking = byId(params.get('cook'))
   if (cooking) {
@@ -480,6 +482,38 @@ export function Meals({ data }: { data: MealsData }) {
                 </button>
               )
             })}
+            <form
+              className="ml-auto flex min-w-0 max-w-full gap-1"
+              onSubmit={(e) => {
+                e.preventDefault()
+                const url = ingestUrl.trim()
+                if (!url || ingesting) return
+                setIngesting(true)
+                start(async () => {
+                  const result = await importRecipe(url)
+                  setIngesting(false)
+                  if (!result.ok) toast(result.error)
+                  else {
+                    setIngestUrl('')
+                    setParams({ recipe: result.id, slot: null })
+                  }
+                })
+              }}
+            >
+              <input
+                value={ingestUrl}
+                onChange={(e) => setIngestUrl(e.target.value)}
+                placeholder="Paste a recipe URL to ingest"
+                className="w-[260px] min-w-0 max-w-full border border-rule-2 bg-bg-elev px-2.5 py-[7px] text-[12px] text-ink outline-none focus:border-brand"
+              />
+              <button
+                type="submit"
+                disabled={ingesting}
+                className={cn(MINI, 'border-brand text-ink hover:bg-brand hover:text-bg disabled:text-ink-4')}
+              >
+                {ingesting ? 'Ingesting…' : 'Ingest'}
+              </button>
+            </form>
           </div>
 
           <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,240px),1fr))] gap-3">

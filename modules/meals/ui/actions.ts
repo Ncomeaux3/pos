@@ -95,3 +95,18 @@ export async function logAdhoc(
     return failed(error)
   }
 }
+
+/** Read a page's Recipe JSON-LD into a draft. The tool's refusal is the error. */
+export async function importRecipe(
+  url: string,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  await requireOwner()
+  try {
+    const result = await callTool('meals', 'import_recipe', { url }, { source: 'ui' })
+    if (result.status !== 'done') return { ok: false, error: 'Not imported' }
+    revalidatePath('/meals')
+    return { ok: true, id: (result.result as { id: string }).id }
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'Failed' }
+  }
+}
