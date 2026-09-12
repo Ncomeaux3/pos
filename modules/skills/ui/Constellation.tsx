@@ -438,7 +438,7 @@ export function Constellation({
                     panned.current = false
                     return
                   }
-                  if (!isRoot) onSelect(isSelected ? null : node.id)
+                  onSelect(isSelected ? null : node.id)
                 }}
                 // The artboard's double-click: fly to the node rather than
                 // zooming wherever the pointer happens to be.

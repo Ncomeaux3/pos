@@ -3,10 +3,11 @@
 import { useSearchParams } from 'next/navigation'
 import { useCallback, useMemo, useState, useTransition } from 'react'
 import { BandSearch, Chip, EmptyState, Radar, SearchButton } from '@/components/pos'
-import type { SkillEvent, SkillTreeData } from '../data'
+import type { SkillEvent, SkillStat, SkillTreeData } from '../data'
 import { underGoalPressure } from '../pressure'
 import { reassignEvent } from './actions'
 import { Constellation, toneFor } from './Constellation'
+import { ROOT_ID } from './layout'
 import { WeeklyBars } from './WeeklyBars'
 
 const DAY = 24 * 60 * 60 * 1000
@@ -108,13 +109,34 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
   /** Goals point here, and nothing has happened. Weight first, then quiet. */
   const aimed = useMemo(() => underGoalPressure(leaves, 4), [leaves])
 
-  const stat = selected ? statById.get(selected) : undefined
-  const children = data.stats.filter((s) => s.parent === selected)
+  // The centre star is not a skill row, so the pane gets one made from the
+  // character figures: the sum of the attributes, which is what "You" is.
+  const isRoot = selected === ROOT_ID
+  const you = useMemo<SkillStat>(
+    () => ({
+      id: ROOT_ID,
+      name: 'You',
+      keywords: [],
+      ownXp: 0,
+      xp: data.totalXp,
+      level: data.characterLevel,
+      gained30d: attributes.reduce((sum, a) => sum + a.gained30d, 0),
+      lastEventAt: attributes.reduce<string | null>(
+        (latest, a) => (a.lastEventAt && (!latest || a.lastEventAt > latest) ? a.lastEventAt : latest),
+        null,
+      ),
+      goalWeight: 0,
+    }),
+    [data.totalXp, data.characterLevel, attributes],
+  )
+  const stat = isRoot ? you : selected ? statById.get(selected) : undefined
+  const children = data.stats.filter((s) => (isRoot ? !s.parent : s.parent === selected))
 
   // Every event under the selected skill, its descendants included, so clicking
-  // an attribute shows the work that rolled up into it.
+  // an attribute shows the work that rolled up into it. Under You, all of them.
   const descendantIds = useMemo(() => {
     if (!selected) return new Set<string>()
+    if (selected === ROOT_ID) return new Set(data.stats.map((s) => s.id))
     const ids = new Set([selected])
     let grew = true
     while (grew) {
@@ -351,7 +373,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
             ) : (
               <div className="space-y-4" aria-busy={pending}>
                 <div>
-                  <span className="eyebrow text-ink-3">{path ?? 'Attribute'}</span>
+                  <span className="eyebrow text-ink-3">{path ?? (isRoot ? 'Character' : 'Attribute')}</span>
                   {/* Name and level on one baseline, then the bar: how close
                     * the next level is should be a length, not a subtraction. */}
                   <div className="mt-2 flex items-baseline justify-between gap-3">
@@ -398,9 +420,9 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
                   </div>
                 </div>
 
-                {children.length > 0 ? (
+                {children.length > 0 && (
                   <div>
-                    <span className="eyebrow text-ink-3">Children</span>
+                    <span className="eyebrow text-ink-3">{isRoot ? 'Attributes' : 'Children'}</span>
                     <ul className="mt-1.5">
                       {children.map((c) => (
                         <li key={c.id}>
@@ -428,7 +450,12 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
                       Drop an event here to reassign it to that skill.
                     </p>
                   </div>
-                ) : (
+                )}
+
+                {/* A leaf lists its events; so does You, across every skill,
+                  * which is the month in one column. An attribute lists its
+                  * children instead. */}
+                {(children.length === 0 || isRoot) && (
                   <>
                     <div>
                       <div className="flex items-baseline justify-between gap-3">
@@ -453,22 +480,24 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
                       )}
                     </div>
 
-                    <div>
-                      <span className="eyebrow text-ink-3">Keywords &middot; skills.yaml</span>
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {stat.keywords.length === 0 ? (
-                          <span className="t-caption text-ink-3">
-                            None. This skill is only reachable by the model or by hand.
-                          </span>
-                        ) : (
-                          stat.keywords.map((k) => (
-                            <Chip key={k} tone="quiet">
-                              {k}
-                            </Chip>
-                          ))
-                        )}
+                    {!isRoot && (
+                      <div>
+                        <span className="eyebrow text-ink-3">Keywords &middot; skills.yaml</span>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {stat.keywords.length === 0 ? (
+                            <span className="t-caption text-ink-3">
+                              None. This skill is only reachable by the model or by hand.
+                            </span>
+                          ) : (
+                            stat.keywords.map((k) => (
+                              <Chip key={k} tone="quiet">
+                                {k}
+                              </Chip>
+                            ))
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </>
                 )}
               </div>

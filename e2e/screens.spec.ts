@@ -348,6 +348,20 @@ test('skill tree, the constellation hovers, selects, pans and zooms', async ({ p
   await star.click({ force: true })
   await expect(page).toHaveURL(/skill=coding/)
 
+  // The centre star opens too: the character, its five attributes with their
+  // levels, and the month's events across every skill. It used to be inert.
+  const pane = page.getByTestId('skill-tree-detail-pane')
+  await page.locator('g[data-skill="__you"]').click({ force: true })
+  await expect(page).toHaveURL(/skill=__you/)
+  await expect(pane.getByText('Character', { exact: true })).toBeVisible()
+  await expect(pane.getByRole('heading', { name: 'You' })).toBeVisible()
+  await expect(pane.getByText('Attributes', { exact: true })).toHaveCount(2)
+  await expect(pane.getByRole('button', { name: /Engineering/ })).toBeVisible()
+  await expect(pane.getByText(/Events · 30 days/)).toBeVisible()
+  await expect(pane.getByText(/Keywords/)).toHaveCount(0)
+  await star.click({ force: true })
+  await expect(page).toHaveURL(/skill=coding/)
+
   // Zoom anchors on the cursor, and a step is symmetric: in then out puts the
   // node back exactly where it was, at the size it was.
   const before = (await star.boundingBox())!
