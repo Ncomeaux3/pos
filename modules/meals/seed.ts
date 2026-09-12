@@ -18,6 +18,7 @@ type Recipe = {
   favourite?: boolean
   status?: 'draft' | 'ready'
   sourceUrl?: string
+  notes?: string
   ingredients: [string, string][]
   steps: string[]
 }
@@ -59,6 +60,7 @@ const RECIPES: Recipe[] = [
     kcal: 540, protein: 44, carbs: 46, fat: 14,
     tags: ['dinner', 'batch', 'high-protein'],
     favourite: true,
+    notes: 'Doubles well. Freeze flat in bags; a bag is two dinners.',
     ingredients: [['Ground turkey', '900 g'], ['Kidney beans', '2 cans'], ['Crushed tomatoes', '800 g'], ['Onion', '1'], ['Bell pepper', '2'], ['Chili powder', '2 tbsp'], ['Olive oil', 'a splash']],
     steps: ['Brown the turkey with the onion.', 'Add pepper, spices, tomatoes and beans.', 'Simmer thirty minutes.'],
   },
@@ -86,20 +88,26 @@ const RECIPES: Recipe[] = [
   },
 ]
 
-/** A week that is mostly planned, with gaps, and the past two days ticked. */
-const PLAN: [dayOffset: number, slot: string, recipe: string, eaten: boolean][] = [
-  [0, 'breakfast', 'r-yogurt', true],
-  [0, 'lunch', 'r-bowl', true],
-  [0, 'dinner', 'r-chili', false],
-  [1, 'breakfast', 'r-oats', false],
-  [1, 'lunch', 'r-bowl', false],
-  [1, 'dinner', 'r-lentil', false],
-  [2, 'breakfast', 'r-yogurt', false],
-  [2, 'dinner', 'r-chili', false],
-  [3, 'breakfast', 'r-oats', false],
-  [3, 'dinner', 'r-lentil', false],
-  [4, 'breakfast', 'r-yogurt', false],
-  [5, 'dinner', 'r-chili', false],
+/**
+ * The current week, Monday to Sunday, mostly planned, plus most of last week
+ * and two entries next week. Days before today are ticked except one lunch,
+ * and today's breakfast is ticked, so the screen shows a plan and a log that
+ * differ.
+ */
+const PLAN: [day: number, slot: string, recipe: string][] = [
+  [-7, 'breakfast', 'r-yogurt'], [-7, 'lunch', 'r-bowl'], [-7, 'dinner', 'r-chili'],
+  [-6, 'breakfast', 'r-oats'], [-6, 'lunch', 'r-lentil'], [-6, 'dinner', 'r-chili'],
+  [-5, 'breakfast', 'r-yogurt'], [-5, 'lunch', 'r-bowl'], [-5, 'dinner', 'r-lentil'],
+  [-4, 'breakfast', 'r-oats'], [-4, 'dinner', 'r-chili'],
+  [-3, 'breakfast', 'r-yogurt'], [-3, 'lunch', 'r-bowl'], [-3, 'dinner', 'r-lentil'],
+  [0, 'breakfast', 'r-yogurt'], [0, 'lunch', 'r-bowl'], [0, 'dinner', 'r-chili'],
+  [1, 'breakfast', 'r-oats'], [1, 'lunch', 'r-bowl'], [1, 'dinner', 'r-lentil'],
+  [2, 'breakfast', 'r-yogurt'], [2, 'dinner', 'r-chili'],
+  [3, 'breakfast', 'r-oats'], [3, 'lunch', 'r-bowl'], [3, 'dinner', 'r-lentil'],
+  [4, 'breakfast', 'r-yogurt'], [4, 'lunch', 'r-bowl'], [4, 'dinner', 'r-chili'],
+  [5, 'breakfast', 'r-oats'], [5, 'dinner', 'r-lentil'],
+  [6, 'breakfast', 'r-yogurt'], [6, 'lunch', 'r-bowl'], [6, 'dinner', 'r-chili'],
+  [7, 'breakfast', 'r-oats'], [7, 'dinner', 'r-chili'],
 ]
 
 export async function seed(): Promise<number> {
@@ -109,10 +117,11 @@ export async function seed(): Promise<number> {
     const { rows } = await db().query<{ id: string }>(
       `insert into meals.recipe
          (name, source_url, servings, time_minutes, cost_cents, kcal, protein_g,
-          carbs_g, fat_g, tags, favourite, status, source, external_id)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'demo', $13)
+          carbs_g, fat_g, tags, favourite, status, source, external_id, notes)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'demo', $13, $14)
        on conflict (source, external_id) do update
-         set name = excluded.name, status = excluded.status, kcal = excluded.kcal
+         set name = excluded.name, status = excluded.status, kcal = excluded.kcal,
+             notes = excluded.notes
        returning id`,
       [
         recipe.name,
@@ -128,6 +137,7 @@ export async function seed(): Promise<number> {
         recipe.favourite ?? false,
         recipe.status ?? 'ready',
         recipe.external_id,
+        recipe.notes ?? '',
       ],
     )
     ids.set(recipe.external_id, rows[0].id)
@@ -167,12 +177,28 @@ export async function seed(): Promise<number> {
   // day is a constraint. Nothing registers a plan entry in core.entities, so
   // there is nothing to orphan by deleting these.
   await db().query(`delete from meals.plan_entry where source = 'demo'`)
+  // The screen tests plan into empty slots around the fixture week, and one
+  // thing per slot per day is a constraint: a row they left behind would
+  // collide with the fixture on the next seed.
+  await db().query(
+    `delete from meals.plan_entry
+      where source = 'manual'
+        and on_date between date_trunc('week', core.today())::date - 7
+                        and date_trunc('week', core.today())::date + 14`,
+  )
 
-  for (const [offset, slot, recipeKey, eaten] of PLAN) {
+  // Days since Monday, so the week reads the same whichever day it is seeded.
+  const { rows } = await db().query<{ idx: number }>(
+    `select ((extract(isodow from core.today())::int) - 1) as idx`,
+  )
+  const todayIdx = rows[0].idx
+
+  for (const [day, slot, recipeKey] of PLAN) {
+    const eaten = day < todayIdx ? !(day === 3 && slot === 'lunch') : day === todayIdx && slot === 'breakfast'
     await db().query(
       `insert into meals.plan_entry (recipe_id, on_date, slot, servings, eaten, source, external_id)
-       values ($1, core.today() + $2::int, $3, 1, $4, 'demo', $5)`,
-      [ids.get(recipeKey), offset, slot, eaten, `plan-${offset}-${slot}`],
+       values ($1, date_trunc('week', core.today())::date + $2::int, $3, 1, $4, 'demo', $5)`,
+      [ids.get(recipeKey), day, slot, eaten, `plan-${day}-${slot}`],
     )
   }
 

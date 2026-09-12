@@ -2,7 +2,9 @@ import { z } from 'zod'
 import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
+import { fillWeek } from './fill'
 import { nightlyDigest } from './jobs/nightly-digest'
+import { parseRecipe } from './jsonld'
 import MealsPage from './ui/MealsPage'
 import { MealsTile } from './ui/Tile'
 
@@ -107,6 +109,72 @@ export default defineModule({
         })
 
         return { id: rows[0].id, status }
+      },
+    }),
+
+    import_recipe: defineTool({
+      description:
+        'Read the schema.org Recipe JSON-LD out of a page and file it as a draft for the owner to accept. Pass the page source; a page with no Recipe block is refused rather than guessed at.',
+      input: z.object({ url: z.url(), html: z.string().min(1) }),
+      run: async ({ url, html }) => {
+        const recipe = parseRecipe(html)
+        const { rows } = await db().query<{ id: string }>(
+          `insert into meals.recipe
+             (name, source_url, servings, time_minutes, kcal, protein_g, carbs_g, fat_g, status)
+           values ($1, $2, $3, $4, $5, $6, $7, $8, 'draft')
+           returning id`,
+          [
+            recipe.name,
+            url,
+            recipe.servings,
+            recipe.time_minutes,
+            recipe.kcal,
+            recipe.protein_g,
+            recipe.carbs_g,
+            recipe.fat_g,
+          ],
+        )
+        await writeParts(rows[0].id, recipe.ingredients, recipe.steps)
+        await register({
+          module: 'meals',
+          entityType: 'recipe',
+          entityId: rows[0].id,
+          title: recipe.name,
+          eventType: 'meal_planned',
+        })
+        return { id: rows[0].id, status: 'draft', name: recipe.name }
+      },
+    }),
+
+    fill_week: defineTool({
+      description:
+        'Fill the empty slots between two dates from the library: a recipe tagged for the slot, favourites first, rotating. No model. Nothing planned is replaced.',
+      input: z.object({ from: date, to: date }),
+      run: async ({ from, to }) => {
+        const { rows: recipes } = await db().query<{ id: string; tags: string[]; favourite: boolean }>(
+          `select id, tags, favourite from meals.recipe where status = 'ready'`,
+        )
+        const { rows: taken } = await db().query<{ on_date: string; slot: string }>(
+          `select on_date::text, slot from meals.plan_entry where on_date between $1 and $2`,
+          [from, to],
+        )
+        const { rows: days } = await db().query<{ on_date: string }>(
+          `select d::date::text as on_date from generate_series($1::date, $2::date, '1 day') d`,
+          [from, to],
+        )
+        const has = new Set(taken.map((t) => `${t.on_date}|${t.slot}`))
+        const empty = days.flatMap((d) =>
+          slot.options.filter((s) => !has.has(`${d.on_date}|${s}`)).map((s) => ({ on_date: d.on_date, slot: s })),
+        )
+        const picks = fillWeek(empty, recipes)
+        for (const pick of picks) {
+          await db().query(
+            `insert into meals.plan_entry (recipe_id, on_date, slot) values ($1, $2, $3)
+             on conflict (on_date, slot) do nothing`,
+            [pick.recipe_id, pick.on_date, pick.slot],
+          )
+        }
+        return { planned: picks.length }
       },
     }),
 
