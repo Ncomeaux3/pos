@@ -2337,3 +2337,37 @@ test('gestures, swiping a task completes it', async ({ page }, testInfo) => {
 
   await expect(page.getByText(/^Done\. Sketch the week ahead/)).toBeVisible()
 })
+
+test('gestures, holding a dashboard tile enters arrange mode', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Touch gestures are a phone thing')
+
+  await page.goto('/')
+  const tile = page.getByTestId('dashboard-bento').locator('> div').first()
+  await expect(tile).toBeVisible()
+  const box = (await tile.boundingBox())!
+  const at = { clientX: box.x + 40, clientY: box.y + 40 }
+
+  // A hold of PosPhone's 480ms is the way in on a phone.
+  await tile.dispatchEvent('pointerdown', { pointerType: 'touch', ...at })
+  await expect(page).toHaveURL(/arrange=1/)
+  await expect(page.getByText(/^Arrange mode/)).toBeVisible()
+
+  // A tap lifts before the timer and stays put.
+  await page.goto('/')
+  await tile.dispatchEvent('pointerdown', { pointerType: 'touch', ...at })
+  await page.waitForTimeout(100)
+  await tile.dispatchEvent('pointerup', { pointerType: 'touch', ...at })
+  await page.waitForTimeout(600)
+  await expect(page).not.toHaveURL(/arrange/)
+
+  // A finger that scrolls is not pressing.
+  await tile.dispatchEvent('pointerdown', { pointerType: 'touch', ...at })
+  await tile.dispatchEvent('pointermove', { pointerType: 'touch', clientX: at.clientX, clientY: at.clientY + 30 })
+  await page.waitForTimeout(600)
+  await expect(page).not.toHaveURL(/arrange/)
+
+  // A slow mouse click is not a gesture.
+  await tile.dispatchEvent('pointerdown', { pointerType: 'mouse', ...at })
+  await page.waitForTimeout(600)
+  await expect(page).not.toHaveURL(/arrange/)
+})

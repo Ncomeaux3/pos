@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useSyncExternalStore, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { useLongPress } from '@/components/pos/gestures'
 
 // The dashboard grid, in the order this device likes it.
 //
@@ -73,6 +74,10 @@ function parse(value: string | null): string[] | null {
  */
 export function Bento({ tiles }: { tiles: Tile[] }) {
   const arranging = useSearchParams().get('arrange') === '1'
+  const router = useRouter()
+  // PosPhone's way in: hold a tile and the page enters the same arrange mode
+  // the header link opens. Touch and pen only; see components/pos/gestures.
+  const press = useLongPress(() => router.push('/?arrange=1'))
 
   const order = parse(useSyncExternalStore(subscribe, raw, () => null))
   const [dragging, setDragging] = useState<string | null>(null)
@@ -111,7 +116,8 @@ export function Bento({ tiles }: { tiles: Tile[] }) {
       {arranging && (
         <div className="-mt-1 mb-[22px] flex flex-wrap items-center justify-between gap-3 border border-dashed border-brand px-3.5 py-2.5 text-[12px] text-ink-2">
           <span>
-            Arrange mode: drag tiles, or use ‹ › on each. Order is saved on this device.
+            Arrange mode: <span className="max-md:hidden">drag tiles, or </span>use ‹ › on each. Order
+            is saved on this device.
           </span>
           <button
             type="button"
@@ -134,6 +140,7 @@ export function Bento({ tiles }: { tiles: Tile[] }) {
           return (
             <div
               key={id}
+              {...(arranging ? {} : press)}
               draggable={arranging}
               onDragStart={() => setDragging(id)}
               onDragOver={(e) => arranging && e.preventDefault()}
