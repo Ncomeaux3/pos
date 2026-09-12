@@ -67,7 +67,7 @@ export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overr
               {visible.map((skill) => (
                 <div
                   key={skill.id}
-                  className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2.5 border-b border-rule py-1.5"
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5 border-b border-rule py-1.5 md:grid-cols-[minmax(0,1fr)_auto_auto]"
                 >
                   <input
                     key={skill.name}
@@ -86,7 +86,7 @@ export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overr
                       skill.deleted ? 'text-ink-3 line-through' : 'text-ink',
                     )}
                   />
-                  <span className="flex shrink-0 items-center gap-1.5">
+                  <span className="order-last col-span-2 flex min-w-0 items-center gap-1.5 md:order-none md:col-span-1 md:shrink-0">
                     {skill.origin === 'custom' && (
                       <span className="num border border-brand px-[5px] py-px text-[9px] tracking-[0.08em] text-brand">CUSTOM</span>
                     )}

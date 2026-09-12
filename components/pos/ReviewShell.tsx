@@ -66,8 +66,8 @@ export function ReviewShell({
   )
 
   return (
-    <div className="-m-7">
-      <header className="flex flex-wrap items-center justify-between gap-5 border-b border-rule px-7 pb-[18px] pt-6">
+    <div className="-m-[18px] md:-m-7">
+      <header className="flex flex-wrap items-center justify-between gap-5 border-b border-rule px-[18px] md:px-7 pb-[18px] pt-6">
         {/* The artboard names the week and the step, never the page. The page
             still needs a heading, so it has one and it is not drawn. */}
         <h1 className="sr-only">Weekly review</h1>
@@ -96,7 +96,7 @@ export function ReviewShell({
         />
       </div>
 
-      <div className="flex justify-center px-7 pb-11 pt-10">
+      <div className="flex justify-center px-[18px] md:px-7 pb-11 pt-10">
         <div className="w-full max-w-[760px]">
           <p className="label text-[11px] tracking-[0.16em] text-brand">{kicker}</p>
           <h2 className="mt-4 text-pretty text-[clamp(26px,3vw,38px)] font-normal leading-[1.08] tracking-[-0.03em] text-ink">

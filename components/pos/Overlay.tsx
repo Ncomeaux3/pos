@@ -101,19 +101,24 @@ export function Overlay({
         className={cn(
           'absolute flex flex-col bg-bg-elev outline-none',
           'duration-[260ms] ease-[cubic-bezier(.2,.8,.2,1)] animate-in',
+          // Below md every drawer is PosPhone's sheet: full width on the
+          // bottom edge, at most 74% of the screen. The side prop only
+          // decides the desktop.
+          'max-md:bottom-0 max-md:left-0 max-md:max-h-[74vh] max-md:w-full max-md:rounded-t-xl max-md:border-t max-md:border-rule-2 max-md:slide-in-from-bottom',
           side === 'right'
             ? cn(
-                'right-0 top-0 h-full border-l border-rule-2 shadow-[-24px_0_48px_rgba(0,0,0,.35)] slide-in-from-right',
-                wide ? 'w-[min(560px,100%)]' : narrow ? 'w-[min(480px,100%)]' : 'w-[min(520px,100%)]',
+                'md:right-0 md:top-0 md:h-full md:border-l md:border-rule-2 md:shadow-[-24px_0_48px_rgba(0,0,0,.35)] md:slide-in-from-right',
+                wide ? 'md:w-[min(560px,100%)]' : narrow ? 'md:w-[min(480px,100%)]' : 'md:w-[min(520px,100%)]',
               )
-            : 'bottom-0 left-0 max-h-[74vh] w-full rounded-t-xl border-t border-rule-2 slide-in-from-bottom',
+            : 'md:bottom-0 md:left-0 md:max-h-[74vh] md:w-full md:rounded-t-xl md:border-t md:border-rule-2 md:slide-in-from-bottom',
         )}
       >
-        {side === 'bottom' && (
-          <div aria-hidden className="mx-auto mt-2 h-1 w-9 rounded-full bg-ink-4" />
-        )}
+        <div
+          aria-hidden
+          className={cn('mx-auto mt-2 h-1 w-[38px] rounded-full bg-rule-2', side === 'right' && 'md:hidden')}
+        />
 
-        <div className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-rule px-6">
+        <div className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-rule px-[18px] md:px-6">
           <div className="min-w-0 truncate">{eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}</div>
           <button
             type="button"
@@ -125,8 +130,8 @@ export function Overlay({
         </div>
 
         {title !== undefined && (
-          <div className="shrink-0 px-6 pt-[22px]">
-            <h2 className="text-[26px] font-normal leading-none tracking-[-0.03em] text-ink">
+          <div className="shrink-0 px-[18px] pt-[22px] md:px-6">
+            <h2 className="text-[20px] font-normal leading-none tracking-[-0.03em] text-ink md:text-[26px]">
               {title}
             </h2>
             {lede && <p className="mt-2 text-[13px] leading-[1.5] text-ink-3">{lede}</p>}
@@ -135,7 +140,7 @@ export function Overlay({
 
         <div
           className={cn(
-            'min-h-0 flex-1 overflow-y-auto px-6 pb-6',
+            'min-h-0 flex-1 overflow-y-auto px-[18px] pb-[34px] md:px-6 md:pb-6',
             title === undefined ? 'pt-[22px]' : 'pt-[18px]',
           )}
         >
@@ -143,7 +148,7 @@ export function Overlay({
         </div>
 
         {footer && (
-          <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-rule px-6 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-rule px-[18px] pb-[34px] pt-4 md:px-6 md:pb-4">
             {footer}
           </div>
         )}
