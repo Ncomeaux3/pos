@@ -100,6 +100,7 @@ export async function listPacking(tripId?: string): Promise<
 
 export type PlaceRow = {
   id: string
+  trip_id: string | null
   name: string
   country: string
   lat: string
@@ -109,7 +110,7 @@ export type PlaceRow = {
 
 export async function listPlaces(): Promise<PlaceRow[]> {
   const { rows } = await db().query<PlaceRow>(
-    `select id, name, country, lat::text, lon::text, visited_on::text
+    `select id, trip_id, name, country, lat::text, lon::text, visited_on::text
        from travel.place_visited order by visited_on desc nulls last`,
   )
   return rows

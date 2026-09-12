@@ -333,7 +333,10 @@ and a parsed add line, Budget with per-category lines (migration
 by kind), Packing with add and tick, Inbox; Edit details, the forms, Delete
 trip. New tools: write_budget_line, delete_budget_line, write_packing,
 delete_item, delete_trip (guarded). Not drawn for want of a source: the HOME
-pin, a fare alert, the packing suggester.
+pin, a fare alert, the packing suggester. 2026-09-12: the globe zooms about
+the cursor or a pinch (`zoomAt`, `clampView` in `modules/travel/globe.ts`),
+the wheel no longer scrolls the page, max zoom is 8x, every pin is named
+from 2x, and a grey pin opens its trip or a read-only PlaceDrawer.
 
 **The fidelity pass, screen four: Skill Tree.** docs/plans/skill-tree-fidelity.md.
 Two flush halves split by one rule under a 56px band (crumb, scoped search,

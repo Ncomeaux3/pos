@@ -1,25 +1,48 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import land from '../land.json'
-import { flat, graticule, landPath, project, visible, type Rotation } from '../globe'
+import { R, clampView, flat, graticule, landPath, project, visible, zoomAt, type Half, type Rotation, type View } from '../globe'
 
 // The globe, as POS Travel.dc.html draws it: the continents as a dot matrix,
 // a pin per place coloured by what it is, the legend bottom left, the four
 // controls bottom right and an alert top right when there is one. Drag to
-// rotate (or pan, flat), scroll or the buttons to zoom, ⟲ to reset, FLAT to
-// unroll it, double-click a pin to fly to it.
+// turn it (or pan, flat), scroll, pinch or the buttons to zoom about the
+// cursor, ⟲ to reset, FLAT to unroll it, double-click a pin to fly to it.
+// Past 2x every pin names itself, at the same size on screen whatever the
+// zoom.
 //
 // No d3, no topojson, no world-atlas: see ../globe.ts.
 
 export type PinKind = 'upcoming' | 'past' | 'wishlist'
 export type Pin = { id: string; name: string; country: string; lat: number; lon: number; kind: PinKind }
 
-const R = 100
 const DOTS = land as [number, number][]
-const ZOOM_MIN = 1
-const ZOOM_MAX = 4
+const HOME: View = { zoom: 1, tx: 0, ty: 0 }
+/** The zoom from which every pin is named. Below it only the next trip is. */
+const LABEL_ZOOM = 2
+/** A label's height on screen, in pixels. */
+const LABEL_PX = 9
+
+/** Client pixels to viewBox units, so a zoom can anchor on the cursor. */
+function toBox(svg: SVGSVGElement, clientX: number, clientY: number) {
+  const m = svg.getScreenCTM()
+  if (!m) return { x: 0, y: 0 }
+  const p = new DOMPoint(clientX, clientY).matrixTransform(m.inverse())
+  return { x: p.x, y: p.y }
+}
+
+/**
+ * Screen pixels per viewBox unit, and half of what the svg shows in units.
+ * The viewBox is letterboxed into the box rather than stretched, so on a
+ * tall phone the flat map shows less than its box and the clamp must know.
+ */
+function measure(svg: SVGSVGElement): { scale: number; half: Half } {
+  const m = svg.getScreenCTM()
+  const scale = m?.a || 1
+  return { scale, half: { x: svg.clientWidth / 2 / scale, y: svg.clientHeight / 2 / scale } }
+}
 
 export function Globe({
   pins,
@@ -41,53 +64,107 @@ export function Globe({
     // project() centres a point when phi equals its latitude.
     return { lambda: -next.lon, phi: next.lat }
   }
+  const svgRef = useRef<SVGSVGElement>(null)
   const [rotation, setRotation] = useState<Rotation>(home)
-  const [zoom, setZoom] = useState(1)
+  const [view, setView] = useState<View>(HOME)
   const [mode, setMode] = useState<'globe' | 'flat'>('globe')
-  const [dragging, setDragging] = useState<{ x: number; y: number } | null>(null)
+  // Every pointer that is down, where it last was. One turns, two pinch.
+  const pointers = useRef(new Map<number, { x: number; y: number }>())
+  const [{ scale, half }, setBox] = useState<ReturnType<typeof measure>>({ scale: 1, half: { x: R + 4, y: R + 4 } })
 
-  const drag = (e: React.PointerEvent) => {
-    if (!dragging) return
-    const speed = 0.5 / zoom
-    setRotation((r) => ({
-      lambda: r.lambda + (e.clientX - dragging.x) * speed,
-      // Clamped, so the globe cannot be tipped past its pole. Flat ignores it.
-      phi: mode === 'globe' ? Math.max(-90, Math.min(90, r.phi - (e.clientY - dragging.y) * speed)) : r.phi,
-    }))
-    setDragging({ x: e.clientX, y: e.clientY })
+  // Measured on mount, on resize and when the viewBox changes with the mode.
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    const update = () => setBox(measure(svg))
+    update()
+    const watch = new ResizeObserver(update)
+    watch.observe(svg)
+    return () => watch.disconnect()
+  }, [mode])
+
+  // React registers wheel listeners as passive, which cannot stop the page
+  // scrolling under the globe. A native one can.
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    const wheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const { x, y } = toBox(svg, e.clientX, e.clientY)
+      // Wheel down, or fingers toward you, zooms in. A mouse notch is about a
+      // sixth and a trackpad tick well under a hundredth, so a gesture is
+      // gradual rather than a jump to the limit.
+      setView((v) => zoomAt(v, Math.exp(e.deltaY * 0.0015), x, y, mode, half))
+    }
+    svg.addEventListener('wheel', wheel, { passive: false })
+    return () => svg.removeEventListener('wheel', wheel)
+  }, [mode, half])
+
+  const move = (e: React.PointerEvent<SVGSVGElement>) => {
+    const prev = pointers.current.get(e.pointerId)
+    if (!prev) return
+    const svg = e.currentTarget
+    const other = [...pointers.current.entries()].find(([id]) => id !== e.pointerId)?.[1]
+    if (other) {
+      // A pinch: zoom by how much the two fingers spread, about their midpoint.
+      const before = Math.hypot(prev.x - other.x, prev.y - other.y)
+      const after = Math.hypot(e.clientX - other.x, e.clientY - other.y)
+      const mid = toBox(svg, (e.clientX + other.x) / 2, (e.clientY + other.y) / 2)
+      if (before > 0) setView((v) => zoomAt(v, after / before, mid.x, mid.y, mode, half))
+    } else {
+      // Pushing the land: drag right and it moves left, drag down and it moves up.
+      const speed = 0.5 / view.zoom
+      const dx = e.clientX - prev.x
+      const dy = e.clientY - prev.y
+      setRotation((r) => ({
+        lambda: r.lambda - dx * speed,
+        // Clamped, so the globe cannot be tipped past its pole. Flat pans instead.
+        phi: mode === 'globe' ? Math.max(-90, Math.min(90, r.phi + dy * speed)) : r.phi,
+      }))
+      if (mode === 'flat') {
+        const was = toBox(svg, prev.x, prev.y)
+        const now = toBox(svg, e.clientX, e.clientY)
+        setView((v) => clampView({ ...v, ty: v.ty - (now.y - was.y) }, 'flat', half))
+      }
+    }
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
   }
+  const lift = (e: React.PointerEvent) => pointers.current.delete(e.pointerId)
 
-  const zoomBy = (factor: number) => setZoom((z) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z * factor)))
+  const zoomBy = (factor: number) => setView((v) => zoomAt(v, factor, 0, 0, mode, half))
   const reset = () => {
     setRotation(home())
-    setZoom(1)
+    setView(HOME)
   }
   const flyTo = (pin: Pin) => {
     setRotation({ lambda: -pin.lon, phi: mode === 'globe' ? pin.lat : 0 })
-    setZoom(2)
+    setView({ ...HOME, zoom: 2 })
   }
 
   const place = (p: Pin) => (mode === 'globe' ? project(p.lon, p.lat, rotation) : flat(p.lon, p.lat, rotation))
   const shown = mode === 'globe' ? pins.filter((p) => visible(p.lon, p.lat, rotation)) : pins
   const box = mode === 'globe' ? `${-R - 4} ${-R - 4} ${(R + 4) * 2} ${(R + 4) * 2}` : `${-R * 2} ${-R} ${R * 4} ${R * 2}`
+  const zoom = view.zoom
+  const font = LABEL_PX / (zoom * scale)
 
   return (
     <div className={cn('relative h-full w-full', className)}>
       <svg
+        ref={svgRef}
         viewBox={box}
-        role="img"
+        // A group, not an img: an img hides its children and the pins are buttons.
+        role="group"
         aria-label={`Globe showing ${pins.length} places`}
-        onPointerDown={(e) => {
-          setDragging({ x: e.clientX, y: e.clientY })
-          e.currentTarget.setPointerCapture(e.pointerId)
-        }}
-        onPointerMove={drag}
-        onPointerUp={() => setDragging(null)}
-        onPointerCancel={() => setDragging(null)}
-        onWheel={(e) => zoomBy(e.deltaY < 0 ? 1.2 : 1 / 1.2)}
+        // No pointer capture: with it a click on a pin lands on the svg
+        // instead of the pin, so a pin could never be picked.
+        onPointerDown={(e) => pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })}
+        onPointerMove={move}
+        onPointerUp={lift}
+        onPointerCancel={lift}
+        onPointerLeave={lift}
         className="h-full w-full cursor-grab touch-none select-none active:cursor-grabbing"
       >
-        <g transform={`scale(${zoom})`}>
+        <g transform={`translate(${view.tx} ${view.ty}) scale(${zoom})`}>
           {mode === 'globe' ? (
             <>
               <circle cx={0} cy={0} r={R} fill="var(--bg-deep)" stroke="var(--rule-2)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
@@ -122,8 +199,17 @@ export function Globe({
               <g
                 key={pin.id}
                 data-pin={pin.kind}
+                role={onPick ? 'button' : undefined}
+                tabIndex={onPick ? 0 : undefined}
+                aria-label={onPick ? title : undefined}
                 className={onPick ? 'cursor-pointer' : undefined}
                 onClick={() => onPick?.(pin.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onPick?.(pin.id)
+                  }
+                }}
                 onDoubleClick={() => flyTo(pin)}
               >
                 <title>{title}</title>
@@ -132,8 +218,17 @@ export function Globe({
                 ) : (
                   <circle cx={cx} cy={cy} r={(pin.kind === 'upcoming' ? 4 : 3.5) / zoom} fill={pin.kind === 'upcoming' ? 'var(--accent)' : 'var(--ink-3)'} />
                 )}
-                {pin.kind === 'upcoming' && (
-                  <text x={cx + 6 / zoom} y={cy - 5 / zoom} fontSize={4.6 / zoom} letterSpacing={0.4 / zoom} fill="var(--ink-2)" className="uppercase">
+                {/* Named at a fixed size on screen: the text is divided by the zoom the group multiplies by. */}
+                {(pin.kind === 'upcoming' || zoom >= LABEL_ZOOM) && (
+                  <text
+                    data-label
+                    x={cx + 6 / zoom}
+                    y={cy - 5 / zoom}
+                    fontSize={font}
+                    letterSpacing={font / 12}
+                    fill="var(--ink-2)"
+                    className="uppercase"
+                  >
                     {pin.name}
                   </text>
                 )}
@@ -154,8 +249,8 @@ export function Globe({
       <div className="absolute bottom-2.5 right-3 flex gap-1">
         {(
           [
-            ['+', 'Zoom in', () => zoomBy(1.4)],
-            ['−', 'Zoom out', () => zoomBy(1 / 1.4)],
+            ['+', 'Zoom in', () => zoomBy(1.5)],
+            ['−', 'Zoom out', () => zoomBy(1 / 1.5)],
             ['⟲', 'Reset view', reset],
           ] as const
         ).map(([glyph, label, act]) => (
@@ -167,7 +262,10 @@ export function Globe({
           type="button"
           aria-label={mode === 'globe' ? 'Flat' : 'Globe'}
           title="Globe / flat"
-          onClick={() => setMode((m) => (m === 'globe' ? 'flat' : 'globe'))}
+          onClick={() => {
+            setMode((m) => (m === 'globe' ? 'flat' : 'globe'))
+            setView(HOME)
+          }}
           className={cn(control, 'label w-auto px-2 text-[10px] tracking-[0.08em]')}
         >
           {mode === 'globe' ? 'Flat' : 'Globe'}
