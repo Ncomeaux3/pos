@@ -3,10 +3,10 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
-Last updated: 2026-09-11, ten fidelity passes (Weekly Review, Dashboard,
-Finance, Skill Tree, Travel, Tasks, Goals, then Second Brain, Insurance and
-Meals as the first parallel batch) and the rail to PosSidebar. Branch `main`.
-Seventeen screens remain: Fitness, Health, Home, Ideas, Review, Notifications,
+Last updated: 2026-09-12, eleven fidelity passes (Weekly Review, Dashboard,
+Finance, Skill Tree, Travel, Tasks, Goals, Ideas, then Second Brain, Insurance
+and Meals as the first parallel batch) and the rail to PosSidebar. Branch
+`main`. Sixteen screens remain: Fitness, Health, Home, Review, Notifications,
 Agent Log, Settings, Search, Login, Onboarding, Mobile and the phone views.
 
 ## Done
@@ -27,6 +27,23 @@ bundle landed 2026-09-07 and steps 0, 7.5 and 8 to 14 followed.
 | 13 | `pnpm setup` and `pnpm setup:demo`, both idempotent |
 | 14 | CI and backup workflows, restore drilled |
 | 16 | Docs squared up: README quickstart, connections registry, the notes module README |
+
+**The fidelity pass, screen eleven: Ideas.** docs/plans/ideas-fidelity.md.
+The band's "{live} ideas · {stale} stale" with an amber dot when anything
+is stale, the artboard's lede, Board / Effort × impact as an ink-filled
+segment beside the title, a capture line that reads #tags, effort: and
+impact: (Add, Full form), an AGENT band offering to merge the closest pair
+of ideas when core.embeddings puts them within 85% (absent otherwise), four
+stage columns at once with cards carrying the quadrant pill, IMPACT and
+EFFORT bars, a two-line pitch, #tags and skill chips and "{n}d in stage"
+(STALE at 60), the matrix with a little scatter, and a 520px drawer: view
+with the Stage / Impact / Effort strip, Move to, the problem, an Agent card
+whose Draft task writes a review-state task through core's callTool to
+tasks.write (the first module to call another's tool), the Research card
+the artboard predates, linked skills, goal and related notes; edit as a
+form holding until Save. Migration `20260912030000_ideas_tags_stage`
+(tags, stage_since, the draft columns); tools merge, delete (guarded),
+draft_task. "Filler" is now "Fill-in"; the quadrant rule is unchanged.
 
 **The fidelity pass, screens eight to ten in parallel: Second Brain,
 Insurance, Meals.** Plan: `~/.claude/plans/great-rigth-now-tasks-partitioned-pike.md`
