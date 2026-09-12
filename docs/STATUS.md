@@ -3,12 +3,11 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
-Last updated: 2026-09-12, twelve fidelity passes (Weekly Review, Dashboard,
-Finance, Skill Tree, Travel, Tasks, Goals, Ideas, Health, then Second Brain,
-Insurance and Meals as the first parallel batch) and the rail to PosSidebar.
-Branch `main`. Fitness, Home and Review are in flight in another session
-(`.worktrees/`). Remaining after those: Notifications, Agent Log, Settings,
-Search, Login, Onboarding, Mobile and the phone views.
+Last updated: 2026-09-12, fifteen fidelity passes (Weekly Review, Dashboard,
+Finance, Skill Tree, Travel, Tasks, Goals, Ideas, Health, then two parallel
+batches: Second Brain, Insurance and Meals; Home, Fitness and Review) and the
+rail to PosSidebar. Branch `main`. Remaining: Notifications, Agent Log,
+Settings, Search, Login, Onboarding, Mobile and the phone views.
 
 ## Done
 
@@ -28,6 +27,56 @@ bundle landed 2026-09-07 and steps 0, 7.5 and 8 to 14 followed.
 | 13 | `pnpm setup` and `pnpm setup:demo`, both idempotent |
 | 14 | CI and backup workflows, restore drilled |
 | 16 | Docs squared up: README quickstart, connections registry, the notes module README |
+
+**The fidelity pass, screens thirteen to fifteen in parallel: Home, Fitness,
+Review.** The second batch on the method of the first (below): three agents in
+`.worktrees/` off `e6b02b6`, ports 3011 to 3013, Phase A decisions answered in
+one round, then the build. Review is a core screen, so its agent's scope was
+`app/(app)/review/**` alone. Merges clean again. Integrator work after the
+merge: `propose()` now returns the dismissed row when the same call comes back
+inside `dismissed_until`, so the Review dismissal line ("will not re-propose
+this for 30 days") is true by construction; `MetricTile` had been losing its
+`leading-none` to tailwind-merge (a `leading-*` before a text size is dropped),
+so every tile number across the app rendered at 51px line height, fixed by
+class order in `components/pos/Card.tsx`. Ideas and Health landed on main from
+the other session while this batch ran; Fitness kept `metrics.body_weight`
+untouched for Health. One flaky full-suite run from shared-database
+interference, clean on the rerun (172 passed, 3 skipped).
+
+**Home** (docs/plans/home-fidelity.md): the band's crumb with "{n} jobs due
+this month · ${cost} estimated" and its dot, "Log service" as the accent
+primary, four separate KPI cards with compact money, the asset card grid
+(kind, OVERDUE / SERVICE DUE / GOOD pill, VALUE and ANNUAL COST, the soonest
+job and its month), the twelve month cards with status dots, the selected
+month's rows, the warranty table with COVER · EXPIRES · FILE, attention
+cards, the Property card reading its cover from `insurance.property_premium`
+(the `finance.net_worth` read went; Finance holds no mortgage, so none is
+drawn), vendor rows. Drawers on the shared `narrow` Overlay; Log service
+gained Notes and the hint line. Helpers in `schedule.ts` with tests. Not
+drawn by decision: mortgage, rate, escrow and equity, warranty page counts,
+Undo on a done job, posting a cost to Finance.
+
+**Fitness** (docs/plans/fitness-fidelity.md): the band crumb with the shared
+SyncBand, a mono "{n} WORKOUTS · {year} → TODAY" beside the title, four tiles
+in the artboard's shape: This week, the heaviest set named in its eyebrow,
+the fitness goal read from the Goals digest and picked by a shared skill link
+("340 / 405", "STALLED · 50%"), Body metrics. The Workouts tab is the
+artboard's Recent workouts card (DATE, WORKOUT, TIME, SKILL through the
+`skillNames` seam, "{n} STRAVA · {m} BY HAND"). With no workouts at all the
+page is the "Connect a workout source" card: the Strava row and "Run first
+import →". Not drawn by decision: XP per workout (the weight lives in the
+skills schema), the Apple Health row (the webhook still writes nothing), the
+four-step importing screen. Exercises, Body and Plan tabs unchanged.
+
+**Review** (docs/plans/review-fidelity.md): six states captured. The band
+carries "{n} pending"; the tabs are the DS `TabBar` behind a `ReviewTabs`
+wrapper keeping `?tab=`; the list is the artboard's `1fr 1.1fr` grid of cards
+with the selection in `?sel=`; `ProposalPanel.tsx` draws Current / After per
+diff entry with inline edit riding `approve()`'s patch, the Confidence /
+Evidence / Affects strip, the 51px "Approve →", Undo on a dismissal only
+(reopening an approval would run the tool twice). Copy cut to what the code
+does: no "is_manual = true", no "marked manual"; the empty inbox names the
+nightly hour from the cron in the owner's zone.
 
 **The fidelity pass, screen twelve: Health.** docs/plans/health-fidelity.md.
 The shared band carries "{n} screenings overdue · next visit {D Mon}" above
