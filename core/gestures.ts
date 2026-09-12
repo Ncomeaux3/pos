@@ -1,4 +1,5 @@
-// Which way a drag went. No imports and no React: the swipe logic is decided
+// Which way a drag went, and whether a hold was a long press. No imports and
+// no React: the gesture logic is decided
 // here so it can be tested, and the hook that listens for pointer events lives
 // in components/pos/gestures.ts.
 
@@ -39,4 +40,20 @@ export function swipeOf(
  */
 export function atTop(scrollY: number): boolean {
   return scrollY <= 4
+}
+
+/** PosPhone's timer: a tile held this long enters arrange mode. */
+export const LONG_PRESS_MS = 480
+
+/** A finger that moved further than this on either axis is scrolling. */
+export const LONG_PRESS_SLOP = 10
+
+/**
+ * Whether a hold counts as a long press.
+ *
+ * Long enough, and still. The stillness is what keeps a slow scroll that
+ * started on a tile from flipping the dashboard into arrange mode.
+ */
+export function isLongPress(heldMs: number, dx: number, dy: number): boolean {
+  return heldMs >= LONG_PRESS_MS && Math.abs(dx) < LONG_PRESS_SLOP && Math.abs(dy) < LONG_PRESS_SLOP
 }

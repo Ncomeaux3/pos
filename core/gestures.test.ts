@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { atTop, swipeOf } from './gestures'
+import { atTop, isLongPress, swipeOf } from './gestures'
 
 describe('swipeOf', () => {
   it('needs to travel before it is a swipe', () => {
@@ -40,5 +40,20 @@ describe('atTop', () => {
     expect(atTop(0)).toBe(true)
     expect(atTop(4)).toBe(true)
     expect(atTop(60)).toBe(false)
+  })
+})
+
+describe('isLongPress', () => {
+  it('needs the hold to last', () => {
+    // Anything shorter is a tap that took a moment.
+    expect(isLongPress(200, 0, 0)).toBe(false)
+    expect(isLongPress(480, 0, 0)).toBe(true)
+  })
+
+  it('needs the finger to stay put', () => {
+    // A finger that travelled is scrolling, however long it has been down.
+    expect(isLongPress(600, 4, 6)).toBe(true)
+    expect(isLongPress(600, 12, 0)).toBe(false)
+    expect(isLongPress(600, 0, -12)).toBe(false)
   })
 })
