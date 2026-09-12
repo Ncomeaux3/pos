@@ -3,11 +3,12 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session, then `docs/plans/design-build.md` for what comes next.
 
-Last updated: 2026-09-12, fifteen fidelity passes (Weekly Review, Dashboard,
-Finance, Skill Tree, Travel, Tasks, Goals, Ideas, Health, then two parallel
-batches: Second Brain, Insurance and Meals; Home, Fitness and Review) and the
-rail to PosSidebar. Branch `main`. Remaining: Notifications, Agent Log,
-Settings, Search, Login, Onboarding, Mobile and the phone views.
+Last updated: 2026-09-12, sixteen fidelity passes (Weekly Review, Dashboard,
+Finance, Skill Tree, Travel, Tasks, Goals, Ideas, Health, Settings, then two
+parallel batches: Second Brain, Insurance and Meals; Home, Fitness and Review)
+and the rail to PosSidebar. Branch `main`. In flight in the third parallel
+batch: Notifications, Agent Log, Onboarding, Login. Remaining after those:
+Search, Finance Options, and the Mobile artboard re-check.
 
 ## Done
 
