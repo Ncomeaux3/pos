@@ -57,3 +57,41 @@ export async function decideRecipe(id: string, accept: boolean): Promise<ActionR
     return failed(error)
   }
 }
+
+export async function setFavourite(id: string, favourite: boolean): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    await callTool('meals', 'write_recipe', { id, favourite }, { source: 'ui' })
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+export async function fillWeek(from: string, to: string): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    await callTool('meals', 'fill_week', { from, to }, { source: 'ui' })
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+/** Something eaten with no recipe behind it: a label in a slot, ticked. */
+export async function logAdhoc(
+  onDate: string,
+  slot: 'breakfast' | 'lunch' | 'dinner' | 'snack',
+  label: string,
+): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    const planned = await callTool('meals', 'plan', { on_date: onDate, slot, label }, { source: 'ui' })
+    if (planned.status !== 'done') return failed(new Error('Not planned'))
+    const { id } = planned.result as { id: string }
+    await callTool('meals', 'mark_eaten', { id, eaten: true }, { source: 'ui' })
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}
