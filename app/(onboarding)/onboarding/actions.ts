@@ -26,7 +26,6 @@ const SETUP_KEYS = [
   'owner_name',
   'timezone',
   'modules_enabled',
-  'digest_morning_at',
   'digest_morning_enabled',
   'digest_evening_at',
   'digest_evening_enabled',

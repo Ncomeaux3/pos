@@ -46,7 +46,6 @@ export type SetupData = {
   todayIso: string
   nightlyAt: string
   schedule: {
-    morningAt: string
     morningEnabled: boolean
     eveningAt: string
     eveningEnabled: boolean
@@ -751,13 +750,15 @@ export function Onboarding({ data }: { data: SetupData }) {
           <div className="space-y-2">
             <Eyebrow>Morning digest</Eyebrow>
             <div className="flex items-center gap-2.5">
-              <input
-                type="time"
+              {/* Not an input. The digest goes out when the nightly cron
+                * fires, once a day, so no setting here could move it. */}
+              <span
                 aria-label="Morning digest time"
-                defaultValue={data.schedule.morningAt}
-                onBlur={(e) => run(() => saveSetting('digest_morning_at', e.target.value))}
-                className={cn(fieldClass, 'w-32')}
-              />
+                title="Set by the nightly cron in vercel.json"
+                className={cn(fieldClass, 'inline-flex w-32 items-center tabular-nums')}
+              >
+                {data.nightlyAt}
+              </span>
               <Switch
                 label="Morning digest on"
                 checked={data.schedule.morningEnabled}
