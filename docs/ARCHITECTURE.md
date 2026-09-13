@@ -105,6 +105,7 @@ export default defineModule({
   guarded: ['write'],                 // these tools land in core.proposals when called by an agent
   requires: ['simplefin'],            // integrations this module needs connected
   jobs: [{ name: 'sync', run }, { name: 'nightly_digest', run }],
+  inbound: { health_auto_export: async (payload) => void },  // optional; a pushed payload, after the webhook route validated it
   entityTypes: ['transaction', 'subscription'],
   searchText: (row) => row.title,     // optional, default is the entity title
 })
@@ -147,6 +148,7 @@ Core guarantees:
 - Credentials are encrypted with `core/crypto.ts` and stored in `core.connections`. Modules call `getCredentials('simplefin')`. No module reads a provider secret from `.env`.
 - `test()` runs on save and on a Test button. Result and timestamp show on the card.
 - OAuth2 refresh runs in the nightly job before module syncs.
+- A webhook payload that passes the secret and the zod schema is handed to every module's `inbound[<integration id>]`. The integration owns the translation in its `client.ts`, the module owns the write, the same split as a sync job; core matches ids and names neither.
 - Disconnect deletes the row. Nothing else changes.
 
 Day one providers, all defined and none connected: anthropic (token), voyage (token), resend (token), simplefin (token), strava (oauth2), health_auto_export (webhook), github_vault (token). Notion is a file import, not a live connection.

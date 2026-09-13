@@ -69,7 +69,7 @@ names the phase it unblocks.
 | 1 | Hygiene and the production login fix | low | 4, 5, 6 | PR open | #13 |
 | 2 | Production live: first real nightly | low (code), owner-heavy | 4, 5, 6 | Blocked on owner steps 2 to 7 | |
 | 3 | Strava, vault, SimpleFIN connected and syncing nightly | low | 4, 5, 6 | Blocked on 2 and owner steps 11 to 13 | |
-| 4 | Health Auto Export webhook writes body metrics | medium | 1, 5, 6 | Not started | |
+| 4 | Health Auto Export webhook writes body metrics | medium | 1, 5, 6 | PR open | #17 |
 | 5 | Cron-silence check | low | 1, 4, 6 | Done 2026-09-12: red and green paths proven on the real workflow | |
 | 6 | PR #10 skill tree zoom finished and merged | medium | 1, 4, 5 | #10 merged 2026-09-12; the re-checks continue on `fix/skill-tree-zoom` | #10 |
 
@@ -169,15 +169,15 @@ integration calling `callTool` (an import cycle through the module index, and
 a proposal for every scale reading at autonomy observe).
 
 Tasks (tests first):
-- [ ] `modules/fitness/inbound.test.ts`, DB-backed like `modules/goals/checkin.test.ts`: (1) 185.2 lb becomes `weight` 84005 g, 52 bpm becomes `resting_hr`, 7.5 h sleep becomes 450 `sleep_minutes`, 18.4 % becomes `body_fat` 184, `measured_on` is the date part; (2) a `source = 'manual'` row on the same `(kind, measured_on)` keeps its value and a `'health_auto_export'` row is corrected; (3) `step_count`, an unknown name and `data.workouts` write nothing; (4) a record whose date is not `yyyy-MM-dd HH:mm:ss Z` is skipped and the good record beside it lands
-- [ ] `core/integration-routes.test.ts`: one case, a valid payload through POST with the secret lands a row (proves the dispatch line)
-- [ ] `core/module-contract.ts`: `inbound?: Record<string, (payload: unknown) => Promise<void>>` with a doc comment
-- [ ] `app/api/integrations/[id]/webhook/route.ts`: after the manifest's own `webhook`, `for (const m of getModules()) await m.inbound?.[id]?.(data)`. A throw is a logged 500 through `withLog` and the app retries, which is right for a database outage
-- [ ] `integrations/health_auto_export/client.ts` (new, no imports): `toBodyMetrics(payload)` returning `{ kind, measuredOn, value }[]`. Mapping: `weight_body_mass` (lb or kg, `qty`) to `weight` in grams; `resting_heart_rate` (`qty`) to `resting_hr`; `heart_rate_variability` (`qty`, ms) to `hrv`; `body_fat_percentage` (`qty`) to `body_fat` in tenths; `sleep_analysis` (`totalSleep` else `asleep`, hours) to `sleep_minutes`, day from `sleepEnd` else `date`. Everything else skipped. Date regex `^(\d{4}-\d{2}-\d{2}) \d{2}:\d{2}:\d{2} [+-]\d{4}$`; the day is the first ten characters (the phone's local day). A bad record is skipped, not thrown. The metric identifier strings and the sleep field are verify against one real export from the app before the mapping is final; the shape (`data.metrics[] { name, units, data[] }`, `{ qty, date }`, sleep `{ asleep, inBed, totalSleep, sleepStart, sleepEnd }`) is from the app's export-format page
-- [ ] `integrations/health_auto_export/manifest.ts`: drop the no-op `webhook`; `test()` reads `max(occurred_at)` from `core.request_log` for this route with status 200 and reports "Last payload received {date}" or "No payload yet. Paste the URL and secret into the app."
-- [ ] `modules/fitness/manifest.ts`: `inbound.health_auto_export` upserts each metric `on conflict (kind, measured_on) do update ... where source <> 'manual'`, source `'health_auto_export'`, no `register()` (same as `log_metric`, XP weight zero). Not added to `requires`
-- [ ] `config/connectors.yaml`: the Fitness provider becomes "Apple Health (Health Auto Export)" so Onboarding's supported-provider match finds the manifest
-- [ ] Docs: the "webhook writes nothing" lines in docs/STATUS.md and the SetupCard comment; docs/SETUP-INTEGRATIONS.md gets its Health Auto Export section (URL and secret from the Connections card, header `x-pos-secret`, metrics to enable, daily schedule)
+- [x] `modules/fitness/inbound.test.ts`, DB-backed like `modules/goals/checkin.test.ts`: (1) 185.2 lb becomes `weight` 84005 g, 52 bpm becomes `resting_hr`, 7.5 h sleep becomes 450 `sleep_minutes`, 18.4 % becomes `body_fat` 184, `measured_on` is the date part; (2) a `source = 'manual'` row on the same `(kind, measured_on)` keeps its value and a `'health_auto_export'` row is corrected; (3) `step_count`, an unknown name and `data.workouts` write nothing; (4) a record whose date is not `yyyy-MM-dd HH:mm:ss Z` is skipped and the good record beside it lands
+- [x] `core/integration-routes.test.ts`: one case, a valid payload through POST with the secret lands a row (proves the dispatch line)
+- [x] `core/module-contract.ts`: `inbound?: Record<string, (payload: unknown) => Promise<void>>` with a doc comment
+- [x] `app/api/integrations/[id]/webhook/route.ts`: after the manifest's own `webhook`, `for (const m of getModules()) await m.inbound?.[id]?.(data)`. A throw is a logged 500 through `withLog` and the app retries, which is right for a database outage
+- [x] `integrations/health_auto_export/client.ts` (new, no imports): `toBodyMetrics(payload)` returning `{ kind, measuredOn, value }[]`. Mapping: `weight_body_mass` (lb or kg, `qty`) to `weight` in grams; `resting_heart_rate` (`qty`) to `resting_hr`; `heart_rate_variability` (`qty`, ms) to `hrv`; `body_fat_percentage` (`qty`) to `body_fat` in tenths; `sleep_analysis` (`totalSleep` else `asleep`, hours) to `sleep_minutes`, day from `sleepEnd` else `date`. Everything else skipped. Date regex `^(\d{4}-\d{2}-\d{2}) \d{2}:\d{2}:\d{2} [+-]\d{4}$`; the day is the first ten characters (the phone's local day). A bad record is skipped, not thrown. The metric identifier strings and the sleep field are verify against one real export from the app before the mapping is final; the shape (`data.metrics[] { name, units, data[] }`, `{ qty, date }`, sleep `{ asleep, inBed, totalSleep, sleepStart, sleepEnd }`) is from the app's export-format page
+- [x] `integrations/health_auto_export/manifest.ts`: drop the no-op `webhook`; `test()` reads `max(occurred_at)` from `core.request_log` for this route with status 200 and reports "Last payload received {date}" or "No payload yet. Paste the URL and secret into the app."
+- [x] `modules/fitness/manifest.ts`: `inbound.health_auto_export` upserts each metric `on conflict (kind, measured_on) do update ... where source <> 'manual'`, source `'health_auto_export'`, no `register()` (same as `log_metric`, XP weight zero). Not added to `requires`
+- [x] `config/connectors.yaml`: the Fitness provider becomes "Apple Health (Health Auto Export)" so Onboarding's supported-provider match finds the manifest
+- [x] Docs: the "webhook writes nothing" lines in docs/STATUS.md and the SetupCard comment; docs/SETUP-INTEGRATIONS.md gets its Health Auto Export section (URL and secret from the Connections card, header `x-pos-secret`, metrics to enable, daily schedule)
 
 Exit checks:
 - `pnpm test -- modules/fitness core/integration-routes` green, then `pnpm typecheck && pnpm lint`
@@ -187,6 +187,14 @@ Exit checks:
 Assumptions: only `source = 'manual'` rows are protected; several records for one day means the last in payload order wins. Verify in the app that its REST automation can send a custom header; if it can only send the secret in the body or query, the route needs a small addition.
 
 Depends on: nothing in code; owner step 14 for the production check. Out of scope: Apple workouts, steps, any analysis of the numbers.
+
+Built 2026-09-12, PR open. The two local exit checks pass; the production check
+waits on owner step 14. From the app's public docs: the payload shape, the date
+format, custom headers (so the `x-pos-secret` route needs no addition) and the names `resting_heart_rate` and `sleep_analysis`
+are confirmed; `weight_body_mass`, `heart_rate_variability`,
+`body_fat_percentage` and the sleep field `totalSleep` are still verify, so the
+first real export may need a one-line rename in `client.ts`. Follow-up outside
+this phase: Fitness > Body labels HRV "bpm" where the unit is ms.
 
 ### Phase 5: cron-silence check
 

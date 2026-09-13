@@ -20,11 +20,10 @@ Every card runs its own Test on save and tells you what it saw.
 | **Strava** | oauth2 | free | **Client and sync job built. Needs your app registration.** |
 | **Obsidian vault** | token | free | **Client built. Needs a repo and a token.** |
 | **SimpleFIN** | token | ~$1.50/mo | **Client, real Test and nightly sync built. Needs a bridge subscription.** |
-| Health Auto Export | webhook | paid iOS app | Manifest only |
+| **Health Auto Export** | webhook | paid iOS app | **Webhook writes body metrics. Needs the app and one paste.** |
 
 Everything in bold has a client and a real Test button. None of them is
-connected, because each needs an account only you have. Health Auto Export is
-the last stub.
+connected, because each needs an account only you have.
 
 ---
 
@@ -230,15 +229,49 @@ screen; net worth is a plain sum either way.
 
 ---
 
-## The one left
+## Health Auto Export
 
-### Health Auto Export
+**Buys you:** weight, resting heart rate, heart rate variability, body fat and
+sleep from Apple Health, landing in `fitness.body_metric` on whatever schedule
+you give the app. Fitness > Body shows them, and a goal with a body metric
+source moves on its own.
 
-Apple Health metrics by webhook. Needs the paid iOS app, which pushes JSON to a
-URL the Connections page generates for you, protected by a shared secret.
+The app is a paid iOS app (healthyapps.dev). It reads Apple Health on the phone
+and posts JSON to a URL you give it. Nothing pulls: there is no Apple Health
+API to call from a server.
 
-Manifest only. Worth doing after Strava, since the two overlap on workouts and
-Health Auto Export is the better source for sleep and resting heart rate.
+### Connect
+
+1. **Settings > Connections > Health Auto Export**, Generate. The card shows
+   the inbound URL and a secret. Copy both.
+2. In the app, **Automations > New > REST API**. Paste the URL. Add a header
+   named `x-pos-secret` with the secret as its value (the app's REST automation
+   supports custom headers, per its help pages). Format JSON.
+3. Enable the metrics: Body Mass, Resting Heart Rate, Heart Rate Variability,
+   Body Fat Percentage, Sleep Analysis (verify: these are the names on the
+   app's supported-data list, not checked in the app itself). Anything else is
+   accepted and ignored.
+4. Schedule daily. Run it once by hand.
+5. Back on the card, Test. It reads "Last payload received {date}" once the
+   first post has landed.
+
+### What happens next
+
+Each post goes through `/api/integrations/health_auto_export/webhook`. The
+secret is checked, the shape is validated, then the Fitness module upserts one
+row per metric per day on `(kind, measured_on)`. A second post for the same day
+corrects the first. A value you typed in by hand carries `source = 'manual'`
+and is never touched.
+
+Units are converted on the way in: pounds or kilograms to grams, percent to
+tenths, hours of sleep to minutes. Sleep is dated by the morning it ended. The
+day is the phone's local day, not UTC.
+
+The metric identifier strings the app sends are marked verify in
+`integrations/health_auto_export/client.ts` until one real export has been
+seen. If a metric you enabled does not appear on Fitness > Body, the row in
+`core.request_log` for the route will show the post arrived, and the payload
+name needs matching to the table's kinds.
 
 ---
 

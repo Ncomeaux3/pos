@@ -8,9 +8,8 @@ import { syncFitness } from './sync'
 /**
  * "Connect a workout source": what the page is when nothing is on file.
  *
- * Only Strava is drawn. The Health Auto Export webhook accepts payloads and
- * writes nothing yet, and a row that offers to connect it would be a promise
- * the app does not keep.
+ * Only Strava is drawn. Health Auto Export writes body metrics, not workouts,
+ * so it is not a workout source and does not belong on this card.
  */
 export function SetupCard({
   connected,

@@ -154,8 +154,9 @@ artboard's Recent workouts card (DATE, WORKOUT, TIME, SKILL through the
 `skillNames` seam, "{n} STRAVA · {m} BY HAND"). With no workouts at all the
 page is the "Connect a workout source" card: the Strava row and "Run first
 import →". Not drawn by decision: XP per workout (the weight lives in the
-skills schema), the Apple Health row (the webhook still writes nothing), the
-four-step importing screen. Exercises, Body and Plan tabs unchanged.
+skills schema), the Apple Health row (the webhook writes body metrics but the
+card stays Strava-only until the owner has the app), the four-step importing
+screen. Exercises, Body and Plan tabs unchanged.
 
 **Review** (docs/plans/review-fidelity.md): six states captured. The band
 carries "{n} pending"; the tabs are the DS `TabBar` behind a `ReviewTabs`
@@ -667,12 +668,21 @@ set, the rule hit rate went from 31% to 58% and Home's misses from 28 to 7.
 read sentence in the app, costs nothing, works with no provider connected, and
 is now testable rather than sampled. `Purpose` in `core/llm.ts` lost `headline`.
 
-## Integrations: three of four stubs are now real
+## Integrations: all four stubs are now real
 
 Strava, the Obsidian vault and SimpleFIN were manifest-only stubs whose
 `test()` returned "not verified", so none could be connected even once a
 credential existed. All three have clients, real Test buttons and nightly sync
-jobs. Health Auto Export is the one left, and it needs a paid iOS app.
+jobs. Health Auto Export (2026-09-12) is a push, so it has no job: the webhook
+route hands the validated payload to `fitness.inbound.health_auto_export`
+through the module contract's optional `inbound` seam, and Test reads the last
+200 on that route from `core.request_log`. It needs a paid iOS app.
+
+- **`fitness.inbound.health_auto_export`** upserts weight, resting heart rate,
+  HRV, body fat and sleep on `(kind, measured_on)`; `source = 'manual'` rows are
+  never touched. `integrations/health_auto_export/client.ts` owns the unit
+  conversion and the date parsing; the metric identifier strings are marked
+  verify until one real export has been seen.
 
 - **`fitness.sync_strava`** upserts on `(source, external_id)` and backdates
   `workout_logged` to the activity rather than the job run.

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getCredentials, getIntegration, secretMatches } from '@/core/integrations'
 import { withLog } from '@/core/log'
+import { getModules } from '@/core/modules'
 
 export const SECRET_HEADER = 'x-pos-secret'
 
@@ -39,7 +40,12 @@ async function handle(request: Request, { params }: { params: Promise<{ id: stri
     )
   }
 
-  await manifest.webhook?.(parsed?.data ?? body)
+  const data = parsed?.data ?? body
+  await manifest.webhook?.(data)
+  // Then every module that declared an inbound handler for this integration.
+  // A throw here is a logged 500 through withLog and the sender retries, which
+  // is the right outcome for a database outage.
+  for (const m of getModules()) await m.inbound?.[id]?.(data)
   return NextResponse.json({ ok: true })
 }
 

@@ -9,6 +9,7 @@ import {
   saveCredentials,
   stateMatches,
 } from './integrations'
+import { getModules } from './modules'
 
 process.env.DATABASE_URL ??= 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
 
@@ -70,9 +71,14 @@ describe('the integration registry', () => {
       }
 
       if (i.auth.type === 'webhook') {
-        // Inbound only: something has to receive and validate the payload.
-        expect(typeof i.webhook, i.id).toBe('function')
+        // Inbound only: something has to validate the payload, and something
+        // has to consume it, either the manifest itself or a module's inbound
+        // seam for this id. A webhook nobody reads is a 200 that lies.
         expect(i.webhookSchema, i.id).toBeDefined()
+        const consumed =
+          typeof i.webhook === 'function' ||
+          getModules().some((m) => typeof m.inbound?.[i.id] === 'function')
+        expect(consumed, i.id).toBe(true)
       }
     }
   })
