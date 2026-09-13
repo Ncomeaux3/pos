@@ -548,6 +548,11 @@ owner work**: Vercel, a hosted Supabase project, and the first real nightly run 
 production. The checklist is in docs/OWNER-TODO.md. Nothing in the codebase
 blocks it, and nothing in Phase 2 waits on it.
 
+**The phone shell rebuild, docs/plans/phone-shell.md, approved 2026-09-13.**
+Five phases, one PR each: speed and gestures, the shell (Home, Tasks, Finance,
+Browse), then Dashboard, Finance, Tasks and Goals phone passes. It supersedes
+the PosPhone shell rules above; the brand layer still holds.
+
 See docs/plans/design-build.md.
 
 The registry cycle that blocked steps 12 and 13 is fixed: both registries load
