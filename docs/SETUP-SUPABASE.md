@@ -266,7 +266,9 @@ the fastest place to look, not the Vercel logs.
 - **A custom domain.** Optional. Vercel's generated URL works, and changing the
   domain later means updating Site URL again.
 - **Backups.** The GitHub Action in `.github/workflows` handles this and is
-  already drilled. See docs/RESTORE.md.
+  already drilled. See docs/RESTORE.md. The same workflow is the cron-silence
+  check: its last step fails when no nightly finished in the last 36 hours,
+  and GitHub emails you about a failed scheduled run.
 - **Tailscale.** The original plan preferred a private network. You chose a
   public URL with auth in front, so the protection is `OWNER_EMAIL` plus
   disabled signup plus the two settings in step 5.

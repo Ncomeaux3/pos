@@ -55,3 +55,22 @@ jobs:
           # failure worth a red run.
           git diff --staged --quiet || git commit -m "Backup $(date -u +%Y-%m-%d)"
           git push
+
+      # The cron-silence check. At 04:10 UTC the last 09:00 UTC nightly is 19
+      # hours old and a missed one is 43, so 36 is the line. A failed run is
+      # excluded on purpose: every job failing sent no digest either. Partial
+      # counts as fired; the dashboard already surfaces single job failures.
+      # After the commit, so the dump still lands when this goes red; a failed
+      # scheduled run is what GitHub emails the owner about.
+      # ponytail: any trigger counts, so a run by hand hides a dead cron for a
+      # day. Add "and trigger_source = 'cron'" once the production cron has
+      # fired; before that the filter would be red every morning.
+      - name: Check the nightly fired
+        env:
+          PGURL: ${{ secrets.BACKUP_DATABASE_URL }}
+        run: |
+          runs=$(psql "$PGURL" -Atc "select count(*) from core.job_runs
+            where finished_at > now() - interval '36 hours'
+              and status in ('clean', 'partial')")
+          echo "nightly runs in the last 36 hours: $runs"
+          test "$runs" -gt 0 || { echo "no clean or partial nightly in 36 hours"; exit 1; }
