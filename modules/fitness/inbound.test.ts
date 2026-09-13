@@ -15,7 +15,7 @@ afterEach(async () => {
   await db().query('delete from fitness.body_metric')
   await db().query(`delete from core.events where module = 'fitness' and event_type = 'workout_logged'`)
   await db().query(`delete from core.entities where module = 'fitness' and entity_type = 'workout'`)
-  await db().query(`delete from fitness.workout where source = 'health_auto_export'`)
+  await db().query(`delete from fitness.workout where source in ('health_auto_export', 'apple_shortcuts')`)
 })
 afterAll(async () => {
   await db().end()
@@ -36,11 +36,12 @@ async function rows() {
   return rows.map((r) => ({ ...r, value: Number(r.value) }))
 }
 
-async function workouts() {
+async function workouts(source = 'health_auto_export') {
   const { rows } = await db().query(
     `select name, kind, to_char(started_at at time zone 'UTC', 'YYYY-MM-DD HH24:MI') as started_at,
             duration_s, distance_m, avg_hr, detail, source, external_id
-       from fitness.workout where source = 'health_auto_export' order by started_at`,
+       from fitness.workout where source = $1 order by started_at`,
+    [source],
   )
   return rows
 }
@@ -159,5 +160,32 @@ it('skips a record with an unreadable date and lands the one beside it', async (
 
   expect(await rows()).toEqual([
     { kind: 'weight', measured_on: '2026-09-12', value: 85000, source: 'health_auto_export' },
+  ])
+})
+
+// The Shortcut's flat payload lands through the same write as the app's.
+it('takes the Shortcut payload through its own inbound with its own source', async () => {
+  await getModule('fitness')!.inbound!.apple_shortcuts({
+    day: '2026-09-13',
+    metrics: { weight_lb: '185.2', steps: 9412 },
+    workouts: [{ name: 'Running', start: '2026-09-13T06:00:00-05:00', minutes: 30, miles: 3.5 }],
+  })
+
+  expect(await rows()).toEqual([
+    { kind: 'steps', measured_on: '2026-09-13', value: 9412, source: 'apple_shortcuts' },
+    { kind: 'weight', measured_on: '2026-09-13', value: 84005, source: 'apple_shortcuts' },
+  ])
+  expect(await workouts('apple_shortcuts')).toEqual([
+    {
+      name: 'Running',
+      kind: 'run',
+      started_at: '2026-09-13 11:00',
+      duration_s: 1800,
+      distance_m: 5633,
+      avg_hr: null,
+      detail: '',
+      source: 'apple_shortcuts',
+      external_id: '2026-09-13T06:00:00-05:00',
+    },
   ])
 })

@@ -2,7 +2,9 @@ import { z } from 'zod'
 import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
+import { toReadings } from '@/integrations/apple_shortcuts/client'
 import { BODY_METRIC_KINDS, toBodyMetrics, toWorkouts } from '@/integrations/health_auto_export/client'
+import { writeReadings } from './inbound'
 import { coachReview } from './jobs/coach'
 import { syncStrava } from './jobs/sync-strava'
 import { nightlyDigest } from './jobs/nightly-digest'
@@ -334,50 +336,14 @@ export default defineModule({
   ],
 
   inbound: {
-    // Apple Health readings pushed by the phone. The integration translates,
-    // this writes. Not in `requires`: the module is usable without it.
-    health_auto_export: async (payload) => {
-      for (const m of toBodyMetrics(payload)) {
-        // A push corrects an earlier push for the same day and never touches
-        // a value the owner typed: `source = 'manual'` is this table's manual
-        // guard, the flag log_metric stamps. No register(), like log_metric.
-        await db().query(
-          `insert into fitness.body_metric (kind, value, measured_on, source)
-           values ($1, $2, $3, 'health_auto_export')
-           on conflict (kind, measured_on) do update
-             set value = excluded.value, source = excluded.source
-             where fitness.body_metric.source <> 'manual'`,
-          [m.kind, m.value, m.measuredOn],
-        )
-      }
-      // Workouts the same way the Strava sync stores its activities: upserted
-      // on the app's id so a re-send corrects, registered so one earns XP,
-      // backdated to when it happened.
-      for (const w of toWorkouts(payload)) {
-        const { rows } = await db().query<{ id: string; title: string; started_at: Date; inserted: boolean }>(
-          `insert into fitness.workout
-             (name, kind, started_at, duration_s, distance_m, avg_hr, detail, source, external_id)
-           values ($1, $2, $3::timestamptz, $4, $5, $6, $7, 'health_auto_export', $8)
-           on conflict (source, external_id) do update
-             set name = excluded.name, kind = excluded.kind, started_at = excluded.started_at,
-                 duration_s = excluded.duration_s, distance_m = excluded.distance_m,
-                 avg_hr = excluded.avg_hr, detail = excluded.detail
-           returning id, name as title, started_at, (xmax = 0) as inserted`,
-          [w.name, w.kind, w.startedAt, w.durationS, w.distanceM, w.avgHr, w.detail, w.externalId],
-        )
-        await register({
-          module: 'fitness',
-          entityType: 'workout',
-          entityId: rows[0].id,
-          title: rows[0].title,
-          eventType: 'workout_logged',
-          // Postgres parsed the app's timestamp; JS Date would not reliably.
-          occurredAt: rows[0].started_at,
-          // A named event always emits, so a re-send would earn the XP twice.
-          // The entity still re-registers, which keeps its title current.
-          emit: rows[0].inserted,
-        })
-      }
+    // Apple Health readings pushed by the phone, from either app. The
+    // integration translates, inbound.ts writes. Not in `requires`: the module
+    // is usable without them.
+    health_auto_export: async (payload) =>
+      writeReadings('health_auto_export', toBodyMetrics(payload), toWorkouts(payload)),
+    apple_shortcuts: async (payload) => {
+      const { metrics, workouts } = toReadings(payload)
+      await writeReadings('apple_shortcuts', metrics, workouts)
     },
   },
   entityTypes: ['workout', 'plan'],
