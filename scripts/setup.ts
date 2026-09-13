@@ -45,6 +45,13 @@ function checkEnv(): void {
 }
 
 function applyMigrations(): void {
+  // `migration up --local` reaches the local stack whatever DATABASE_URL says,
+  // so a bootstrap against production (--env-file=.env.production) must not
+  // run it: the hosted schema is pushed with `supabase db push`, by hand.
+  if (!/^postgres(ql)?:\/\/[^@]*@(127\.0\.0\.1|localhost)[:/]/.test(process.env.DATABASE_URL ?? '')) {
+    say('migrations', 'remote database, left to supabase db push')
+    return
+  }
   // migration up, never db reset: reset rebuilds the database and takes every
   // provider key in core.connections with it.
   const out = execFileSync('supabase', ['migration', 'up', '--local'], {

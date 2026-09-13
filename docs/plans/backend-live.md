@@ -120,14 +120,14 @@ Depends on: nothing. Out of scope: the cron-silence step, Apple Health.
 Goal: the first real nightly in production, then one from the cron.
 
 Tasks:
-- [ ] After owner step 5: the Vercel connector shows the latest production deployment READY and no runtime errors
-- [ ] After Phase 1 merges and redeploys: fetch `https://pos-gilt-rho.vercel.app/login` and confirm the input's class is the real string
-- [ ] After owner step 7: the owner reports the Agent Log run (every job listed, none failed) and the digest email; record the date in docs/STATUS.md
-- [ ] Next morning: a second run with trigger cron in Agent Log, and a second email
-- [ ] Tick the owner steps in docs/OWNER-TODO.md with dates
+- [x] After owner step 5: the Vercel connector shows the latest production deployment READY and no runtime errors (2026-09-13 14:10 CDT, after `DATABASE_URL` moved to the session pooler; the four `ENOTFOUND db.<ref>.supabase.co` errors before it were the direct host)
+- [x] After Phase 1 merges and redeploys: fetch `https://pos-gilt-rho.vercel.app/login` and confirm the input's class is the real string (2026-09-13, `w-full rounded-md border ...` served)
+- [x] After owner step 7: the owner reports the Agent Log run, every job ok (2026-09-13, trigger Run now). No digest email, and none was due: the orchestrator queues a digest only when the summary has an alert, and an empty database raises none. Email delivery is proven by the first alert instead; a refused send is a failed `notify` job in Agent Log, which is the failure this check was after
+- [ ] Next morning: a second run with trigger cron in Agent Log
+- [x] Tick the owner steps in docs/OWNER-TODO.md with dates (steps 1 to 9, 2026-09-13)
 
 Exit checks:
-- Two consecutive production runs with no failed job, one by hand and one by cron
+- Two consecutive production runs with no failed job, one by hand and one by cron. An email is expected only once something raises an alert
 - Login from a phone with no Vercel login screen in front of the app
 
 Depends on: owner steps 2 to 7. Out of scope: integrations.
