@@ -5,10 +5,10 @@ import { useSyncExternalStore } from 'react'
 
 // The search params as UI state: which tab, which drawer, which row is open.
 //
-// The URL changes at once and the screen follows on the next render; the
-// router fetches behind them, queued in order with any server action so the
-// data it brings is fresh. A drawer opens within a frame and its list
-// refreshes behind it.
+// The screen changes on the next render and the router navigates behind it,
+// queued in order with any server action so the data it brings is fresh. A
+// drawer opens within a frame; the URL and the list follow when the fetch
+// lands.
 
 // What was asked for, and the router's params at the time. Once the router
 // hands out a new object it has caught up and the override is spent. One
@@ -45,19 +45,13 @@ export function useSearchState() {
     override = { search, over: params }
     for (const fn of listeners) fn()
     const query = search.toString()
-    const url = `${window.location.pathname}${query ? `?${query}` : ''}`
-    // The URL changes now, not when the fetch lands: a reload or a share in
-    // between must find the drawer. Writing it with the router's own history
-    // state attached makes the router treat the entry as one of its own, so it
-    // does not restore a cached page for it; the navigation below fetches the
-    // data and settles the entry on commit. Before hydration there is no such
-    // state, and the router does the whole thing itself.
-    const own = window.history.state?.__NA ? window.history.state : null
-    if (own) {
-      if (options.push) window.history.pushState(own, '', url)
-      else window.history.replaceState(own, '', url)
-      router.replace(url, { scroll: false })
-    } else if (options.push) router.push(url, { scroll: false })
+    const url = query ? `?${query}` : '?'
+    // ponytail: the URL follows one fetch behind the screen. Writing it at
+    // once through the History API, even with the router's own state attached,
+    // raced a server action about once in thirty runs under a slow network and
+    // showed a deleted row again. Revisit if Next gives a history write that
+    // does not restore.
+    if (options.push) router.push(url, { scroll: false })
     else router.replace(url, { scroll: false })
   }
 

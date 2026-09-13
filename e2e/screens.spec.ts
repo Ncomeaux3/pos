@@ -1068,6 +1068,7 @@ test('tasks, a row expands in place and EDIT opens the form drawer', async ({ pa
   await expect(row.getByText('Source:')).toBeVisible()
   await expect(row.getByText('Skills:')).toBeVisible()
   await expect(row.getByText('Same merchant, amount within 10 percent')).toBeVisible()
+  await expect(page).toHaveURL(/open=/)
   await shoot(page, 'tasks-expanded')
 
   // EDIT opens the drawer, whose state is the URL so the shot survives.
@@ -1324,6 +1325,7 @@ test('weekly review, six steps and a note built from the answers', async ({ page
   await page.getByLabel('Add a win').fill('Shipped the notifications screen')
   await page.getByRole('button', { name: 'Add' }).click()
   await expect(page.getByText('Shipped the notifications screen')).toBeVisible()
+  await expect(page).toHaveURL(/step=wins/)
   await shoot(page, 'weekly-review-wins')
 
   // Step three: every slipped item needs a decision, and the wizard says how
@@ -1334,6 +1336,7 @@ test('weekly review, six steps and a note built from the answers', async ({ page
   // Deciding one of them is what the step is for, so the count says so.
   await page.getByRole('radio', { name: /^Carry$/ }).first().click()
   await expect(page.getByText(/1 of \d+ decided/)).toBeVisible()
+  await expect(page).toHaveURL(/step=misses/)
 
   await shoot(page, 'weekly-review-misses')
 
@@ -1517,6 +1520,8 @@ test('onboarding, six steps that write as they go', async ({ page }) => {
   // the module back on, rather than disappearing.
   const airlineCategory = page.getByText('Airline loyalty').locator('..')
   await expect(airlineCategory).toContainText('Travel module off')
+  // The step shows before the router has written it; the shot reloads.
+  await expect(page).toHaveURL(/step=connect/)
   await shoot(page, 'onboarding-connections-module-off')
   await airlineCategory.getByRole('button', { name: 'Add Travel module' }).click()
   await expect(page.getByText('Travel module off')).toHaveCount(0)
@@ -1672,6 +1677,7 @@ test('second brain, the inbox holds a draft beside its source', async ({ page })
   for (const name of ['Discard', 'Edit', /^Accept/]) {
     await expect(page.getByRole('button', { name })).toBeVisible()
   }
+  await expect(page).toHaveURL(/note=/)
 
   await shoot(page, 'second-brain')
 })
@@ -1782,6 +1788,7 @@ test('travel, trips with confirmed spend only', async ({ page }) => {
   await expect(page).toHaveURL(/trip=/)
   await page.getByRole('tab', { name: 'Budget' }).click()
   await expect(page.getByText('Planned · total')).toBeVisible()
+  await expect(page).toHaveURL(/tab=budget/)
   await shoot(page, 'travel-budget')
 })
 
@@ -1856,6 +1863,7 @@ test('travel, a parsed booking waits in the trip inbox', async ({ page }) => {
 
   await expect(page.getByText('Check in, Kyoto')).toBeVisible()
   await expect(page.getByText(/confidence 94%/)).toBeVisible()
+  await expect(page).toHaveURL(/tab=inbox/)
   await shoot(page, 'travel-inbox')
 
   await page.getByRole('button', { name: 'Add', exact: true }).first().click()
@@ -2133,6 +2141,7 @@ test('meals, a slot is picked, swapped and cleared from the drawer', async ({ pa
   await page.getByRole('button', { name: 'Plan a meal' }).first().click()
   const drawer = page.getByRole('dialog')
   await expect(drawer.getByText('Pick a recipe')).toBeVisible()
+  await expect(page).toHaveURL(/pick=/)
   await shoot(page, 'meals-pick')
   await drawer.getByRole('button', { name: /Lentil soup/ }).click()
   await expect(drawer).toHaveCount(0)
@@ -2142,6 +2151,7 @@ test('meals, a slot is picked, swapped and cleared from the drawer', async ({ pa
   await expect(drawer.getByRole('heading', { name: 'Turkey chili' })).toBeVisible()
   await expect(drawer.getByText('Serves 6 · per-serving values')).toBeVisible()
   await expect(drawer.getByRole('button', { name: 'Cook' })).toBeVisible()
+  await expect(page).toHaveURL(/recipe=/)
   await shoot(page, 'meals-recipe')
   await drawer.getByRole('button', { name: 'Remove from plan' }).click()
   await expect(drawer).toHaveCount(0)
@@ -2350,6 +2360,7 @@ test('insurance, a policy number is revealed only when asked for', async ({ page
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByText('•••• 7730')).toBeVisible()
   // The drawer is in the URL, so it survives the reloads.
+  await expect(page).toHaveURL(/policy=/)
   await shoot(page, 'insurance-drawer')
   await dialog.getByRole('button', { name: /REVEAL/ }).click()
   await expect(dialog.getByText('LMD-48211-7730')).toBeVisible()
@@ -2388,6 +2399,7 @@ test('insurance, the edit form holds changes until Save', async ({ page }) => {
   await page.getByRole('button', { name: /Apartment, renters/ }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Edit' }).click()
   await expect(page.getByText('Insurance / Edit')).toBeVisible()
+  await expect(page).toHaveURL(/edit=1/)
   await shoot(page, 'insurance-edit')
 
   const dialog = page.getByRole('dialog')
@@ -2427,6 +2439,7 @@ test('meals, cook mode scales what can be scaled and says what cannot', async ({
   await page.goto('/meals?tab=recipes')
   await page.getByRole('button', { name: /^Turkey chili/ }).click()
   await expect(page.getByRole('dialog').getByText(/Use "Add to" above/)).toBeVisible()
+  await expect(page).toHaveURL(/recipe=/)
   await shoot(page, 'meals-recipe-library')
   await page.getByRole('dialog').getByRole('button', { name: 'Cook' }).click()
 
@@ -2441,6 +2454,7 @@ test('meals, cook mode scales what can be scaled and says what cannot', async ({
   // the splash of oil, which is not a measurement.
   await page.getByRole('radio', { name: '12', exact: true }).click()
   await expect(page.getByText('1800 g')).toBeVisible()
+  await expect(page).toHaveURL(/servings=12/)
   await expect(page.getByText('a splash', { exact: true })).toBeVisible()
   await expect(page.getByText(/Half a splash is not a measurement/)).toBeVisible()
 
