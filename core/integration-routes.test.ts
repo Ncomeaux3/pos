@@ -27,6 +27,7 @@ beforeEach(() => {
 })
 afterEach(async () => {
   await db().query('delete from core.connections')
+  await db().query('delete from fitness.body_metric')
 })
 afterAll(async () => {
   await db().end()
@@ -156,5 +157,27 @@ describe('webhook route', () => {
       params('anthropic'),
     )
     expect(res.status).toBe(404)
+  })
+
+  // The dispatch line: a validated payload reaches the module that declared
+  // an inbound handler for this integration id, and lands as a row.
+  it('hands a valid payload to the module inbound seam', async () => {
+    await saveCredentials('health_auto_export', { secret: 'the-real-secret' })
+    const res = await post(
+      {
+        data: {
+          metrics: [
+            { name: 'weight_body_mass', units: 'kg', data: [{ qty: 84.5, date: '2026-09-11 07:30:00 -0500' }] },
+          ],
+        },
+      },
+      'the-real-secret',
+    )
+    expect(res.status).toBe(200)
+
+    const { rows } = await db().query<{ value: string; source: string }>(
+      `select value, source from fitness.body_metric where kind = 'weight' and measured_on = '2026-09-11'`,
+    )
+    expect(rows).toEqual([{ value: '84500', source: 'health_auto_export' }])
   })
 })

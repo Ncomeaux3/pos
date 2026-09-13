@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
+import { toBodyMetrics } from '@/integrations/health_auto_export/client'
 import { coachReview } from './jobs/coach'
 import { syncStrava } from './jobs/sync-strava'
 import { nightlyDigest } from './jobs/nightly-digest'
@@ -331,5 +332,25 @@ export default defineModule({
     // suggestion, so a nightly cron does not become a nightly nag.
     { name: 'coach_review', run: coachReview },
   ],
+
+  inbound: {
+    // Apple Health readings pushed by the phone. The integration translates,
+    // this writes. Not in `requires`: the module is usable without it.
+    health_auto_export: async (payload) => {
+      for (const m of toBodyMetrics(payload)) {
+        // A push corrects an earlier push for the same day and never touches
+        // a value the owner typed: `source = 'manual'` is this table's manual
+        // guard, the flag log_metric stamps. No register(), like log_metric.
+        await db().query(
+          `insert into fitness.body_metric (kind, value, measured_on, source)
+           values ($1, $2, $3, 'health_auto_export')
+           on conflict (kind, measured_on) do update
+             set value = excluded.value, source = excluded.source
+             where fitness.body_metric.source <> 'manual'`,
+          [m.kind, m.value, m.measuredOn],
+        )
+      }
+    },
+  },
   entityTypes: ['workout', 'plan'],
 })

@@ -67,6 +67,17 @@ export type ModuleManifest = {
   entityTypes?: string[]
   searchText?: (row: Record<string, unknown>) => string
   /**
+   * Payloads pushed at this module, keyed by the integration id that sends
+   * them. The webhook route calls this after the integration manifest's own
+   * zod schema has accepted the body, so the payload is shaped but untyped.
+   *
+   * A pull has a job to run through; a push has nothing until it arrives, and
+   * this is where it goes. The integration owns the translation of its own
+   * format and the module owns the write, the same split as a sync job. Core
+   * names neither: a route matches ids, nothing more.
+   */
+  inbound?: Record<string, (payload: unknown) => Promise<void>>
+  /**
    * Links an entity to skills. Core calls this from register() for every row
    * every module creates, so at most one module may provide it. No module
    * providing one means no classification, and nothing else changes: this is
