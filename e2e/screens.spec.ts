@@ -430,14 +430,29 @@ test('skill tree, the constellation hovers, selects, pans and zooms', async ({ p
   const scaleOf = async () =>
     Number(/scale\(([\d.]+)\)/.exec((await group.getAttribute('transform')) ?? '')?.[1])
   const z0 = await scaleOf()
+  const target = Math.max(1.6, z0 * 1.5)
+  // The mid-flight value is read from a per-frame sampler started before the
+  // double-click, not after a fixed wait: 60ms read exactly 1 on one CI run
+  // and 1.5995 on another (the flight is wall-clock, the runner was slow),
+  // while the parallel run of the same commit passed both times.
+  type Sampled = SVGSVGElement & { __flight?: string[] }
+  await svg.evaluate((el: Sampled) => {
+    const g = el.querySelector(':scope > g:last-child')!
+    const seen: string[] = (el.__flight = [])
+    const tick = () => {
+      seen.push(g.getAttribute('transform') ?? '')
+      if (seen.length < 120) requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  })
   // On the body circle: the group's centre can fall between star and label,
   // which is the canvas, not the node.
   await star.locator('circle').nth(2).dblclick({ force: true })
-  await page.waitForTimeout(60)
-  const mid = await scaleOf()
-  expect(mid).toBeGreaterThan(z0)
-  expect(mid).toBeLessThan(Math.max(1.6, z0 * 1.5) * 0.99)
-  await expect.poll(scaleOf).toBeCloseTo(Math.max(1.6, z0 * 1.5), 6)
+  await expect.poll(scaleOf).toBeCloseTo(target, 6)
+  const flown = await svg.evaluate((el: Sampled) =>
+    (el.__flight ?? []).map((t) => Number(/scale\(([\d.]+)\)/.exec(t)?.[1])),
+  )
+  expect(flown.some((s) => s > z0 && s < target * 0.99)).toBe(true)
   // The body circle, not the group: the group's box takes in the label
   // under the star and sits low of it.
   const svgBox = (await svg.boundingBox())!

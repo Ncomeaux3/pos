@@ -224,7 +224,6 @@ zoom and double-click still slow, and the centre node opening no card.
 
 Tasks:
 - [ ] Reproduce each on `localhost:3010/skills` and `/travel` at the branch head; fix what reproduces, in `modules/skills/ui/` and `modules/travel/` only
-- [ ] `skill tree, the constellation hovers, selects, pans and zooms` (e2e/screens.spec.ts, the double-click flight): reads the scale 60ms after the dblclick and once received exactly 1 on a CI runner (PR #13, run 34727425240) while the parallel run of the same commit passed. Read the mid-flight value after one animation frame, the way the trackpad burst test does since Phase 1, rather than after a fixed wait
 - [ ] The branch's e2e wheel tests still pass
 - [x] Merge when CI is green and the owner has tried it (merged 2026-09-12 17:05 CDT)
 
