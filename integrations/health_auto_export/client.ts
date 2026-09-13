@@ -10,17 +10,63 @@
 // `body_fat_percentage`, and the sleep field `totalSleep` (`asleep`, `inBed`,
 // `sleepStart`, `sleepEnd` are used by an unofficial client and are likelier).
 
-export type BodyMetricKind = 'weight' | 'resting_hr' | 'hrv' | 'sleep_minutes' | 'body_fat'
+export type BodyMetricKind =
+  | 'weight'
+  | 'resting_hr'
+  | 'hrv'
+  | 'sleep_minutes'
+  | 'body_fat'
+  | 'steps'
+  | 'active_energy'
+  | 'exercise_minutes'
+  | 'stand_hours'
+  | 'vo2_max'
+  | 'blood_oxygen'
+  | 'respiratory_rate'
+  | 'flights_climbed'
+  | 'walking_distance'
+  | 'walking_hr_avg'
+  | 'heart_rate_avg'
 
 export type BodyMetric = {
   kind: BodyMetricKind
   /** YYYY-MM-DD, the phone's local day. */
   measuredOn: string
-  /** Grams, beats, milliseconds, minutes, tenths of a percent by kind. */
+  /** One integer unit per kind, named in the fitness_metric_kinds migration. */
   value: number
 }
 
+export type WorkoutKind = 'strength' | 'run' | 'ride' | 'swim' | 'walk' | 'other'
+
+export type Workout = {
+  externalId: string
+  name: string
+  kind: WorkoutKind
+  /** The app's own timestamp, offset included, for Postgres to parse. */
+  startedAt: string
+  durationS: number
+  distanceM: number
+  avgHr: number | null
+  /** The energy line, or empty. */
+  detail: string
+}
+
 const GRAMS_PER_LB = 453.59237
+const METRES_PER_MI = 1609.344
+
+/**
+ * A total is summed across the day's points, because the app can be set to
+ * send hourly buckets and a day's steps is not its last hour's. Everything
+ * else is a level, and the last reading of the day stands.
+ */
+const TOTALS: ReadonlySet<BodyMetricKind> = new Set([
+  'steps',
+  'active_energy',
+  'exercise_minutes',
+  'stand_hours',
+  'flights_climbed',
+  'walking_distance',
+])
 
 // yyyy-MM-dd HH:mm:ss Z, as the app writes it. The day is the first ten
 // characters, taken as the phone's local day rather than converted to UTC:
@@ -43,7 +89,8 @@ type Translate = (point: Point, units: string) => BodyMetric | null
 /**
  * One reading per point: the day from `date`, the number from `qty`. A scale
  * that returns null says the units are not ones it can convert, and the point
- * is skipped rather than stored under a guessed unit.
+ * is skipped rather than stored under a guessed unit. Values are left
+ * unrounded here so a total can be summed before it is rounded.
  */
 const simple =
   (kind: BodyMetricKind, scale: (qty: number, units: string) => number | null): Translate =>
@@ -52,39 +99,69 @@ const simple =
     const q = qty(point)
     if (!measuredOn || q === null) return null
     const value = scale(q, units)
-    return value === null ? null : { kind, measuredOn, value: Math.round(value) }
+    return value === null ? null : { kind, measuredOn, value }
   }
 
-const byName: Record<string, Translate> = {
+const identity = (q: number) => q
+const tenths = (q: number) => q * 10
+
+const mass = (q: number, units: string) => {
   // Only the two units the app documents for body mass. Anything else, a
   // missing units string included, is skipped: 185 stored as kilograms is a
   // wrong row the owner would have to notice by eye.
-  weight_body_mass: simple('weight', (q, units) => {
-    const u = units.toLowerCase()
-    return u.startsWith('lb') ? q * GRAMS_PER_LB : u.startsWith('kg') ? q * 1000 : null
-  }),
-  resting_heart_rate: simple('resting_hr', (q) => q),
-  heart_rate_variability: simple('hrv', (q) => q),
-  body_fat_percentage: simple('body_fat', (q) => q * 10),
+  const u = units.toLowerCase()
+  return u.startsWith('lb') ? q * GRAMS_PER_LB : u.startsWith('kg') ? q * 1000 : null
+}
+
+const length = (q: number, units: string) => {
+  const u = units.toLowerCase()
+  return u.startsWith('mi') ? q * METRES_PER_MI : u.startsWith('km') ? q * 1000 : u === 'm' ? q : null
+}
+
+const byName: Record<string, Translate> = {
+  // The docs spell it with an ampersand; the older spelling is what an
+  // unofficial client reads. Both land on weight.
+  weight_body_mass: simple('weight', mass),
+  'weight_&_body_mass': simple('weight', mass),
+  resting_heart_rate: simple('resting_hr', identity),
+  heart_rate_variability: simple('hrv', identity),
+  body_fat_percentage: simple('body_fat', tenths),
   // Hours asleep, dated by the morning it ended so a night belongs to the day
   // you woke up. `totalSleep` is the app's newer field; `asleep` the older.
   sleep_analysis: (point) => {
     const measuredOn = day(point.sleepEnd) ?? day(point.date)
     const hours = qty(point, 'totalSleep') ?? qty(point, 'asleep')
     if (!measuredOn || hours === null) return null
-    return { kind: 'sleep_minutes', measuredOn, value: Math.round(hours * 60) }
+    return { kind: 'sleep_minutes', measuredOn, value: hours * 60 }
+  },
+  step_count: simple('steps', identity),
+  active_energy: simple('active_energy', identity),
+  apple_exercise_time: simple('exercise_minutes', identity),
+  apple_stand_time: simple('stand_hours', identity),
+  vo2_max: simple('vo2_max', tenths),
+  blood_oxygen_saturation: simple('blood_oxygen', tenths),
+  respiratory_rate: simple('respiratory_rate', tenths),
+  flights_climbed: simple('flights_climbed', identity),
+  walking_running_distance: simple('walking_distance', length),
+  walking_heart_rate_average: simple('walking_hr_avg', identity),
+  // The docs give heart_rate as Min/Avg/Max on one point rather than qty.
+  heart_rate: (point) => {
+    const measuredOn = day(point.date)
+    const avg = qty(point, 'Avg') ?? qty(point, 'avg')
+    return measuredOn && avg !== null ? { kind: 'heart_rate_avg', measuredOn, value: avg } : null
   },
 }
 
 /**
  * Every reading the payload carries that the body_metric table has a kind
- * for. Unknown metrics, workouts and any point whose date or number does not
- * read are skipped, never thrown: one odd record must not lose the rest.
+ * for, one row per kind and day. Unknown metrics and any point whose date or
+ * number does not read are skipped, never thrown: one odd record must not
+ * lose the rest.
  */
 export function toBodyMetrics(payload: unknown): BodyMetric[] {
   const data = (payload as { data?: { metrics?: unknown } } | null)?.data
   const metrics = Array.isArray(data?.metrics) ? data.metrics : []
-  const out: BodyMetric[] = []
+  const byDay = new Map<string, BodyMetric>()
 
   for (const metric of metrics as { name?: unknown; units?: unknown; data?: unknown }[]) {
     const translate = typeof metric.name === 'string' ? byName[metric.name] : undefined
@@ -92,8 +169,86 @@ export function toBodyMetrics(payload: unknown): BodyMetric[] {
     const units = typeof metric.units === 'string' ? metric.units : ''
     for (const point of metric.data as Point[]) {
       const row = translate(point, units)
-      if (row) out.push(row)
+      if (!row) continue
+      const key = `${row.kind} ${row.measuredOn}`
+      const seen = byDay.get(key)
+      if (seen && TOTALS.has(row.kind)) seen.value += row.value
+      else byDay.set(key, seen ? { ...seen, value: row.value } : row)
     }
+  }
+  return [...byDay.values()].map((m) => ({ ...m, value: Math.round(m.value) }))
+}
+
+/** The same word rules the Strava sync applies to its sport types. */
+function toKind(name: string): WorkoutKind {
+  const s = name.toLowerCase()
+  if (s.includes('strength') || s.includes('interval') || s.includes('crossfit')) return 'strength'
+  if (s.includes('run')) return 'run'
+  if (s.includes('cycl') || s.includes('ride') || s.includes('bike')) return 'ride'
+  if (s.includes('swim')) return 'swim'
+  if (s.includes('walk') || s.includes('hik')) return 'walk'
+  return 'other'
+}
+
+function quantity(v: unknown): { qty: number; units: string } | null {
+  const o = v as { qty?: unknown; units?: unknown } | null
+  const q = typeof o?.qty === 'number' && Number.isFinite(o.qty) ? o.qty : null
+  return q === null ? null : { qty: q, units: typeof o?.units === 'string' ? o.units : '' }
+}
+
+/**
+ * Every v2 workout the payload carries. `id`, `start` and `duration` are the
+ * app's required fields and the ones an upsert needs; a workout missing any
+ * (the v1 shape has no id) is skipped. Distance, heart rate and energy are
+ * optional and land as zero, null and an empty detail.
+ */
+export function toWorkouts(payload: unknown): Workout[] {
+  const data = (payload as { data?: { workouts?: unknown } } | null)?.data
+  const workouts = Array.isArray(data?.workouts) ? data.workouts : []
+  const out: Workout[] = []
+
+  for (const w of workouts as Record<string, unknown>[]) {
+    const externalId = typeof w.id === 'string' ? w.id : null
+    const startedAt = typeof w.start === 'string' && DATE.test(w.start) ? w.start : null
+    const duration = qty(w, 'duration')
+    if (!externalId || !startedAt || duration === null) continue
+
+    const name = typeof w.name === 'string' && w.name ? w.name : 'Workout'
+    const distance = quantity(w.distance)
+    const metres = distance ? length(distance.qty, distance.units) : null
+    const hr = quantity((w.heartRate as { avg?: unknown } | undefined)?.avg)
+    const energy = quantity(w.activeEnergyBurned)
+
+    out.push({
+      externalId,
+      name,
+      kind: toKind(name),
+      startedAt,
+      durationS: Math.round(duration),
+      distanceM: metres === null ? 0 : Math.round(metres),
+      avgHr: hr ? Math.round(hr.qty) : null,
+      detail: energy ? `${Math.round(energy.qty)} kcal` : '',
+    })
   }
   return out
 }
+
+/** Every kind, in the migration's order, for the tool schema and the screen. */
+export const BODY_METRIC_KINDS = [
+  'weight',
+  'resting_hr',
+  'hrv',
+  'sleep_minutes',
+  'body_fat',
+  'steps',
+  'active_energy',
+  'exercise_minutes',
+  'stand_hours',
+  'vo2_max',
+  'blood_oxygen',
+  'respiratory_rate',
+  'flights_climbed',
+  'walking_distance',
+  'walking_hr_avg',
+  'heart_rate_avg',
+] as const satisfies readonly BodyMetricKind[]

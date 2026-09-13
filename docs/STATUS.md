@@ -678,11 +678,18 @@ route hands the validated payload to `fitness.inbound.health_auto_export`
 through the module contract's optional `inbound` seam, and Test reads the last
 200 on that route from `core.request_log`. It needs a paid iOS app.
 
-- **`fitness.inbound.health_auto_export`** upserts weight, resting heart rate,
-  HRV, body fat and sleep on `(kind, measured_on)`; `source = 'manual'` rows are
-  never touched. `integrations/health_auto_export/client.ts` owns the unit
-  conversion and the date parsing; the metric identifier strings are marked
-  verify until one real export has been seen.
+- **`fitness.inbound.health_auto_export`** upserts sixteen body metric kinds
+  on `(kind, measured_on)` (the five originals plus steps, active energy,
+  exercise minutes, stand hours, VO2 max, blood oxygen, respiratory rate,
+  flights climbed, walking distance, walking and average heart rate, added
+  2026-09-13 by the owner's decision to take everything from Apple Health
+  rather than connect Strava first); `source = 'manual'` rows are never
+  touched. Totals are summed across a day's buckets, levels keep the last
+  reading. v2 workouts land in `fitness.workout` on `(source, external_id)`
+  like Strava's and emit `workout_logged` once, on first insert.
+  `integrations/health_auto_export/client.ts` owns the unit conversion and the
+  date parsing; the metric identifier strings are marked verify until one real
+  export has been seen.
 
 - **`fitness.sync_strava`** upserts on `(source, external_id)` and backdates
   `workout_logged` to the activity rather than the job run.

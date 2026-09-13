@@ -11,7 +11,7 @@ docs/SETUP-INTEGRATIONS.md for the providers.
 
 ## Before anything: security
 
-- [ ] **1. Delete the old Voyage and Anthropic keys.** 2026-09-09: replacements
+- [x] **1. Delete the old Voyage and Anthropic keys.** Done 2026-09-13. 2026-09-09: replacements
       were generated and verified, which means the old ones were not revoked
       and still work. Delete the old Voyage key at dash.voyageai.com and the
       old Anthropic key at console.anthropic.com, then re-test on Settings >
@@ -23,18 +23,18 @@ What was verified 2026-09-12: the Vercel project `pos` already exists and
 deploys every push; production is `https://pos-gilt-rho.vercel.app`. The
 hosted Supabase project exists but nothing has been pushed to it.
 
-- [ ] **2. Confirm the hosted Supabase project ref** (`supabase/.temp/project-ref`
+- [x] **2. Confirm the hosted Supabase project ref** Done 2026-09-13: linked to `qmpeikzicfxvahueghtc`. (`supabase/.temp/project-ref`
       or the dashboard URL) and that `supabase link` points at it.
-- [ ] **3. `supabase db push`**, then `supabase migration list --linked`: local
+- [x] **3. `supabase db push`**, Done 2026-09-13: 24 were already there from 2026-09-09, the last 3 applied, 27 match. Then `supabase migration list --linked`: local
       and remote columns match, 27 rows. Never `db reset` against the linked
       project.
-- [ ] **4. Supabase dashboard, four settings.** Allow new users to sign up: off.
+- [x] **4. Supabase dashboard, four settings.** Done 2026-09-13, owner confirmed all four. Allow new users to sign up: off.
       Exposed schemas: `public, graphql_public` only. Email OTP expiry: 900
       seconds. Site URL: `https://pos-gilt-rho.vercel.app`, also in redirect
       URLs. The first two are the security review's top finding: every RLS
       policy trusts `authenticated`, and neither setting can be enforced from
       the repo.
-- [ ] **5. Vercel project settings.** Node.js version 22.x (it is on 24;
+- [x] **5. Vercel project settings.** Done 2026-09-13: Node 22.x, Standard Protection (production open, previews gated), 13 production env vars, redeploy READY at `e857a7b`, `/login` serves the real class. Node.js version 22.x (it is on 24;
       CI tests 22). Deployment Protection: Vercel Authentication for previews
       only, off for production (decision 2026-09-12; the app's own gate is
       OWNER_EMAIL plus disabled signup plus RLS). Every key from `.env.example`
@@ -44,21 +44,24 @@ hosted Supabase project exists but nothing has been pushed to it.
       a VAPID pair. `RESEND_FROM` may stay unset (sends from
       onboarding@resend.dev). Then redeploy `main` and confirm Settings > Cron
       Jobs lists `/api/cron/nightly` at `0 9 * * *`.
-- [ ] **6. `pnpm setup` against production**, from the laptop with the
+- [x] **6. `pnpm setup` against production**, Done 2026-09-13 as `pnpm tsx --env-file=.env.production scripts/setup.ts`: 5 steps, owner exists. Session pooler URL for DATABASE_URL (the direct host is IPv6 only) and the legacy service_role JWT. From the laptop with the
       production values loaded. Never `setup:demo` against production.
-- [ ] **7. First run.** Log in on the phone. Settings > General: timezone.
+- [x] **7. First run.** Done 2026-09-13: login on the phone, timezone set, three connections green, one run with every job ok. No digest, and none expected: the orchestrator queues one only when there is an alert, and the database is empty. Email delivery is unproven until the first alert; the Resend signup address must match the digest recipient. Push not yet enabled. Log in on the phone. Settings > General: timezone.
       Settings > Connections: paste Anthropic, Voyage, Resend; all three green
       (new rows, encrypted with the new key). Dashboard: Run now. Agent Log:
       one run, no failed job. Inbox: one digest. Share > Add to Home Screen,
       then Settings > Notifications > Devices, enable push. Tell me the date
       and what Agent Log showed.
-- [ ] **8. Two GitHub repo secrets for the backup workflow:**
+- [x] **8. Two GitHub repo secrets for the backup workflow:** Done 2026-09-13: run 34779333979 green, dump `pos-2026-09-13.sql.gz` committed to pos-backups, cron check counted 4 runs.
       `BACKUP_DATABASE_URL` (the session mode pooler URL, port 5432) and
       `BACKUP_REPO_TOKEN` (fine-grained, contents write on `pos-backups`
       only). Run the Backup workflow once by hand and check the dump landed.
       Phase 5's cron check rides on the same secret.
-- [ ] **9. Vercel firewall:** Attack Challenge Mode on. Bot protection if
-      Hobby offers it (plan gate unverified).
+- [x] **9. Vercel firewall:** Done 2026-09-13: Bot Protection on in Log mode.
+      Attack Challenge Mode stays **off**: tested on, it answered 429 to every
+      non-browser request, which blocks the Health Auto Export webhook,
+      `/api/mcp` and possibly the cron. Vercel documents it as a temporary
+      under-attack switch (1h to 24h), not a setting.
 - [ ] **10. Optional: a card on Voyage.** Verified 2026-09-08: without one the
       account is limited to 3 requests a minute; the 200M token free allowance
       still applies with a card. Until then Search says when it fell back to

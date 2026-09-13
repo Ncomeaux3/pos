@@ -18,6 +18,7 @@ import { getOrigin } from '@/core/origin'
 import { getSetting } from '@/core/settings'
 import { clockIn } from '@/core/today'
 import { SettingsHeader } from '../tabs'
+import { Copy } from './Copy'
 import { Reveal } from './Reveal'
 
 // One card per manifest. Adding a provider folder adds a card; nothing here
@@ -264,11 +265,16 @@ function ProviderCard({
 
           {manifest.auth.type === 'webhook' && (
             <div className="mt-2.5 flex flex-col gap-2 border border-rule px-3 py-2.5">
-              <div className="flex items-center justify-between gap-2.5">
+              {/* Wraps rather than truncates: the phone is where this gets read, and a
+                  cut-off URL cannot be checked against the one pasted into the app. */}
+              <div className="flex flex-col gap-1">
                 <Eyebrow>Inbound URL</Eyebrow>
-                <span className="num min-w-0 truncate text-[11px] text-ink-2">{`${origin}/api/integrations/${manifest.id}/webhook`}</span>
+                <span className="flex items-center justify-between gap-2.5">
+                  <span className="num min-w-0 break-all text-[11px] text-ink-2">{`${origin}/api/integrations/${manifest.id}/webhook`}</span>
+                  <Copy value={`${origin}/api/integrations/${manifest.id}/webhook`} />
+                </span>
               </div>
-              <div className="flex items-center justify-between gap-2.5">
+              <div className="flex flex-col gap-1">
                 <Eyebrow>Shared secret</Eyebrow>
                 {secret ? (
                   <Reveal value={secret} />

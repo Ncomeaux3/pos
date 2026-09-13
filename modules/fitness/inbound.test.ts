@@ -3,12 +3,19 @@ import { afterAll, afterEach, expect, it } from 'vitest'
 process.env.DATABASE_URL ??= 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
 
 const { db } = await import('@/core/db')
-const { default: fitness } = await import('./manifest')
+// Through the registry, not './manifest': the workout path calls register(),
+// which resolves the classifier through modules/_index, and importing the
+// manifest first leaves that half initialised (the cycle core/entities.ts
+// documents).
+const { getModule } = await import('@/core/modules')
 
-const inbound = fitness.inbound!.health_auto_export
+const inbound = getModule('fitness')!.inbound!.health_auto_export
 
 afterEach(async () => {
   await db().query('delete from fitness.body_metric')
+  await db().query(`delete from core.events where module = 'fitness' and event_type = 'workout_logged'`)
+  await db().query(`delete from core.entities where module = 'fitness' and entity_type = 'workout'`)
+  await db().query(`delete from fitness.workout where source = 'health_auto_export'`)
 })
 afterAll(async () => {
   await db().end()
@@ -19,7 +26,7 @@ const metric = (name: string, units: string, data: Record<string, unknown>[]) =>
   units,
   data,
 })
-const at = (day: string) => `${day} 07:30:00 -0500`
+const at = (day: string, time = '07:30:00') => `${day} ${time} -0500`
 
 async function rows() {
   const { rows } = await db().query<{ kind: string; measured_on: string; value: string; source: string }>(
@@ -27,6 +34,15 @@ async function rows() {
      from fitness.body_metric order by kind`,
   )
   return rows.map((r) => ({ ...r, value: Number(r.value) }))
+}
+
+async function workouts() {
+  const { rows } = await db().query(
+    `select name, kind, to_char(started_at at time zone 'UTC', 'YYYY-MM-DD HH24:MI') as started_at,
+            duration_s, distance_m, avg_hr, detail, source, external_id
+       from fitness.workout where source = 'health_auto_export' order by started_at`,
+  )
+  return rows
 }
 
 it('translates each metric into the units the table stores', async () => {
@@ -77,20 +93,56 @@ it('keeps a manual row and corrects an earlier export on the same day', async ()
   ])
 })
 
-it('writes nothing for metrics the table has no kind for, unknown weight units, or workouts', async () => {
+it('writes nothing for metrics the table has no kind for, unknown weight units, or a v1 workout', async () => {
   await inbound({
     data: {
       metrics: [
-        metric('step_count', 'count', [{ qty: 9000, date: at('2026-09-11') }]),
         metric('something_new', 'x', [{ qty: 1, date: at('2026-09-11') }]),
         // A weight in units the translation cannot convert is not guessed at.
         metric('weight_body_mass', 'st', [{ qty: 13.2, date: at('2026-09-11') }]),
       ],
-      workouts: [{ name: 'Run', start: at('2026-09-11') }],
+      // The legacy shape has no id, so there is nothing to upsert on.
+      workouts: [{ name: 'Run', start: at('2026-09-11'), end: at('2026-09-11'), duration: 600 }],
     },
   })
 
   expect(await rows()).toEqual([])
+  expect(await workouts()).toEqual([])
+})
+
+// A workout is an entity like a Strava one: upserted on its id so a re-send
+// corrects it, registered so it earns Health XP, and registered once.
+it('stores a v2 workout, corrects it on a re-send, and registers it once', async () => {
+  const run = {
+    id: 'hae-1',
+    name: 'Outdoor Run',
+    start: at('2026-09-11', '06:00:00'),
+    end: at('2026-09-11', '06:30:00'),
+    duration: 1800,
+    distance: { qty: 5, units: 'km' },
+    heartRate: { avg: { qty: 150, units: 'bpm' } },
+    activeEnergyBurned: { qty: 400, units: 'kcal' },
+  }
+  await inbound({ data: { workouts: [run] } })
+  await inbound({ data: { workouts: [{ ...run, duration: 1860, distance: { qty: 5.2, units: 'km' } }] } })
+
+  expect(await workouts()).toEqual([
+    {
+      name: 'Outdoor Run',
+      kind: 'run',
+      started_at: '2026-09-11 11:00',
+      duration_s: 1860,
+      distance_m: 5200,
+      avg_hr: 150,
+      detail: '400 kcal',
+      source: 'health_auto_export',
+      external_id: 'hae-1',
+    },
+  ])
+  const { rows: events } = await db().query<{ n: string }>(
+    `select count(*) as n from core.events where module = 'fitness' and event_type = 'workout_logged'`,
+  )
+  expect(Number(events[0].n)).toBe(1)
 })
 
 it('skips a record with an unreadable date and lands the one beside it', async () => {
