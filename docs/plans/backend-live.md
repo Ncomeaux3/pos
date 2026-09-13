@@ -219,6 +219,27 @@ Exit checks: `pnpm test`, `pnpm typecheck`, `pnpm lint`, the connections and fit
 
 ---
 
+### Phase 4c: the free route, an iOS Shortcut
+
+Added 2026-09-13, same day. Strava requires a paid subscription to create an
+API app since June 2026, and Health Auto Export's automatic sync is a paid
+tier; the owner asked for a free way. Apple Health is readable only on the
+phone, and Shortcuts is the on-phone app Apple ships that can read it and
+post JSON, so a second webhook integration takes a flat payload a Shortcut can
+build with one Dictionary action. Same tables, same write, its own source.
+
+Tasks:
+- [x] `supabase/migrations/20260913210311_fitness_shortcuts_source.sql`: `apple_shortcuts` in both source checks
+- [x] `modules/fitness/inbound.ts`: `writeReadings(source, metrics, workouts)`, shared by both inbound handlers
+- [x] `integrations/apple_shortcuts/client.ts` and its test: key to kind and unit, numeric strings, blanks skipped, workouts keyed by start
+- [x] `integrations/apple_shortcuts/manifest.ts`: webhook auth, Test from `core.request_log`; `config/connectors.yaml` provider; registry test
+- [x] `modules/fitness/inbound.test.ts`: the Shortcut payload lands with `source = 'apple_shortcuts'`
+- [x] docs/SETUP-INTEGRATIONS.md: the Shortcut recipe, action by action; Strava row says why it is deferred
+
+Exit checks: `pnpm test`, `pnpm typecheck`, `pnpm lint`, the connections e2e screen. The one verify in the recipe is whether the owner's iOS lists Workouts as a Find Health Samples type; the metrics do not depend on it.
+
+---
+
 ### Phase 5: cron-silence check
 
 Goal: a nightly that never fires is noticed the next morning.

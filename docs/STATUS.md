@@ -694,7 +694,16 @@ through the module contract's optional `inbound` seam, and Test reads the last
   like Strava's and emit `workout_logged` once, on first insert.
   `integrations/health_auto_export/client.ts` owns the unit conversion and the
   date parsing; the metric identifier strings are marked verify until one real
-  export has been seen.
+  export has been seen. Both Apple Health sources write through
+  `modules/fitness/inbound.ts`.
+- **`fitness.inbound.apple_shortcuts`** (2026-09-13): the free route. An iOS
+  Shortcut posts a flat `{ day, metrics, workouts }` payload to
+  `/api/integrations/apple_shortcuts/webhook`; `integrations/apple_shortcuts/
+  client.ts` maps its keys onto the same kinds. Built because Strava now needs
+  a paid subscription to create an API app and Health Auto Export's REST sync
+  is a paid tier. The Shortcut recipe is in docs/SETUP-INTEGRATIONS.md; a
+  workout's identity is its start instant since no HealthKit id reaches a
+  Shortcut.
 
 - **`fitness.sync_strava`** upserts on `(source, external_id)` and backdates
   `workout_logged` to the activity rather than the job run.

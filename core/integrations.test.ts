@@ -29,6 +29,7 @@ describe('the integration registry', () => {
   it('has every provider the architecture lists for day one', () => {
     expect(integrations.map((i) => i.id).sort()).toEqual([
       'anthropic',
+      'apple_shortcuts',
       'github_vault',
       'health_auto_export',
       'resend',
