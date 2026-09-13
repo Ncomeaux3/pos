@@ -21,7 +21,7 @@ Every card runs its own Test on save and tells you what it saw.
 | **Obsidian vault** | token | free | **Client built. Needs a repo and a token.** |
 | **SimpleFIN** | token | ~$1.50/mo | **Client, real Test and nightly sync built. Needs a bridge subscription.** |
 | **Health Auto Export** | webhook | paid iOS app | **Webhook writes workouts and sixteen body metrics. Needs the app and one paste.** |
-| **Apple Health (Shortcuts)** | webhook | free | **Same tables, from an iOS Shortcut you build once. Recipe below.** |
+| **Apple Health (Shortcuts)** | webhook | free | **Readings from an iOS Shortcut you build once; workouts need Health Auto Export. Recipe below.** |
 
 Everything in bold has a client and a real Test button. None of them is
 connected, because each needs an account only you have.
@@ -294,8 +294,9 @@ name needs matching to the table's kinds.
 
 ## Apple Health (Shortcuts)
 
-**Buys you:** the same workouts and readings as Health Auto Export, for
-nothing, from a Shortcut on the phone that runs itself every morning. Apple
+**Buys you:** the same daily readings as Health Auto Export, for nothing,
+from a Shortcut on the phone that runs itself every morning. Not workouts:
+see below. Apple
 Health can only be read by an app on the phone, and Shortcuts is the one Apple
 ships that can read it and post JSON.
 
@@ -347,19 +348,19 @@ the Shortcut corrects rather than duplicates.
      Duration, then *Calculate* divided by 3600 for hours. Send it as
      `sleep_hours`.
 
-   **Workouts** (verify: on iOS 17 and later the Type chooser lists Workouts;
-   if yours does not, skip this block and the metrics still work):
-   - *Find Health Samples* where Type is Workouts, Start Date is Today.
-   - *Repeat with Each* over the results. Inside: *Get Details of Health
-     Sample* for Name, Start Date, Duration; *Format Date* on the Start Date
-     as ISO 8601 with time; *Dictionary* with `name`, `start`, `minutes`
-     (Duration is seconds, so *Calculate* divided by 60); *Add to Variable*
-     `workouts`.
+   **Workouts: not from Shortcuts.** Checked on the owner's phone
+   2026-09-13: *Find Health Samples* does not list Workouts as a type, so a
+   native Shortcut cannot read them. The `workouts` key stays in the payload
+   for a Shortcut that gets them from a third-party action, but the recipe
+   here sends metrics only. For workouts, Health Auto Export ($1.99 for one
+   month covers the webhook it already has) or a native app; a "workout
+   ended" automation could post a name and a rough duration, but distance and
+   heart rate would be guesses, and this app does not earn XP on guesses.
 
    **Assemble and send.**
    - *Dictionary*: `day` set to *Format Date* of Current Date with custom
      format `yyyy-MM-dd`; `metrics` set to a nested Dictionary of the keys
-     above; `workouts` set to the `workouts` variable.
+     above; no `workouts` key.
    - *Get Contents of URL*: the inbound URL, Method **POST**, Headers: one
      row, `x-pos-secret` with the secret; Request Body **JSON**, the
      Dictionary.
