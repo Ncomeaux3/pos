@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react'
-import { isLongPress, LONG_PRESS_MS, swipeOf } from '@/core/gestures'
+import { fromEdge, isLongPress, LONG_PRESS_MS, swipeOf } from '@/core/gestures'
 
 // The pointer half of the gestures. The decision about what counts as a swipe
 // lives in core/gestures.ts, where it can be tested without a browser.
@@ -11,6 +11,7 @@ import { isLongPress, LONG_PRESS_MS, swipeOf } from '@/core/gestures'
 
 export type SwipeHandlers = {
   onPointerDown: (event: ReactPointerEvent) => void
+  onPointerMove: (event: ReactPointerEvent) => void
   onPointerUp: (event: ReactPointerEvent) => void
   onPointerCancel: () => void
 }
@@ -23,19 +24,37 @@ export type SwipeHandlers = {
  * kind of bug that gets a gesture removed rather than fixed.
  */
 export function useSwipe(
-  handlers: { onLeft?: () => void; onRight?: () => void; onDown?: () => void },
+  handlers: {
+    onLeft?: () => void
+    onRight?: () => void
+    onDown?: () => void
+    /** The horizontal distance so far, while the finger is down; 0 when it lifts. */
+    onMove?: (dx: number) => void
+  },
   options: { minDistance?: number } = {},
 ): SwipeHandlers {
   const from = useRef<{ x: number; y: number } | null>(null)
 
   return {
     onPointerDown: (event) => {
-      if (event.pointerType === 'mouse') return
+      // The edge strip belongs to swipe-back, so a drag from there is not ours.
+      if (event.pointerType === 'mouse' || fromEdge(event.clientX)) return
       from.current = { x: event.clientX, y: event.clientY }
+      // Keep the events coming once the finger leaves the element. Playwright's
+      // synthetic pointers have no capture to take, hence the try.
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId)
+      } catch {}
+    },
+    onPointerMove: (event) => {
+      const start = from.current
+      if (!start || !handlers.onMove) return
+      handlers.onMove(event.clientX - start.x)
     },
     onPointerUp: (event) => {
       const start = from.current
       from.current = null
+      handlers.onMove?.(0)
       if (!start || event.pointerType === 'mouse') return
 
       const direction = swipeOf(event.clientX - start.x, event.clientY - start.y, {
@@ -49,12 +68,12 @@ export function useSwipe(
     },
     onPointerCancel: () => {
       from.current = null
+      handlers.onMove?.(0)
     },
   }
 }
 
 export type LongPressHandlers = SwipeHandlers & {
-  onPointerMove: (event: ReactPointerEvent) => void
   onPointerLeave: () => void
 }
 

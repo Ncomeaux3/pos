@@ -808,14 +808,11 @@ test('dashboard renders the nightly run', async ({ page }) => {
   await page.goto('/')
 
   // Run now is a server action behind requireOwner, not a call to the cron
-  // route, so it needs no secret. The phone band has no button for it, as
-  // its artboard has none (pull to sync is the gesture), so the phone reads
-  // whatever the last run wrote.
-  if ((page.viewportSize()?.width ?? 0) >= 720) {
-    await page.getByRole('button', { name: /^run now$/i }).click()
-    await expect(page.getByText(/^Run clean$|jobs? failed/i)).toBeVisible({ timeout: 20_000 })
-    await page.reload()
-  }
+  // route, so it needs no secret. On both widths: a job runs from a button
+  // that says so, and pulling down is a refresh, not a run.
+  await page.getByRole('button', { name: /^run now$/i }).click()
+  await expect(page.getByText(/^Run clean$|jobs? failed/i)).toBeVisible({ timeout: 20_000 })
+  await page.reload()
 
   // Tile labels are uppercased by CSS, so the DOM still says "Warnings".
   const main = page.getByRole('main')
@@ -2555,6 +2552,69 @@ test('gestures, swiping a task completes it', async ({ page }, testInfo) => {
   })
 
   await expect(page.getByText(/^Done\. Sketch the week ahead/)).toBeVisible()
+})
+
+test('gestures, a swiped task reads as done before the server answers', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Touch gestures are a phone thing')
+
+  // Hold the server action so the only way the row can flip is optimistically.
+  let release!: () => void
+  const held = new Promise<void>((resolve) => (release = resolve))
+  await page.route('**/tasks**', async (route) => {
+    if (!route.request().headers()['next-action']) return route.continue()
+    await held
+    return route.continue()
+  })
+
+  await page.goto('/tasks')
+  const card = page.locator('article').filter({ hasText: 'Lower, deadlift day' }).first()
+  await expect(card.getByRole('button', { name: /^Complete Lower, deadlift/ })).toBeVisible()
+
+  const box = (await card.boundingBox())!
+  const y = box.y + 8
+  await card.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: box.x + 20, clientY: y })
+  await card.dispatchEvent('pointerup', { pointerType: 'touch', clientX: box.x + box.width - 10, clientY: y })
+
+  // Gone from Today while the request is still held, and no toast yet: the
+  // row moved on the guess, not on the answer.
+  await expect(card).toHaveCount(0)
+  await expect(page.getByText(/^Done\. Lower, deadlift/)).toHaveCount(0)
+  release()
+  await expect(page.getByText(/^Done\. Lower, deadlift/)).toBeVisible()
+})
+
+test('a drawer is a history entry, so Back closes it', async ({ page }) => {
+  await page.goto('/tasks')
+  await page.getByRole('button', { name: 'Edit Recurring detection tests' }).click()
+  await expect(page).toHaveURL(/task=/)
+  await expect(page.getByRole('dialog')).toBeVisible()
+
+  // Opening pushed, not replaced: the phone's Back gesture and button, and the
+  // browser's, land on the list with the drawer gone.
+  await page.goBack()
+  await expect(page).not.toHaveURL(/task=/)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('gestures, pulling down from the top refreshes the screen', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Touch gestures are a phone thing')
+
+  await page.goto('/finance')
+  // The listener is registered by an effect after hydration; wait for the
+  // page to go quiet so the first pointer event is not dropped on the floor.
+  await page.waitForLoadState('networkidle')
+  const x = 200
+  await page.dispatchEvent('body', 'pointerdown', { pointerType: 'touch', clientX: x, clientY: 120 })
+  await page.dispatchEvent('body', 'pointermove', { pointerType: 'touch', clientX: x, clientY: 180 })
+  await expect(page.getByText('Release to refresh')).toBeVisible()
+  // The release asks the router for the page again: one RSC request.
+  const fetched = page.waitForRequest((r) => r.url().includes('/finance') && r.headers()['rsc'] === '1')
+  await page.dispatchEvent('body', 'pointerup', { pointerType: 'touch', clientX: x, clientY: 220 })
+  await fetched
+
+  // The strip says so while the fetch runs, then goes; the page is still Finance.
+  await expect(page.getByText(/Refreshing|Release to refresh/)).toHaveCount(0, { timeout: 15_000 })
+  await expect(page.getByRole('heading', { name: 'Finance', level: 1 })).toBeVisible()
 })
 
 test('gestures, holding a dashboard tile enters arrange mode', async ({ page }, testInfo) => {

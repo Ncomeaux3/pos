@@ -1,6 +1,5 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
 import { useTransition } from 'react'
 import {
   ActionButton,
@@ -13,6 +12,7 @@ import {
   PageHeader,
   useToast,
 } from '@/components/pos'
+import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
 import {
   annualCents,
@@ -31,22 +31,11 @@ import { UploadDrawer } from './UploadDrawer'
 export type { InsuranceData, Policy }
 
 export function Insurance({ data }: { data: InsuranceData }) {
-  const router = useRouter()
-  const params = useSearchParams()
+  const { params, set: setParams } = useSearchState()
   const open = data.policies.find((p) => p.id === params.get('policy')) ?? null
   const editing = params.get('edit') === '1'
   const creating = params.get('policy') === 'new' && editing
   const uploading = params.get('upload') === '1'
-
-  const setParams = (next: Record<string, string | null>) => {
-    const search = new URLSearchParams(params.toString())
-    for (const [key, value] of Object.entries(next)) {
-      if (value === null) search.delete(key)
-      else search.set(key, value)
-    }
-    const query = search.toString()
-    router.replace(query ? `?${query}` : '?', { scroll: false })
-  }
 
   const [, start] = useTransition()
   const toast = useToast()
@@ -94,7 +83,7 @@ export function Insurance({ data }: { data: InsuranceData }) {
           <>
             <ActionButton
               className="h-11 px-3 text-[12px] text-ink-3 md:h-[51px]"
-              onClick={() => setParams({ upload: '1' })}
+              onClick={() => setParams({ upload: '1' }, { push: true })}
             >
               Upload PDF
             </ActionButton>
@@ -102,7 +91,7 @@ export function Insurance({ data }: { data: InsuranceData }) {
               variant="solid"
               size="xl"
               className="h-11 gap-2 px-3.5 text-[13px] md:h-[51px] md:px-[22px] md:text-[15px]"
-              onClick={() => setParams({ policy: 'new', edit: '1' })}
+              onClick={() => setParams({ policy: 'new', edit: '1' }, { push: true })}
             >
               Add policy <span aria-hidden="true">&rarr;</span>
             </ActionButton>
@@ -185,7 +174,7 @@ export function Insurance({ data }: { data: InsuranceData }) {
               <DataRow
                 key={policy.id}
                 selected={open?.id === policy.id}
-                onClick={() => setParams({ policy: policy.id, edit: null })}
+                onClick={() => setParams({ policy: policy.id, edit: null }, { push: true })}
               >
                 <span className="flex min-w-0 items-center gap-3">
                   <span className="label w-11 shrink-0 text-[9px] tracking-[0.08em] text-ink-4">

@@ -140,7 +140,7 @@ export function Overlay({
 
         <div
           className={cn(
-            'min-h-0 flex-1 overflow-y-auto px-[18px] pb-[34px] md:px-6 md:pb-6',
+            'min-h-0 flex-1 overflow-y-auto [overscroll-behavior:contain] px-[18px] pb-[calc(18px+var(--inset-b))] md:px-6 md:pb-6',
             title === undefined ? 'pt-[22px]' : 'pt-[18px]',
           )}
         >
@@ -148,7 +148,7 @@ export function Overlay({
         </div>
 
         {footer && (
-          <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-rule px-[18px] pb-[34px] pt-4 md:px-6 md:pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-rule px-[18px] pb-[calc(18px+var(--inset-b))] pt-4 md:px-6 md:pb-4">
             {footer}
           </div>
         )}

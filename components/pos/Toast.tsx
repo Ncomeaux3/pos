@@ -26,8 +26,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div
         aria-live="polite"
-        // 12px clear of the 91px phone tab bar; the desktop has no bar.
-        className="pointer-events-none fixed inset-x-0 bottom-[103px] z-[60] md:bottom-6 flex flex-col items-center gap-2 px-4"
+        // 12px clear of the phone tab bar (--tabbar); the desktop has no bar.
+        className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--tabbar)+12px)] z-[60] md:bottom-6 flex flex-col items-center gap-2 px-4"
       >
         {toasts.map((t) => (
           <ToastItem

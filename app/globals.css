@@ -18,6 +18,11 @@
 @custom-variant light ([data-theme="light"] &);
 
 :root {
+  /* The phone's home indicator, with a floor for browsers that report zero. */
+  --inset-b: max(env(safe-area-inset-bottom), 12px);
+  /* The tab bar: 1px rule, 8px top, 56px buttons, the inset. Everything that must clear
+     it (toasts, sheets, the page bottom) measures from this. */
+  --tabbar: calc(65px + var(--inset-b));
   --bg: #07080a;
   --bg-elev: #0c0e11;
   --bg-deep: #050608;
@@ -57,6 +62,11 @@
   --ink-4: #b0b3b8;
   --rule: #e1dfd8;
   --rule-2: rgba(12, 14, 17, 0.22);
+}
+
+html {
+  /* The page owns its pull: no browser refresh or rubber band doubling it. */
+  overscroll-behavior-y: contain;
 }
 
 @theme inline {

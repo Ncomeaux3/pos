@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
 import { Fragment, useEffect, useState, useTransition, type ReactNode } from 'react'
 import {
   ActionButton,
@@ -13,6 +12,7 @@ import {
   TabBar,
   useToast,
 } from '@/components/pos'
+import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
 import { standing, total, type Macros } from '../macros'
 import { scaleQuantity, servingFactor } from '../scale'
@@ -80,19 +80,8 @@ export const MINI =
   'shrink-0 whitespace-nowrap border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink'
 
 export function Meals({ data }: { data: MealsData }) {
-  const router = useRouter()
-  const params = useSearchParams()
+  const { params, set: setParams } = useSearchState()
   const tab = params.get('tab') === 'recipes' ? 'recipes' : 'week'
-
-  const setParams = (next: Record<string, string | null>) => {
-    const search = new URLSearchParams(params.toString())
-    for (const [key, value] of Object.entries(next)) {
-      if (value === null) search.delete(key)
-      else search.set(key, value)
-    }
-    const query = search.toString()
-    router.replace(query ? `?${query}` : '?', { scroll: false })
-  }
 
   const [pending, start] = useTransition()
   const toast = useToast()
@@ -197,7 +186,7 @@ export function Meals({ data }: { data: MealsData }) {
           </p>
         </div>
         <div className="flex shrink-0 gap-2">
-          <button type="button" onClick={() => setParams({ drawer: 'grocery' })} className={GHOST}>
+          <button type="button" onClick={() => setParams({ drawer: 'grocery' }, { push: true })} className={GHOST}>
             Grocery list <span className="num ml-1.5 text-[10px] text-ink-4">{groceryCount}</span>
           </button>
           <ActionButton
@@ -360,8 +349,19 @@ export function Meals({ data }: { data: MealsData }) {
                           <div
                             role="button"
                             tabIndex={0}
-                            onClick={() => setParams({ recipe: entry.recipeId, slot: entry.id, tab: null })}
-                            onKeyDown={(e) => e.key === 'Enter' && setParams({ recipe: entry.recipeId, slot: entry.id, tab: null })}
+                            onClick={() =>
+                              setParams(
+                                { recipe: entry.recipeId, slot: entry.id, tab: null },
+                                entry.recipeId ? { push: true } : undefined,
+                              )
+                            }
+                            onKeyDown={(e) =>
+                              e.key === 'Enter' &&
+                              setParams(
+                                { recipe: entry.recipeId, slot: entry.id, tab: null },
+                                entry.recipeId ? { push: true } : undefined,
+                              )
+                            }
                             className={cn(
                               'h-full cursor-grab border bg-bg-elev px-[9px] py-2 transition-colors duration-150 hover:border-rule-2',
                               entry.eaten ? 'border-brand' : 'border-rule',
@@ -400,7 +400,7 @@ export function Meals({ data }: { data: MealsData }) {
                           <button
                             type="button"
                             aria-label="Plan a meal"
-                            onClick={() => setParams({ pick: `${iso}:${slot}` })}
+                            onClick={() => setParams({ pick: `${iso}:${slot}` }, { push: true })}
                             className="h-full min-h-16 w-full border border-dashed border-rule text-[16px] text-ink-4 transition-colors duration-150 hover:border-brand hover:text-brand"
                           >
                             +
@@ -495,7 +495,7 @@ export function Meals({ data }: { data: MealsData }) {
                   if (!result.ok) toast(result.error)
                   else {
                     setIngestUrl('')
-                    setParams({ recipe: result.id, slot: null })
+                    setParams({ recipe: result.id, slot: null }, { push: true })
                   }
                 })
               }}
@@ -522,8 +522,8 @@ export function Meals({ data }: { data: MealsData }) {
                 key={r.id}
                 role="button"
                 tabIndex={0}
-                onClick={() => setParams({ recipe: r.id, slot: null })}
-                onKeyDown={(e) => e.key === 'Enter' && setParams({ recipe: r.id, slot: null })}
+                onClick={() => setParams({ recipe: r.id, slot: null }, { push: true })}
+                onKeyDown={(e) => e.key === 'Enter' && setParams({ recipe: r.id, slot: null }, { push: true })}
                 className="min-w-0 cursor-pointer border border-rule bg-bg-elev px-4 py-3.5 text-left transition-colors duration-200 hover:border-rule-2"
               >
                 <div className="flex items-start justify-between gap-2">

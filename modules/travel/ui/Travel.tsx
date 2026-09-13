@@ -1,8 +1,8 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
 import { useTransition } from 'react'
 import { ActionButton, BandSearch, SearchButton, useToast } from '@/components/pos'
+import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
 import { deleteTrip, setTripStatus, type ActionResult } from './actions'
 import { Globe, type Pin } from './Globe'
@@ -108,20 +108,10 @@ const KIND_COLOUR: Record<(typeof KINDS)[number], string> = {
 }
 
 export function Travel({ data }: { data: TravelData }) {
-  const router = useRouter()
-  const params = useSearchParams()
+  const { params, set: setParams } = useSearchState()
   const [, start] = useTransition()
   const toast = useToast()
 
-  const setParams = (next: Record<string, string | null>) => {
-    const search = new URLSearchParams(params.toString())
-    for (const [key, value] of Object.entries(next)) {
-      if (value === null) search.delete(key)
-      else search.set(key, value)
-    }
-    const query = search.toString()
-    router.replace(query ? `?${query}` : '?', { scroll: false })
-  }
   const run = (action: () => Promise<ActionResult>, ok?: string) =>
     start(async () => {
       const result = await action()
@@ -189,7 +179,7 @@ export function Travel({ data }: { data: TravelData }) {
                   {i === data.loyalty.length - 1 && (
                     <button
                       type="button"
-                      onClick={() => setParams({ loyalty: '1' })}
+                      onClick={() => setParams({ loyalty: '1' }, { push: true })}
                       className="shrink-0 text-ink-4 hover:text-ink"
                     >
                       Manage →
@@ -222,12 +212,12 @@ export function Travel({ data }: { data: TravelData }) {
         <div className="flex shrink-0 gap-2">
           <button
             type="button"
-            onClick={() => setParams({ new: 'wish', trip: null })}
+            onClick={() => setParams({ new: 'wish', trip: null }, { push: true })}
             className="whitespace-nowrap border border-rule-2 px-3 py-2 text-[12px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink"
           >
             Add to wishlist
           </button>
-          <ActionButton variant="solid" size="xl" className="h-11 gap-2 px-3.5 text-[13px] md:h-[51px] md:px-[22px] md:text-[15px]" onClick={() => setParams({ new: 'trip', trip: null })}>
+          <ActionButton variant="solid" size="xl" className="h-11 gap-2 px-3.5 text-[13px] md:h-[51px] md:px-[22px] md:text-[15px]" onClick={() => setParams({ new: 'trip', trip: null }, { push: true })}>
             New trip <span aria-hidden="true">&rarr;</span>
           </ActionButton>
         </div>
@@ -241,8 +231,8 @@ export function Travel({ data }: { data: TravelData }) {
             // trip, or whose trip is gone, opens as itself.
             const place = id.startsWith('place-') ? data.places.find((p) => p.id === id.slice(6)) : undefined
             const trip = place ? place.tripId : id.startsWith('trip-') || id.startsWith('wish-') ? id.slice(5) : null
-            if (trip && data.trips.some((t) => t.id === trip)) setParams({ trip, new: null, place: null })
-            else if (place) setParams({ place: place.id, trip: null, new: null })
+            if (trip && data.trips.some((t) => t.id === trip)) setParams({ trip, new: null, place: null }, { push: true })
+            else if (place) setParams({ place: place.id, trip: null, new: null }, { push: true })
           }}
           alert={
             data.alert && (
@@ -278,7 +268,7 @@ export function Travel({ data }: { data: TravelData }) {
                   <button
                     key={t.id}
                     type="button"
-                    onClick={() => setParams({ trip: t.id, new: null })}
+                    onClick={() => setParams({ trip: t.id, new: null }, { push: true })}
                     className="border border-rule bg-bg-elev px-[18px] py-4 text-left transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-rule-2"
                   >
                     <div className="flex items-start justify-between gap-2.5">
@@ -333,7 +323,7 @@ export function Travel({ data }: { data: TravelData }) {
               <button
                 key={t.id}
                 type="button"
-                onClick={() => setParams({ trip: t.id, new: null })}
+                onClick={() => setParams({ trip: t.id, new: null }, { push: true })}
                 className="grid w-full grid-cols-[1fr_auto] gap-2.5 border-b border-rule py-2.5 text-left text-ink transition-colors duration-150 hover:text-brand"
               >
                 <span className="min-w-0 text-[13px]">
@@ -352,7 +342,7 @@ export function Travel({ data }: { data: TravelData }) {
             {wishlist.length === 0 && <p className="py-2.5 text-[12px] text-ink-4">Nothing yet. Add to wishlist keeps a place for later.</p>}
             {wishlist.map((w) => (
               <div key={w.id} className="grid grid-cols-[1fr_auto] items-center gap-2.5 border-b border-rule py-2.5">
-                <button type="button" onClick={() => setParams({ trip: w.id, new: null })} className="min-w-0 text-left text-[13px] text-ink hover:text-brand">
+                <button type="button" onClick={() => setParams({ trip: w.id, new: null }, { push: true })} className="min-w-0 text-left text-[13px] text-ink hover:text-brand">
                   <span className="block">{w.name}</span>
                   {w.notes && <span className="mt-0.5 block text-[11px] text-ink-3">{w.notes}</span>}
                 </button>

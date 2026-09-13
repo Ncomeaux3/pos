@@ -1,8 +1,8 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
 import { useTransition } from 'react'
 import { ActionButton, BandSearch, SearchButton, useToast } from '@/components/pos'
+import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
 import { KINDS, ago, finishedOn, folderLabel, subLine } from '../shape'
 import type { ActionResult } from './actions'
@@ -41,23 +41,12 @@ export const isFinished = (n: BrainNote) =>
   n.status === 'published' && (n.kind === 'book' || n.kind === 'article')
 
 export function Brain({ data }: { data: BrainData }) {
-  const router = useRouter()
-  const params = useSearchParams()
+  const { params, set: setParams } = useSearchState()
   const toast = useToast()
   const [, start] = useTransition()
 
   const folder = params.get('folder') ?? 'inbox'
   const ingestOpen = params.get('ingest') === '1'
-
-  const setParams: SetParams = (next) => {
-    const search = new URLSearchParams(params.toString())
-    for (const [key, value] of Object.entries(next)) {
-      if (value === null) search.delete(key)
-      else search.set(key, value)
-    }
-    const query = search.toString()
-    router.replace(query ? `?${query}` : '?', { scroll: false })
-  }
 
   const run = (action: () => Promise<ActionResult>, ok?: string) =>
     start(async () => {
@@ -118,7 +107,7 @@ export function Brain({ data }: { data: BrainData }) {
             variant="solid"
             size="xl"
             className="h-11 gap-2 px-3.5 text-[13px] md:h-[51px] md:px-[22px] md:text-[15px]"
-            onClick={() => setParams({ ingest: '1' })}
+            onClick={() => setParams({ ingest: '1' }, { push: true })}
           >
             Ingest <span aria-hidden="true">&rarr;</span>
           </ActionButton>

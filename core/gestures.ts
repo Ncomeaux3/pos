@@ -57,3 +57,16 @@ export const LONG_PRESS_SLOP = 10
 export function isLongPress(heldMs: number, dx: number, dy: number): boolean {
   return heldMs >= LONG_PRESS_MS && Math.abs(dx) < LONG_PRESS_SLOP && Math.abs(dy) < LONG_PRESS_SLOP
 }
+
+/**
+ * The strip along the left edge that belongs to swipe-back.
+ *
+ * A swipe that starts here is never a segment change or a task completion. An
+ * installed PWA on iOS has no browser edge gesture of its own, so the app draws
+ * the back control and, from Phase 2, owns the drag that mirrors it.
+ */
+export const EDGE_PX = 20
+
+export function fromEdge(x: number): boolean {
+  return x <= EDGE_PX
+}

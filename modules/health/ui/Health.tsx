@@ -1,9 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { ActionButton, Eyebrow, useToast } from '@/components/pos'
+import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
 import { dueOn, screeningStatus, type ScreeningStatus } from '../screening'
 import { completeScreening, markMedication, snoozeScreening, type ActionResult } from './actions'
@@ -134,17 +134,7 @@ export const accentOutline =
   'inline-flex h-[34px] shrink-0 items-center whitespace-nowrap border border-brand px-[13px] text-[12px] text-brand transition-colors duration-150 hover:bg-brand hover:text-white'
 
 function useParams() {
-  const router = useRouter()
-  const params = useSearchParams()
-  const setParams = (next: Record<string, string | null>) => {
-    const search = new URLSearchParams(params.toString())
-    for (const [key, value] of Object.entries(next)) {
-      if (value === null) search.delete(key)
-      else search.set(key, value)
-    }
-    const query = search.toString()
-    router.replace(query ? `?${query}` : '?', { scroll: false })
-  }
+  const { params, set: setParams } = useSearchState()
   return { params, setParams }
 }
 
@@ -152,7 +142,7 @@ function useParams() {
 export function LogVisitButton() {
   const { setParams } = useParams()
   return (
-    <ActionButton variant="accent" className="h-10 px-4 text-[13px]" onClick={() => setParams({ new: '1', appt: null, record: null })}>
+    <ActionButton variant="accent" className="h-10 px-4 text-[13px]" onClick={() => setParams({ new: '1', appt: null, record: null }, { push: true })}>
       Log a visit
     </ActionButton>
   )
@@ -243,7 +233,7 @@ export function Health({ data }: { data: HealthData }) {
               <button
                 key={a.id}
                 type="button"
-                onClick={() => setParams({ appt: a.id, record: null, new: null })}
+                onClick={() => setParams({ appt: a.id, record: null, new: null }, { push: true })}
                 className={cn(
                   'mt-2.5 flex w-full flex-wrap items-center gap-3 gap-x-4 border bg-bg-elev p-4 text-left transition-colors duration-150 hover:border-ink',
                   held ? 'border-warn' : 'border-rule-2',
@@ -362,7 +352,7 @@ export function Health({ data }: { data: HealthData }) {
             <button
               key={r.id}
               type="button"
-              onClick={() => setParams({ record: r.id, appt: null, new: null })}
+              onClick={() => setParams({ record: r.id, appt: null, new: null }, { push: true })}
               className="flex w-full flex-wrap items-center gap-3 gap-x-3.5 border-b border-rule px-3 py-[15px] text-left transition-colors duration-150 hover:bg-brand-soft"
             >
               <span className="min-w-0 flex-[1_1_200px]">
@@ -421,7 +411,7 @@ export function Health({ data }: { data: HealthData }) {
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {state === 'scheduled' ? (
-                    <button type="button" className={accentOutline} onClick={() => setParams({ appt: booked!.id, record: null, new: null })}>
+                    <button type="button" className={accentOutline} onClick={() => setParams({ appt: booked!.id, record: null, new: null }, { push: true })}>
                       View appointment
                     </button>
                   ) : (

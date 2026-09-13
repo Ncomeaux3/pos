@@ -1,7 +1,7 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useMemo, useState, useTransition } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { useMemo, useOptimistic, useState, useTransition } from 'react'
 import { ActionButton, EmptyState, TabBar, useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { parseQuickAdd } from '../quickadd'
@@ -15,6 +15,7 @@ import {
   type View,
 } from '../shape'
 import { useSwipe } from '@/components/pos/gestures'
+import { useSearchState } from '@/components/pos/searchState'
 import { approveTask, completeTask, deleteTask, writeTask, type ActionResult } from './actions'
 import { Calendar } from './Calendar'
 import { TaskDrawer } from './TaskDrawer'
@@ -64,7 +65,7 @@ export function BoardCrumb() {
 }
 
 export function Board({
-  tasks,
+  tasks: serverTasks,
   projects,
   goals,
   reminderChannels,
@@ -80,20 +81,15 @@ export function Board({
   // a refresh, they can be linked to, and it is what lets a screenshot of
   // "By project" actually be one: the theme switch reloads the page, and
   // client state does not come back.
-  const router = useRouter()
-  const params = useSearchParams()
+  const { params, set: setParams } = useSearchState()
   const { view, calendar: showCalendar } = useView()
   const drawer = params.get('task')
 
-  const setParams = (next: Record<string, string | null>) => {
-    const search = new URLSearchParams(params.toString())
-    for (const [key, value] of Object.entries(next)) {
-      if (value === null) search.delete(key)
-      else search.set(key, value)
-    }
-    const query = search.toString()
-    router.replace(query ? `?${query}` : '?', { scroll: false })
-  }
+  // A completed task reads as done the moment the box is ticked or the row is
+  // swiped, and the server's answer replaces the guess when it lands.
+  const [tasks, flip] = useOptimistic(serverTasks, (state, patch: { id: string; done: boolean }) =>
+    state.map((t) => (t.id === patch.id ? { ...t, status: patch.done ? 'done' : 'open' } : t)),
+  )
 
   // The expanded row rides in the URL with the view and the drawer, for the
   // same reason: a screenshot of an open row has to survive a reload.
@@ -142,7 +138,7 @@ export function Board({
     return patch
   }
 
-  const openDrawer = (id: string) => setParams({ task: id })
+  const openDrawer = (id: string) => setParams({ task: id }, { push: true })
   const remove = (task: Task) => {
     if (!window.confirm(`Delete "${task.title}"?`)) return
     setParams({ open: null, task: null })
@@ -159,7 +155,7 @@ export function Board({
         projects={projects.map((p) => p.name)}
         today={today}
         onSave={run}
-        onNew={() => setParams({ task: 'new' })}
+        onNew={() => setParams({ task: 'new' }, { push: true })}
       />
 
       <TabBar
@@ -277,9 +273,13 @@ export function Board({
                             // An agent's task is approved before it is done; the
                             // box opens the row so Approve is in reach.
                             if (task.status === 'review') return setExpanded(task.id)
+                            const done = task.status !== 'done'
                             run(
-                              () => completeTask(task.id, task.status !== 'done'),
-                              task.status === 'done' ? 'Reopened' : `Done. ${task.title}`,
+                              () => {
+                                flip({ id: task.id, done })
+                                return completeTask(task.id, done)
+                              },
+                              done ? `Done. ${task.title}` : 'Reopened',
                             )
                           }}
                           onApprove={() => run(() => approveTask(task.id), 'Approved')}
@@ -372,153 +372,170 @@ function Row({
   // Swipe right to complete, swipe left to reopen: the gesture every task app
   // has, and the reason the checkbox does not have to be hit exactly with a
   // thumb. Touch only, so a mouse drag over the text still selects it.
+  // The card follows the finger up to 80px in the direction that means
+  // something, with the word it is about to earn showing behind it.
+  const [dx, setDx] = useState(0)
   const swipe = useSwipe({
     onRight: () => !done && onComplete(),
     onLeft: () => done && onComplete(),
+    onMove: (d) => setDx(done ? Math.max(-80, Math.min(0, d)) : Math.max(0, Math.min(80, d))),
   })
 
   return (
-    <article
-      draggable={draggable}
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
-      {...swipe}
-      className={cn(
-        'border bg-bg p-2.5 transition-colors duration-150',
-        expanded ? 'border-rule-2' : 'border-rule',
-        draggable && 'cursor-grab active:cursor-grabbing',
-      )}
-    >
-      <div className="flex items-start gap-2.5">
-        <button
-          type="button"
-          onClick={onComplete}
-          title={agent ? 'Approve first' : done ? 'Reopen' : 'Complete'}
-          aria-label={done ? `Reopen ${task.title}` : `Complete ${task.title}`}
-          className={cn(
-            'mt-px flex size-4 shrink-0 items-center justify-center border transition-colors duration-150',
-            done
-              ? 'border-brand bg-brand'
-              : agent
-                ? 'border-dashed border-warn'
-                : 'border-ink-3 hover:border-brand',
-          )}
-        >
-          {done && <span className="block size-1.5 bg-bg" />}
-        </button>
-
-        <button
-          type="button"
-          onClick={onExpand}
-          onDoubleClick={onEdit}
-          title="Click: details · Double-click: edit"
-          aria-expanded={expanded}
-          className="min-w-0 flex-1 text-left"
-        >
-          <span
+    <div className="relative">
+      <span
+        aria-hidden="true"
+        className={cn(
+          'label absolute inset-y-0 flex w-20 items-center justify-center text-[10px] tracking-[0.12em] text-brand',
+          done ? 'right-0' : 'left-0',
+        )}
+      >
+        {done ? 'Reopen' : 'Done'}
+      </span>
+      <article
+        draggable={draggable}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        {...swipe}
+        style={{ transform: dx ? `translateX(${dx}px)` : undefined }}
+        className={cn(
+          'relative border bg-bg p-2.5 transition-colors duration-150 [touch-action:pan-y]',
+          !dx && 'transition-transform',
+          expanded ? 'border-rule-2' : 'border-rule',
+          draggable && 'cursor-grab active:cursor-grabbing',
+        )}
+      >
+        <div className="flex items-start gap-2.5">
+          <button
+            type="button"
+            onClick={onComplete}
+            title={agent ? 'Approve first' : done ? 'Reopen' : 'Complete'}
+            aria-label={done ? `Reopen ${task.title}` : `Complete ${task.title}`}
             className={cn(
-              'block text-[13px] leading-[1.35]',
-              done ? 'text-ink-3 line-through' : 'text-ink',
+              'mt-px flex size-4 shrink-0 items-center justify-center border transition-colors duration-150',
+              done
+                ? 'border-brand bg-brand'
+                : agent
+                  ? 'border-dashed border-warn'
+                  : 'border-ink-3 hover:border-brand',
             )}
           >
-            {task.title}
-          </span>
-          <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            {overdue && <Mark tone="bad">OVERDUE</Mark>}
-            {agent && <Mark tone="warn">AGENT · REVIEW</Mark>}
-            <span className={cn('num text-[10px]', priorityColor(task.priority))}>
-              {task.priority}
+            {done && <span className="block size-1.5 bg-bg" />}
+          </button>
+
+          <button
+            type="button"
+            onClick={onExpand}
+            onDoubleClick={onEdit}
+            title="Click: details · Double-click: edit"
+            aria-expanded={expanded}
+            className="min-w-0 flex-1 text-left"
+          >
+            <span
+              className={cn(
+                'block text-[13px] leading-[1.35]',
+                done ? 'text-ink-3 line-through' : 'text-ink',
+              )}
+            >
+              {task.title}
             </span>
-            <span className="num text-[10px] text-ink-3">
-              {dueLabel(task.dueInDays, today)}
-              {task.dueAt ? ` · ${task.dueAt}` : ''}
-            </span>
-            {remind && (
-              <span
-                title="Reminder"
-                className="num inline-flex items-center gap-[3px] whitespace-nowrap border border-rule-2 px-[5px] py-px text-[9px] tracking-[0.06em] text-ink-4"
-              >
-                ⏰ {remind}
+            <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              {overdue && <Mark tone="bad">OVERDUE</Mark>}
+              {agent && <Mark tone="warn">AGENT · REVIEW</Mark>}
+              <span className={cn('num text-[10px]', priorityColor(task.priority))}>
+                {task.priority}
               </span>
-            )}
-            {task.projectName && (
-              <span className="text-[10px] text-ink-3">#{task.projectName}</span>
-            )}
-            {task.estimateMinutes !== null && task.estimateMinutes > 0 && (
-              <span className="num text-[10px] text-ink-4">{task.estimateMinutes}m</span>
-            )}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={onEdit}
-          title="Edit task"
-          aria-label={`Edit ${task.title}`}
-          className="num shrink-0 border border-rule px-1.5 py-0.5 text-[9px] tracking-[0.08em] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink"
-        >
-          EDIT
-        </button>
-      </div>
-
-      {expanded && (
-        <div className="mt-2.5 flex flex-col gap-2 border-t border-rule pt-2.5 duration-150 animate-in fade-in">
-          {task.notes && <p className="text-[12px] leading-[1.5] text-ink-2">{task.notes}</p>}
-          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-ink-3">
-            <span>
-              Goal: <span className="text-ink-2">{task.goalTitle ?? 'none'}</span>
-            </span>
-            <span>
-              Skills:{' '}
-              <span className="text-ink-2">
-                {task.skills.length === 0
-                  ? 'none'
-                  : task.skills
-                      .map((s) =>
-                        s.by === 'manual' ? s.name : `${s.name} ${Math.round(s.confidence * 100)}%`,
-                      )
-                      .join(', ')}
-              </span>{' '}
-              {task.skills.length > 0 && (
+              <span className="num text-[10px] text-ink-3">
+                {dueLabel(task.dueInDays, today)}
+                {task.dueAt ? ` · ${task.dueAt}` : ''}
+              </span>
+              {remind && (
                 <span
-                  className={cn(
-                    'num',
-                    by === 'manual' ? 'text-warn' : by === 'model' ? 'text-ink-4' : 'text-ok',
-                  )}
+                  title="Reminder"
+                  className="num inline-flex items-center gap-[3px] whitespace-nowrap border border-rule-2 px-[5px] py-px text-[9px] tracking-[0.06em] text-ink-4"
                 >
-                  {by.toUpperCase()}
+                  ⏰ {remind}
                 </span>
               )}
+              {task.projectName && (
+                <span className="text-[10px] text-ink-3">#{task.projectName}</span>
+              )}
+              {task.estimateMinutes !== null && task.estimateMinutes > 0 && (
+                <span className="num text-[10px] text-ink-4">{task.estimateMinutes}m</span>
+              )}
             </span>
-            <span>
-              Source: <span className="text-ink-2">{task.source}</span>
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            <button type="button" onClick={onEdit} className={miniAccent}>
-              Edit
-            </button>
-            {agent && (
-              <button type="button" onClick={onApprove} className={miniAccent}>
-                Approve
-              </button>
-            )}
-            {moves.map((m) => (
-              <button key={m.label} type="button" onClick={m.go} className={mini}>
-                → {m.label}
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={onDelete}
-              className={cn(mini, 'ml-auto hover:border-bad hover:text-bad')}
-            >
-              Delete
-            </button>
-          </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={onEdit}
+            title="Edit task"
+            aria-label={`Edit ${task.title}`}
+            className="num shrink-0 border border-rule px-1.5 py-0.5 text-[9px] tracking-[0.08em] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink"
+          >
+            EDIT
+          </button>
         </div>
-      )}
-    </article>
+
+        {expanded && (
+          <div className="mt-2.5 flex flex-col gap-2 border-t border-rule pt-2.5 duration-150 animate-in fade-in">
+            {task.notes && <p className="text-[12px] leading-[1.5] text-ink-2">{task.notes}</p>}
+            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-ink-3">
+              <span>
+                Goal: <span className="text-ink-2">{task.goalTitle ?? 'none'}</span>
+              </span>
+              <span>
+                Skills:{' '}
+                <span className="text-ink-2">
+                  {task.skills.length === 0
+                    ? 'none'
+                    : task.skills
+                        .map((s) =>
+                          s.by === 'manual' ? s.name : `${s.name} ${Math.round(s.confidence * 100)}%`,
+                        )
+                        .join(', ')}
+                </span>{' '}
+                {task.skills.length > 0 && (
+                  <span
+                    className={cn(
+                      'num',
+                      by === 'manual' ? 'text-warn' : by === 'model' ? 'text-ink-4' : 'text-ok',
+                    )}
+                  >
+                    {by.toUpperCase()}
+                  </span>
+                )}
+              </span>
+              <span>
+                Source: <span className="text-ink-2">{task.source}</span>
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <button type="button" onClick={onEdit} className={miniAccent}>
+                Edit
+              </button>
+              {agent && (
+                <button type="button" onClick={onApprove} className={miniAccent}>
+                  Approve
+                </button>
+              )}
+              {moves.map((m) => (
+                <button key={m.label} type="button" onClick={m.go} className={mini}>
+                  → {m.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={onDelete}
+                className={cn(mini, 'ml-auto hover:border-bad hover:text-bad')}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        )}
+      </article>
+    </div>
   )
 }
 

@@ -240,7 +240,7 @@ const NAV_ICON: Record<string, LucideIcon> = {
 }
 
 /**
- * Below 720px the sidebar is a bottom tab bar: the first four nav entries plus
+ * Below 768px the sidebar is a bottom tab bar: the first four nav entries plus
  * More, which opens the rest. Same list, same order, same badge.
  *
  * Measured off PosPhone.dc.html: 56px rows on `8px 6px 26px` padding, an 18px
@@ -265,7 +265,7 @@ export function MobileTabBar({
   return (
     <nav
       aria-label="Sections"
-      className="fixed inset-x-0 bottom-0 z-40 flex border-t border-rule-2 bg-bg-elev px-1.5 pb-[26px] pt-2 md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 flex border-t border-rule-2 bg-bg-elev px-1.5 pb-[var(--inset-b)] pt-2 md:hidden"
     >
       {primary.map((item, i) => (
         <Link
@@ -300,7 +300,7 @@ export function MobileTabBar({
           <span className="label text-[9px] tracking-[0.08em]">More</span>
         </summary>
 
-        <div className="fixed inset-x-0 bottom-[90px] z-50 max-h-[70dvh] overflow-y-auto border-t border-rule-2 bg-bg-elev px-[18px] pb-5 pt-3.5">
+        <div className="fixed inset-x-0 bottom-[var(--tabbar)] z-50 max-h-[70dvh] overflow-y-auto border-t border-rule-2 bg-bg-elev px-[18px] pb-5 pt-3.5">
           <span className="mx-auto mb-3.5 block h-1 w-[38px] rounded-full bg-rule-2" aria-hidden />
           <div className="mb-3 flex items-baseline justify-between gap-3">
             <span className="eyebrow text-ink-3">All modules</span>
