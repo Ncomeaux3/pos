@@ -69,7 +69,7 @@ names the phase it unblocks.
 | 1 | Hygiene and the production login fix | low | 4, 5, 6 | PR open | #13 |
 | 2 | Production live: first real nightly | low (code), owner-heavy | 4, 5, 6 | Blocked on owner steps 2 to 7 | |
 | 3 | Strava, vault, SimpleFIN connected and syncing nightly | low | 4, 5, 6 | Blocked on 2 and owner steps 11 to 13 | |
-| 4 | Health Auto Export webhook writes body metrics | medium | 1, 5, 6 | PR open | #17 |
+| 4 | Health Auto Export webhook writes body metrics | medium | 1, 5, 6 | Done 2026-09-13 (#17); widened to workouts and sixteen metrics the same day, see Phase 4b | #17 |
 | 5 | Cron-silence check | low | 1, 4, 6 | Done 2026-09-12: red and green paths proven on the real workflow | |
 | 6 | PR #10 skill tree zoom finished and merged | medium | 1, 4, 5 | #10 merged 2026-09-12; the re-checks continue on `fix/skill-tree-zoom` | #10 |
 
@@ -195,6 +195,29 @@ are confirmed; `weight_body_mass`, `heart_rate_variability`,
 `body_fat_percentage` and the sleep field `totalSleep` are still verify, so the
 first real export may need a one-line rename in `client.ts`. Follow-up outside
 this phase: Fitness > Body labels HRV "bpm" where the unit is ms.
+
+### Phase 4b: everything Apple Health sends
+
+Added 2026-09-13. The owner chose not to register a Strava app and to take
+workouts and every daily reading from Apple Health instead. Bounded change on
+the Phase 4 flow: `toWorkouts()` beside `toBodyMetrics()` in the same
+import-free client, `fitness.inbound` upserting workouts on `(source,
+external_id)` and registering `workout_logged` on first insert only, one
+migration widening `body_metric.kind` by eleven, labels and units on Fitness >
+Body, and a Copy button plus a wrapping URL on the Connections card because the
+inbound URL was cut off on the phone.
+
+Tasks:
+- [x] `integrations/health_auto_export/client.test.ts`: units for every new kind, per-day summing of totals versus last reading of levels, v2 workout fields, kind by name, v1 skipped
+- [x] `modules/fitness/inbound.test.ts`: workout upsert corrects on re-send and emits once; v1 workout writes nothing
+- [x] `supabase/migrations/20260913201442_fitness_metric_kinds.sql`
+- [x] `integrations/health_auto_export/client.ts`, `modules/fitness/manifest.ts` (`inbound`, `log_metric` enum from `BODY_METRIC_KINDS`), `modules/fitness/ui/Fitness.tsx`
+- [x] `app/(app)/settings/connections/`: `Copy.tsx`, URL and secret each on their own line with Copy
+- [x] Docs: SETUP-INTEGRATIONS metrics list and workout paragraph, STATUS, this section
+
+Exit checks: `pnpm test`, `pnpm typecheck`, `pnpm lint`, the connections and fitness e2e screens at 402 and 1440, both screenshots read. Production proof still waits on owner step 14.
+
+---
 
 ### Phase 5: cron-silence check
 

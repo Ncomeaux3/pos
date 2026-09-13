@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
-import { toBodyMetrics } from '@/integrations/health_auto_export/client'
+import { BODY_METRIC_KINDS, toBodyMetrics, toWorkouts } from '@/integrations/health_auto_export/client'
 import { coachReview } from './jobs/coach'
 import { syncStrava } from './jobs/sync-strava'
 import { nightlyDigest } from './jobs/nightly-digest'
@@ -99,9 +99,9 @@ export default defineModule({
 
     log_metric: defineTool({
       description:
-        'Record a body measurement. Weight in grams, sleep in minutes, heart rate in beats.',
+        'Record a body measurement. Weight in grams, sleep in minutes, heart rate in beats, distance in metres, percentages and VO2 max in tenths.',
       input: z.object({
-        kind: z.enum(['weight', 'resting_hr', 'hrv', 'sleep_minutes', 'body_fat']),
+        kind: z.enum(BODY_METRIC_KINDS),
         value: z.number(),
         measured_on: date.optional(),
       }),
@@ -349,6 +349,34 @@ export default defineModule({
              where fitness.body_metric.source <> 'manual'`,
           [m.kind, m.value, m.measuredOn],
         )
+      }
+      // Workouts the same way the Strava sync stores its activities: upserted
+      // on the app's id so a re-send corrects, registered so one earns XP,
+      // backdated to when it happened.
+      for (const w of toWorkouts(payload)) {
+        const { rows } = await db().query<{ id: string; title: string; started_at: Date; inserted: boolean }>(
+          `insert into fitness.workout
+             (name, kind, started_at, duration_s, distance_m, avg_hr, detail, source, external_id)
+           values ($1, $2, $3::timestamptz, $4, $5, $6, $7, 'health_auto_export', $8)
+           on conflict (source, external_id) do update
+             set name = excluded.name, kind = excluded.kind, started_at = excluded.started_at,
+                 duration_s = excluded.duration_s, distance_m = excluded.distance_m,
+                 avg_hr = excluded.avg_hr, detail = excluded.detail
+           returning id, name as title, started_at, (xmax = 0) as inserted`,
+          [w.name, w.kind, w.startedAt, w.durationS, w.distanceM, w.avgHr, w.detail, w.externalId],
+        )
+        await register({
+          module: 'fitness',
+          entityType: 'workout',
+          entityId: rows[0].id,
+          title: rows[0].title,
+          eventType: 'workout_logged',
+          // Postgres parsed the app's timestamp; JS Date would not reliably.
+          occurredAt: rows[0].started_at,
+          // A named event always emits, so a re-send would earn the XP twice.
+          // The entity still re-registers, which keeps its title current.
+          emit: rows[0].inserted,
+        })
       }
     },
   },

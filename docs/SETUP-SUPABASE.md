@@ -52,12 +52,15 @@ client component and never in the repo.
 
 **From the Connect button at the top of the dashboard:**
 
-- `DATABASE_URL` is the **Transaction pooler** string, on port `6543`
+- `DATABASE_URL` is a **pooler** string: the Transaction pooler on port
+  `6543`, or the Session pooler on port `5432`, which is what production has
+  run on since 2026-09-13 and what the backup workflow uses. Either one. The
+  user in both is `postgres.<project-ref>`, not `postgres`.
 
-Take the transaction pooler, not the direct connection. Vercel functions are
-short lived and open a connection each, which is exactly what that pooler is
-for; the direct connection is IPv6 only on the free tier and will simply fail to
-resolve from some networks.
+Take a pooler, not the direct connection. Vercel functions are short lived and
+open a connection each, which is exactly what a pooler is for; the direct
+connection is IPv6 only on the free tier and fails from Vercel (`ENOTFOUND`)
+and from most home networks (`EHOSTUNREACH`), both seen on 2026-09-13.
 
 The usual objection to transaction mode is that it does not support prepared
 statements. I checked: this app never names a query, so `pg` never prepares one.
@@ -173,11 +176,17 @@ link will not come back to the right place otherwise.
 
 ## 6. Bootstrap the owner
 
-With the production values in your environment, from the repo root:
+With the production values in `.env.production`, from the repo root:
 
 ```bash
-pnpm setup
+pnpm tsx --env-file=.env.production scripts/setup.ts
 ```
+
+`pnpm setup` itself is pinned to `.env`, which is the local stack, so the
+script is called directly with the production file. It refuses to start if any
+key from `.env.example` is blank, and it needs the legacy `service_role` JWT
+(Project Settings > API Keys > Legacy tab), not an `sb_secret_` key, for the
+Auth admin call that creates the owner.
 
 This is idempotent and safe to re-run. It creates the owner user from
 `OWNER_EMAIL`, seeds `core.settings`, and writes the XP weights. It does not

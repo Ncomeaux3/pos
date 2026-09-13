@@ -20,7 +20,7 @@ Every card runs its own Test on save and tells you what it saw.
 | **Strava** | oauth2 | free | **Client and sync job built. Needs your app registration.** |
 | **Obsidian vault** | token | free | **Client built. Needs a repo and a token.** |
 | **SimpleFIN** | token | ~$1.50/mo | **Client, real Test and nightly sync built. Needs a bridge subscription.** |
-| **Health Auto Export** | webhook | paid iOS app | **Webhook writes body metrics. Needs the app and one paste.** |
+| **Health Auto Export** | webhook | paid iOS app | **Webhook writes workouts and sixteen body metrics. Needs the app and one paste.** |
 
 Everything in bold has a client and a real Test button. None of them is
 connected, because each needs an account only you have.
@@ -231,10 +231,13 @@ screen; net worth is a plain sum either way.
 
 ## Health Auto Export
 
-**Buys you:** weight, resting heart rate, heart rate variability, body fat and
-sleep from Apple Health, landing in `fitness.body_metric` on whatever schedule
-you give the app. Fitness > Body shows them, and a goal with a body metric
-source moves on its own.
+**Buys you:** workouts from Apple Health into `fitness.workout`, the same table
+and XP the Strava sync writes to, plus sixteen daily readings into
+`fitness.body_metric`: weight, resting heart rate, heart rate variability, body
+fat, sleep, steps, active energy, exercise minutes, stand hours, VO2 max, blood
+oxygen, respiratory rate, flights climbed, walking distance, walking heart rate
+and average heart rate. Fitness > Body shows the readings, Fitness > Workouts
+the workouts, and a goal with a body metric source moves on its own.
 
 The app is a paid iOS app (healthyapps.dev). It reads Apple Health on the phone
 and posts JSON to a URL you give it. Nothing pulls: there is no Apple Health
@@ -243,15 +246,21 @@ API to call from a server.
 ### Connect
 
 1. **Settings > Connections > Health Auto Export**, Generate. The card shows
-   the inbound URL and a secret. Copy both.
+   the inbound URL and a secret, each with a Copy button.
 2. In the app, **Automations > New > REST API**. Paste the URL. Add a header
    named `x-pos-secret` with the secret as its value (the app's REST automation
    supports custom headers, per its help pages). Format JSON.
-3. Enable the metrics: Body Mass, Resting Heart Rate, Heart Rate Variability,
-   Body Fat Percentage, Sleep Analysis (verify: these are the names on the
-   app's supported-data list, not checked in the app itself). Anything else is
-   accepted and ignored.
-4. Schedule daily. Run it once by hand.
+3. Enable Workouts (export version 2, the app's recommended one; the legacy
+   v1 shape has no id and writes nothing) and the metrics: Body Mass, Resting
+   Heart Rate, Heart Rate Variability, Body Fat Percentage, Sleep Analysis,
+   Step Count, Active Energy, Apple Exercise Time, Apple Stand Time, VO2 Max,
+   Blood Oxygen Saturation, Respiratory Rate, Flights Climbed, Walking +
+   Running Distance, Walking Heart Rate Average, Heart Rate (verify: these
+   are the names on the app's supported-data list, not checked in the app
+   itself). Anything else is accepted and ignored.
+4. Schedule daily, aggregated by day. Hourly buckets also work: a total such
+   as steps is summed across the day's buckets, a level such as blood oxygen
+   keeps the last reading. Run it once by hand.
 5. Back on the card, Test. It reads "Last payload received {date}" once the
    first post has landed.
 
@@ -263,9 +272,16 @@ row per metric per day on `(kind, measured_on)`. A second post for the same day
 corrects the first. A value you typed in by hand carries `source = 'manual'`
 and is never touched.
 
-Units are converted on the way in: pounds or kilograms to grams, percent to
-tenths, hours of sleep to minutes. Sleep is dated by the morning it ended. The
-day is the phone's local day, not UTC.
+Units are converted on the way in: pounds or kilograms to grams, miles or
+kilometres to metres, percentages and VO2 max to tenths, hours of sleep and
+exercise minutes to minutes. Sleep is dated by the morning it ended. The day is
+the phone's local day, not UTC.
+
+A workout upserts on the app's `id`, so a re-send corrects it and earns its
+`workout_logged` XP once. Its kind comes from the workout name by the same
+word rules the Strava sync uses (Running is a run, Cycling a ride, Traditional
+Strength Training strength, Yoga other). Distance, average heart rate and
+active energy are optional; routes and per-second series are not stored.
 
 The metric identifier strings the app sends are marked verify in
 `integrations/health_auto_export/client.ts` until one real export has been

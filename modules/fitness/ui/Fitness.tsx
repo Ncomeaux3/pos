@@ -93,7 +93,15 @@ const shortDate = (iso: string) => {
 function metricValue(kind: string, value: number): string {
   if (kind === 'weight') return mass(value)
   if (kind === 'sleep_minutes') return duration(value * 60)
-  if (kind === 'body_fat') return `${(value / 10).toFixed(1)}%`
+  if (kind === 'exercise_minutes') return duration(value * 60)
+  if (kind === 'walking_distance') return distance(value)
+  if (kind === 'body_fat' || kind === 'blood_oxygen') return `${(value / 10).toFixed(1)}%`
+  if (kind === 'vo2_max') return (value / 10).toFixed(1)
+  if (kind === 'respiratory_rate') return `${(value / 10).toFixed(1)} /min`
+  if (kind === 'hrv') return `${Math.round(value)} ms`
+  if (kind === 'active_energy') return `${Math.round(value)} kcal`
+  if (kind === 'stand_hours') return `${Math.round(value)} h`
+  if (kind === 'steps' || kind === 'flights_climbed') return Math.round(value).toLocaleString('en-US')
   return `${Math.round(value)} bpm`
 }
 
@@ -103,6 +111,23 @@ const METRIC_LABELS: Record<string, string> = {
   hrv: 'Heart rate variability',
   sleep_minutes: 'Sleep',
   body_fat: 'Body fat',
+  steps: 'Steps',
+  active_energy: 'Active energy',
+  exercise_minutes: 'Exercise',
+  stand_hours: 'Stand hours',
+  vo2_max: 'VO2 max',
+  blood_oxygen: 'Blood oxygen',
+  respiratory_rate: 'Respiratory rate',
+  flights_climbed: 'Flights climbed',
+  walking_distance: 'Walking distance',
+  walking_hr_avg: 'Walking heart rate',
+  heart_rate_avg: 'Average heart rate',
+}
+
+/** The labels' order, body first and the daily totals after, not the alphabet's. */
+const order = (kind: string) => {
+  const i = Object.keys(METRIC_LABELS).indexOf(kind)
+  return i === -1 ? Number.MAX_SAFE_INTEGER : i
 }
 
 export function Fitness({ data }: { data: FitnessData }) {
@@ -186,7 +211,7 @@ export function Fitness({ data }: { data: FitnessData }) {
           </EmptyState>
         ) : (
           <RowList>
-            {data.metrics.map((m) => (
+            {[...data.metrics].sort((a, b) => order(a.kind) - order(b.kind)).map((m) => (
               <Row
                 key={m.kind}
                 title={METRIC_LABELS[m.kind] ?? m.kind}
