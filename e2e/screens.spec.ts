@@ -182,8 +182,9 @@ test('dashboard, the week ahead and arranging the tiles', async ({ page }) => {
   // task from the Tasks module appears on a core screen without core reading
   // the tasks schema.
   await expect(page.getByText('Next 7 days')).toBeVisible()
-  // Dated by the module that owns it, not by core.
-  await expect(page.getByText('Pay the Amex statement')).toBeVisible()
+  // Dated by the module that owns it, not by core. The strip's entry is a
+  // link named by its day; the Tasks tile lists the same title as a button.
+  await expect(page.getByRole('link', { name: /Pay the Amex statement$/ })).toBeVisible()
 
   // Arrange lives in the header and the mode lives in the URL, which is what
   // lets the button be a link rather than a lifted piece of state.
