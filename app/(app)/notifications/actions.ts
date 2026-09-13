@@ -50,7 +50,6 @@ export async function snooze(id: string, days: number): Promise<ActionResult> {
  * setting, including agent_autonomy and the model spend cap.
  */
 const SCHEDULE_KEYS = [
-  'digest_morning_at',
   'digest_morning_enabled',
   'digest_evening_at',
   'digest_evening_enabled',

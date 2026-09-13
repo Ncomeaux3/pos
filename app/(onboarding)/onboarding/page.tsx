@@ -65,7 +65,6 @@ export default async function OnboardingPage() {
     // winter, same as the Review pass computes it.
     nightlyAt: nightlyRunAt(settings.timezone),
     schedule: {
-      morningAt: settings.digest_morning_at,
       morningEnabled: settings.digest_morning_enabled,
       eveningAt: settings.digest_evening_at,
       eveningEnabled: settings.digest_evening_enabled,
