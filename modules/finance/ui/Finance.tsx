@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useSyncExternalStore, useTransition, type ReactNode } from 'react'
+import { useState, useTransition, type ReactNode } from 'react'
 import {
   DataTable,
   DataRow,
@@ -18,6 +18,7 @@ import {
   useToast,
 } from '@/components/pos'
 import { useSearchState } from '@/components/pos/searchState'
+import { useIsPhone } from '@/components/pos/useIsPhone'
 import { cn } from '@/lib/utils'
 import {
   balance,
@@ -130,20 +131,6 @@ const overviewCard = 'border-rule px-5 py-3.5'
 /** Its rows: 9px, and the accent wash on hover. */
 const overviewRow = 'md:py-[9px] md:gap-y-0 hover:bg-brand-soft'
 
-/** True from md up. False on the server and on the first client render, so the
- * phone's segments are what hydrates; the desktop takes over on the pass after. */
-function useDesktop() {
-  return useSyncExternalStore(
-    (notify) => {
-      const mq = window.matchMedia('(min-width: 768px)')
-      mq.addEventListener('change', notify)
-      return () => mq.removeEventListener('change', notify)
-    },
-    () => window.matchMedia('(min-width: 768px)').matches,
-    () => false,
-  )
-}
-
 /** One cell of the KPI strip: eyebrow, 34px figure, an 11px tracked line. */
 function Kpi({
   label,
@@ -209,7 +196,7 @@ export function Finance({ data }: { data: FinanceData }) {
 
   // The desktop is the artboard's one page; the segments are the phone's,
   // from PosPhone, and the tab in the URL only means something there.
-  const desktop = useDesktop()
+  const desktop = !useIsPhone()
 
   return (
     <div className="space-y-5">

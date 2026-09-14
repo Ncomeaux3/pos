@@ -554,7 +554,17 @@ Browse), then Dashboard, Finance, Tasks and Goals phone passes. It supersedes
 the PosPhone shell rules above; the brand layer still holds. Phase 1 (speed and
 gestures) is built: a loading skeleton on every route, sheets that open on the
 next render, a task that reads done before the server answers, safe-area
-insets, pull to refresh, and Run now on both widths.
+insets, pull to refresh, and Run now on both widths. Phase 2 (the shell) is
+built: the tab bar is Home, Tasks, Finance, Browse, and Browse is a page
+(search, one row per module, then Review, Notifications, Agent log, Settings)
+in place of the More sheet; every screen below md has a back control off a
+tab root: PageHeader screens draw one row with it, the title and one action,
+and the five that draw their own band (Second Brain, Meals, Skill Tree,
+Travel, Weekly review) carry it in that band; `Segments` wraps a
+section row and the pane that swipes it (Meals first, Finance, Tasks and Goals
+in their own passes); a drag from the left edge past 90px goes back; the
+sheet's handle drags closed. Finance's Sync button is desktop only until Phase
+4; Fitness's is its phone action already. Phases 3 to 5 are next.
 
 See docs/plans/design-build.md.
 

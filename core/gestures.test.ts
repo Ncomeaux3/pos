@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { atTop, isLongPress, swipeOf, fromEdge } from './gestures'
+import { atTop, edgeBack, fromEdge, isLongPress, swipeOf } from './gestures'
 
 describe('swipeOf', () => {
   it('needs to travel before it is a swipe', () => {
@@ -63,5 +63,16 @@ describe('fromEdge', () => {
     expect(fromEdge(0)).toBe(true)
     expect(fromEdge(20)).toBe(true)
     expect(fromEdge(21)).toBe(false)
+  })
+})
+
+describe('edgeBack', () => {
+  it('fires past 90px from the edge, not from mid-screen', () => {
+    expect(edgeBack(10, 120, 0)).toBe(true)
+    expect(edgeBack(10, 60, 0)).toBe(false)
+    // The same drag from the middle of the screen is a segment swipe.
+    expect(edgeBack(180, 120, 0)).toBe(false)
+    // A mostly vertical drag from the edge is a scroll.
+    expect(edgeBack(10, 100, 300)).toBe(false)
   })
 })

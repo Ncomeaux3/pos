@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useSyncExternalStore, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useSyncExternalStore, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
+import { useSwipe } from './gestures'
 import { Eyebrow } from './text'
 
 /** Nothing to subscribe to: the value only ever differs between server and client. */
@@ -47,6 +48,10 @@ export function Overlay({
   children: ReactNode
 }) {
   const panel = useRef<HTMLDivElement>(null)
+  const headingId = useId()
+  // Dragging the sheet's handle down closes it, as every phone sheet does. On
+  // the handle and the band only: the body scrolls, and a pull there is that.
+  const drag = useSwipe({ onDown: onClose })
 
   // A portal cannot render on the server, and `typeof document === 'undefined'`
   // is a server/client branch: with the open state in the URL the server
@@ -94,9 +99,10 @@ export function Overlay({
         ref={panel}
         role="dialog"
         aria-modal="true"
-        aria-label={
-          typeof title === 'string' ? title : typeof eyebrow === 'string' ? eyebrow : undefined
-        }
+        // Named by its heading when it has one, so a title built from nodes
+        // still names the dialog; the eyebrow text is the fallback.
+        aria-labelledby={title !== undefined ? headingId : undefined}
+        aria-label={title === undefined && typeof eyebrow === 'string' ? eyebrow : undefined}
         tabIndex={-1}
         className={cn(
           'absolute flex flex-col bg-bg-elev outline-none',
@@ -113,25 +119,31 @@ export function Overlay({
             : 'md:bottom-0 md:left-0 md:max-h-[74vh] md:w-full md:rounded-t-xl md:border-t md:border-rule-2 md:slide-in-from-bottom',
         )}
       >
-        <div
-          aria-hidden
-          className={cn('mx-auto mt-2 h-1 w-[38px] rounded-full bg-rule-2', side === 'right' && 'md:hidden')}
-        />
+        <div className="shrink-0 [touch-action:none]" {...drag}>
+          <div
+            aria-hidden
+            className={cn('mx-auto mt-2 h-1 w-[38px] rounded-full bg-rule-2', side === 'right' && 'md:hidden')}
+          />
 
-        <div className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-rule px-[18px] md:px-6">
-          <div className="min-w-0 truncate">{eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}</div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="label shrink-0 border border-rule-2 px-[9px] py-[5px] text-[11px] tracking-[0.08em] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink"
-          >
-            Esc · close
-          </button>
+          <div className="flex h-14 items-center justify-between gap-4 border-b border-rule px-[18px] md:px-6">
+            <div className="min-w-0 truncate">{eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}</div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="label shrink-0 border border-rule-2 px-[9px] py-[5px] text-[11px] tracking-[0.08em] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink"
+            >
+              <span className="md:hidden">Close</span>
+              <span className="hidden md:inline">Esc · close</span>
+            </button>
+          </div>
         </div>
 
         {title !== undefined && (
           <div className="shrink-0 px-[18px] pt-[22px] md:px-6">
-            <h2 className="text-[20px] font-normal leading-none tracking-[-0.03em] text-ink md:text-[26px]">
+            <h2
+              id={headingId}
+              className="text-[20px] font-normal leading-none tracking-[-0.03em] text-ink md:text-[26px]"
+            >
               {title}
             </h2>
             {lede && <p className="mt-2 text-[13px] leading-[1.5] text-ink-3">{lede}</p>}

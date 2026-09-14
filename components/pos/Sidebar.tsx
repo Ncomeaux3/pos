@@ -5,6 +5,7 @@ import {
   Bell,
   Brain,
   CalendarCheck,
+  Compass,
   FileText,
   House,
   Inbox,
@@ -12,7 +13,6 @@ import {
   Lightbulb,
   LineChart,
   ListChecks,
-  MoreHorizontal,
   Network,
   Plane,
   ScrollText,
@@ -25,8 +25,9 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useRef, useTransition } from 'react'
+import { useTransition } from 'react'
 import type { NavItem } from '@/core/nav'
+import { phoneTabs } from '@/core/phone-tabs'
 import type { Theme } from '@/core/theme'
 import { cn } from '@/lib/utils'
 import { ComeauxverseMark } from './Logo'
@@ -216,8 +217,9 @@ export function Sidebar({
  * the bar reads as a table. Keyed by href so a module without an entry falls
  * back to its code rather than to a wrong picture.
  */
-const NAV_ICON: Record<string, LucideIcon> = {
+export const NAV_ICON: Record<string, LucideIcon> = {
   '/': LayoutGrid,
+  '/browse': Compass,
   '/finance': LineChart,
   '/tasks': ListChecks,
   '/fitness': Activity,
@@ -240,34 +242,23 @@ const NAV_ICON: Record<string, LucideIcon> = {
 }
 
 /**
- * Below 768px the sidebar is a bottom tab bar: the first four nav entries plus
- * More, which opens the rest. Same list, same order, same badge.
+ * Below 768px the sidebar is a bottom tab bar: Home, Tasks, Finance, Browse.
+ * Browse is a page listing the rest of the app; there is no More sheet.
  *
- * Measured off PosPhone.dc.html: 56px rows on `8px 6px 26px` padding, an 18px
- * glyph over a 9px label, accent for the current tab. The 26px at the bottom
- * is the home indicator's, and without it the labels sat on the very edge of
- * the screen under it.
+ * Measured off PosPhone.dc.html: 56px rows on `8px 6px` padding, an 18px
+ * glyph over a 9px label, accent for the current tab. The bottom inset is the
+ * home indicator's, and without it the labels sat on the very edge of the
+ * screen under it.
  */
-export function MobileTabBar({
-  nav,
-  footer,
-  reviewCount,
-}: {
-  nav: NavItem[]
-  footer: NavItem[]
-  reviewCount: number
-}) {
+export function MobileTabBar({ nav, reviewCount }: { nav: NavItem[]; reviewCount: number }) {
   const pathname = usePathname()
-  const primary = phoneTabs(nav)
-  const rest = [...nav.filter((n) => !primary.includes(n)), ...footer]
-  const sheet = useRef<HTMLDetailsElement>(null)
 
   return (
     <nav
       aria-label="Sections"
       className="fixed inset-x-0 bottom-0 z-40 flex border-t border-rule-2 bg-bg-elev px-1.5 pb-[var(--inset-b)] pt-2 md:hidden"
     >
-      {primary.map((item, i) => (
+      {phoneTabs(nav).map((item, i) => (
         <Link
           key={item.href}
           href={item.href}
@@ -286,68 +277,8 @@ export function MobileTabBar({
           </span>
         </Link>
       ))}
-
-      {/* A sheet, as the artboard has it: full width above the bar, a grab
-        * handle, and the rest of the app as numbered cards two across. It was
-        * a 78vw box in the corner with a list of plain links in it.
-        *
-        * Still a `details`, so More opens with no javascript, and the artboard's
-        * scrim is what that costs: nothing can close a sheet it has no way to
-        * toggle. Tapping More again closes it either way. */}
-      <details ref={sheet} className="group flex-1 [&_summary::-webkit-details-marker]:hidden">
-        <summary className="flex min-h-[56px] cursor-pointer list-none flex-col items-center justify-center gap-[5px] px-0.5 py-1.5 text-ink-3 group-open:text-brand">
-          <MoreHorizontal size={18} strokeWidth={1.3} aria-hidden />
-          <span className="label text-[9px] tracking-[0.08em]">More</span>
-        </summary>
-
-        <div className="fixed inset-x-0 bottom-[var(--tabbar)] z-50 max-h-[70dvh] overflow-y-auto border-t border-rule-2 bg-bg-elev px-[18px] pb-5 pt-3.5">
-          <span className="mx-auto mb-3.5 block h-1 w-[38px] rounded-full bg-rule-2" aria-hidden />
-          <div className="mb-3 flex items-baseline justify-between gap-3">
-            <span className="eyebrow text-ink-3">All modules</span>
-            <button
-              type="button"
-              onClick={() => sheet.current?.removeAttribute('open')}
-              className="label text-[10px] tracking-[0.12em] text-ink-3 hover:text-ink"
-            >
-              Close
-            </button>
-          </div>
-          <div className="grid grid-cols-2 gap-2.5">
-            {rest.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex min-h-[76px] flex-col justify-end gap-1.5 border border-rule-2 bg-bg px-3.5 py-4 hover:border-ink-4"
-              >
-                <span className="label text-[9px] tracking-[0.12em] text-brand">{item.code}</span>
-                <span className="text-[14px] text-ink">{item.label}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </details>
     </nav>
   )
-}
-
-/**
- * The four the phone gets, by name rather than by nav order.
- *
- * The design plan names them: Home, Finance, Tasks, Fitness. `nav.slice(0, 4)`
- * gave whatever manifest order produced, which is Dashboard, Finance, Notes and
- * Skill Tree here, so two of the four thumb-reachable tabs were screens nobody
- * opens on a phone. Filtered against the nav rather than hardcoded into it, so
- * a module the owner has disabled drops out and the list tops up in nav order
- * instead of leaving a hole.
- */
-const PHONE_TABS = ['/', '/finance', '/tasks', '/fitness']
-
-function phoneTabs(nav: NavItem[]): NavItem[] {
-  const wanted = PHONE_TABS.map((href) => nav.find((n) => n.href === href)).filter(
-    (n): n is NavItem => n !== undefined,
-  )
-  const spare = nav.filter((n) => !wanted.includes(n))
-  return [...wanted, ...spare].slice(0, 4)
 }
 
 /** The tab's glyph, or its code when this repo has no icon for that route. */

@@ -70,7 +70,7 @@ export async function getOffRailNav(): Promise<NavItem[]> {
     .map((m) => ({ href: `/${m.id}`, label: m.nav.label, code: '··' }))
 }
 
-/** The sidebar footer, and the source of the mobile More sheet's second half. */
+/** The sidebar footer. The phone reaches these through Browse and the palette. */
 export const NAV_FOOTER: NavItem[] = [
   { href: '/search', label: 'Search', code: '⌘K' },
   { href: '/weekly-review', label: 'Weekly review', code: 'WK' },
