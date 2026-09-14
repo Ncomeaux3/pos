@@ -234,7 +234,26 @@ test('skill tree, constellation and the selected skill panel', async ({ page }) 
     expect(pips.length).toBeGreaterThan(2)
     for (const label of pips) expect(label.trim().length).toBeLessThanOrEqual(6)
     await expect(canvas.getByText('Double-click: zoom')).toBeVisible()
+    // The sky and its columns end where the window does. The page ran 20px
+    // over once, and that was the whole reason the columns needed a scroll.
+    const [scrollHeight, innerHeight] = await page.evaluate(() => [
+      document.documentElement.scrollHeight,
+      window.innerHeight,
+    ])
+    expect(scrollHeight).toBe(innerHeight)
+  } else {
+    // The first phone screen is the tree and its four columns: the columns
+    // end above the tab bar without a scroll.
+    const [columnsBottom, tabBarTop] = await page.evaluate(() => [
+      document.querySelector('[data-testid="skill-tree-canvas-pane"] > div:last-child')!.getBoundingClientRect().bottom,
+      document.querySelector('nav.fixed')!.getBoundingClientRect().top,
+    ])
+    expect(columnsBottom).toBeLessThanOrEqual(tabBarTop)
   }
+  // One nebula per attribute, inside the pan and zoom group so it moves with
+  // the tree rather than staying behind when the tree zooms away from it.
+  const attributeCount = await page.getByTestId('skill-pip-label').count()
+  await expect(page.locator('.skill-view circle[fill="url(#skill-neb)"]')).toHaveCount(attributeCount)
   await shoot(page, 'skills')
 
   // The demo seed classifies notes through the keyword rules, so Engineering
