@@ -107,21 +107,26 @@ export default async function FinancePage() {
     (b) => !b.isFixed && b.limitCents && (b.spentCents / b.limitCents) * 100 >= alertThreshold,
   ).length
 
+  // SyncBand's own reading (provider, last pull) is `hidden md:inline-flex`,
+  // so the same element used as the phone action shows the button alone.
+  const syncBand = (
+    <SyncBand
+      provider={sync.provider}
+      at={sync.at}
+      status={sync.status}
+      connected={sync.connected}
+      onSync={syncFinance}
+    />
+  )
+
   return (
     <div className="space-y-7">
       <PageHeader
         eyebrow="Finance / Overview"
         // The artboard puts the provider and the last pull in the first band,
         // beside the search, with the button that does it now.
-        status={
-          <SyncBand
-            provider={sync.provider}
-            at={sync.at}
-            status={sync.status}
-            connected={sync.connected}
-            onSync={syncFinance}
-          />
-        }
+        status={syncBand}
+        phoneAction={syncBand}
         title="Finance"
         lede="Balances, upcoming charges, and budgets. Synced nightly, amounts in USD."
         // A reading, not a button, so it stays off the phone's action slot.

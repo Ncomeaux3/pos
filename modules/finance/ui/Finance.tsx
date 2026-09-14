@@ -14,11 +14,10 @@ import {
   PaceBar,
   Row,
   RowList,
-  TabBar,
   useToast,
 } from '@/components/pos'
+import { Segments } from '@/components/pos/Segments'
 import { useSearchState } from '@/components/pos/searchState'
-import { useIsPhone } from '@/components/pos/useIsPhone'
 import { cn } from '@/lib/utils'
 import {
   balance,
@@ -154,9 +153,70 @@ function Kpi({
       >
         {value}
       </div>
-      <div className="label mt-2 truncate text-[11px] tracking-[0.06em] text-ink-3">{children}</div>
+      {/* Wraps on the phone, where a card is half the width and nothing may be cut. */}
+      <div className="label mt-2 text-[11px] tracking-[0.06em] text-ink-3 md:truncate">{children}</div>
     </div>
   )
+}
+
+/** The KPI strip's four cells: the phone's overview summary and the desktop's one-page dashboard share them. */
+function KpiStrip({
+  data,
+  hot,
+  upcomingTotal,
+  daysLeft,
+}: {
+  data: FinanceData
+  hot: FinanceData['budgets']
+  upcomingTotal: number
+  daysLeft: number
+}) {
+  return (
+    <>
+      <Kpi label="Net worth" value={balance(data.netWorthCents)}>
+        assets {money(data.assetsCents)} · debt {money(data.debtCents)}
+      </Kpi>
+      <Kpi
+        label="30-day change"
+        value={signedMoney(data.changeCents)}
+        tone={data.changeCents > 0 ? 'ok' : data.changeCents < 0 ? 'bad' : undefined}
+      >
+        {data.series.length > 1
+          ? `${data.changeCents >= 0 ? '+' : ''}${((data.changeCents / Math.max(1, Math.abs(data.series[0]))) * 100).toFixed(1)}% · from ${money(data.series[0])}`
+          : 'no history yet'}
+      </Kpi>
+      <Kpi label="Due in 14 days" value={money(upcomingTotal, true)}>
+        {data.upcoming.length > 0
+          ? `${data.upcoming.length} ${data.upcoming.length === 1 ? 'charge' : 'charges'} · next ${shortDate(data.upcoming[0].nextChargeOn)}`
+          : 'nothing booked'}
+      </Kpi>
+      <Kpi
+        label={`Budgets over ${data.alertThreshold}%`}
+        value={hot.length}
+        tone={hot.length > 0 ? 'warn' : undefined}
+      >
+        {hot.length > 0
+          ? `${hot.map((b) => b.name).join(' · ')} · ${daysLeft} days left`
+          : `all within limits · ${daysLeft} days left`}
+      </Kpi>
+    </>
+  )
+}
+
+/** The chart or its empty state: the phone's sparkline card and the desktop's chart card share this. */
+function NetWorthCard({ data }: { data: FinanceData }) {
+  if (data.series.length < 2) {
+    return (
+      <>
+        <CardHead label="Net worth · 30 days" meta="no history yet" />
+        <EmptyState headline="No history yet" className="mt-3 border-0">
+          The chart is built from one balance snapshot per account per night. It fills in
+          as the nightly job runs; a balance not recorded on the day is gone.
+        </EmptyState>
+      </>
+    )
+  }
+  return <NetWorthChart values={data.series} dates={data.seriesDates} />
 }
 
 export function Finance({ data }: { data: FinanceData }) {
@@ -194,388 +254,392 @@ export function Finance({ data }: { data: FinanceData }) {
     .filter((b) => b.limitCents)
     .reduce((t, b) => ({ spent: t.spent + b.spentCents, limit: t.limit + (b.limitCents ?? 0) }), { spent: 0, limit: 0 })
 
-  // The desktop is the artboard's one page; the segments are the phone's,
-  // from PosPhone, and the tab in the URL only means something there.
-  const desktop = !useIsPhone()
-
   return (
     <div className="space-y-5">
-      <TabBar
-        className="md:hidden"
-        label="Finance views"
-        value={tab}
-        onChange={(next) => setParams({ tab: next === 'overview' ? null : next })}
-        tabs={TABS.map((t) => ({
-          value: t.value,
-          label: t.label,
-          count:
-            t.value === 'accounts'
-              ? data.accounts.length
-              : t.value === 'subscriptions'
-                ? data.upcoming.length
-                : undefined,
-        }))}
-      />
+      <div className="md:hidden">
+        <Segments
+          label="Finance views"
+          value={tab}
+          onChange={(next) => setParams({ tab: next === 'overview' ? null : next })}
+          tabs={TABS.map((t) => ({
+            value: t.value,
+            label: t.label,
+            count:
+              t.value === 'accounts'
+                ? data.accounts.length
+                : t.value === 'subscriptions'
+                  ? data.upcoming.length
+                  : undefined,
+          }))}
+        >
+          {tab === 'overview' && (
+            <div className="mt-[18px] space-y-3.5">
+              <div className="grid grid-cols-2 gap-px border border-rule bg-rule">
+                <KpiStrip data={data} hot={hot} upcomingTotal={upcomingTotal} daysLeft={daysLeft} />
+              </div>
+              <Card className={cn(overviewCard, 'flex min-h-[260px] flex-col')}>
+                <NetWorthCard data={data} />
+              </Card>
+              <RowList>
+                <Row
+                  title="Accounts"
+                  meta={`${data.accounts.length} ${data.accounts.length === 1 ? 'account' : 'accounts'} · ${balance(data.netWorthCents)}`}
+                  onClick={() => setParams({ tab: 'accounts' })}
+                  right={<span aria-hidden="true" className="text-ink-3">&rarr;</span>}
+                />
+                <Row
+                  title="Budgets"
+                  meta={`${hot.length} over ${data.alertThreshold}% · ${money(budgetTotals.spent)} spent`}
+                  onClick={() => setParams({ tab: 'budgets' })}
+                  right={<span aria-hidden="true" className="text-ink-3">&rarr;</span>}
+                />
+                <Row
+                  title="Subscriptions"
+                  meta={`${data.upcoming.length} due in 14 days · ${money(upcomingTotal, true)}`}
+                  onClick={() => setParams({ tab: 'subscriptions' })}
+                  right={<span aria-hidden="true" className="text-ink-3">&rarr;</span>}
+                />
+              </RowList>
+            </div>
+          )}
 
-      {(tab === 'overview' || desktop) && (
-        <div className="space-y-3.5">
-          {/* POS Finance.dc.html: the whole picture on one page. Four cells on
-            * the page ground with 1px rules between, then accounts over the
-            * curve beside what is due over the budgets. The phone drills in
-            * through its segments; the desktop through the drawers. */}
-          <div
-            data-testid="finance-kpis"
-            className="grid grid-cols-2 gap-px border border-rule bg-rule sm:grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))]"
-          >
-            <Kpi label="Net worth" value={balance(data.netWorthCents)}>
-              assets {money(data.assetsCents)} · debt {money(data.debtCents)}
-            </Kpi>
-            <Kpi
-              label="30-day change"
-              value={signedMoney(data.changeCents)}
-              tone={data.changeCents > 0 ? 'ok' : data.changeCents < 0 ? 'bad' : undefined}
-            >
-              {data.series.length > 1
-                ? `${data.changeCents >= 0 ? '+' : ''}${((data.changeCents / Math.max(1, Math.abs(data.series[0]))) * 100).toFixed(1)}% · from ${money(data.series[0])}`
-                : 'no history yet'}
-            </Kpi>
-            <Kpi label="Due in 14 days" value={money(upcomingTotal, true)}>
-              {data.upcoming.length > 0
-                ? `${data.upcoming.length} ${data.upcoming.length === 1 ? 'charge' : 'charges'} · next ${shortDate(data.upcoming[0].nextChargeOn)}`
-                : 'nothing booked'}
-            </Kpi>
-            <Kpi
-              label={`Budgets over ${data.alertThreshold}%`}
-              value={hot.length}
-              tone={hot.length > 0 ? 'warn' : undefined}
-            >
-              {hot.length > 0
-                ? `${hot.map((b) => b.name).join(' · ')} · ${daysLeft} days left`
-                : `all within limits · ${daysLeft} days left`}
-            </Kpi>
-          </div>
-
-          <div className="grid items-start gap-3.5 lg:grid-cols-2">
-            <div className="flex min-w-0 flex-col gap-3.5 self-stretch">
-              <Card data-testid="finance-accounts" className={overviewCard}>
-                <CardHead label="Accounts" meta="share of assets" className="mb-1" />
-                <DataTable
-                  head={['Account', 'Institution', 'Balance', '30d', 'Share']}
-                  cols="minmax(0,1.3fr) minmax(0,1fr) minmax(0,.9fr) minmax(0,.7fr) minmax(0,1fr)"
-                >
-                  {data.accounts.map((a) => (
-                    <DataRow key={a.id} onClick={() => setParams({ account: a.id }, { push: true })} className={overviewRow}>
-                      <span className="min-w-0 truncate text-[13px] text-ink">
-                        {a.name}
-                        <span className="label ml-1.5 text-[10px] text-ink-4">{a.txCount} tx →</span>
-                      </span>
-                      <span className="truncate text-[13px] text-ink-3">{a.institution}</span>
-                      <span className="num text-right text-[13px] text-ink">{balance(a.balanceCents)}</span>
+          {tab === 'accounts' && (
+            <RowList className="mt-[18px]">
+              {data.accounts.map((a) => (
+                <Row
+                  key={a.id}
+                  title={a.name}
+                  meta={`${a.institution}${a.mask ? ` ${a.mask}` : ''} / ${a.txCount} transactions`}
+                  onClick={() => setParams({ account: a.id }, { push: true })}
+                  right={
+                    <>
+                      <span className="num text-[14px] text-ink">{balance(a.balanceCents)}</span>
                       <span
                         className={cn(
-                          'num text-right text-[13px]',
-                          a.changeCents === null || a.changeCents === 0
+                          'label text-[10px]',
+                          a.changeCents === null
                             ? 'text-ink-3'
                             : a.changeCents > 0
                               ? 'text-ok'
-                              : 'text-bad',
+                              : a.changeCents < 0
+                                ? 'text-bad'
+                                : 'text-ink-3',
                         )}
                       >
                         {/* Not tracked is not the same as no change, and must not
                             render as one. */}
-                        {a.changeCents === null ? 'new' : a.changeCents === 0 ? 'flat' : signedMoney(a.changeCents)}
+                        {a.changeCents === null ? 'new' : signedMoney(a.changeCents)}
                       </span>
-                      <span className="flex items-center justify-end gap-2">
-                        <span className="h-0.5 w-14 bg-rule-2" aria-hidden>
-                          <span className="block h-0.5 bg-brand" style={{ width: `${Math.max(0, Math.min(100, a.sharePercent))}%` }} />
-                        </span>
-                        <span className="num w-[34px] shrink-0 text-right text-[11px] text-ink-2">
-                          {a.balanceCents > 0 ? `${Math.round(a.sharePercent)}%` : '\u2014'}
-                        </span>
-                      </span>
-                    </DataRow>
-                  ))}
-                </DataTable>
-              </Card>
-
-              {/* The chart owns its own header, because the high, low and
-                * average belong beside the title rather than under the line.
-                * It takes the rest of the column's height, as drawn. */}
-              <Card className={cn(overviewCard, 'flex min-h-[340px] flex-1 flex-col')}>
-                {data.series.length < 2 ? (
-                  <>
-                    <CardHead label="Net worth · 30 days" meta="no history yet" />
-                    <EmptyState headline="No history yet" className="mt-3 border-0">
-                      The chart is built from one balance snapshot per account per night. It fills in
-                      as the nightly job runs; a balance not recorded on the day is gone.
-                    </EmptyState>
-                  </>
-                ) : (
-                  <NetWorthChart values={data.series} dates={data.seriesDates} />
-                )}
-              </Card>
-            </div>
-
-            <div className="flex min-w-0 flex-col gap-3.5">
-              <Card data-testid="finance-upcoming" className={overviewCard}>
-                <CardHead
-                  label="Upcoming · 14 days"
-                  meta={`${shortDate(data.todayIso)} → ${shortDate(plusDays(data.todayIso, 14))}`}
-                  className="mb-1"
-                />
-                {data.upcoming.length === 0 ? (
-                  <EmptyState headline="Nothing booked" className="border-0">
-                    No active subscription is due in the next fortnight.
-                  </EmptyState>
-                ) : (
-                  <DataTable head={['Date', 'Charge', 'Amount']} cols="82px minmax(0,1fr) auto">
-                    {data.upcoming.map((u) => (
-                      <DataRow key={u.id} className={cn(overviewRow, 'md:gap-x-3')}>
-                        <span className="num text-[12px] text-ink">
-                          {shortDate(u.nextChargeOn)}
-                          <span className="mt-0.5 block text-[10px] text-ink-3">
-                            {weekday(u.nextChargeOn)} · {inDays(data.todayIso, u.nextChargeOn)}
-                          </span>
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block truncate text-[13px] text-ink">{u.name}</span>
-                          <span className="mt-0.5 block truncate text-[11px] text-ink-3">
-                            Subscription · {u.cadence}
-                            {u.vendor ? ` · ${u.vendor}` : ''}
-                          </span>
-                        </span>
-                        <span className="flex items-center justify-end gap-2.5">
-                          <span className="num text-right text-[13px] text-ink">{money(u.amountCents, true)}</span>
-                          {/* Not on the artboard: cancel has no home there, and
-                              this is the one place a due charge is named. */}
-                          <button
-                            type="button"
-                            aria-label={`Cancel ${u.name}`}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              run(() => setSubscriptionStatus(u.id, 'cancelled'), `${u.name} cancelled`)
-                            }}
-                            className="label border border-rule-2 px-2 py-[3px] text-[10px] tracking-[0.08em] text-ink-3 transition-colors duration-150 hover:border-bad hover:text-bad"
-                          >
-                            Cancel
-                          </button>
-                        </span>
-                      </DataRow>
-                    ))}
-                    <DataRow className="border-b-0 md:gap-x-3 md:pb-0.5 md:pt-2.5">
-                      <span className="label text-[11px] text-ink-3">Total</span>
-                      <span className="text-[12px] text-ink-3">
-                        {data.upcoming.length} {data.upcoming.length === 1 ? 'charge' : 'charges'} ·{' '}
-                        {money(monthlySubscriptions, true)}/mo in subscriptions
-                      </span>
-                      <span className="num text-right text-[13px] text-ink">{money(upcomingTotal, true)}</span>
-                    </DataRow>
-                  </DataTable>
-                )}
-              </Card>
-
-              <Card data-testid="finance-budgets" className={cn(overviewCard, 'flex flex-col')}>
-                <div className="mb-1 flex items-center justify-between gap-3.5">
-                  <Eyebrow>Budgets · {monthLabel(data.todayIso)}</Eyebrow>
-                  <span className="flex items-center gap-3.5">
-                    <span className={cn('label text-[11px]', hot.length > 0 ? 'text-warn' : 'text-ink-3')}>
-                      {hot.length} over {data.alertThreshold}%
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setParams({ limits: '1' }, { push: true })}
-                      className="label border border-rule-2 px-2 py-1 text-[11px] tracking-[0.08em] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink"
-                    >
-                      Edit limits
-                    </button>
-                  </span>
-                </div>
-                {data.budgets.length === 0 ? (
-                  <EmptyState headline="No budgets" className="border-0">
-                    A budget is a limit on a category for this month. Set one with Edit limits.
-                  </EmptyState>
-                ) : (
-                  <>
-                    <DataTable head={['Category', 'Spent / limit', 'Used']} cols="minmax(0,1fr) auto 44px">
-                      {data.budgets.map((b) => {
-                        const used = b.limitCents ? (b.spentCents / b.limitCents) * 100 : null
-                        const over = used !== null && !b.isFixed && used >= data.alertThreshold
-                        const tone =
-                          used === null
-                            ? 'text-ink-3'
-                            : over && used >= 100
-                              ? 'text-bad'
-                              : over
-                                ? 'text-warn'
-                                : 'text-ink'
-                        return (
-                          <DataRow
-                            key={b.id}
-                            onClick={() => setParams({ budget: b.id }, { push: true })}
-                            className={cn(overviewRow, 'md:block md:py-1.5')}
-                          >
-                            <span className="grid items-baseline gap-x-3.5 md:grid-cols-[minmax(0,1fr)_auto_44px]">
-                              <span className="min-w-0 truncate text-[13px] text-ink">
-                                {b.name}
-                                {b.isFixed ? (
-                                  <span className="label ml-1.5 text-[10px] tracking-[0.08em] text-ink-4">Fixed</span>
-                                ) : over ? (
-                                  <span className="label ml-1.5 text-[10px] tracking-[0.08em] text-warn">
-                                    over {data.alertThreshold}%
-                                  </span>
-                                ) : null}
-                              </span>
-                              <span className="num text-[12px] text-ink-2">
-                                {money(b.spentCents)}{' '}
-                                <span className="text-ink-3">/ {b.limitCents ? money(b.limitCents) : 'no limit'}</span>
-                              </span>
-                              <span className={cn('num text-right text-[12px]', tone)}>
-                                {used === null ? '\u2014' : `${Math.round(used)}%`}
-                              </span>
-                            </span>
-                            <BudgetBar budget={b} pace={data.monthPace} threshold={data.alertThreshold} compact />
-                          </DataRow>
-                        )
-                      })}
-                    </DataTable>
-                    <div className="grid items-baseline gap-x-3.5 pt-2.5 md:grid-cols-[minmax(0,1fr)_auto_44px]">
-                      <span className="label text-[11px] text-ink-3">
-                        Total · <span className="text-ink-2">{money(Math.max(0, budgetTotals.limit - budgetTotals.spent))} left</span> ·
-                        pace mark at day {dayOfMonth(data.todayIso)}
-                      </span>
-                      <span className="num text-[12px] text-ink">
-                        {money(budgetTotals.spent)} <span className="text-ink-3">/ {money(budgetTotals.limit)}</span>
-                      </span>
-                      <span className="num text-right text-[12px] text-ink">
-                        {budgetTotals.limit > 0 ? `${Math.round((budgetTotals.spent / budgetTotals.limit) * 100)}%` : '\u2014'}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </Card>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {tab === 'accounts' && !desktop && (
-        <RowList>
-          {data.accounts.map((a) => (
-            <Row
-              key={a.id}
-              title={a.name}
-              meta={`${a.institution}${a.mask ? ` ${a.mask}` : ''} / ${a.txCount} transactions`}
-              onClick={() => setParams({ account: a.id }, { push: true })}
-              right={
-                <>
-                  <span className="num text-[14px] text-ink">{balance(a.balanceCents)}</span>
-                  <span
-                    className={cn(
-                      'label text-[10px]',
-                      a.changeCents === null
-                        ? 'text-ink-3'
-                        : a.changeCents > 0
-                          ? 'text-ok'
-                          : a.changeCents < 0
-                            ? 'text-bad'
-                            : 'text-ink-3',
-                    )}
-                  >
-                    {/* Not tracked is not the same as no change, and must not
-                        render as one. */}
-                    {a.changeCents === null ? 'new' : signedMoney(a.changeCents)}
-                  </span>
-                </>
-              }
-            >
-              {a.balanceCents > 0 && (
-                <div className="flex items-center gap-2.5">
-                  <PaceBar value={a.sharePercent} max={100} className="flex-1" />
-                  <span className="label w-9 shrink-0 text-right text-[10px] text-ink-3">
-                    {Math.round(a.sharePercent)}%
-                  </span>
-                </div>
-              )}
-            </Row>
-          ))}
-        </RowList>
-      )}
-
-      {tab === 'budgets' && !desktop && (
-        <div className="space-y-3">
-          <p className="t-caption text-ink-3">
-            The tick on each bar is where you would be if you spent evenly through the month. A
-            limit you set here applies to this month only, so raising one in March does not rewrite
-            what February was measured against.
-          </p>
-          {data.budgets.map((b) => (
-            <Card key={b.id} className="space-y-2.5">
-              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                <button
-                  type="button"
-                  onClick={() => setParams({ budget: b.id }, { push: true })}
-                  className="t-body text-left text-ink"
-                >
-                  {b.name}
-                </button>
-                <div className="flex items-center gap-2">
-                  {b.isFixed && <Chip tone="quiet">Fixed</Chip>}
-                  <span className="num text-[12px] text-ink-3">
-                    {money(b.spentCents)}
-                    {b.limitCents ? ` of ${money(b.limitCents)}` : ' spent, no limit'}
-                  </span>
-                </div>
-              </div>
-              <BudgetBar budget={b} pace={data.monthPace} threshold={data.alertThreshold} />
-              <p className="t-caption text-ink-3">{b.description}</p>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {tab === 'subscriptions' && !desktop && (
-        <div className="space-y-3">
-          {data.upcoming.length === 0 ? (
-            <EmptyState headline="Nothing detected">
-              A subscription is three charges from the same merchant, within ten percent of each
-              other, on a regular cadence. The nightly job promotes what it finds; two charges is a
-              coincidence, not a subscription.
-            </EmptyState>
-          ) : (
-            <RowList>
-              {data.upcoming.map((u) => (
-                <Row
-                  key={u.id}
-                  title={u.name}
-                  meta={`${u.vendor || 'No vendor'} / ${u.cadence} / next ${shortDate(u.nextChargeOn)}`}
-                  right={
-                    <>
-                      <span className="num text-[13px] text-ink">{money(u.amountCents, true)}</span>
-                      <ActionButton
-                        onClick={() =>
-                          run(() => setSubscriptionStatus(u.id, 'cancelled'), `Cancelled ${u.name}`)
-                        }
-                      >
-                        Cancel
-                      </ActionButton>
                     </>
                   }
-                />
+                >
+                  {a.balanceCents > 0 && (
+                    <div className="flex items-center gap-2.5">
+                      <PaceBar value={a.sharePercent} max={100} className="flex-1" />
+                      <span className="label w-9 shrink-0 text-right text-[10px] text-ink-3">
+                        {Math.round(a.sharePercent)}%
+                      </span>
+                    </div>
+                  )}
+                </Row>
               ))}
             </RowList>
           )}
-        </div>
-      )}
 
-      {tab === 'transactions' && !desktop && (
-        <TransactionList
-          transactions={data.transactions}
-          categories={data.budgets.map((b) => ({ id: b.id, name: b.name }))}
-          onRecategorise={(id, categoryId) =>
-            run(() => recategorise(id, categoryId), 'Filed, and the rule learned it')
-          }
-        />
-      )}
+          {tab === 'budgets' && (
+            <div className="mt-[18px] space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className={cn('label text-[11px]', hot.length > 0 ? 'text-warn' : 'text-ink-3')}>
+                  {hot.length} over {data.alertThreshold}%
+                </span>
+                {/* The same drawer the desktop card opens; the phone has no card head to hold it. */}
+                <button
+                  type="button"
+                  onClick={() => setParams({ limits: '1' }, { push: true })}
+                  className="label border border-rule-2 px-2 py-1 text-[11px] tracking-[0.08em] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink"
+                >
+                  Edit limits
+                </button>
+              </div>
+              <p className="t-caption text-ink-3">
+                The tick on each bar is where you would be if you spent evenly through the month. A
+                limit you set here applies to this month only, so raising one in March does not rewrite
+                what February was measured against.
+              </p>
+              {data.budgets.map((b) => (
+                <Card key={b.id} className="space-y-2.5">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                    <button
+                      type="button"
+                      onClick={() => setParams({ budget: b.id }, { push: true })}
+                      className="t-body text-left text-ink"
+                    >
+                      {b.name}
+                    </button>
+                    <div className="flex items-center gap-2">
+                      {b.isFixed && <Chip tone="quiet">Fixed</Chip>}
+                      <span className="num text-[12px] text-ink-3">
+                        {money(b.spentCents)}
+                        {b.limitCents ? ` of ${money(b.limitCents)}` : ' spent, no limit'}
+                      </span>
+                    </div>
+                  </div>
+                  <BudgetBar budget={b} pace={data.monthPace} threshold={data.alertThreshold} />
+                  <p className="t-caption text-ink-3">{b.description}</p>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {tab === 'subscriptions' && (
+            <div className="mt-[18px] space-y-3">
+              {data.upcoming.length === 0 ? (
+                <EmptyState headline="Nothing detected">
+                  A subscription is three charges from the same merchant, within ten percent of each
+                  other, on a regular cadence. The nightly job promotes what it finds; two charges is a
+                  coincidence, not a subscription.
+                </EmptyState>
+              ) : (
+                <RowList>
+                  {data.upcoming.map((u) => (
+                    <Row
+                      key={u.id}
+                      title={u.name}
+                      meta={`${u.vendor || 'No vendor'} / ${u.cadence} / next ${shortDate(u.nextChargeOn)}`}
+                      right={
+                        <>
+                          <span className="num text-[13px] text-ink">{money(u.amountCents, true)}</span>
+                          <ActionButton
+                            onClick={() =>
+                              run(() => setSubscriptionStatus(u.id, 'cancelled'), `Cancelled ${u.name}`)
+                            }
+                          >
+                            Cancel
+                          </ActionButton>
+                        </>
+                      }
+                    />
+                  ))}
+                </RowList>
+              )}
+            </div>
+          )}
+
+          {tab === 'transactions' && (
+            <TransactionList
+              transactions={data.transactions}
+              categories={data.budgets.map((b) => ({ id: b.id, name: b.name }))}
+              onRecategorise={(id, categoryId) =>
+                run(() => recategorise(id, categoryId), 'Filed, and the rule learned it')
+              }
+            />
+          )}
+        </Segments>
+      </div>
+
+      <div className="hidden md:block space-y-3.5">
+        {/* POS Finance.dc.html: the whole picture on one page. Four cells on
+          * the page ground with 1px rules between, then accounts over the
+          * curve beside what is due over the budgets. The phone drills in
+          * through its segments; the desktop through the drawers. */}
+        <div
+          data-testid="finance-kpis"
+          className="grid grid-cols-2 gap-px border border-rule bg-rule sm:grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))]"
+        >
+          <KpiStrip data={data} hot={hot} upcomingTotal={upcomingTotal} daysLeft={daysLeft} />
+        </div>
+
+        <div className="grid items-start gap-3.5 lg:grid-cols-2">
+          <div className="flex min-w-0 flex-col gap-3.5 self-stretch">
+            <Card data-testid="finance-accounts" className={overviewCard}>
+              <CardHead label="Accounts" meta="share of assets" className="mb-1" />
+              <DataTable
+                head={['Account', 'Institution', 'Balance', '30d', 'Share']}
+                cols="minmax(0,1.3fr) minmax(0,1fr) minmax(0,.9fr) minmax(0,.7fr) minmax(0,1fr)"
+              >
+                {data.accounts.map((a) => (
+                  <DataRow key={a.id} onClick={() => setParams({ account: a.id }, { push: true })} className={overviewRow}>
+                    <span className="min-w-0 truncate text-[13px] text-ink">
+                      {a.name}
+                      <span className="label ml-1.5 text-[10px] text-ink-4">{a.txCount} tx →</span>
+                    </span>
+                    <span className="truncate text-[13px] text-ink-3">{a.institution}</span>
+                    <span className="num text-right text-[13px] text-ink">{balance(a.balanceCents)}</span>
+                    <span
+                      className={cn(
+                        'num text-right text-[13px]',
+                        a.changeCents === null || a.changeCents === 0
+                          ? 'text-ink-3'
+                          : a.changeCents > 0
+                            ? 'text-ok'
+                            : 'text-bad',
+                      )}
+                    >
+                      {/* Not tracked is not the same as no change, and must not
+                          render as one. */}
+                      {a.changeCents === null ? 'new' : a.changeCents === 0 ? 'flat' : signedMoney(a.changeCents)}
+                    </span>
+                    <span className="flex items-center justify-end gap-2">
+                      <span className="h-0.5 w-14 bg-rule-2" aria-hidden>
+                        <span className="block h-0.5 bg-brand" style={{ width: `${Math.max(0, Math.min(100, a.sharePercent))}%` }} />
+                      </span>
+                      <span className="num w-[34px] shrink-0 text-right text-[11px] text-ink-2">
+                        {a.balanceCents > 0 ? `${Math.round(a.sharePercent)}%` : '\u2014'}
+                      </span>
+                    </span>
+                  </DataRow>
+                ))}
+              </DataTable>
+            </Card>
+
+            {/* The chart owns its own header, because the high, low and
+              * average belong beside the title rather than under the line.
+              * It takes the rest of the column's height, as drawn. */}
+            <Card className={cn(overviewCard, 'flex min-h-[340px] flex-1 flex-col')}>
+              <NetWorthCard data={data} />
+            </Card>
+          </div>
+
+          <div className="flex min-w-0 flex-col gap-3.5">
+            <Card data-testid="finance-upcoming" className={overviewCard}>
+              <CardHead
+                label="Upcoming · 14 days"
+                meta={`${shortDate(data.todayIso)} → ${shortDate(plusDays(data.todayIso, 14))}`}
+                className="mb-1"
+              />
+              {data.upcoming.length === 0 ? (
+                <EmptyState headline="Nothing booked" className="border-0">
+                  No active subscription is due in the next fortnight.
+                </EmptyState>
+              ) : (
+                <DataTable head={['Date', 'Charge', 'Amount']} cols="82px minmax(0,1fr) auto">
+                  {data.upcoming.map((u) => (
+                    <DataRow key={u.id} className={cn(overviewRow, 'md:gap-x-3')}>
+                      <span className="num text-[12px] text-ink">
+                        {shortDate(u.nextChargeOn)}
+                        <span className="mt-0.5 block text-[10px] text-ink-3">
+                          {weekday(u.nextChargeOn)} · {inDays(data.todayIso, u.nextChargeOn)}
+                        </span>
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-[13px] text-ink">{u.name}</span>
+                        <span className="mt-0.5 block truncate text-[11px] text-ink-3">
+                          Subscription · {u.cadence}
+                          {u.vendor ? ` · ${u.vendor}` : ''}
+                        </span>
+                      </span>
+                      <span className="flex items-center justify-end gap-2.5">
+                        <span className="num text-right text-[13px] text-ink">{money(u.amountCents, true)}</span>
+                        {/* Not on the artboard: cancel has no home there, and
+                            this is the one place a due charge is named. */}
+                        <button
+                          type="button"
+                          aria-label={`Cancel ${u.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            run(() => setSubscriptionStatus(u.id, 'cancelled'), `${u.name} cancelled`)
+                          }}
+                          className="label border border-rule-2 px-2 py-[3px] text-[10px] tracking-[0.08em] text-ink-3 transition-colors duration-150 hover:border-bad hover:text-bad"
+                        >
+                          Cancel
+                        </button>
+                      </span>
+                    </DataRow>
+                  ))}
+                  <DataRow className="border-b-0 md:gap-x-3 md:pb-0.5 md:pt-2.5">
+                    <span className="label text-[11px] text-ink-3">Total</span>
+                    <span className="text-[12px] text-ink-3">
+                      {data.upcoming.length} {data.upcoming.length === 1 ? 'charge' : 'charges'} ·{' '}
+                      {money(monthlySubscriptions, true)}/mo in subscriptions
+                    </span>
+                    <span className="num text-right text-[13px] text-ink">{money(upcomingTotal, true)}</span>
+                  </DataRow>
+                </DataTable>
+              )}
+            </Card>
+
+            <Card data-testid="finance-budgets" className={cn(overviewCard, 'flex flex-col')}>
+              <div className="mb-1 flex items-center justify-between gap-3.5">
+                <Eyebrow>Budgets · {monthLabel(data.todayIso)}</Eyebrow>
+                <span className="flex items-center gap-3.5">
+                  <span className={cn('label text-[11px]', hot.length > 0 ? 'text-warn' : 'text-ink-3')}>
+                    {hot.length} over {data.alertThreshold}%
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setParams({ limits: '1' }, { push: true })}
+                    className="label border border-rule-2 px-2 py-1 text-[11px] tracking-[0.08em] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink"
+                  >
+                    Edit limits
+                  </button>
+                </span>
+              </div>
+              {data.budgets.length === 0 ? (
+                <EmptyState headline="No budgets" className="border-0">
+                  A budget is a limit on a category for this month. Set one with Edit limits.
+                </EmptyState>
+              ) : (
+                <>
+                  <DataTable head={['Category', 'Spent / limit', 'Used']} cols="minmax(0,1fr) auto 44px">
+                    {data.budgets.map((b) => {
+                      const used = b.limitCents ? (b.spentCents / b.limitCents) * 100 : null
+                      const over = used !== null && !b.isFixed && used >= data.alertThreshold
+                      const tone =
+                        used === null
+                          ? 'text-ink-3'
+                          : over && used >= 100
+                            ? 'text-bad'
+                            : over
+                              ? 'text-warn'
+                              : 'text-ink'
+                      return (
+                        <DataRow
+                          key={b.id}
+                          onClick={() => setParams({ budget: b.id }, { push: true })}
+                          className={cn(overviewRow, 'md:block md:py-1.5')}
+                        >
+                          <span className="grid items-baseline gap-x-3.5 md:grid-cols-[minmax(0,1fr)_auto_44px]">
+                            <span className="min-w-0 truncate text-[13px] text-ink">
+                              {b.name}
+                              {b.isFixed ? (
+                                <span className="label ml-1.5 text-[10px] tracking-[0.08em] text-ink-4">Fixed</span>
+                              ) : over ? (
+                                <span className="label ml-1.5 text-[10px] tracking-[0.08em] text-warn">
+                                  over {data.alertThreshold}%
+                                </span>
+                              ) : null}
+                            </span>
+                            <span className="num text-[12px] text-ink-2">
+                              {money(b.spentCents)}{' '}
+                              <span className="text-ink-3">/ {b.limitCents ? money(b.limitCents) : 'no limit'}</span>
+                            </span>
+                            <span className={cn('num text-right text-[12px]', tone)}>
+                              {used === null ? '\u2014' : `${Math.round(used)}%`}
+                            </span>
+                          </span>
+                          <BudgetBar budget={b} pace={data.monthPace} threshold={data.alertThreshold} compact />
+                        </DataRow>
+                      )
+                    })}
+                  </DataTable>
+                  <div className="grid items-baseline gap-x-3.5 pt-2.5 md:grid-cols-[minmax(0,1fr)_auto_44px]">
+                    <span className="label text-[11px] text-ink-3">
+                      Total · <span className="text-ink-2">{money(Math.max(0, budgetTotals.limit - budgetTotals.spent))} left</span> ·
+                      pace mark at day {dayOfMonth(data.todayIso)}
+                    </span>
+                    <span className="num text-[12px] text-ink">
+                      {money(budgetTotals.spent)} <span className="text-ink-3">/ {money(budgetTotals.limit)}</span>
+                    </span>
+                    <span className="num text-right text-[12px] text-ink">
+                      {budgetTotals.limit > 0 ? `${Math.round((budgetTotals.spent / budgetTotals.limit) * 100)}%` : '\u2014'}
+                    </span>
+                  </div>
+                </>
+              )}
+            </Card>
+          </div>
+        </div>
+      </div>
 
       {openAccount && (
         <Overlay
@@ -984,8 +1048,8 @@ function TransactionList({
             <div className="grid grid-cols-[64px_minmax(0,1fr)_auto] items-center gap-x-3 py-[9px] text-[13px]">
               <span className="num text-[11px] text-ink-3">{shortDate(t.occurredOn)}</span>
               <span className="min-w-0">
-                <span className="block truncate text-ink">{t.descriptor}</span>
-                <span className="mt-0.5 block truncate text-[11px] text-ink-3">
+                <span className="block text-ink md:truncate">{t.descriptor}</span>
+                <span className="mt-0.5 block text-[11px] text-ink-3 md:truncate">
                   <button
                     type="button"
                     aria-label={`File ${t.descriptor}`}

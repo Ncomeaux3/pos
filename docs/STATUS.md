@@ -25,6 +25,8 @@ push Devices e2e test fail locally until it is added.
 
 ## Done
 
+**Phone shell, Phase 4: Finance.** docs/plans/phone-shell.md. The phone is five segments (Overview, Accounts, Budgets, Subscriptions, Transactions) that swipe and keep `?tab=`; Overview is the two-up KPIs, the net worth chart and three rows that switch segment; account and budget rows open sheets; Sync is the header's one action; nothing truncates below md. The desktop is unchanged, now CSS-gated.
+
 **The fidelity pass, screens eighteen to twenty-one in parallel: Notifications,
 Agent Log, Onboarding, Login.** The third batch on the method below, all core
 screens, so each agent's scope was its route folder alone; Onboarding and
