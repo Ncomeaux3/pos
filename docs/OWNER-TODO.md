@@ -72,10 +72,13 @@ hosted Supabase project exists but nothing has been pushed to it.
 Each has a client, a real Test button and a nightly sync job. None is
 connected, because each needs an account only you have.
 
-- [ ] **11. Strava**, free, about 5 minutes. Register an app at
-      strava.com/settings/api with the callback domain `pos-gilt-rho.vercel.app`
-      (bare host, no scheme, no path; `localhost` for local). `STRAVA_CLIENT_ID`
-      and `STRAVA_CLIENT_SECRET` into `.env` and Vercel. Connect on Settings.
+- [ ] **11. Strava.** Deferred by you 2026-09-13. Since June 2026 Strava
+      requires an active subscription ($11.99 a month) to create an API app,
+      so it is no longer free. Apple Watch workouts reach Apple Health without
+      it. If you ever subscribe: register at strava.com/settings/api with the
+      callback domain `pos-gilt-rho.vercel.app` (bare host), put
+      `STRAVA_CLIENT_ID` and `STRAVA_CLIENT_SECRET` in Vercel and
+      `.env.production`, redeploy, Connect on Settings.
 - [ ] **12. Obsidian vault**, free, about 5 minutes. A private repo and a
       fine-grained token with Contents: Read-only on that one repo. The client
       has no write path, so a write scope would be pure downside. Connect on
@@ -87,13 +90,37 @@ connected, because each needs an account only you have.
 
 ## Phase 4: Apple Health
 
-- [ ] **14. Buy Health Auto Export on iOS**, and send me one real export (or
-      its metric identifier strings) so the mapping is verified rather than
-      guessed. After the code ships: copy the inbound URL and secret from the
-      Connections card into the app's REST automation as the `x-pos-secret`
-      header; enable weight, resting heart rate, HRV, body fat and sleep; daily
-      schedule. Readings land in `fitness.body_metric`; a value you typed by
-      hand is never overwritten.
+Two sources are built and live in production (PRs #17, #18, #19, all
+2026-09-13). Both write the same Fitness rows.
+
+- [ ] **14. Build the readings Shortcut**, free, about 20 minutes once. The
+      tap-by-tap recipe is docs/SETUP-INTEGRATIONS.md, section "Apple Health
+      (Shortcuts)". Start with weight and steps, run it, see them on Fitness >
+      Body, then add the rest of the keys. Then the daily 7:00 AM automation.
+      Tell me what the run returns; the one place the recipe may not match
+      your iOS is the Request Body control in Get Contents of URL.
+- [ ] **15. Workouts.** Native Shortcuts cannot read them (checked on your
+      phone 2026-09-13: Find Health Samples has no Workouts type). When you
+      want workouts in POS: Health Auto Export, Premium for one month ($1.99),
+      its webhook is already built and tested. Copy the URL and secret from
+      its Connections card into the app's REST automation as the
+      `x-pos-secret` header, enable Workouts (export version 2), run once,
+      cancel the subscription after if you like. Or say the word and I plan a
+      native iOS companion app (exact, but a new codebase and a $99 a year
+      developer account).
+
+## Left over from the first run
+
+- [ ] **16. Enable push on the phone.** Add POS to the Home Screen, open it
+      from there, Settings > Notifications > Devices, enable. First use of
+      the VAPID pair you generated for step 5.
+- [ ] **17. Digest email recipient.** Resend without a verified domain
+      delivers only to the address the Resend account was created with. If
+      that is not your owner email, set Settings > Notifications > digest
+      email to the Resend address. No digest has been sent yet: the
+      orchestrator queues one only when there is an alert, and the database is
+      empty. The first alert proves delivery; a refused send shows as a failed
+      `notify` job in Agent Log.
 
 ## Decisions I would like from you
 

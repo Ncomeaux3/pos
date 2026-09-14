@@ -17,10 +17,11 @@ Every card runs its own Test on save and tells you what it saw.
 | Anthropic | token | pay as you go, cents | Connected |
 | Voyage | token | free tier | Connected, 3 req/min without a card |
 | Resend | token | free | Connected |
-| **Strava** | oauth2 | free | **Client and sync job built. Needs your app registration.** |
+| **Strava** | oauth2 | Strava subscription ($11.99/mo since June 2026, to create an API app) | **Client and sync job built. Deferred by the owner 2026-09-13; Apple Health covers watch workouts.** |
 | **Obsidian vault** | token | free | **Client built. Needs a repo and a token.** |
 | **SimpleFIN** | token | ~$1.50/mo | **Client, real Test and nightly sync built. Needs a bridge subscription.** |
 | **Health Auto Export** | webhook | paid iOS app | **Webhook writes workouts and sixteen body metrics. Needs the app and one paste.** |
+| **Apple Health (Shortcuts)** | webhook | free | **Readings from an iOS Shortcut you build once; workouts need Health Auto Export. Recipe below.** |
 
 Everything in bold has a client and a real Test button. None of them is
 connected, because each needs an account only you have.
@@ -288,6 +289,115 @@ The metric identifier strings the app sends are marked verify in
 seen. If a metric you enabled does not appear on Fitness > Body, the row in
 `core.request_log` for the route will show the post arrived, and the payload
 name needs matching to the table's kinds.
+
+---
+
+## Apple Health (Shortcuts)
+
+**Buys you:** the same daily readings as Health Auto Export, for nothing,
+from a Shortcut on the phone that runs itself every morning. Not workouts:
+see below. Apple
+Health can only be read by an app on the phone, and Shortcuts is the one Apple
+ships that can read it and post JSON.
+
+**Costs you:** twenty minutes once, tapping the Shortcut together. Add three
+metrics first, run it, see them on Fitness > Body, then add the rest.
+
+### What the Shortcut posts
+
+```json
+{ "day": "2026-09-13",
+  "metrics": { "weight_lb": 185.2, "resting_hr": 52, "hrv_ms": 61,
+               "body_fat_pct": 18.4, "sleep_hours": 7.5, "steps": 9412,
+               "active_kcal": 613, "exercise_min": 42, "stand_hours": 11,
+               "vo2_max": 41.3, "spo2_pct": 97.6, "resp_rate": 14.5,
+               "flights": 12, "walk_mi": 4.2, "walking_hr": 98, "hr_avg": 71 },
+  "workouts": [ { "name": "Running", "start": "2026-09-13T06:00:00-05:00",
+                  "minutes": 30, "miles": 3.5, "kcal": 350, "avg_hr": 150 } ] }
+```
+
+Every key is optional. `weight_kg` and `walk_km` are accepted in place of the
+imperial ones. Numbers may be text; a blank is skipped. A workout needs
+`start` (ISO 8601 with offset, what Format Date writes) and `minutes`; the
+rest is optional. The start instant is the workout's identity, so re-running
+the Shortcut corrects rather than duplicates.
+
+### Connect, tap by tap
+
+A Shortcut cannot be pasted as text and Apple imports only shortcut files it
+has signed, so it is built once by hand. Version 1 sends weight and steps;
+once that lands, add metrics by repeating steps 2 and 3.
+
+Before you start, in POS: **Settings > Connections > Apple Health
+(Shortcuts) > Generate**. Leave the page open; you come back twice for COPY.
+
+1. **Shortcuts > +**. Tap the name at the top, call it `POS Health`.
+2. **Add Action**, search `Find Health Samples`.
+   - Tap *All Health Samples*, choose **Body Mass**.
+   - *Add Filter* > **Start Date** > **is today**.
+   - *Show More*: **Unit** `lb`.
+3. **+**, search `Calculate Statistics`. It should read "Calculate Maximum of
+   Health Samples"; if it says Average, tap it and choose **Maximum**.
+4. Repeat 2 and 3 for **Steps** (Start Date is today), with **Sum** in step 3.
+5. **+**, search `Dictionary`.
+   - *Add new item* > **Text**: key `day`. Value: tap the field, tap the
+     **Current Date** variable above the keyboard, tap the inserted variable
+     > *Format Date* > **Custom** > `yyyy-MM-dd`.
+   - *Add new item* > **Dictionary**: key `metrics`. Inside it, two
+     **Number** items: `weight_lb` with value *Select Variable* > the first
+     **Statistics**; `steps` with value the second **Statistics**.
+6. **+**, search `Get Contents of URL`.
+   - URL: switch to POS, COPY the inbound URL, switch back, paste.
+   - *Show More*. Method **POST**. Headers > *Add new header*: key
+     `x-pos-secret`, value: switch to POS, REVEAL, COPY, switch back, paste.
+   - Request Body: **JSON**, and make the body the whole Dictionary (tap the
+     body, *Select Variable* > **Dictionary**). If your iOS only offers fields
+     there, choose **File** as the body type instead and select the
+     Dictionary variable. This control is the one that varies by iOS version.
+7. **+**, search `Show Result`, input **Contents of URL**, so the reply shows.
+8. **Done**, then run it. Allow Health access, every box. `{"ok":true}` means
+   it landed; POS > Fitness > Body shows Weight and Steps for today.
+9. **Automation tab > + > Time of Day**, 7:00 AM, Daily, **Run
+   Immediately**, choose POS Health. It runs without asking.
+
+### Adding metrics
+
+Repeat steps 2 and 3 for the type, then one more **Number** item under
+`metrics`. Key, then the Health type, unit if it matters, and the statistic:
+
+| key | Health type | unit | statistic |
+|---|---|---|---|
+| `resting_hr` | Resting Heart Rate | | Maximum |
+| `hrv_ms` | Heart Rate Variability | ms | Average |
+| `body_fat_pct` | Body Fat Percentage | | Maximum |
+| `active_kcal` | Active Energy | kcal | Sum |
+| `exercise_min` | Exercise Minutes | | Sum |
+| `stand_hours` | Stand Hours | | Sum |
+| `vo2_max` | VO2 Max | | Maximum |
+| `spo2_pct` | Blood Oxygen Saturation | | Average |
+| `resp_rate` | Respiratory Rate | | Average |
+| `flights` | Flights Climbed | | Sum |
+| `walk_mi` | Walking + Running Distance | mi | Sum |
+| `walking_hr` | Walking Heart Rate Average | | Average |
+| `hr_avg` | Heart Rate | | Average |
+| `sleep_hours` | Sleep, Start Date is yesterday | | Sum of Duration, then *Calculate* divided by 3600 |
+
+**Workouts: not from Shortcuts.** Checked on the owner's phone 2026-09-13:
+*Find Health Samples* does not list Workouts as a type. The `workouts` key
+stays accepted for a Shortcut that gets them from a third-party action, but
+this recipe sends readings only. For workouts, Health Auto Export ($1.99 for
+one month covers the webhook it already has) or a native app; a "workout
+ended" automation could post a name and a rough duration, but distance and
+heart rate would be guesses, and this app does not earn XP on guesses.
+
+### What happens next
+
+Each post goes through `/api/integrations/apple_shortcuts/webhook`. The
+secret is checked, the shape is validated, then the Fitness module writes the
+same way it does for Health Auto Export: one row per metric per day on
+`(kind, measured_on)`, a workout upserted on its start instant and earning its
+`workout_logged` XP once, and a value you typed by hand never touched. Rows
+carry `source = 'apple_shortcuts'`.
 
 ---
 

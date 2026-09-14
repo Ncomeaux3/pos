@@ -44,7 +44,7 @@ categories:
     name: Fitness and health
     module: fitness
     data: workouts, heart rate, body metrics
-    providers: [Strava, Apple Health (Health Auto Export), Garmin, Whoop, Oura, Peloton]
+    providers: [Strava, Apple Health (Health Auto Export), Apple Health (Shortcuts), Garmin, Whoop, Oura, Peloton]
 
   - id: air
     name: Airline loyalty
