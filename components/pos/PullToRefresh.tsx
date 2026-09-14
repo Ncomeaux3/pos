@@ -21,7 +21,9 @@ export function PullToRefresh() {
 
   useEffect(() => {
     const down = (event: PointerEvent) => {
-      if (event.pointerType === 'mouse' || !atTop(window.scrollY)) {
+      // A pull inside an open sheet scrolls the sheet, not the page behind it.
+      const inSheet = event.target instanceof Element && event.target.closest('[role="dialog"]') !== null
+      if (event.pointerType === 'mouse' || inSheet || !atTop(window.scrollY)) {
         from.current = null
         return
       }

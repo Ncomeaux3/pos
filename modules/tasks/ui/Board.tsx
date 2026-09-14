@@ -1,6 +1,5 @@
 'use client'
 
-import { useSearchParams } from 'next/navigation'
 import { useMemo, useOptimistic, useState, useTransition } from 'react'
 import { ActionButton, EmptyState, TabBar, useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
@@ -44,7 +43,7 @@ const TABS: { value: View | 'calendar'; label: string }[] = [
 ]
 
 function useView(): { view: View; calendar: boolean; label: string } {
-  const params = useSearchParams()
+  const { params } = useSearchState()
   const view = (VIEWS.find((v) => v.value === params.get('view'))?.value ?? 'today') as View
   const calendar = params.get('month') === '1'
   return {
