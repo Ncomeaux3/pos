@@ -1,5 +1,19 @@
 import { execFileSync } from 'node:child_process'
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, test as base, type Locator, type Page } from '@playwright/test'
+
+// CI's dev server serves a chunk per module, and on its runner the gap between
+// first paint and hydration is close to a second. A click in that gap lands on
+// a button with no handler yet, and the test then waits for a change nobody
+// asked for (a tab that never switched, a long press that never armed). So
+// every goto waits for the network to go quiet, which is after the last chunk
+// has loaded and, in practice, after hydration.
+const test = base.extend({
+  page: async ({ page }, run) => {
+    const goto = page.goto.bind(page)
+    page.goto = (url, options) => goto(url, { waitUntil: 'networkidle', ...options })
+    await run(page)
+  },
+})
 
 // One smoke test per screen: load it, assert the elements that carry meaning
 // are there, and capture the shot at this project's width in both themes. The
