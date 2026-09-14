@@ -1,7 +1,14 @@
-// The six digit code from the sign in email. Kept here, pure, so the rules
-// about what counts as a code can be tested without a session or a server.
+// The code from the sign in email. Kept here, pure, so the rules about what
+// counts as a code can be tested without a session or a server.
+//
+// The length is Supabase's to choose, not this app's. Email OTP Length is a
+// project setting from 6 to 10, and a build that assumes 6 silently drops the
+// end of an 8 digit code and tells the owner their correct code is wrong. That
+// happened on 2026-09-14 and cost an evening: the field looked like it was
+// working and the digits were gone before anything was submitted.
 
-export const CODE_LENGTH = 6
+export const MIN_CODE_LENGTH = 6
+export const MAX_CODE_LENGTH = 10
 
 /**
  * What the owner typed, reduced to what Supabase will accept.
@@ -11,14 +18,22 @@ export const CODE_LENGTH = 6
  * brings a trailing space or a non breaking one, and some keyboards insert a
  * thin space every three digits. Every one of those is the right code typed by
  * a person who would then be told it was wrong.
+ *
+ * The cap is the longest code Supabase can issue, so it never truncates a real
+ * one. It exists only so a paste of the whole email cannot become a guess.
  */
 export function normalizeCode(input: string): string {
-  return input.replace(/\D/g, '').slice(0, CODE_LENGTH)
+  return input.replace(/\D/g, '').slice(0, MAX_CODE_LENGTH)
 }
 
-/** A code that is worth spending a verification attempt on. */
+/**
+ * A code worth spending a verification attempt on. Length is not checked
+ * against an exact number because this app does not get to decide it: anything
+ * from the shortest Supabase issues upward is plausible, and Supabase is the
+ * one that says whether it is right.
+ */
 export function isCompleteCode(input: string): boolean {
-  return normalizeCode(input).length === CODE_LENGTH
+  return normalizeCode(input).length >= MIN_CODE_LENGTH
 }
 
 /**

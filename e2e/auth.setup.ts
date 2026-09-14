@@ -34,9 +34,10 @@ async function newestCodeFor(email: string, seen: Set<string>): Promise<string |
     if (!body.ok) continue
 
     const { Text = '', HTML = '' } = (await body.json()) as { Text?: string; HTML?: string }
-    // Six digits standing alone. The link in the same email holds long hex
-    // tokens, so anchoring on word boundaries is what keeps them out.
-    const match = `${Text}\n${HTML}`.match(/(?<!\d)\d{6}(?!\d)/)
+    // A run of 6 to 10 digits standing alone, because Email OTP Length is a
+    // project setting and this must not assume 6. The link in the same email
+    // holds long hex tokens, so the digit boundaries are what keep them out.
+    const match = `${Text}\n${HTML}`.match(/(?<!\d)\d{6,10}(?!\d)/)
     if (match) return match[0]
   }
   return null
@@ -64,9 +65,8 @@ setup('sign in as the owner', async ({ page }) => {
   }
   expect(code, 'no sign in code arrived in Mailpit within 60s').toBeTruthy()
 
-  // The field submits itself on the sixth digit, so filling it is the whole
-  // interaction and there is no button to click.
-  await page.getByLabel(/six digit code/i).fill(code!)
+  await page.getByLabel(/sign in code/i).fill(code!)
+  await page.getByRole('button', { name: /^sign in$/i }).click()
   await expect(page).toHaveURL(`${BASE_URL}/`)
 
   await page.context().storageState({ path: STATE })
