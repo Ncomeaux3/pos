@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { ActionButton, Eyebrow, Overlay } from '@/components/pos'
 import type { Metric } from '@/core/metrics'
+import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
 import { formatValue, historyPaths, ruleLong, type GoalKind } from '../progress'
 import { deleteGoal, recordCheckin, writeGoal, type ActionResult, type GoalInput } from './actions'
@@ -208,12 +209,14 @@ function View({
               className="mt-3 flex items-center gap-2"
               onSubmit={(e) => {
                 e.preventDefault()
-                if (value === '') return
-                onRun(() => recordCheckin(goal.id, Number(value)), 'Checked in')
+                const n = parseNumber(value)
+                if (n === null) return
+                onRun(() => recordCheckin(goal.id, n), 'Checked in')
                 setValue('')
               }}
             >
               <input
+                inputMode="decimal"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 aria-label={`Check in on ${goal.title}`}
@@ -340,7 +343,8 @@ function Form({
   const set = (key: keyof typeof d) => (e: { target: { value: string } }) =>
     setD((prev) => ({ ...prev, [key]: e.target.value }))
   const milestone = d.kind === 'milestone'
-  const ready = d.title.trim() !== '' && d.deadline !== '' && (milestone || Number(d.target) > 0)
+  const target = parseNumber(d.target) ?? 0
+  const ready = d.title.trim() !== '' && d.deadline !== '' && (milestone || target > 0)
 
   const save = () => {
     if (!ready) return
@@ -350,8 +354,8 @@ function Form({
       kind: d.kind,
       area: d.area,
       unit: milestone ? '' : d.unit,
-      target_value: milestone ? 1 : Number(d.target),
-      start_value: milestone ? 0 : Number(d.start) || 0,
+      target_value: milestone ? 1 : target,
+      start_value: milestone ? 0 : (parseNumber(d.start) ?? 0),
       deadline: d.deadline,
       metric_source: d.metric || null,
       notes: d.notes,
@@ -417,7 +421,7 @@ function Form({
             <>
               <label className="flex flex-col gap-1.5">
                 <Eyebrow>{d.kind === 'streak' ? 'Times per week' : 'Target'}</Eyebrow>
-                <input type="number" step="any" value={d.target} onChange={set('target')} className={cn(field, 'num')} />
+                <input inputMode="decimal" value={d.target} onChange={set('target')} className={cn(field, 'num')} />
               </label>
               <label className="flex flex-col gap-1.5">
                 <Eyebrow>Unit</Eyebrow>
@@ -432,7 +436,7 @@ function Form({
           {!milestone && (
             <label className="flex flex-col gap-1.5">
               <Eyebrow>Starting value</Eyebrow>
-              <input type="number" step="any" value={d.start} onChange={set('start')} className={cn(field, 'num')} />
+              <input inputMode="decimal" value={d.start} onChange={set('start')} className={cn(field, 'num')} />
             </label>
           )}
         </div>

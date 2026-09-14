@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { ActionButton, Eyebrow, Overlay, fieldClass, useToast } from '@/components/pos'
+import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
 import { actualFor, budgetTotals, parseCategory } from '../budget'
 import type { Hit } from '../geocode'
@@ -405,14 +406,13 @@ function Budget({
         <div className="bg-bg px-3 py-2.5">
           <Eyebrow>Planned · total</Eyebrow>
           <input
-            type="number"
-            min={0}
-            step={1}
+            inputMode="decimal"
             defaultValue={dollars(trip.budgetCents)}
             aria-label="Planned total in dollars"
             onBlur={(e) => {
-              const next = Math.round(Number(e.target.value) * 100)
-              if (Number.isFinite(next) && next !== trip.budgetCents) run(() => saveTrip({ id: trip.id, budget_cents: next }), 'Budget saved')
+              const typed = parseNumber(e.target.value)
+              const next = typed === null ? null : Math.round(typed * 100)
+              if (next !== null && next !== trip.budgetCents) run(() => saveTrip({ id: trip.id, budget_cents: next }), 'Budget saved')
             }}
             className="num mt-1 w-full border-0 border-b border-rule-2 bg-transparent py-0.5 text-[18px] font-light text-ink outline-none focus-visible:border-brand"
           />
@@ -442,15 +442,17 @@ function Budget({
               <div className="grid grid-cols-[1fr_90px_90px_20px] items-center gap-2.5 text-[12px]">
                 <span className="text-ink">{l.category}</span>
                 <input
-                  type="number"
-                  min={0}
+                  inputMode="decimal"
                   key={`a-${l.id}-${l.actual_override_cents}`}
                   defaultValue={dollars(actual)}
                   aria-label={`${l.category} actual in dollars`}
                   title={l.actual_override_cents === null ? 'Summed from the confirmed itinerary; type to override' : 'Typed over; clear to sum again'}
                   onBlur={(e) => {
                     const raw = e.target.value.trim()
-                    const next = raw === '' ? null : Math.round(Number(raw) * 100)
+                    const typed = parseNumber(raw)
+                    // Empty clears the override; anything else that is not a number is ignored.
+                    if (raw !== '' && typed === null) return
+                    const next = typed === null ? null : Math.round(typed * 100)
                     if (next === l.actual_override_cents) return
                     if (next !== null && next === actual && l.actual_override_cents === null) return
                     run(() => saveBudgetLine({ trip_id: trip.id, category: l.category, actual_override_cents: next }), 'Saved')
@@ -458,14 +460,14 @@ function Budget({
                   className={cn(inlineInput, 'num text-right', l.actual_override_cents === null && 'text-ink-2')}
                 />
                 <input
-                  type="number"
-                  min={0}
+                  inputMode="decimal"
                   key={`p-${l.id}-${l.planned_cents}`}
                   defaultValue={dollars(l.planned_cents)}
                   aria-label={`${l.category} planned in dollars`}
                   onBlur={(e) => {
-                    const next = Math.round(Number(e.target.value) * 100)
-                    if (Number.isFinite(next) && next !== l.planned_cents) run(() => saveBudgetLine({ trip_id: trip.id, category: l.category, planned_cents: next }), 'Saved')
+                    const typed = parseNumber(e.target.value)
+                    const next = typed === null ? null : Math.round(typed * 100)
+                    if (next !== null && next !== l.planned_cents) run(() => saveBudgetLine({ trip_id: trip.id, category: l.category, planned_cents: next }), 'Saved')
                   }}
                   className={cn(inlineInput, 'num text-right')}
                 />
