@@ -41,10 +41,10 @@ async function since(): Promise<Date> {
   return new Date(new Date(latest).getTime() - OVERLAP_HOURS * 3_600_000)
 }
 
-async function store(a: Activity): Promise<void> {
+export async function store(a: Activity): Promise<void> {
   // Strava sends metres and seconds as floats. The column is integer metres on
   // purpose, so round here rather than letting Postgres truncate silently.
-  const { rows } = await db().query<{ id: string; title: string }>(
+  const { rows } = await db().query<{ id: string; title: string; inserted: boolean }>(
     `insert into fitness.workout
        (name, kind, started_at, duration_s, distance_m, avg_hr, source, external_id)
      values ($1, $2, $3, $4, $5, $6, 'strava', $7)
@@ -56,7 +56,7 @@ async function store(a: Activity): Promise<void> {
            distance_m = excluded.distance_m,
            avg_hr = excluded.avg_hr,
            updated_at = now()
-     returning id, name as title`,
+     returning id, name as title, (xmax = 0) as inserted`,
     [
       a.name,
       toKind(a.sport_type),
@@ -73,7 +73,10 @@ async function store(a: Activity): Promise<void> {
   )
 
   // register() emits workout_logged, which is what earns Health XP and moves a
-  // fitness goal. It backdates to the activity, not to tonight's job run.
+  // fitness goal. It backdates to the activity, not to tonight's job run. A
+  // named event always emits, and the 48 hour overlap stores most activities
+  // on two or three runs, so the event is tied to the insert: the entity
+  // still re-registers, which keeps a renamed activity's title current.
   await register({
     module: 'fitness',
     entityType: 'workout',
@@ -81,6 +84,7 @@ async function store(a: Activity): Promise<void> {
     title: rows[0].title,
     eventType: 'workout_logged',
     occurredAt: new Date(a.start_date),
+    emit: rows[0].inserted,
   })
 }
 
