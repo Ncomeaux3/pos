@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ActionButton, Eyebrow } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { ago, byLine, finishedOn, folderLabel, sourceMeta, subLine, wordCount } from '../shape'
 import { blocks } from '../wikilinks'
-import { deleteNote, publishNote, saveNote, startFromLink, type ActionResult } from './actions'
-import { isFinished, type BrainNote, type SetParams } from './Brain'
+import type { Related } from '../related'
+import { deleteNote, publishNote, relatedForNote, saveNote, setNoteHubs, startFromLink, type ActionResult } from './actions'
+import { isFinished, type BrainHub, type BrainNote, type SetParams } from './Brain'
 
 // The right pane of POS Second Brain.dc.html: a draft beside the text it was
 // drawn from, or a note with its skills, backlinks and vault cell.
@@ -20,9 +21,35 @@ const CHIP =
 
 type Run = (action: () => Promise<ActionResult>, ok?: string) => void
 
-export function NotePane({ note, setParams, run }: { note: BrainNote; setParams: SetParams; run: Run }) {
+export function NotePane({
+  note,
+  hubs,
+  setParams,
+  run,
+}: {
+  note: BrainNote
+  hubs: BrainHub[]
+  setParams: SetParams
+  run: Run
+}) {
   const [editing, setEditing] = useState(false)
   const [body, setBody] = useState(note.body)
+  const [hubsEditing, setHubsEditing] = useState(false)
+  const [picked, setPicked] = useState<string[]>(() => note.hubs.map((h) => h.id))
+  // Fetched on open rather than for every note on the page: a nearest
+  // neighbour query per note is the one thing the page load should not pay.
+  const [related, setRelated] = useState<Related[] | null>(null)
+
+  useEffect(() => {
+    if (note.status !== 'published') return
+    let live = true
+    void relatedForNote(note.id).then((r) => {
+      if (live) setRelated(r.ok ? (r.related ?? []) : [])
+    })
+    return () => {
+      live = false
+    }
+  }, [note.id, note.status])
 
   const toggleEdit = () => {
     setBody(note.body)
@@ -170,6 +197,63 @@ export function NotePane({ note, setParams, run }: { note: BrainNote; setParams:
         </div>
       </div>
 
+      {/* Hubs, the owner's groupings. Edit turns the chips into checkboxes
+        * over every hub; a tick is manual and wins over a rule or a guess. */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Eyebrow className="mr-1">Hubs</Eyebrow>
+        {hubsEditing ? (
+          <>
+            {hubs.map((h) => (
+              <label key={h.id} className={cn(CHIP, 'min-h-11 cursor-pointer md:min-h-0', picked.includes(h.id) && 'border-ink text-ink')}>
+                <input
+                  type="checkbox"
+                  checked={picked.includes(h.id)}
+                  onChange={(e) =>
+                    setPicked((p) => (e.target.checked ? [...p, h.id] : p.filter((id) => id !== h.id)))
+                  }
+                  className="accent-brand"
+                />
+                {h.name}
+              </label>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                run(() => setNoteHubs(note.id, picked), 'Filed')
+                setHubsEditing(false)
+              }}
+              className={cn(MINI, 'border-brand text-ink hover:bg-brand hover:text-bg')}
+            >
+              Save
+            </button>
+          </>
+        ) : (
+          <>
+            {note.hubs.length === 0 && <span className="text-[11px] text-ink-4">Unfiled</span>}
+            {note.hubs.map((h) => (
+              <button key={h.id} type="button" onClick={() => setParams({ folder: `hub:${hubs.find((x) => x.id === h.id)?.slug ?? ''}`, note: null })} className={CHIP}>
+                {h.name}
+              </button>
+            ))}
+            {hubs.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setPicked(note.hubs.map((h) => h.id))
+                  setHubsEditing(true)
+                }}
+                className={cn(MINI, 'hover:border-ink hover:text-ink')}
+              >
+                Edit
+              </button>
+            )}
+            {note.hubs.length > 0 && (
+              <span className="label ml-auto text-[9px] tracking-[0.08em] text-ink-4">{byLine(note.hubs)}</span>
+            )}
+          </>
+        )}
+      </div>
+
       {editing ? (
         <textarea
           value={body}
@@ -231,6 +315,23 @@ export function NotePane({ note, setParams, run }: { note: BrainNote; setParams:
               </button>
             ))}
             {note.backlinks.length === 0 && <span className="text-[12px] text-ink-4">None yet</span>}
+          </div>
+        </div>
+        <div className={CELL}>
+          <Eyebrow>Related</Eyebrow>
+          <div className="mt-1.5 flex flex-col">
+            {(related ?? []).map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => setParams({ note: r.slug })}
+                className="flex min-h-11 items-baseline justify-between gap-2 border-b border-rule py-1.5 text-left text-[12px] text-ink-2 transition-colors duration-150 hover:text-ok md:min-h-0"
+              >
+                <span className="min-w-0 truncate">{r.title}</span>
+                <span className="num shrink-0 text-[10px] text-ink-4">{Math.round(r.similarity * 100)}%</span>
+              </button>
+            ))}
+            {(related === null || related.length === 0) && <span className="text-[12px] text-ink-4">None yet</span>}
           </div>
         </div>
         <div className={CELL}>

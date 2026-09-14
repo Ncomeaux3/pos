@@ -154,3 +154,20 @@ export async function listSkillLinks(): Promise<SkillLinkRow[]> {
 export async function deleteNote(id: string): Promise<void> {
   await db().query(`delete from brain.note where id = $1`, [id])
 }
+
+export type HubRow = { id: string; name: string; slug: string; keywords: string[] }
+
+export async function listHubs(): Promise<HubRow[]> {
+  const { rows } = await db().query<HubRow>(`select id, name, slug, keywords from brain.hub order by name`)
+  return rows
+}
+
+export type NoteHubRow = { note_id: string; hub_id: string; classified_by: string; is_manual: boolean }
+
+/** Every hub filing, for the chips in the band and on a note. */
+export async function listNoteHubs(): Promise<NoteHubRow[]> {
+  const { rows } = await db().query<NoteHubRow>(
+    `select note_id, hub_id, classified_by, is_manual from brain.note_hub`,
+  )
+  return rows
+}
