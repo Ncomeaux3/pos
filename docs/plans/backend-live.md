@@ -66,9 +66,9 @@ names the phase it unblocks.
 | Phase | Goal | Complexity | Parallel-safe with | Status | PR |
 |---|---|---|---|---|---|
 | 0 | Planning files and owner checklist | low | | Done 2026-09-12 | #12 |
-| 1 | Hygiene and the production login fix | low | 4, 5, 6 | PR open | #13 |
-| 2 | Production live: first real nightly | low (code), owner-heavy | 4, 5, 6 | Blocked on owner steps 2 to 7 | |
-| 3 | Strava, vault, SimpleFIN connected and syncing nightly | low | 4, 5, 6 | Blocked on 2 and owner steps 11 to 13 | |
+| 1 | Hygiene and the production login fix | low | 4, 5, 6 | Done 2026-09-13 | #13 |
+| 2 | Production live: first real nightly | low (code), owner-heavy | 4, 5, 6 | Done 2026-09-13: owner steps 2 to 9 done, the nightly ran, the digest was skipped on an empty database | |
+| 3 | Strava, vault, SimpleFIN connected and syncing nightly | low | 4, 5, 6 | Blocked on owner steps 11 to 13; Strava deferred by the owner 2026-09-13 | |
 | 4 | Health Auto Export webhook writes body metrics | medium | 1, 5, 6 | Done 2026-09-13 (#17); widened to workouts and sixteen metrics the same day, see Phase 4b | #17 |
 | 5 | Cron-silence check | low | 1, 4, 6 | Done 2026-09-12: red and green paths proven on the real workflow | |
 | 6 | PR #10 skill tree zoom finished and merged | medium | 1, 4, 5 | #10 merged 2026-09-12; the re-checks continue on `fix/skill-tree-zoom` | #10 |

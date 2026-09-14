@@ -2,6 +2,8 @@
 
 Approved 2026-09-13. Each phase is one branch and PR, implemented in a fresh session. Superseded decisions are logged in decisions/log.md.
 
+**Complete 2026-09-14.** All five phases merged: #21, #27, #33, #34, #36. Each phase's Done paragraph below records what changed from its text. Follow-on: a phone pass per remaining module, not planned yet.
+
 ## Context
 
 The owner uses POS mostly as an installed PWA on a recent iPhone. The phone build today is the desktop screen squeezed to 402px: the desktop `PageHeader` (breadcrumb, search field, status band) sits on every phone screen, Finance renders every section in one column with truncated text, the Skill Tree tells a phone user to "Hover, Double-click, Scroll to zoom", the Dashboard is a 4900px column of thirteen tiles, Tasks shows both a "New task" button and a quick-add field. The owner's verdict on 2026-09-13: finding a module, refresh and sync, buttons and forms, going back, screen layout, swipes, and speed all fail on the phone.
