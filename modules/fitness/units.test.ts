@@ -127,8 +127,10 @@ describe('the overview labels', () => {
   })
 
   it('draws the setup card only when there is nothing at all', () => {
-    expect(screenState({ workouts: 0, connected: false })).toBe('setup')
-    expect(screenState({ workouts: 0, connected: true })).toBe('setup-connected')
-    expect(screenState({ workouts: 3, connected: false })).toBe('live')
+    expect(screenState({ workouts: 0, metrics: 0, connected: false })).toBe('setup')
+    expect(screenState({ workouts: 0, metrics: 0, connected: true })).toBe('setup-connected')
+    expect(screenState({ workouts: 3, metrics: 0, connected: false })).toBe('live')
+    // Readings with no workouts: what a phone that cannot send workouts leaves.
+    expect(screenState({ workouts: 0, metrics: 4, connected: false })).toBe('live')
   })
 })
