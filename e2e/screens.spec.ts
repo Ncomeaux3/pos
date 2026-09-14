@@ -1815,17 +1815,22 @@ test('travel, the globe is drawn from real coordinates', async ({ page }) => {
   await page.goto('/travel')
 
   // Hand rolled orthographic projection, no d3 and no world-atlas download;
-  // the land is a committed list of points.
+  // the land is a committed list of rings.
   const globe = page.getByRole('group', { name: /Globe showing \d+ places/ })
   await expect(globe).toBeVisible()
 
   // Only the near side is drawn, so the pins on screen are fewer than the six
-  // seeded places spread across four continents, and the land is many dots.
+  // seeded places spread across four continents. It opens level on the US,
+  // so Austin is on the near side.
   const pins = globe.locator('[data-pin]')
   expect(await pins.count()).toBeGreaterThan(1)
-  // One path for the land, a dash per point: thousands of them on the near side.
-  const dashes = await globe.locator('[data-land]').getAttribute('d')
-  expect((dashes?.match(/M/g) ?? []).length).toBeGreaterThan(500)
+  await expect(globe.locator('[data-pin="past"] title', { hasText: 'Austin' })).toHaveCount(1)
+  // One path for the land: a closed subpath per ring on the near side, and
+  // a ring cut by the horizon is joined along the rim with an arc.
+  const land = globe.locator('[data-land]')
+  const home = (await land.getAttribute('d')) ?? ''
+  expect((home.match(/Z/g) ?? []).length).toBeGreaterThan(100)
+  expect(home).toContain('A')
 
   // The pin's own tooltip is what makes a dot identifiable at all: a visited
   // place names itself and its country.
@@ -1847,11 +1852,17 @@ test('travel, the globe is drawn from real coordinates', async ({ page }) => {
   await page.mouse.move(sbox.x + sbox.width / 2 + 40, sbox.y + sbox.height * 0.7, { steps: 4 })
   await page.mouse.up()
   await expect.poll(async () => (await pin.boundingBox())!.x).toBeGreaterThan(before)
+  // The drag moved the land too, and Reset brings it back to the same view.
+  expect(await land.getAttribute('d')).not.toBe(home)
+  await page.getByTestId('travel-globe').getByRole('button', { name: 'Reset view' }).click()
+  await expect(land).toHaveAttribute('d', home)
 
   // Past 2x every pin names itself; two presses of + is 2.25x. The wheel
   // handler is a native non-passive listener, so the page under the globe
-  // does not scroll when it zooms.
-  const past = globe.locator('[data-pin="past"]').first()
+  // does not scroll when it zooms. The zoom is about the centre, so a pin
+  // far from it leaves the box: Lisbon at the rim, and Austin at 30 north
+  // clears the top at 2.25x. Mexico City at 19 north stays.
+  const past = globe.locator('[data-pin="past"]').filter({ hasText: 'Mexico City' })
   await expect(past.locator('[data-label]')).toHaveCount(0)
   const controls = page.getByTestId('travel-globe')
   await controls.getByRole('button', { name: 'Zoom in' }).click()
