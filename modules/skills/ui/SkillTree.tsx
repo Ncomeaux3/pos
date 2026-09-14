@@ -202,8 +202,13 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
       <header className="-mx-[18px] -mt-[18px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 md:-mx-7 md:-mt-7 md:h-14 md:flex-nowrap md:px-7 md:py-0">
         <BackControl />
         <h1 className="sr-only">Skill Tree</h1>
+        {/* The view name is desktop only: there is one view, and with the
+          * back control in the band the full crumb ran under the search. */}
         <span className="eyebrow shrink-0 whitespace-nowrap text-ink-3">
-          Skill Tree <span className="text-ink-4">/</span> Constellation
+          Skill Tree
+          <span className="hidden md:contents">
+            <span className="text-ink-4">/</span> Constellation
+          </span>
         </span>
         <div className="flex min-w-0 flex-1 items-center justify-end gap-4">
           <SearchButton className="md:hidden" />
