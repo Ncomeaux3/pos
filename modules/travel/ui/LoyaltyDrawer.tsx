@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { Eyebrow, Overlay, fieldClass, useToast } from '@/components/pos'
+import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
 import { centsPerPoint } from '../globe'
 import { saveLoyalty } from './actions'
@@ -22,7 +23,7 @@ export function LoyaltyDrawer({
   const toast = useToast()
   const [cash, setCash] = useState('')
   const [points, setPoints] = useState('')
-  const cpp = centsPerPoint(Math.round(Number(cash) * 100) || 0, Number(points) || 0)
+  const cpp = centsPerPoint(Math.round((parseNumber(cash) ?? 0) * 100), parseNumber(points) ?? 0)
 
   return (
     <Overlay
@@ -47,14 +48,12 @@ export function LoyaltyDrawer({
           </span>
           <span className="text-[11px] text-ink-3">{p.kind}</span>
           <input
-            type="number"
-            min={0}
-            step={1}
+            inputMode="decimal"
             defaultValue={p.balance}
             aria-label={`${p.name} balance`}
             onBlur={(e) => {
-              const next = Number(e.target.value)
-              if (!Number.isFinite(next) || next === p.balance) return
+              const next = parseNumber(e.target.value)
+              if (next === null || next === p.balance) return
               start(async () => {
                 const result = await saveLoyalty(p.name, next, p.kind as 'airline' | 'hotel' | 'card' | 'rail')
                 toast(result.ok ? `${p.name} saved` : result.error)
@@ -77,11 +76,11 @@ export function LoyaltyDrawer({
         <div className="mt-3 grid grid-cols-2 gap-2.5">
           <label className="space-y-1.5">
             <Eyebrow className="text-[10px]">Cash fare</Eyebrow>
-            <input type="number" min={0} value={cash} onChange={(e) => setCash(e.target.value)} aria-label="Cash fare in dollars" placeholder="640" className={cn(fieldClass, 'w-full')} />
+            <input inputMode="decimal" value={cash} onChange={(e) => setCash(e.target.value)} aria-label="Cash fare in dollars" placeholder="640" className={cn(fieldClass, 'w-full')} />
           </label>
           <label className="space-y-1.5">
             <Eyebrow className="text-[10px]">Points</Eyebrow>
-            <input type="number" min={0} value={points} onChange={(e) => setPoints(e.target.value)} aria-label="Points required" placeholder="35000" className={cn(fieldClass, 'w-full')} />
+            <input inputMode="decimal" value={points} onChange={(e) => setPoints(e.target.value)} aria-label="Points required" placeholder="35000" className={cn(fieldClass, 'w-full')} />
           </label>
         </div>
         <div className="mt-3 flex items-baseline gap-2.5">

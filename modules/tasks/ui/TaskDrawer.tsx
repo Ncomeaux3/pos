@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { ActionButton, Eyebrow, Overlay } from '@/components/pos'
+import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
 import type { Task } from '../shape'
 import { writeTask, type ActionResult, type WriteInput } from './actions'
@@ -106,7 +107,7 @@ export function TaskDrawer({
       priority: draft.priority,
       project: draft.project || null,
       goal_ref: draft.goal || null,
-      estimated_minutes: draft.estimate === '' ? null : Number(draft.estimate),
+      estimated_minutes: parseNumber(draft.estimate),
       remind_minutes: draft.remind === '' ? null : Number(draft.remind),
     }
     onSave(() => writeTask(input), task ? 'Saved' : `Added. ${title}`)
@@ -215,8 +216,7 @@ export function TaskDrawer({
           <label className="flex flex-col gap-1.5">
             <Eyebrow>Estimate · min</Eyebrow>
             <input
-              type="number"
-              min={0}
+              inputMode="decimal"
               value={draft.estimate}
               onChange={set('estimate')}
               className={cn(field, 'num')}

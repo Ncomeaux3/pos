@@ -1545,6 +1545,16 @@ test('finance, the limits drawer holds edits until Done', async ({ page }) => {
   await page.keyboard.press('ArrowRight')
   await expect(page.getByText('1 unsaved change')).toBeVisible()
 
+  // Typed one key at a time, because the drawer once refocused its panel on
+  // every keystroke and only the first character landed. A pasted amount
+  // arrives the way money() prints it, with the sign and the comma.
+  const limit = page.getByLabel(/^Monthly limit for/).first()
+  await limit.fill('')
+  await limit.pressSequentially('1500')
+  await expect(limit).toHaveValue('1500')
+  await limit.fill('$1,250.50')
+  await expect(page.getByText('2 unsaved changes')).toBeVisible()
+
   await page.getByRole('button', { name: 'Reset' }).click()
   await expect(page.getByText('No changes')).toBeVisible()
   await page.getByRole('button', { name: 'Done' }).click()

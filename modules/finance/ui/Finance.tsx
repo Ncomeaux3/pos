@@ -19,6 +19,7 @@ import {
 } from '@/components/pos'
 import { useSearchState } from '@/components/pos/searchState'
 import { useIsPhone } from '@/components/pos/useIsPhone'
+import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
 import {
   balance,
@@ -634,15 +635,13 @@ export function Finance({ data }: { data: FinanceData }) {
             <Eyebrow className="flex-1">Monthly limit</Eyebrow>
             <span className="num text-[13px] text-ink-3">$</span>
             <input
-              type="number"
-              min={1}
-              step="1"
+              inputMode="decimal"
               defaultValue={openBudget.limitCents ? openBudget.limitCents / 100 : ''}
               aria-label={`Monthly limit for ${openBudget.name}`}
-              onBlur={(e) =>
-                e.target.value !== '' &&
-                run(() => saveBudget(openBudget.id, Number(e.target.value)), 'Limit saved')
-              }
+              onBlur={(e) => {
+                const n = parseNumber(e.target.value)
+                if (n !== null) run(() => saveBudget(openBudget.id, n), 'Limit saved')
+              }}
               className="num w-24 border border-rule-2 bg-bg px-2.5 py-[7px] text-right text-[14px] text-ink outline-none focus-visible:border-brand"
             />
             <span className="num text-[11px] text-ink-3">
@@ -1058,9 +1057,10 @@ function LimitsDrawer({
   const [nextThreshold, setNextThreshold] = useState(threshold)
   const [pending, start] = useTransition()
 
-  const changed = Object.entries(limits).filter(([id, v]) => {
+  const changed = Object.entries(limits).flatMap(([id, v]) => {
+    const n = parseNumber(v)
     const was = budgets.find((b) => b.id === id)?.limitCents
-    return v !== '' && Math.round(Number(v) * 100) !== (was ?? 0)
+    return n !== null && Math.round(n * 100) !== (was ?? 0) ? [[id, n] as [string, number]] : []
   })
   const thresholdChanged = nextThreshold !== threshold
   const count = changed.length + (thresholdChanged ? 1 : 0)
@@ -1075,10 +1075,7 @@ function LimitsDrawer({
   }
   const done = () =>
     start(async () => {
-      const result = await onSave(
-        changed.map(([id, v]) => [id, Number(v)] as [string, number]),
-        thresholdChanged ? nextThreshold : null,
-      )
+      const result = await onSave(changed, thresholdChanged ? nextThreshold : null)
       if (!result.ok) {
         toast(result.error)
         return
@@ -1089,8 +1086,8 @@ function LimitsDrawer({
 
   const totals = budgets.reduce(
     (t, b) => {
-      const edited = limits[b.id]
-      const limit = edited !== undefined && edited !== '' ? Math.round(Number(edited) * 100) : (b.limitCents ?? 0)
+      const edited = limits[b.id] === undefined ? null : parseNumber(limits[b.id])
+      const limit = edited !== null ? Math.round(edited * 100) : (b.limitCents ?? 0)
       return { spent: t.spent + b.spentCents, limit: t.limit + limit }
     },
     { spent: 0, limit: 0 },
@@ -1143,9 +1140,7 @@ function LimitsDrawer({
             <span className="flex items-center justify-end gap-1.5">
               <span className="num text-[13px] text-ink-3">$</span>
               <input
-                type="number"
-                min={1}
-                step="1"
+                inputMode="decimal"
                 value={limits[b.id] ?? (b.limitCents ? String(b.limitCents / 100) : '')}
                 onChange={(e) => setLimits((l) => ({ ...l, [b.id]: e.target.value }))}
                 aria-label={`Monthly limit for ${b.name}`}
