@@ -167,6 +167,7 @@ export default async function DashboardPage() {
             </p>
           ) : (
             <WarningList
+              phoneLimit={2}
               warnings={warnings.map((w) => ({
                 id: w.id,
                 title: w.title,
@@ -202,6 +203,7 @@ export default async function DashboardPage() {
             </p>
           ) : (
             <ProposalList
+              phoneLimit={1}
               proposals={proposals.map((p) => ({
                 id: p.id,
                 title: p.title ?? 'Proposal',

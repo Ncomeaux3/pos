@@ -49,6 +49,7 @@ export function Overlay({
 }) {
   const panel = useRef<HTMLDivElement>(null)
   const headingId = useId()
+  const eyebrowId = useId()
   // Dragging the sheet's handle down closes it, as every phone sheet does. On
   // the handle and the band only: the body scrolls, and a pull there is that.
   const drag = useSwipe({ onDown: onClose })
@@ -106,9 +107,9 @@ export function Overlay({
         role="dialog"
         aria-modal="true"
         // Named by its heading when it has one, so a title built from nodes
-        // still names the dialog; the eyebrow text is the fallback.
-        aria-labelledby={title !== undefined ? headingId : undefined}
-        aria-label={title === undefined && typeof eyebrow === 'string' ? eyebrow : undefined}
+        // still names the dialog; the eyebrow element is the fallback, so a
+        // crumb built from nodes ("Tasks / Edit") names a form drawer too.
+        aria-labelledby={title !== undefined ? headingId : eyebrow ? eyebrowId : undefined}
         tabIndex={-1}
         className={cn(
           'absolute flex flex-col bg-bg-elev outline-none',
@@ -132,7 +133,7 @@ export function Overlay({
           />
 
           <div className="flex h-14 items-center justify-between gap-4 border-b border-rule px-[18px] md:px-6">
-            <div className="min-w-0 truncate">{eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}</div>
+            <div id={eyebrowId} className="min-w-0 truncate">{eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}</div>
             <button
               type="button"
               onClick={onClose}

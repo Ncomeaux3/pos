@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
@@ -18,8 +19,11 @@ const MINI =
 
 export function WarningList({
   warnings,
+  phoneLimit,
 }: {
   warnings: { id: string; title: string; sub: string; urgent: boolean }[]
+  /** Rows shown below md; the rest sit behind a link, so Home fits in two swipes. */
+  phoneLimit?: number
 }) {
   const [gone, setGone] = useState<string[]>([])
   const [asking, setAsking] = useState<string | null>(null)
@@ -51,10 +55,13 @@ export function WarningList({
 
   return (
     <div className="flex flex-col">
-      {shown.map((w) => (
+      {shown.map((w, i) => (
         <div
           key={w.id}
-          className="flex items-center justify-between gap-2.5 border-b border-rule px-1 py-2 hover:bg-brand-soft"
+          className={cn(
+            'flex items-center justify-between gap-2.5 border-b border-rule px-1 py-2 hover:bg-brand-soft',
+            phoneLimit !== undefined && i >= phoneLimit && 'max-md:hidden',
+          )}
         >
           <span className="grid min-w-0 grid-cols-[8px_1fr] items-start gap-2.5">
             <span
@@ -106,13 +113,16 @@ export function WarningList({
           </span>
         </div>
       ))}
+      <More count={phoneLimit === undefined ? 0 : shown.length - phoneLimit} href="/notifications" />
     </div>
   )
 }
 
 export function ProposalList({
   proposals,
+  phoneLimit,
 }: {
+  phoneLimit?: number
   proposals: { id: string; title: string; from: string }[]
 }) {
   const [gone, setGone] = useState<string[]>([])
@@ -143,8 +153,11 @@ export function ProposalList({
 
   return (
     <div className="flex flex-col">
-      {shown.map((p) => (
-        <div key={p.id} className="border-b border-rule px-1 py-2.5">
+      {shown.map((p, i) => (
+        <div
+          key={p.id}
+          className={cn('border-b border-rule px-1 py-2.5', phoneLimit !== undefined && i >= phoneLimit && 'max-md:hidden')}
+        >
           <div className="flex items-baseline justify-between gap-2.5">
             <span className="truncate text-[11px] text-ink-3">{p.from}</span>
             <span className="label text-[10px] tracking-[0.06em] text-warn">pending</span>
@@ -210,6 +223,17 @@ export function ProposalList({
           </div>
         </div>
       ))}
+      <More count={phoneLimit === undefined ? 0 : shown.length - phoneLimit} href="/review" />
     </div>
+  )
+}
+
+/** The phone's way to the rows it does not show. Nothing from md up. */
+function More({ count, href }: { count: number; href: string }) {
+  if (count <= 0) return null
+  return (
+    <Link href={href} className="px-1 py-2 text-[12px] text-ink-2 hover:text-ink md:hidden">
+      and {count} more &rarr;
+    </Link>
   )
 }
