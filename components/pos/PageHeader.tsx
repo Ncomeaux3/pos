@@ -34,6 +34,7 @@ export function PageHeader({
   phoneAction,
   hideTitle = false,
   search = true,
+  searchPlaceholder,
   className,
 }: {
   /** The breadcrumb in band one. "Finance / Overview". */
@@ -53,6 +54,8 @@ export function PageHeader({
   hideTitle?: boolean
   /** False on the Search page, where the box below is the search. */
   search?: boolean
+  /** Home's artboard asks a question; every other band says "Search <title>". */
+  searchPlaceholder?: string
   className?: string
 }) {
   return (
@@ -78,7 +81,7 @@ export function PageHeader({
         {search && (
           <BandSearch
             className="ml-auto"
-            placeholder={typeof title === 'string' ? `Search ${title.toLowerCase()}` : undefined}
+            placeholder={searchPlaceholder ?? (typeof title === 'string' ? `Search ${title.toLowerCase()}` : undefined)}
           />
         )}
         {status && <div className={cn('flex items-center gap-3', !search && 'ml-auto')}>{status}</div>}

@@ -25,6 +25,8 @@ push Devices e2e test fail locally until it is added.
 
 ## Done
 
+**Phone shell, Phase 3: Dashboard.** docs/plans/phone-shell.md. Home's inline header is `PageHeader` (title Home, Run now as the phone's one action; the desktop band keeps crumb, search, Arrange and Run now). Phone Home is the headline plus five tiles, warnings, finance, tasks, review and timeline, in one column; every other tile and Arrange are desktop only. Open: the phone page is 2141px with the seeded data against the plan's 1800px, which only the tile bodies can shorten.
+
 **The fidelity pass, screens eighteen to twenty-one in parallel: Notifications,
 Agent Log, Onboarding, Login.** The third batch on the method below, all core
 screens, so each agent's scope was its route folder alone; Onboarding and

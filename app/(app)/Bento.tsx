@@ -15,7 +15,9 @@ import { useLongPress } from '@/components/pos/gestures'
 
 const KEY = 'pos.dashboard.order'
 
-export type Tile = { id: string; node: ReactNode }
+/** `phone: false` hides both the tile and its grid cell below md, so a tile
+ * the phone does not carry leaves no blank row behind it. */
+export type Tile = { id: string; node: ReactNode; phone?: boolean }
 
 // The stored order is external state, so it is read through the hook meant for
 // external state: the server snapshot is null, the browser's is whatever the
@@ -77,7 +79,11 @@ export function Bento({ tiles }: { tiles: Tile[] }) {
   const router = useRouter()
   // PosPhone's way in: hold a tile and the page enters the same arrange mode
   // the header link opens. Touch and pen only; see components/pos/gestures.
-  const press = useLongPress(() => router.push('/?arrange=1'))
+  // Arrange is desktop only (2026-09-13 decision), so a phone hold is a no-op.
+  const press = useLongPress(() => {
+    if (window.innerWidth < 768) return
+    router.push('/?arrange=1')
+  })
 
   const order = parse(useSyncExternalStore(subscribe, raw, () => null))
   const [dragging, setDragging] = useState<string | null>(null)
@@ -131,7 +137,7 @@ export function Bento({ tiles }: { tiles: Tile[] }) {
 
       <div
         data-testid="dashboard-bento"
-        className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] content-start gap-3.5 [grid-auto-rows:minmax(200px,auto)]"
+        className="grid grid-cols-1 content-start gap-3 [grid-auto-rows:minmax(200px,auto)] md:grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] md:gap-3.5"
       >
         {sorted.map((id) => {
           const tile = tiles.find((t) => t.id === id)
@@ -146,7 +152,8 @@ export function Bento({ tiles }: { tiles: Tile[] }) {
               onDragOver={(e) => arranging && e.preventDefault()}
               onDrop={() => drop(id)}
               className={cn(
-                'flex min-w-0 flex-col',
+                tile.phone === false ? 'hidden md:flex' : 'flex',
+                'min-w-0 flex-col',
                 arranging && 'cursor-grab',
                 dragging === id && 'opacity-60',
               )}
@@ -190,7 +197,8 @@ export function ArrangeToggle() {
       href={arranging ? '/' : '/?arrange=1'}
       className={cn(
         // 12px in 8px 12px, and filled accent while arranging, as drawn.
-        'inline-flex h-11 shrink-0 items-center border px-3 text-[12px] transition-colors duration-150 sm:h-[33px]',
+        // Arrange is desktop only (2026-09-13 decision).
+        'hidden h-11 shrink-0 items-center border px-3 text-[12px] transition-colors duration-150 sm:h-[33px] md:inline-flex',
         arranging
           ? 'border-brand bg-brand text-bg'
           : 'border-rule-2 text-ink-2 hover:border-ink hover:text-ink',
