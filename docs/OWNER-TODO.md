@@ -121,7 +121,7 @@ Two sources are built and live in production (PRs #17, #18, #19, all
       orchestrator queues one only when there is an alert, and the database is
       empty. The first alert proves delivery; a refused send shows as a failed
       `notify` job in Agent Log.
-- [ ] **18. `DATABASE_URL` to transaction mode**, 2 minutes. Vercel > pos >
+- [x] **18. `DATABASE_URL` to transaction mode**, done 2026-09-14. Confirmed from Vercel: zero runtime errors in the three hours after the change, against nine `EMAXCONNSESSION` failures before it., 2 minutes. Vercel > pos >
       Settings > Environment Variables > `DATABASE_URL` (Production): change
       `:5432` to `:6543`, nothing else, save, then Deployments > Redeploy the
       latest. Step 6 chose the session pooler, and session mode caps clients at
