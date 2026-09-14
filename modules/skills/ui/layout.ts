@@ -37,9 +37,16 @@ const LEAF_KY = 0.86
  */
 const SPREAD = 0.75
 
+/**
+ * Three decimals. The server and the browser disagree in the last bits of
+ * cos and sin, and React reported every edge and transform as a hydration
+ * mismatch; a thousandth of a unit is under a hundredth of a pixel.
+ */
+const round = (n: number) => Math.round(n * 1000) / 1000
+
 const at = (angle: number, rx: number, ry: number) => ({
-  x: Math.cos(angle) * rx,
-  y: Math.sin(angle) * ry,
+  x: round(Math.cos(angle) * rx),
+  y: round(Math.sin(angle) * ry),
 })
 
 /**
@@ -100,8 +107,8 @@ export function layout(nodes: SkillNode[]): Placed[] {
       const attr = placed.find((p) => p.id === attribute.id)!
       placed.push({
         id: category.id,
-        x: (attr.x + mean.x) / 2,
-        y: (attr.y + mean.y) / 2,
+        x: round((attr.x + mean.x) / 2),
+        y: round((attr.y + mean.y) / 2),
         ring: 'category',
         parent: category.parent,
       })
