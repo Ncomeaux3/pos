@@ -2,7 +2,21 @@
 
 Claude Code must ask about every unresolved item here before scaffolding. Record the answer, date, and reason in decisions/log.md, then mark it resolved.
 
-(none open)
+## Open for v2
+
+Both block a phase of docs/plans/v2-agent-layer.md. Neither blocks starting it.
+
+- **Auto-approve seed rules.** Which verbs are safe enough on day one. Blocks
+  phase 2. Recommendation: none. Ship `core.auto_approve_rules` empty, run four
+  weeks on manual approval, and write rules against what was approved every
+  time without hesitation.
+- **Gmail's read scope.** The whole mailbox, or one label the owner files into.
+  Blocks phase 5. Recommendation: one label, as the smaller blast radius for a
+  first connector.
+
+The nine resolved on 2026-09-14 (runner, ledger shape, integration extension,
+cost cap, plan location, no chat, first connectors, voice, secret store and
+queue) are in decisions/log.md and in docs/SPEC-v2.md.
 
 ## Resolved
 All eleven original items plus the architecture, platform, and template decisions were resolved on 2026-09-05. See decisions/log.md for each choice, its reason, and what was rejected. See docs/ARCHITECTURE.md for how they fit together.

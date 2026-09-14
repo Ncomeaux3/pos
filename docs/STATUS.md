@@ -581,6 +581,21 @@ The registry cycle that blocked steps 12 and 13 is fixed: both registries load
 in a plain Node process, which is what lets `pnpm setup` and the cron job work
 outside Next.
 
+## v2, specified 2026-09-14, not started
+
+docs/SPEC-v2.md and docs/plans/v2-agent-layer.md. The agent layer: per-verb
+permission on integrations, an action state machine over core.proposals, run
+budgets, a Postgres queue, a memory tier, a nightly suggestion pass, and plans
+in the goals schema. Nine decisions were taken with the owner the same day and
+are in decisions/log.md; two stay open in docs/DECISIONS.md.
+
+The draft spec proposed six things that already ship under other names (the
+credential vault, the connector registry, the approval gate, the audit trail,
+the runs table, the push channel), so v2 extends rather than adds. It stays on
+Vercel Hobby with the $10 cap, which is what fixes its shape: no long-lived
+process, no external queue, and a run that advances only when something drains
+the queue. Phases 0 to 4 are the product.
+
 ## Open questions for the owner
 
 - Voyage is capped at 3 requests a minute without a payment method. Search is

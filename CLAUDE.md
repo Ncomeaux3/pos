@@ -8,6 +8,7 @@ Owner: Nick. Solo, nights and weekends. Finish one module before starting the ne
 - Where the build is right now: docs/STATUS.md (read this first in a fresh session)
 - How it is built: docs/ARCHITECTURE.md (read before touching core, a manifest, or a migration)
 - Full module spec: @docs/SPEC.md (use /module <name> to load one module's section)
+- The next version: docs/SPEC-v2.md and docs/plans/v2-agent-layer.md (the agent layer, specified 2026-09-14, not started)
 - Unresolved choices: @docs/DECISIONS.md (ask before scaffolding anything they affect)
 - About the owner and how he works: context/owner.md
 - What was decided and why: decisions/log.md (append only)
