@@ -14,6 +14,7 @@ import {
   useToast,
 } from '@/components/pos'
 import { useSearchState } from '@/components/pos/searchState'
+import { parseNumber } from '@/core/numbers'
 import type { GlanceTile } from '@/core/review-glance'
 import type { Theme } from '@/core/theme'
 import {
@@ -599,15 +600,12 @@ export function Wizard({ data }: { data: WeekData }) {
                   {!check.computed && (
                     <div className="mt-3.5 flex flex-wrap gap-2.5 border-t border-rule pt-3.5">
                       <input
-                        type="number"
-                        step="any"
+                        inputMode="decimal"
                         defaultValue={answers.checkins[check.id] ?? ''}
-                        onBlur={(e) =>
-                          e.target.value !== '' &&
-                          patch({
-                            checkins: { ...answers.checkins, [check.id]: Number(e.target.value) },
-                          })
-                        }
+                        onBlur={(e) => {
+                          const n = parseNumber(e.target.value)
+                          if (n !== null) patch({ checkins: { ...answers.checkins, [check.id]: n } })
+                        }}
                         aria-label={`Check in on ${check.title}`}
                         placeholder="Where it stands today"
                         className={cn(reviewField, 'flex-[1_1_240px]')}

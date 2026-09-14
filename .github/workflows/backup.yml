@@ -35,7 +35,7 @@ jobs:
           ls -lh out/
 
       - name: Checkout the backup repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ github.repository_owner }}/pos-backups
           token: ${{ secrets.BACKUP_REPO_TOKEN }}

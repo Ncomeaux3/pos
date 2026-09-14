@@ -102,6 +102,8 @@ Out of scope: content of any module. Dashboard's inline header (Phase 3).
 
 Goal: Home is the Today page.
 
+Done 2026-09-14. Changes from the text below: the phone hides a tile's grid cell through a `phone` flag on `Tile` rather than the Card, since a hidden Card still held its 200px row; a long press to arrange is a no-op below md in the callback, a gesture having no CSS to hide; `PageHeader` took a `searchPlaceholder` prop so Home keeps the artboard's "What are you looking for?"; the headline under the band is a paragraph now that PageHeader's "Home" is the h1. Not met: the phone page measures 2141px with the seeded data (Warnings at 386px and Review at 398px carry the height) against the 1800px target; tile internals are out of scope here, so that is an open item for the owner. See decisions/log.md.
+
 Change
 - `app/(app)/page.tsx:373`: replace the inline header with `PageHeader` (title Home, `phoneAction` RunNow; desktop bands unchanged: crumb, BandSearch, ArrangeToggle, RunNow). `ORDER` at line 105 already holds `warnings, finance, tasks, review, timeline`: those five plus the headline render on the phone, every other tile gets `hidden md:flex`. Data is fetched server side either way, so no `useIsPhone`.
 - `app/(app)/Bento.tsx`: phone is `grid-cols-1` with 12px gap; Arrange toggle and long-press `hidden md:block`.

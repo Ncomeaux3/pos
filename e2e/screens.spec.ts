@@ -65,6 +65,11 @@ test('dashboard shell', async ({ page }) => {
     await page.goto('/browse')
     await expect(page.getByRole('link', { name: /^Review/ })).toBeVisible()
     await page.goto('/')
+
+    // Phone Home is a Today page: the headline plus five tiles (2026-09-13
+    // decision) - warnings, finance, tasks, review, timeline. Every other
+    // tile is desktop only.
+    await expect(page.getByTestId('dashboard-bento').locator(':scope > div:visible')).toHaveCount(5)
   } else {
     // By href: the sidebar prefixes each label with its two character index and
     // appends the pending count, so the accessible name is "RV Review 2", and
@@ -166,7 +171,8 @@ test('dashboard shell', async ({ page }) => {
       return { padding: cs.padding, border: cs.borderTopColor === ruleRgb }
     })
     expect(tile).toEqual({ padding: '16px 20px', border: true })
-    await expect(page.locator('header').getByText('What are you looking for?')).toBeVisible()
+    // The band's search, with the artboard's question rather than PageHeader's default.
+    await expect(page.getByRole('button', { name: /What are you looking for/ })).toBeVisible()
 
     // The footer is a list too: Dark (or Light) and Collapse are rows in it
     // with 13px labels, not a bar under it.
@@ -214,6 +220,19 @@ test('phone header shows back off a tab root and not on one', async ({ page }, t
   await expect(back).toHaveAttribute('href', '/browse')
 })
 
+test('home shows Run now on the phone', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'The phone header is a phone thing')
+
+  // Home is a tab root, so its phone header is title plus one action, no
+  // Back: the one thing to do from a phone after a run is press it again.
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'Home', level: 1 })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Back' })).toHaveCount(0)
+  // The phone header's own Run now, first in DOM order; the desktop band's
+  // copy of the same button sits after it, hidden below md.
+  await expect(page.getByRole('button', { name: 'Run now' }).first()).toBeVisible()
+})
+
 test('dashboard, the week ahead and arranging the tiles', async ({ page }) => {
   await page.goto('/')
 
@@ -225,15 +244,21 @@ test('dashboard, the week ahead and arranging the tiles', async ({ page }) => {
   // link named by its day; the Tasks tile lists the same title as a button.
   await expect(page.getByRole('link', { name: /Pay the Amex statement$/ })).toBeVisible()
 
-  // Arrange lives in the header and the mode lives in the URL, which is what
-  // lets the button be a link rather than a lifted piece of state.
-  await page.waitForLoadState('networkidle')
-  await page.getByRole('link', { name: 'Arrange' }).click()
-  await expect(page).toHaveURL(/arrange=1/)
-  await expect(page.getByText(/Arrange mode/)).toBeVisible()
+  // Arrange is desktop only (2026-09-13 decision): the toggle lives in the
+  // desktop band and stays hidden below md.
+  if ((page.viewportSize()?.width ?? 0) >= 768) {
+    // Arrange lives in the header and the mode lives in the URL, which is what
+    // lets the button be a link rather than a lifted piece of state.
+    await page.waitForLoadState('networkidle')
+    await page.getByRole('link', { name: 'Arrange' }).click()
+    await expect(page).toHaveURL(/arrange=1/)
+    await expect(page.getByText(/Arrange mode/)).toBeVisible()
 
-  await page.getByRole('link', { name: 'Done', exact: true }).click()
-  await expect(page.getByText(/Arrange mode/)).toBeHidden()
+    await page.getByRole('link', { name: 'Done', exact: true }).click()
+    await expect(page.getByText(/Arrange mode/)).toBeHidden()
+  } else {
+    await expect(page.getByRole('link', { name: 'Arrange' })).toBeHidden()
+  }
 })
 
 test('notes, the stub module page', async ({ page }) => {
@@ -866,22 +891,28 @@ test('changing autonomy is what decides whether an agent write is held', async (
 
 test('dashboard renders the nightly run', async ({ page }) => {
   await page.goto('/')
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
 
   // Run now is a server action behind requireOwner, not a call to the cron
   // route, so it needs no secret. On both widths: a job runs from a button
-  // that says so, and pulling down is a refresh, not a run.
-  await page.getByRole('button', { name: /^run now$/i }).click()
+  // that says so, and pulling down is a refresh, not a run. Two copies of the
+  // button exist (phone header and desktop band); only one is visible.
+  await page.getByRole('button', { name: /^run now$/i }).filter({ visible: true }).click()
   await expect(page.getByText(/^Run clean$|jobs? failed/i)).toBeVisible({ timeout: 20_000 })
   await page.reload()
 
   // Tile labels are uppercased by CSS, so the DOM still says "Warnings".
   const main = page.getByRole('main')
   await expect(main.getByText('Warnings')).toBeVisible()
-  await expect(main.getByText('System')).toBeVisible()
-  await expect(main.getByText('Model spend')).toBeVisible()
-  // One tile per module that wrote a digest, so the page needs no knowledge of
-  // any module to show its numbers. The tile's head is the link in, as drawn.
-  await expect(main.getByRole('link', { name: /open notes/i })).toBeVisible()
+  if (!mobile) {
+    // System, Model spend and Notes are desktop only tiles on the phone
+    // (2026-09-13 decision): Home is warnings, finance, tasks, review, timeline.
+    await expect(main.getByText('System')).toBeVisible()
+    await expect(main.getByText('Model spend')).toBeVisible()
+    // One tile per module that wrote a digest, so the page needs no knowledge of
+    // any module to show its numbers. The tile's head is the link in, as drawn.
+    await expect(main.getByRole('link', { name: /open notes/i })).toBeVisible()
+  }
 
   await shoot(page, 'dashboard-live')
 })
@@ -1545,6 +1576,16 @@ test('finance, the limits drawer holds edits until Done', async ({ page }) => {
   await slider.focus()
   await page.keyboard.press('ArrowRight')
   await expect(page.getByText('1 unsaved change')).toBeVisible()
+
+  // Typed one key at a time, because the drawer once refocused its panel on
+  // every keystroke and only the first character landed. A pasted amount
+  // arrives the way money() prints it, with the sign and the comma.
+  const limit = page.getByLabel(/^Monthly limit for/).first()
+  await limit.fill('')
+  await limit.pressSequentially('1500')
+  await expect(limit).toHaveValue('1500')
+  await limit.fill('$1,250.50')
+  await expect(page.getByText('2 unsaved changes')).toBeVisible()
 
   await page.getByRole('button', { name: 'Reset' }).click()
   await expect(page.getByText('No changes')).toBeVisible()
@@ -2418,10 +2459,11 @@ test('home, the calendar is worked out from the history', async ({ page }) => {
 test('home, a snooze comes back rather than dismissing', async ({ page }) => {
   await page.goto('/home')
 
-  const snooze = page.getByRole('button', { name: 'Snooze 30d' })
-  expect(await snooze.count()).toBeGreaterThan(0)
+  // Waited for, not counted: a count read before the tiles render is 0.
+  const snooze = page.getByRole('button', { name: 'Snooze 30d' }).first()
+  await expect(snooze).toBeVisible()
 
-  await snooze.first().click()
+  await snooze.click()
   await expect(page.getByText(/It comes back, it does not go away/)).toBeVisible()
 })
 
@@ -2775,7 +2817,8 @@ test('gestures, pulling down from the top refreshes the screen', async ({ page }
 })
 
 test('gestures, holding a dashboard tile enters arrange mode', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'mobile', 'Touch gestures are a phone thing')
+  // Arrange is desktop only (2026-09-13 decision): a phone hold is a no-op.
+  test.skip(testInfo.project.name === 'mobile', 'Arrange is desktop only')
 
   await page.goto('/')
   const tile = page.getByTestId('dashboard-bento').locator('> div').first()
@@ -2783,7 +2826,7 @@ test('gestures, holding a dashboard tile enters arrange mode', async ({ page }, 
   const box = (await tile.boundingBox())!
   const at = { clientX: box.x + 40, clientY: box.y + 40 }
 
-  // A hold of PosPhone's 480ms is the way in on a phone.
+  // A hold of PosPhone's 480ms is the way in, now desktop only.
   await tile.dispatchEvent('pointerdown', { pointerType: 'touch', ...at })
   await expect(page).toHaveURL(/arrange=1/)
   await expect(page.getByText(/^Arrange mode/)).toBeVisible()

@@ -5,6 +5,7 @@ import { useState, useTransition } from 'react'
 import { ActionButton, Eyebrow, TabBar, useToast } from '@/components/pos'
 import { useSearchState } from '@/components/pos/searchState'
 import type { LinkedItem } from '@/core/module-contract'
+import { parseNumber } from '@/core/numbers'
 import type { Metric } from '@/core/metrics'
 import { cn } from '@/lib/utils'
 import { formatValue, type GoalKind, type Point, type Progress, type Status } from '../progress'
@@ -303,7 +304,8 @@ function AddGoal({
     )
   }
 
-  const ready = title.trim() !== '' && Number(target) > 0 && deadline !== ''
+  const targetValue = parseNumber(target) ?? 0
+  const ready = title.trim() !== '' && targetValue > 0 && deadline !== ''
 
   return (
     <form
@@ -311,7 +313,7 @@ function AddGoal({
         e.preventDefault()
         if (!ready) return
         onRun(
-          () => writeGoal({ title: title.trim(), target_value: Number(target), deadline }),
+          () => writeGoal({ title: title.trim(), target_value: targetValue, deadline }),
           `Added. ${title.trim()}`,
         )
         setTitle('')
@@ -334,8 +336,7 @@ function AddGoal({
       <label className="flex flex-col gap-1.5">
         <Eyebrow>Target</Eyebrow>
         <input
-          type="number"
-          step="any"
+          inputMode="decimal"
           value={target}
           onChange={(e) => setTarget(e.target.value)}
           placeholder="21.1"
@@ -472,12 +473,14 @@ function Card({
             className="flex shrink-0 gap-1"
             onSubmit={(e) => {
               e.preventDefault()
-              if (value === '') return
-              onRun(() => recordCheckin(goal.id, Number(value)), 'Checked in')
+              const n = parseNumber(value)
+              if (n === null) return
+              onRun(() => recordCheckin(goal.id, n), 'Checked in')
               setValue('')
             }}
           >
             <input
+              inputMode="decimal"
               value={value}
               onChange={(e) => setValue(e.target.value)}
               aria-label={`Check in on ${goal.title}`}

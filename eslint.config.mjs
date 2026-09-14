@@ -18,6 +18,7 @@ const eslintConfig = defineConfig([
     "supabase/.temp/**",
     // Sibling checkouts carry their own .next output.
     ".worktrees/**",
+    ".claude/worktrees/**",
     "modules/_index.ts",
     "integrations/_index.ts",
   ]),
