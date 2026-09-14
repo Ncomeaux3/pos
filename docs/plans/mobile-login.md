@@ -33,11 +33,22 @@ an existing session, and losing the phone needs a way back in.
 **Email code, primary.** The same `signInWithOtp` call, the same email. The
 template carries `{{ .Token }}` and `{{ .ConfirmationURL }}`, so one message
 holds both the code and the link. The sent screen becomes a six digit field;
-submitting calls `verifyOtp({ email, token, type: 'email' })` in a server
-action, which returns a session directly and sets the cookie on the response.
-No PKCE is involved in that path, verified against
-`@supabase/auth-js@2.116.0` `GoTrueClient.verifyOtp`. The link keeps working
-for the laptop, where it never broke.
+submitting calls `verifyOtp` in a server action, which returns a session
+directly and sets the cookie on the response. No PKCE is involved in that path,
+verified against `@supabase/auth-js@2.116.0` `GoTrueClient.verifyOtp`. The link
+keeps working for the laptop, where it never broke.
+
+Corrected 2026-09-14, after the first build reached production. That call
+passed `type: 'email'`, which is what Supabase documents for this flow, and it
+refused every valid code. GoTrue files a magic link to an existing user as a
+recovery token (`auth.one_time_tokens.token_type` came back `recovery_token`)
+and `/verify` matches only when the type maps to the same column, so a code 41
+seconds old came back "token has expired or is invalid". The stored token is
+hashed, so which type maps to that column cannot be tested from outside, and it
+is a GoTrue internal the docs do not pin down. `core/otp.ts` `VERIFY_TYPES` now
+tries `magiclink`, `email` and `recovery` in that order and takes the first
+accepted, so the only way into this app does not rest on a guess about an
+undocumented internal.
 
 **Passkey, fast path.** Supabase Auth has native passkeys as of
 supabase-js 2.105.0; this repo is on 2.116.0 and the methods are present. It

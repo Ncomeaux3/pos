@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { serverClient } from '@/core/db'
 import { getOrigin } from '@/core/origin'
 import { ownerVerdict } from '@/core/owner'
-import { isCompleteCode, normalizeCode } from '@/core/otp'
+import { isCompleteCode, normalizeCode, verifyWithAnyType } from '@/core/otp'
 
 // Server actions are standalone POST endpoints addressed by id, so neither the
 // layout nor the proxy's owner check stands in front of them. Both actions here
@@ -74,11 +74,19 @@ export async function verifyCode(formData: FormData) {
   }
 
   const supabase = await serverClient()
-  const { error } = await supabase.auth.verifyOtp({ email, token: code, type: 'email' })
+
+  // One code, tried against each type GoTrue might have filed it under. See
+  // VERIFY_TYPES: the documented 'email' alone refused every valid code on this
+  // project, because a magic link to an existing user is stored as a recovery
+  // token and the type has to match the column.
+  const { ok } = await verifyWithAnyType(async (type) => {
+    const { error } = await supabase.auth.verifyOtp({ email, token: code, type })
+    return error
+  })
 
   // Wrong and expired are one message. Supabase does not reliably tell them
   // apart, and the next step is the same either way: ask for another.
-  if (error) back({ sent: '1', email, error: 'code' })
+  if (!ok) back({ sent: '1', email, error: 'code' })
 
   redirect('/')
 }

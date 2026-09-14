@@ -20,3 +20,47 @@ export function normalizeCode(input: string): string {
 export function isCompleteCode(input: string): boolean {
   return normalizeCode(input).length === CODE_LENGTH
 }
+
+/**
+ * The verification types tried, in order, against one code.
+ *
+ * Supabase documents `email` for this flow. It does not work here. GoTrue
+ * stores the code for a magic link to an existing user in the recovery token
+ * column (confirmed on 2026-09-14: the row in `auth.one_time_tokens` came back
+ * as `recovery_token`), and `/verify` only matches when the type it is handed
+ * maps to the same column. With `email` alone every code was refused as
+ * "token has expired or is invalid" 41 seconds after it was issued.
+ *
+ * Which type maps to that column is a GoTrue internal the docs do not pin
+ * down, and the stored token is hashed so it cannot be tested from outside.
+ * Encoding one guess is how the only way into this app breaks again the next
+ * time that internal moves, so all three are tried and the first accepted one
+ * wins. `magiclink` is first because it is what the evidence points at, so the
+ * common case costs one call.
+ *
+ * A wrong code costs three refusals rather than one. That spends Supabase's
+ * own verification limit three times as fast, which for a single owner makes
+ * brute force harder rather than easier.
+ */
+export const VERIFY_TYPES = ['magiclink', 'email', 'recovery'] as const
+
+export type VerifyType = (typeof VERIFY_TYPES)[number]
+
+/**
+ * Runs `attempt` for each type until one returns no error. `attempt` returns
+ * the error or null, so this stays free of any Supabase type and can be tested
+ * without a project.
+ */
+export async function verifyWithAnyType<E>(
+  attempt: (type: VerifyType) => Promise<E | null>,
+): Promise<{ ok: boolean; type: VerifyType | null; error: E | null }> {
+  let last: E | null = null
+
+  for (const type of VERIFY_TYPES) {
+    const error = await attempt(type)
+    if (!error) return { ok: true, type, error: null }
+    last = error
+  }
+
+  return { ok: false, type: null, error: last }
+}
