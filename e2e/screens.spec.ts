@@ -2411,10 +2411,11 @@ test('home, the calendar is worked out from the history', async ({ page }) => {
 test('home, a snooze comes back rather than dismissing', async ({ page }) => {
   await page.goto('/home')
 
-  const snooze = page.getByRole('button', { name: 'Snooze 30d' })
-  expect(await snooze.count()).toBeGreaterThan(0)
+  // Waited for, not counted: a count read before the tiles render is 0.
+  const snooze = page.getByRole('button', { name: 'Snooze 30d' }).first()
+  await expect(snooze).toBeVisible()
 
-  await snooze.first().click()
+  await snooze.click()
   await expect(page.getByText(/It comes back, it does not go away/)).toBeVisible()
 })
 
