@@ -13,7 +13,7 @@ Single user. Fork and fill template: the code holds nothing personal. Personal s
 | Database | Supabase Postgres with pgvector, one schema per module plus `core` |
 | Data access | Direct pg over the pool in `core/db.ts` for core and module schemas, typed against generated types; supabase-js for auth only. Hand-written SQL migrations, no ORM. Schemas stay unexposed to PostgREST (2026-09-05). |
 | Storage | Supabase Storage, one private bucket per module |
-| Auth | Supabase Auth magic link, signups disabled, one owner user, RLS everywhere |
+| Auth | Supabase Auth: a six digit emailed code, a passkey once one is registered, signups disabled, one owner user, RLS everywhere |
 | Hosting | Vercel Hobby with Git integration, one hosted Supabase project for prod |
 | Jobs | One Vercel cron at 09:00 UTC hitting `/api/cron/nightly` |
 | Agents | One MCP server at `/api/mcp`, namespaced tools, bearer token |
@@ -26,7 +26,7 @@ Single user. Fork and fill template: the code holds nothing personal. Personal s
 
 ```
 app/                      Next.js App Router
-  (auth)/login            magic link page
+  (auth)/login            code and passkey sign in
   (app)/layout.tsx        shell: nav built from module manifests
   (app)/page.tsx          dashboard (reads core.dashboard_summary)
   (app)/[module]/[[...path]]/page.tsx   one catch-all that dispatches to manifest.pages
@@ -207,7 +207,13 @@ Jobs never throw past the runner. Failures land in `core.jobs` and appear as an 
 
 ## Auth and secrets
 
-Supabase Auth, magic link, signups disabled. `scripts/setup.ts` creates the one owner user from `OWNER_EMAIL`. Middleware rejects any session whose email differs. RLS on every table as backstop.
+Supabase Auth, signups disabled. `scripts/setup.ts` creates the one owner user from `OWNER_EMAIL`. Middleware rejects any session whose email differs. RLS on every table as backstop.
+
+Three ways in, in the order the screen offers them:
+
+- **Passkey.** `signInWithPasskey()` in the browser, Supabase Auth's own WebAuthn. No table here: it stores the credential and mints the session. Registering needs a session, so it is never the first way in. The relying party lives in Supabase's config, not in this repo, so moving domains is a dashboard change. Supabase marks the API experimental and `core/db-browser.ts` opts in explicitly; every failure path falls back to the code.
+- **Six digit code.** `signInWithOtp` sends it, `verifyOtp({ email, token, type: 'email' })` in a server action creates the session. This is the path that works on a phone, because the session is created by the browser that is reading the page rather than by whichever browser a mail app decides to open.
+- **The link in the same email.** `app/auth/callback/route.ts`, a PKCE exchange. It only works in the browser that asked, since that is where the code verifier cookie is, which is exactly why it is not the primary path any more.
 
 `.env` holds infrastructure secrets only: Supabase URL and keys, `OWNER_EMAIL`, `ENCRYPTION_KEY`, `CRON_SECRET`, `MCP_TOKEN`, and OAuth client id and secret per oauth2 provider. Every account credential lives encrypted in `core.connections`. Policy numbers and account identifiers pass through `core/crypto.ts` before insert. `.env.example` names every key. Claude Code is denied reading `.env` by `.claude/settings.json`.
 
@@ -245,12 +251,12 @@ Forks receive upgrades by adding this repo as a git remote and merging. Personal
 | Frontend | Next.js App Router, Tailwind, shadcn/ui, PWA manifest. Module pages come from manifests. Screens come from the design bundle; type, shape and colour come from ComeauxVerse/brand/visual.md: Manrope one family, radius 12px and 8px, the brand type scale, 15 colour tokens. Shared primitives in `components/pos/`, charts hand-rolled SVG. See docs/plans/design-build.md. |
 | APIs and backend logic | Server actions for UI writes, route handlers for cron, MCP, OAuth callback, webhooks. Module logic in `modules/<name>/`, shared logic in `core/`. |
 | Database and storage | Supabase Postgres, one schema per module plus `core`, pgvector, Supabase Storage bucket per module, integer cents, timestamptz. |
-| Auth and permissions | Supabase Auth magic link, signups disabled, one owner. RLS on every table. `pos_readonly` role for agent SQL. MCP bearer token. CRON_SECRET on cron. Webhook shared secrets. |
+| Auth and permissions | Supabase Auth, emailed code or passkey, signups disabled, one owner. RLS on every table. `pos_readonly` role for agent SQL. MCP bearer token. CRON_SECRET on cron. Webhook shared secrets. |
 | Hosting and deployment | Vercel Hobby, Git integration, main to prod, branches to previews. One hosted Supabase project. |
 | Cloud and compute | Vercel serverless functions with fluid compute for the nightly job, chunked work with cursors. No servers or containers in prod. Docker only for local Supabase. |
 | CI/CD and version control | GitHub private repo, Actions for typecheck, lint, vitest, `supabase db push` from a release step, branch per module. |
 | Security and data access | Infra secrets in `.env`, account credentials encrypted in `core.connections`, AES-256-GCM, Dependabot on, security headers in `next.config`, zod at every boundary, nothing personal in the repo. |
-| Rate limiting | Vercel Firewall at the edge, per-route in-memory limiter (60 per minute per IP), Supabase Auth's own limits on magic links. |
+| Rate limiting | Vercel Firewall at the edge, per-route in-memory limiter (60 per minute per IP), Supabase Auth's own limits on sign in emails and on code verifications. |
 | Caching and CDN | Vercel CDN for static assets, Next.js cache with revalidate tags, digest tables as read cache, provider responses persisted so external APIs are hit once per sync. No Redis. |
 | Load balancing and scaling | Not a goal. Single user, single region. The platform scales itself; the app never needs more than one concurrent job. |
 | Observability and logs | `core.jobs`, `core.request_log`, `core.llm_calls`, all queryable in-app and by the query tool. Vercel logs for short-lived runtime detail. Failures appear in the daily email. |

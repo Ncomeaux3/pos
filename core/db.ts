@@ -23,6 +23,14 @@ export async function serverClient() {
     env('NEXT_PUBLIC_SUPABASE_URL'),
     env('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
     {
+      auth: {
+        // Listing and deleting a passkey are plain calls against the owner's
+        // own session, so they belong here rather than in the browser. Only
+        // creating one needs a browser, because only a browser can run the
+        // WebAuthn ceremony. supabase-js gates every passkey method behind
+        // this flag.
+        experimental: { passkey: true },
+      },
       cookies: {
         getAll() {
           return parseCookieHeader(cookieStore.toString())
