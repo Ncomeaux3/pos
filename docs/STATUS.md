@@ -568,7 +568,10 @@ Travel, Weekly review) carry it in that band; `Segments` wraps a
 section row and the pane that swipes it (Meals first, Finance, Tasks and Goals
 in their own passes); a drag from the left edge past 90px goes back; the
 sheet's handle drags closed. Finance's Sync button is desktop only until Phase
-4; Fitness's is its phone action already. Phases 3 to 5 are next.
+4; Fitness's is its phone action already. Phase 3 (Dashboard) is built: Home
+is the headline and five tiles on the phone. Open from it: the phone page is
+2141px tall against the plan's 1800px, and only the tile bodies (out of scope
+for the shell) can shorten it. Phases 4 and 5 are next.
 
 See docs/plans/design-build.md.
 
