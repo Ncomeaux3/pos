@@ -2028,8 +2028,7 @@ test('second brain, the capture box saves a note and shows related while typing'
   await box.getByRole('button', { name: /^Save/ }).click()
   await expect(page.getByText('Saved')).toBeVisible()
   await expect(page).toHaveURL(/folder=note/)
-  const rows = page.locator('section').first().getByRole('button', { name: /^Captured/ })
-  await expect(rows.first()).toContainText(title)
+  await expect(page.getByRole('button', { name: /^Captured/ }).first()).toContainText(title)
   await expect(page.getByRole('heading', { name: title })).toBeVisible()
 })
 
