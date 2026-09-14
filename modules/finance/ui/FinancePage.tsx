@@ -124,8 +124,9 @@ export default async function FinancePage() {
         }
         title="Finance"
         lede="Balances, upcoming charges, and budgets. Synced nightly, amounts in USD."
+        // A reading, not a button, so it stays off the phone's action slot.
         actions={
-          <span className="label text-[11px] tracking-[0.08em] text-ink-3">
+          <span className="label hidden text-[11px] tracking-[0.08em] text-ink-3 md:inline">
             {bandDate(todayIso)} · {data.accounts.length} accounts · {hot} {hot === 1 ? 'flag' : 'flags'}
           </span>
         }

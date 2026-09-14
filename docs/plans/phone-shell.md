@@ -72,6 +72,8 @@ Out of scope: any visual change to headers, tabs, tiles.
 
 ## Phase 2: shell
 
+Done 2026-09-13. Changes from the text below: `phoneTabs` lives in `core/phone-tabs.ts` (core/nav.ts reads the database and the tab bar is a client component); Browse's glyph is `Compass` (LayoutGrid is Dashboard's); the phone header's right slot falls back to the desktop `actions` when no `phoneAction` is given, so modules without a phone pass keep their buttons; Meals took `Segments` this phase so the primitive has a consumer and the gesture test dispatches on its pane; `TabBar` itself scrolls the active tab into view, so Review gets that too. Finance's Sync button is in the desktop `status` band and is not on the phone until Phase 4 makes it the `phoneAction`. See decisions/log.md.
+
 Goal: tab bar Home, Tasks, Finance, Browse; a phone header on every screen; the segmented row owns its swipe; app-owned swipe-back.
 
 Add

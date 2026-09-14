@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { useSwipe } from './gestures'
 
@@ -67,8 +67,22 @@ export function TabBar<T extends string>({
     onRight: () => index > 0 && onChange(tabs[index - 1].value),
   })
 
+  // Five tabs at 402px run off the edge, so a change made by swipe or by a
+  // deep link brings the active tab into view. By hand rather than
+  // scrollIntoView, which would also scroll the page to the row.
+  const row = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = row.current
+    const tab = el?.querySelector<HTMLElement>('[aria-selected="true"]')
+    if (!el || !tab) return
+    const left = tab.offsetLeft - el.offsetLeft
+    const right = left + tab.offsetWidth
+    if (left < el.scrollLeft) el.scrollLeft = left
+    else if (right > el.scrollLeft + el.clientWidth) el.scrollLeft = right - el.clientWidth
+  }, [value])
+
   return (
-    <div role="tablist" aria-label={label} className={cn(TAB_ROW, className)} {...swipe}>
+    <div ref={row} role="tablist" aria-label={label} className={cn(TAB_ROW, className)} {...swipe}>
       {tabs.map((t) => {
         const on = t.value === value
         return (

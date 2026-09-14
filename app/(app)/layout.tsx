@@ -1,20 +1,14 @@
 import { requireOwner } from '@/core/auth'
-import { db } from '@/core/db'
 import { getNav, getOffRailNav, NAV_FOOTER } from '@/core/nav'
+import { countPending } from '@/core/proposals'
 import { getSettings } from '@/core/settings'
 import { getSidebarCollapsed, getTheme } from '@/core/theme'
 import { CommandPalette } from '@/components/pos/CommandPalette'
 import { MobileTabBar, Sidebar } from '@/components/pos/Sidebar'
 import { ToastProvider } from '@/components/pos'
 import { PullToRefresh } from '@/components/pos/PullToRefresh'
+import { EdgeBack } from '@/components/pos/EdgeBack'
 import { toggleSidebar, toggleTheme } from './shell-actions'
-
-async function pendingProposals(): Promise<number> {
-  const { rows } = await db().query<{ count: string }>(
-    `select count(*)::text as count from core.proposals where status = 'pending'`,
-  )
-  return Number(rows[0].count)
-}
 
 export default async function AppLayout({ children }: LayoutProps<'/'>) {
   await requireOwner()
@@ -24,7 +18,8 @@ export default async function AppLayout({ children }: LayoutProps<'/'>) {
     getOffRailNav(),
     getSidebarCollapsed(),
     getTheme(),
-    pendingProposals(),
+    // The same count Browse and Review show: a snoozed proposal is not a badge.
+    countPending(),
     getSettings(),
   ])
 
@@ -40,9 +35,10 @@ export default async function AppLayout({ children }: LayoutProps<'/'>) {
         onToggleCollapse={toggleSidebar}
         onToggleTheme={toggleTheme}
       />
-      <MobileTabBar nav={nav} footer={NAV_FOOTER} reviewCount={reviewCount} />
+      <MobileTabBar nav={nav} reviewCount={reviewCount} />
       <CommandPalette nav={[...nav, ...NAV_FOOTER, ...offRail]} />
       <PullToRefresh />
+      <EdgeBack />
 
       <main
         // The sidebar is fixed so the rail never scrolls with the page; this

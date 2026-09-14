@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { ActionButton } from './Button'
+import { BackControl } from './BackControl'
 
 export type ReviewStep = { key: string; name: string }
 
@@ -71,6 +72,7 @@ export function ReviewShell({
         {/* The artboard names the week and the step, never the page. The page
             still needs a heading, so it has one and it is not drawn. */}
         <h1 className="sr-only">Weekly review</h1>
+        <BackControl />
         <div className="min-w-0">
           <span className="eyebrow text-ink-3">
             <span className="status-dot" aria-hidden />

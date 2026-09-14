@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 // One smoke test per screen: load it, assert the elements that carry meaning
 // are there, and capture the shot at this project's width in both themes. The
@@ -27,6 +27,15 @@ async function withTheme(page: Page, theme: 'dark' | 'light') {
   ])
 }
 
+/**
+ * The page band (breadcrumb, status) is the desktop's: below md the header is
+ * one row with the title and at most one action, and the band is not drawn.
+ */
+async function expectBand(page: Page, locator: Locator) {
+  if ((page.viewportSize()?.width ?? 0) < 768) await expect(locator).toBeHidden()
+  else await expect(locator).toBeVisible()
+}
+
 async function shoot(page: Page, name: string) {
   const width = page.viewportSize()?.width ?? 0
   for (const theme of ['dark', 'light'] as const) {
@@ -44,19 +53,24 @@ test('dashboard shell', async ({ page }) => {
   // The nav is built from manifests, so Dashboard has to be there for the
   // module contract to still be working.
   const nav = page.getByRole('navigation', { name: /modules|sections/i }).first()
-  await expect(nav.getByRole('link', { name: 'Dashboard' })).toBeVisible()
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
+  // The rail says Dashboard; the phone's first tab says Home.
+  await expect(nav.getByRole('link', { name: mobile ? 'Home' : 'Dashboard' })).toBeVisible()
 
-  // The phone bar holds four named tabs and a More sheet, so which modules are
-  // on the bar is a layout decision the design already made. What is worth
-  // asserting is that both are reachable, wherever they sit.
-  const mobile = (page.viewportSize()?.width ?? 0) < 720
+  // The phone bar holds Home, Tasks, Finance and Browse, and Browse is the
+  // page where Review lives. What is worth asserting is that Review is
+  // reachable, wherever it sits.
   if (mobile) {
-    await page.getByRole('group').getByText('More').click()
+    await expect(nav.locator('a[href="/browse"]')).toBeVisible()
+    await page.goto('/browse')
+    await expect(page.getByRole('link', { name: /^Review/ })).toBeVisible()
+    await page.goto('/')
+  } else {
+    // By href: the sidebar prefixes each label with its two character index and
+    // appends the pending count, so the accessible name is "RV Review 2", and
+    // "Weekly review" would match a loose name filter anyway.
+    await expect(nav.locator('a[href="/review"]')).toBeVisible()
   }
-  // By href: the sidebar prefixes each label with its two character index and
-  // appends the pending count, so the accessible name is "RV Review 2", and
-  // "Weekly review" would match a loose name filter anyway.
-  await expect(nav.locator('a[href="/review"]')).toBeVisible()
   // PosSidebar.dc.html lists thirteen modules and Review. Notes is not one of
   // them, so the stub leaves the numbered rail and every index after it lines
   // up with the artboard. The route itself stays; the palette test proves it.
@@ -165,14 +179,39 @@ test('dashboard shell', async ({ page }) => {
     expect(labelSize).toBe('13px')
   }
 
-  // Closed with the summary that opened it. Escape does not close a `details`,
-  // and the sheet is full width now, so leaving it open would be most of the
-  // dashboard shot.
-  if (mobile) {
-    await page.getByRole('group').getByText('More').click()
-    await expect(nav.locator('a[href="/review"]')).toBeHidden()
-  }
   await shoot(page, 'dashboard')
+})
+
+test('browse lists every enabled module and the POS group', async ({ page }) => {
+  await page.goto('/browse')
+  // Same source as the rail, minus Dashboard and Review, which have their own
+  // places: a tab and the POS group.
+  const modules = page.getByRole('list').first()
+  await expect(modules.getByRole('link')).toHaveCount(12)
+  await expect(modules.getByRole('link', { name: 'Finance' })).toBeVisible()
+  await expect(modules.getByRole('link', { name: 'Travel' })).toBeVisible()
+  await expect(modules.getByRole('link', { name: 'Dashboard' })).toHaveCount(0)
+
+  const pos = page.getByRole('list').last()
+  const labels = await pos.getByRole('link').evaluateAll((links) =>
+    links.map((a) => a.textContent?.replace(/\d+$/, '').trim()),
+  )
+  expect(labels).toEqual(['Review', 'Notifications', 'Agent log', 'Settings'])
+  await shoot(page, 'browse')
+})
+
+test('phone header shows back off a tab root and not on one', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'The back control is a phone thing')
+
+  // Tasks is a tab: nothing to go back to.
+  await page.goto('/tasks')
+  await expect(page.getByRole('link', { name: 'Back' })).toHaveCount(0)
+
+  // Goals is not, and a cold open has no history, so Back is a link to Browse.
+  await page.goto('/goals')
+  const back = page.getByRole('link', { name: 'Back' })
+  await expect(back).toBeVisible()
+  await expect(back).toHaveAttribute('href', '/browse')
 })
 
 test('dashboard, the week ahead and arranging the tiles', async ({ page }) => {
@@ -216,7 +255,7 @@ test('skill tree, constellation and the selected skill panel', async ({ page }) 
   const detailPane = page.getByTestId('skill-tree-detail-pane')
   await expect(detailPane.getByText(/to Lv \d/)).toBeVisible()
 
-  const mobile = (page.viewportSize()?.width ?? 0) < 720
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
   if (!mobile) {
     // Two flush halves under a 56px band, split by one rule; Reset view sits
     // in the band; the pips carry the artboard's six letter cuts; the hints
@@ -519,7 +558,7 @@ test('search, empty and with results', async ({ page }) => {
   await page.goto('/search')
   // No title block: the band is the crumb and Quick search; the box sits low
   // on an empty page with every module's chip under it and nothing else.
-  await expect(page.getByRole('button', { name: /Quick search/ })).toBeVisible()
+  await expectBand(page, page.getByRole('button', { name: /Quick search/ }))
   await expect(page.getByRole('link', { name: 'Everything', exact: true })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Finance', exact: true }).first()).toBeVisible()
   await shoot(page, 'search-empty')
@@ -583,7 +622,7 @@ test('command palette opens on cmd k and finds an entity', async ({ page }) => {
 test('settings', async ({ page }) => {
   await page.goto('/settings')
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
-  const mobile = (page.viewportSize()?.width ?? 0) < 720
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
   if (!mobile) await expect(page.getByText(/\d+ of \d+ connected/)).toBeVisible()
 
   // The cap is the artboard's slider; the nightly strip reads the cron on the
@@ -671,12 +710,14 @@ test('review inbox, list and sticky detail panel', async ({ page }) => {
 
   // The band: crumb on the left, the pending count with its dot on the right,
   // above the title rather than beside the bulk button.
-  await expect(page.getByText('Review / Pending')).toBeVisible()
+  await expectBand(page, page.getByText('Review / Pending'))
   const pendingCount = page.getByText(/^\d+ pending$/)
-  await expect(pendingCount).toBeVisible()
-  const countBox = await pendingCount.boundingBox()
-  const headingBox = await heading.boundingBox()
-  expect(countBox!.y).toBeLessThan(headingBox!.y)
+  await expectBand(page, pendingCount)
+  if ((page.viewportSize()?.width ?? 0) >= 768) {
+    const countBox = await pendingCount.boundingBox()
+    const headingBox = await heading.boundingBox()
+    expect(countBox!.y).toBeLessThan(headingBox!.y)
+  }
 
   await expect(page.getByRole('tab', { name: /Pending/ })).toHaveAttribute('aria-selected', 'true')
 
@@ -851,7 +892,7 @@ test('notifications, rules table and the alert centre', async ({ page }) => {
 
   // The band and schedule card join every generated string with a middle dot,
   // matching the artboard, not a slash or "to".
-  await expect(page.getByText(/rules active · \d+ held/)).toBeVisible()
+  await expectBand(page, page.getByText(/rules active · \d+ held/))
   await expect(page.getByText(/Quiet 22:00–06:30 · /)).toBeVisible()
 
   // The rules table's column header, and one row's channel/timing strings,
@@ -934,7 +975,7 @@ test('notifications, pause all turns amber', async ({ page }) => {
   const resume = page.getByRole('button', { name: 'Resume all' })
   await expect(resume).toBeVisible()
   await expect(resume).toHaveClass(/border-warn/)
-  await expect(page.getByText(/rules active · \d+ held/)).toBeVisible()
+  await expectBand(page, page.getByText(/rules active · \d+ held/))
 
   await shoot(page, 'notifications-paused')
 
@@ -962,7 +1003,7 @@ test('agent log, the run accordion and the rail', async ({ page }) => {
 
   // The band names the run with the artboard's punctuation: a middle dot
   // between the write count and the failure count, both pluralised honestly.
-  await expect(page.getByText(/Last run .+ · \d+ writes? · \d+ jobs? failed/)).toBeVisible()
+  await expectBand(page, page.getByText(/Last run .+ · \d+ writes? · \d+ jobs? failed/))
 
   // The accordion opens on the newest run that wrote something, skipping past
   // however many empty Run now records an earlier test left behind. No click
@@ -1049,8 +1090,8 @@ test('settings, notifications', async ({ page }) => {
 test('tasks, the board and the quick add parser', async ({ page }) => {
   await page.goto('/tasks')
   // No title block: the band carries the crumb with the view, and the count.
-  await expect(page.getByText('Tasks / Today')).toBeVisible()
-  await expect(page.getByText(/\d+ open · \d+ done today/)).toBeVisible()
+  await expectBand(page, page.getByText('Tasks / Today'))
+  await expectBand(page, page.getByText(/\d+ open · \d+ done today/))
 
   // Today holds what is due today and what slipped, because a slip is today.
   await expect(page.getByText(/^Today · \w{3} \w{3} \d+$/)).toBeVisible()
@@ -1101,7 +1142,7 @@ test('tasks, a row expands in place and EDIT opens the form drawer', async ({ pa
   // On the phone the drawer is PosPhone's sheet: full width, on the bottom
   // edge, at most 74% of the screen.
   const viewport = page.viewportSize()!
-  if (viewport.width < 720) {
+  if (viewport.width < 768) {
     const box = (await drawer.boundingBox())!
     expect(box.x).toBe(0)
     expect(box.width).toBe(viewport.width)
@@ -1115,7 +1156,7 @@ test('tasks, a row expands in place and EDIT opens the form drawer', async ({ pa
   const toast = page.getByText('Saved')
   await expect(toast).toBeVisible()
   // The toast clears the phone tab bar rather than sitting under it.
-  if (viewport.width < 720) {
+  if (viewport.width < 768) {
     const bar = (await page.getByRole('navigation', { name: 'Sections' }).boundingBox())!
     const t = (await toast.boundingBox())!
     expect(t.y + t.height).toBeLessThan(bar.y)
@@ -1192,7 +1233,7 @@ test('goals, progress by area with the rule behind each status', async ({ page }
   await page.goto('/goals')
   await expect(page.getByRole('heading', { name: 'Goals' })).toBeVisible()
   // The band's summary, with the dot in the worst colour on the page.
-  await expect(page.getByText(/\d+ active · \d+ at risk · \d+ stalled/)).toBeVisible()
+  await expectBand(page, page.getByText(/\d+ active · \d+ at risk · \d+ stalled/))
 
   // Grouped by life area, each group counting what is on track, and every
   // status carries the sentence that produced it rather than only a colour.
@@ -1204,9 +1245,10 @@ test('goals, progress by area with the rule behind each status', async ({ page }
   await expect(page.getByText(/Pace .* vs .* needed \(\d+%\)\./).first()).toBeVisible()
 
   // The demo history is shaped so every rule is on screen at once.
-  await expect(page.getByText('STALLED').first()).toBeVisible()
-  await expect(page.getByText('AT RISK').first()).toBeVisible()
-  await expect(page.getByText('ON TRACK').first()).toBeVisible()
+  // The card badges, not the band's "1 STALLED", which the phone does not draw.
+  await expect(page.getByText('STALLED', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('AT RISK', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('ON TRACK', { exact: true }).first()).toBeVisible()
 
   // The card names the next linked task, which Tasks answers through core.
   await expect(netWorth.getByText(/^Next: /)).toBeVisible()
@@ -1327,7 +1369,7 @@ test('weekly review, six steps and a note built from the answers', async ({ page
   // The band's theme button, as the artboard draws it beside the duration. It
   // names the theme you are on and shares the setting with the sidebar row,
   // so one click moves both. Desktop only: the sidebar is not on a phone.
-  if ((page.viewportSize()?.width ?? 0) >= 720) {
+  if ((page.viewportSize()?.width ?? 0) >= 768) {
     // shoot() leaves the cookie on dark but the page on its last shot, light.
     await page.reload()
     await page.waitForLoadState('networkidle')
@@ -1404,7 +1446,7 @@ test('finance, net worth and the budget pace marks', async ({ page }) => {
   // making, because it names the range the line actually covers.
   await expect(page.getByRole('img', { name: /Net worth over \d+ days/ })).toBeVisible()
 
-  const mobile = (page.viewportSize()?.width ?? 0) < 720
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
   if (!mobile) {
     // POS Finance.dc.html at 1440: one overview, no tabs; the four KPI cells in
     // its order; the accounts table's columns; the Budgets head's Edit limits;
@@ -1447,7 +1489,7 @@ test('finance, net worth and the budget pace marks', async ({ page }) => {
 test('finance, the detector found the subscriptions and left the rest alone', async ({ page }) => {
   // The phone's Subscriptions segment; on the desktop the fortnight's charges
   // in the Upcoming card, which the detector also feeds.
-  const mobile = (page.viewportSize()?.width ?? 0) < 720
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
   await page.goto(mobile ? '/finance?tab=subscriptions' : '/finance')
   const scope = mobile ? page : page.getByTestId('finance-upcoming')
 
@@ -1465,7 +1507,7 @@ test('finance, the detector found the subscriptions and left the rest alone', as
 })
 
 test('finance, filing a transaction teaches the rule', async ({ page }) => {
-  const mobile = (page.viewportSize()?.width ?? 0) < 720
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
   if (mobile) {
     await page.goto('/finance?tab=transactions')
   } else {
@@ -1486,7 +1528,7 @@ test('finance, filing a transaction teaches the rule', async ({ page }) => {
 })
 
 test('finance, the limits drawer holds edits until Done', async ({ page }) => {
-  test.skip((page.viewportSize()?.width ?? 0) < 720, 'desktop drawer')
+  test.skip((page.viewportSize()?.width ?? 0) < 768, 'desktop drawer')
   await page.goto('/finance')
   await page.getByRole('button', { name: /edit limits/i }).click()
   await expect(page).toHaveURL(/limits=1/)
@@ -1674,7 +1716,7 @@ test('second brain, the inbox holds a draft beside its source', async ({ page })
   await expect(page.getByRole('tablist')).toHaveCount(0)
   await expect(page.getByText(/^Second Brain\s*\/\s*Inbox$/)).toBeVisible()
   // The count sits in the band from md up; the phone band has no room for it.
-  if ((page.viewportSize()?.width ?? 0) >= 720) {
+  if ((page.viewportSize()?.width ?? 0) >= 768) {
     await expect(page.getByText(/^\d+ notes$/)).toBeVisible()
   }
   await expect(page.getByRole('button', { name: /^Ingest/ })).toBeVisible()
@@ -2000,7 +2042,7 @@ test('fitness, workouts with pace derived rather than stored', async ({ page }) 
   // The heaviest set is shown as what happened, not as a one rep max estimate.
   await expect(page.getByText(/Deadlift 355 lb × 1/)).toBeVisible()
 
-  if ((page.viewportSize()?.width ?? 0) >= 720) {
+  if ((page.viewportSize()?.width ?? 0) >= 768) {
     // The band's crumb, the mono span beside the title, and the tiles in the
     // artboard's shape: the week, the heaviest set with when it happened, the
     // fitness goal from the Goals digest in its status colour, the body weight.
@@ -2053,7 +2095,7 @@ test('fitness, the exercise index and body metrics read in their own units', asy
 test('health, one page with the artboard\'s panes and the status in the band', async ({ page }) => {
   await page.goto('/health')
   await expect(page.getByRole('heading', { name: 'Health' })).toBeVisible()
-  const mobile = (page.viewportSize()?.width ?? 0) < 720
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
   if (!mobile) await expect(page.getByText(/(\d+ screenings? overdue|Nothing overdue) · (next visit|nothing booked)/)).toBeVisible()
 
   // Body weight belongs to Fitness and the tile says so; clinical readings show
@@ -2139,7 +2181,7 @@ test('meals, a plan is not a log', async ({ page }) => {
 
   // The band: how much of the week is planned and the protein average. The
   // phone band has no room for it, as on every other screen.
-  const mobile = (page.viewportSize()?.width ?? 0) < 720
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
   if (!mobile) await expect(page.getByText(/\d+ \/ 28 planned · \d+g protein avg/)).toBeVisible()
 
   // Two tabs. The grocery list is a drawer and drafts sit in the recipe grid.
@@ -2241,7 +2283,7 @@ test('meals, a slot is picked, swapped and cleared from the drawer', async ({ pa
 test('ideas, four stage columns with the scores on every card', async ({ page }) => {
   await page.goto('/ideas')
   await expect(page.getByRole('heading', { name: 'Ideas' })).toBeVisible()
-  await expect(page.getByText(/\d+ ideas · \d+ stale/)).toBeVisible()
+  await expectBand(page, page.getByText(/\d+ ideas · \d+ stale/))
 
   // Every stage is a column at once, as the artboard draws it.
   for (const stage of ['Exploring', 'Validated', 'Building', 'Killed']) {
@@ -2325,8 +2367,8 @@ test('home, the calendar is worked out from the history', async ({ page }) => {
 
   // The band: the crumb on the left, the month's summary with its dot on the
   // right, and the page's one primary in the title block.
-  await expect(page.getByText('Home / Assets')).toBeVisible()
-  await expect(page.getByText(/\d+ jobs? due this month · \$[\d,]+ estimated/)).toBeVisible()
+  await expectBand(page, page.getByText('Home / Assets'))
+  await expectBand(page, page.getByText(/\d+ jobs? due this month · \$[\d,]+ estimated/))
   await expect(page.getByRole('button', { name: 'Log service' })).toBeVisible()
 
   // Money on the strip is compact; the full figure is not on the page.
@@ -2377,7 +2419,8 @@ test('home, a warranty with no expiry is not a missing date', async ({ page }) =
   await deed.click()
   const drawer = page.getByRole('dialog')
   await expect(drawer.getByText('Recorded Jun 2019')).toBeVisible()
-  await expect(drawer.getByRole('button', { name: 'Close', exact: true })).toBeVisible()
+  // Last: below md the sheet's own band button also reads Close.
+  await expect(drawer.getByRole('button', { name: 'Close', exact: true }).last()).toBeVisible()
 })
 
 test('home, the property card reads cover from Insurance', async ({ page }) => {
@@ -2413,8 +2456,8 @@ test('home, logging service moves the schedule it belongs to', async ({ page }) 
 test('insurance, sorted by what expires first with numbers masked', async ({ page }) => {
   await page.goto('/insurance')
   await expect(page.getByRole('heading', { name: 'Insurance', exact: true })).toBeVisible()
-  await expect(page.getByText('Insurance / Policies')).toBeVisible()
-  await expect(page.getByText(/\d+ policies · \d+ expiring soon/)).toBeVisible()
+  await expectBand(page, page.getByText('Insurance / Policies'))
+  await expectBand(page, page.getByText(/\d+ policies · \d+ expiring soon/))
   await expect(page.getByRole('button', { name: /Add policy/ })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Upload PDF' })).toBeVisible()
 
@@ -2603,14 +2646,16 @@ test('gestures, a swipe moves one tab and a mouse drag does not', async ({ page 
   test.skip(testInfo.project.name !== 'mobile', 'Touch gestures are a phone thing')
 
   await page.goto('/meals')
-  const tabs = page.getByRole('tablist', { name: 'Meals views' })
   await expect(page.getByRole('tab', { name: /Week/ })).toHaveAttribute('aria-selected', 'true')
 
-  const box = (await tabs.boundingBox())!
-  const y = box.y + box.height / 2
+  // The pane under the row is the gesture's target: the whole section, not
+  // the 40px row.
+  const pane = page.locator('[data-segments-pane]')
+  const box = (await pane.boundingBox())!
+  const y = box.y + 40
   const swipe = async (fromX: number, toX: number, pointerType: 'touch' | 'mouse') => {
-    await tabs.dispatchEvent('pointerdown', { pointerType, clientX: fromX, clientY: y })
-    await tabs.dispatchEvent('pointerup', { pointerType, clientX: toX, clientY: y })
+    await pane.dispatchEvent('pointerdown', { pointerType, clientX: fromX, clientY: y })
+    await pane.dispatchEvent('pointerup', { pointerType, clientX: toX, clientY: y })
   }
 
   // Left moves forward one tab, and only one: a swipe that jumped to the last
