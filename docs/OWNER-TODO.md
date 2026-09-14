@@ -132,6 +132,36 @@ Two sources are built and live in production (PRs #17, #18, #19, all
       pg_dump and the setup scripts are one long session each. Tell me when it
       is redeployed and I will check the runtime errors table is quiet.
 
+- [ ] **19. Sign in email through Resend**, 5 minutes, fixes slow and missing
+      mail. Supabase's built-in SMTP is rate limited and shares sender
+      reputation with every other project on it, which is the third of the
+      three phone login problems. Supabase dashboard > Project Settings >
+      Authentication > SMTP Settings: enable, host `smtp.resend.com`, port
+      `587`, username `resend`, password the Resend API key already in
+      Settings > Connections, sender an address on a domain verified in
+      Resend. The caveat from step 17 applies here too and matters more: an
+      unverified Resend domain delivers only to the address the Resend account
+      was created with, so if that is not your owner email, verify a domain
+      first or this makes delivery worse rather than better. Leave it alone
+      until then; the code path works on Supabase's mailer, just slowly.
+- [ ] **20. Sign in email template**, 2 minutes, required before the code
+      screen has a code to check. Supabase dashboard > Authentication > Email
+      Templates > Magic Link: paste the contents of
+      `supabase/templates/magic_link.html`, subject "Your POS sign-in code".
+      Without `{{ .Token }}` in the template Supabase sends a link alone and
+      the six digit field can never be satisfied. The local stack already has
+      it through `supabase/config.toml`.
+- [ ] **21. Turn on passkeys**, 3 minutes, and not before the custom domain is
+      live. Supabase dashboard > Authentication > Passkeys: enable, Relying
+      Party Display Name `POS`, Relying Party ID the bare domain with no
+      scheme or path, Relying Party Origins the `https://` origin. A passkey
+      is bound to the RP ID it was created against, so enrolling against
+      `pos-gilt-rho.vercel.app` and then moving to a custom domain means every
+      passkey stops working and each one is added again. Sign in with the code
+      until the domain is settled, then enable this and add one from Settings
+      > General > Passkeys. Supabase calls the passkey API experimental; if it
+      breaks, the card says passkeys are unavailable and the code still works.
+
 ## Decisions I would like from you
 
 - [ ] **Confirm one deviation from "no monospace anywhere".** Literal secrets

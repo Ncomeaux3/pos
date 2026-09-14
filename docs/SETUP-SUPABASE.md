@@ -254,8 +254,11 @@ check constraints with wider ones.
 ## 8. Verify, in this order
 
 1. **Log in.** Visit the production URL. You should get the login screen, and
-   a magic link should arrive at `OWNER_EMAIL`. If the link 404s, Site URL in
-   step 5 is wrong.
+   an email with a six digit code should arrive at `OWNER_EMAIL`. Type the
+   code into the screen you already have open; that is the path that works on
+   a phone. If the email has a link but no code, the Magic Link template is
+   missing `{{ .Token }}` (OWNER-TODO step 20). If the link in the same email
+   404s, Site URL in step 5 is wrong.
 2. **Connect the providers.** Settings > Connections, paste the Anthropic,
    Voyage and Resend keys. Each card runs Test on save; all three should go
    green. These are new rows encrypted with the new production key.

@@ -7,6 +7,7 @@ import { getSettings, setSetting } from '@/core/settings'
 import { clockIn, zoneAbbrIn } from '@/core/today'
 import { SettingsHeader } from './tabs'
 import { CapSlider } from './CapSlider'
+import { Passkeys } from './Passkeys'
 
 async function save(formData: FormData) {
   'use server'
@@ -167,6 +168,11 @@ export default async function SettingsPage({ searchParams }: PageProps<'/setting
           </ActionButton>
         </div>
       </form>
+
+      {/* Outside the form on purpose. Adding and removing a passkey happen the
+        * moment they are clicked, against Supabase Auth rather than
+        * core.settings, so they have nothing to do with Save. */}
+      <Passkeys />
     </div>
   )
 }

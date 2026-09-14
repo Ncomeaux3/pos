@@ -699,27 +699,55 @@ test('login, signed out', async ({ page, context }) => {
   await page.goto('/login')
   await expect(page.getByLabel(/owner email/i)).toBeVisible()
   await expect(page.getByLabel(/owner email/i)).toHaveAttribute('placeholder', /.+/)
-  await expect(page.getByText(/link expires in 15 min/i)).toBeVisible()
+  await expect(page.getByText(/code expires in 15 min/i)).toBeVisible()
   // The install band uses middots, matching the artboard; a page crumb like
   // "Review / Pending" is the only place this app uses a plain slash.
   await expect(page.getByText(/POS · single owner · v0\.1/i)).toBeVisible()
   // The arrow glyph is aria-hidden, so the accessible name stays plain.
-  await expect(page.getByRole('button', { name: /^send sign-in link$/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^send sign-in code$/i })).toBeVisible()
   await shoot(page, 'login')
 })
 
-test('login, link sent', async ({ page, context }) => {
+test('login, code sent', async ({ page, context }) => {
   await context.clearCookies()
   // Rendered from the query string, so the sent view is reachable without
   // burning an email against the local auth rate limit.
   await page.goto('/login?sent=1&email=owner%40example.com')
-  await expect(page.getByRole('heading', { name: /check your inbox/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /enter the code/i })).toBeVisible()
   await expect(page.getByText(/expires/i)).toBeVisible()
-  // No "Sent via Resend" cell: the magic link goes out through Supabase
-  // Auth's own mailer, not the Resend integration digests use.
-  await expect(page.getByText(/resend ·/i)).toHaveCount(0)
-  await expect(page.getByText('noreply@cmxlogic.com')).toHaveCount(0)
+  // The field a phone actually types into, and the autofill hint that makes
+  // iOS offer the code above the keyboard rather than sending them to Mail.
+  const code = page.getByLabel(/six digit code/i)
+  await expect(code).toBeVisible()
+  await expect(code).toHaveAttribute('autocomplete', 'one-time-code')
+  await expect(code).toHaveAttribute('inputmode', 'numeric')
+  await expect(page.getByText(/noreply@cmxlogic.com/)).toHaveCount(0)
   await shoot(page, 'login-sent')
+})
+
+test('the code field keeps only digits and submits itself on the sixth', async ({ page, context }) => {
+  await context.clearCookies()
+  await page.goto('/login?sent=1&email=owner%40example.com')
+
+  const code = page.getByLabel(/six digit code/i)
+  // What a paste out of a mail app looks like. Five digits is not a code yet,
+  // so nothing is submitted and the punctuation is gone.
+  await code.pressSequentially('48-39 2')
+  await expect(code).toHaveValue('48392')
+  await expect(page).toHaveURL(/sent=1/)
+
+  // The sixth digit submits. The code is not a real one, so the screen comes
+  // back with the field marked rather than signing anyone in.
+  await code.pressSequentially('0')
+  await expect(page.getByText(/wrong or expired/i)).toBeVisible()
+})
+
+test('login shows why a link bounced, which is the phone failure', async ({ page, context }) => {
+  await context.clearCookies()
+  // What app/auth/callback/route.ts redirects to when the PKCE verifier cookie
+  // is missing, which is every link opened outside the browser that asked.
+  await page.goto('/login?error=expired')
+  await expect(page.getByText(/different browser than the one that asked/i)).toBeVisible()
 })
 
 test('login, resend restarts the countdown', async ({ page, context }) => {
