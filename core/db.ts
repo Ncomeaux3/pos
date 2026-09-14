@@ -59,6 +59,12 @@ let pool: Pool | undefined
 /**
  * Direct Postgres, used where supabase-js cannot go: the pos_readonly query
  * tool and the migration tests. Pooled because Fluid compute reuses instances.
+ *
+ * On Vercel, DATABASE_URL must be the Supabase pooler in transaction mode
+ * (port 6543). Session mode (port 5432) pins one backend per client and caps
+ * clients at the dashboard Pool Size, 15: four warm instances at max 4 each
+ * exhausted it on 2026-09-14 and every page render 500ed with EMAXCONNSESSION.
+ * Nothing here needs session mode; the only SET is a transaction-local role.
  */
 export function db(): Pool {
   const connectionString = env('DATABASE_URL')
