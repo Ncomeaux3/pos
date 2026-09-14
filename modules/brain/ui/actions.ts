@@ -2,7 +2,11 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireOwner } from '@/core/auth'
+import { db } from '@/core/db'
 import { callTool } from '@/core/tools'
+import { refileByRules, setHubs } from '../hubs'
+import { relatedTo, relatedToText, type Related } from '../related'
+import { slugify } from '../wikilinks'
 
 // Server actions are standalone POST endpoints addressed by id, so the (app)
 // layout does not run for them and each one authenticates independently.
@@ -103,6 +107,80 @@ export async function startFromLink(slug: string): Promise<ActionResult> {
       { title, body: `Started from a link in another note.\n` },
       { source: 'ui' },
     )
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+/** Save the capture box. First line is the title; `worked` files it as a daily. */
+export async function captureText(input: {
+  text: string
+  worked?: boolean
+}): Promise<ActionResult & { slug?: string }> {
+  await requireOwner()
+  try {
+    const call = await callTool('brain', 'capture', input, { source: 'ui' })
+    const slug = call.status === 'done' ? (call.result as { slug?: string }).slug : undefined
+    return { ...done(), slug }
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+/** Notes near what is being typed. A read, so nothing is revalidated. */
+export async function relatedForDraft(text: string): Promise<ActionResult & { related?: Related[] }> {
+  await requireOwner()
+  try {
+    return { ok: true, related: await relatedToText(text) }
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+/** Notes near an open one, by embedding. Empty until the note has a vector. */
+export async function relatedForNote(noteId: string): Promise<ActionResult & { related?: Related[] }> {
+  await requireOwner()
+  try {
+    return { ok: true, related: await relatedTo(noteId) }
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+/**
+ * Make or rename a hub. The slug is set once, on create, so a `hub:<slug>`
+ * folder in the URL survives a rename. Notes still unfiled are re-run against
+ * the new keywords straight away.
+ */
+export async function saveHub(input: { id?: string; name: string; keywords: string[] }): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    const name = input.name.trim()
+    const keywords = input.keywords.map((k) => k.trim()).filter(Boolean)
+    if (!name) return { ok: false, error: 'A hub needs a name.' }
+    let id = input.id
+    if (id) {
+      await db().query(`update brain.hub set name = $2, keywords = $3 where id = $1`, [id, name, keywords])
+    } else {
+      const { rows } = await db().query<{ id: string }>(
+        `insert into brain.hub (name, slug, keywords) values ($1, $2, $3) returning id`,
+        [name, slugify(name), keywords],
+      )
+      id = rows[0].id
+    }
+    await refileByRules(id)
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+/** The owner's own filing of one note. Wins over rules and the model. */
+export async function setNoteHubs(noteId: string, hubIds: string[]): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    await setHubs(noteId, hubIds)
     return done()
   } catch (error) {
     return failed(error)

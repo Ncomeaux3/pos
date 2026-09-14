@@ -31,9 +31,12 @@ export type BrainNote = {
   backlinks: { id: string; title: string; slug: string }[]
   unresolved: string[]
   skills: { id: string; name: string; confidence: number; by: 'rule' | 'model' | 'manual' }[]
+  hubs: { id: string; name: string; by: 'rule' | 'model' | 'manual' }[]
 }
 
-export type BrainData = { notes: BrainNote[] }
+export type BrainHub = { id: string; name: string; slug: string; keywords: string[]; count: number }
+
+export type BrainData = { notes: BrainNote[]; hubs: BrainHub[] }
 
 export type SetParams = (next: Record<string, string | null>) => void
 
