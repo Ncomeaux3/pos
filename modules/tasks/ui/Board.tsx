@@ -1,7 +1,8 @@
 'use client'
 
+import { Filter, Plus } from 'lucide-react'
 import { useMemo, useOptimistic, useState, useTransition } from 'react'
-import { ActionButton, EmptyState, TabBar, useToast } from '@/components/pos'
+import { ActionButton, EmptyState, PillGroup, useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { parseQuickAdd } from '../quickadd'
 import {
@@ -13,7 +14,9 @@ import {
   type Task,
   type View,
 } from '../shape'
+import { Segments } from '@/components/pos/Segments'
 import { useSwipe } from '@/components/pos/gestures'
+import { useIsPhone } from '@/components/pos/useIsPhone'
 import { useSearchState } from '@/components/pos/searchState'
 import { approveTask, completeTask, deleteTask, writeTask, type ActionResult } from './actions'
 import { Calendar } from './Calendar'
@@ -41,6 +44,15 @@ const TABS: { value: View | 'calendar'; label: string }[] = [
   { value: 'calendar', label: 'Calendar' },
   ...VIEWS.slice(4),
 ]
+
+// The phone segment row: Today, This week, Calendar. The other four views
+// move into the PillGroup filter behind the row's own filter toggle.
+const PHONE_TABS: { value: View | 'calendar'; label: string }[] = [
+  VIEWS[0],
+  VIEWS[1],
+  { value: 'calendar', label: 'Calendar' },
+]
+const FILTER_VIEWS = [VIEWS[2], VIEWS[3], VIEWS[4], VIEWS[5]]
 
 function useView(): { view: View; calendar: boolean; label: string } {
   const { params } = useSearchState()
@@ -83,6 +95,9 @@ export function Board({
   const { params, set: setParams } = useSearchState()
   const { view, calendar: showCalendar } = useView()
   const drawer = params.get('task')
+  const isPhone = useIsPhone()
+  const [showFilter, setShowFilter] = useState(false)
+  const filtered = FILTER_VIEWS.some((v) => v.value === view)
 
   // A completed task reads as done the moment the box is ticked or the row is
   // swiped, and the server's answer replaces the guess when it lands.
@@ -157,7 +172,7 @@ export function Board({
         onNew={() => setParams({ task: 'new' }, { push: true })}
       />
 
-      <TabBar
+      <Segments
         label="Task views"
         className="mt-3.5"
         value={showCalendar ? 'calendar' : view}
@@ -170,13 +185,42 @@ export function Board({
               : { month: null, open: null, view: next === 'today' ? null : next },
           )
         }
-        tabs={TABS.map((t) => ({
+        tabs={(isPhone ? PHONE_TABS : TABS).map((t) => ({
           value: t.value,
           label: t.label,
           count: t.value === 'calendar' ? undefined : counts[t.value] || undefined,
           countTone: t.value === 'review' ? 'warn' : undefined,
         }))}
-      />
+        end={
+          <button
+            type="button"
+            onClick={() => setShowFilter((s) => !s)}
+            aria-label="Filter task views"
+            aria-pressed={showFilter}
+            // Lit while open, and while a filtered view is showing, since no
+            // segment is selected then and the crumb is the only other cue.
+            className={cn(mini, 'mb-2 md:hidden', (showFilter || filtered) && 'border-brand text-ink')}
+          >
+            <Filter size={13} aria-hidden />
+          </button>
+        }
+      >
+        {showFilter && (
+          <PillGroup
+            label="Task view filter"
+            className="pt-3.5 md:hidden"
+            value={view}
+            onChange={(next) => {
+              setParams({ month: null, open: null, view: next === 'today' ? null : next })
+              setShowFilter(false)
+            }}
+            options={FILTER_VIEWS.map((v) => ({
+              value: v.value,
+              label: v.label,
+              count: counts[v.value] || undefined,
+            }))}
+          />
+        )}
 
       <div className="pt-4">
         {showCalendar ? (
@@ -260,6 +304,7 @@ export function Board({
                                 ),
                             }))}
                           draggable={column.drop !== null}
+                          isPhone={isPhone}
                           onDragStart={(e) => {
                             e.dataTransfer.setData('text/plain', task.id)
                             setDragging(task.id)
@@ -303,6 +348,7 @@ export function Board({
           </EmptyState>
         )}
       </div>
+      </Segments>
 
       {drawer !== null && (
         <TaskDrawer
@@ -317,6 +363,21 @@ export function Board({
         />
       )}
     </div>
+  )
+}
+
+/** The phone header's plus: the same drawer opener as the inline "New task" button. */
+export function NewTaskButton() {
+  const { set: setParams } = useSearchState()
+  return (
+    <ActionButton
+      variant="solid"
+      aria-label="New task"
+      className="h-11 w-11 gap-0 rounded-full p-0"
+      onClick={() => setParams({ task: 'new' }, { push: true })}
+    >
+      <Plus size={18} aria-hidden />
+    </ActionButton>
   )
 }
 
@@ -341,6 +402,7 @@ function Row({
   expanded,
   moves,
   draggable,
+  isPhone,
   onDragStart,
   onDragEnd,
   onExpand,
@@ -354,6 +416,8 @@ function Row({
   expanded: boolean
   moves: { label: string; go: () => void }[]
   draggable: boolean
+  /** No inline expand and no EDIT button at this width: tapping the row opens the drawer. */
+  isPhone: boolean
   onDragStart: (e: React.DragEvent) => void
   onDragEnd: () => void
   onExpand: () => void
@@ -392,6 +456,7 @@ function Row({
         {done ? 'Reopen' : 'Done'}
       </span>
       <article
+        data-swipes
         draggable={draggable}
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
@@ -424,9 +489,9 @@ function Row({
 
           <button
             type="button"
-            onClick={onExpand}
-            onDoubleClick={onEdit}
-            title="Click: details · Double-click: edit"
+            onClick={isPhone ? onEdit : onExpand}
+            onDoubleClick={isPhone ? undefined : onEdit}
+            title={isPhone ? 'Edit' : 'Click: details · Double-click: edit'}
             aria-expanded={expanded}
             className="min-w-0 flex-1 text-left"
           >
@@ -470,7 +535,7 @@ function Row({
             onClick={onEdit}
             title="Edit task"
             aria-label={`Edit ${task.title}`}
-            className="num shrink-0 border border-rule px-1.5 py-0.5 text-[9px] tracking-[0.08em] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink"
+            className="num hidden shrink-0 border border-rule px-1.5 py-0.5 text-[9px] tracking-[0.08em] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink md:inline-flex"
           >
             EDIT
           </button>
@@ -600,7 +665,7 @@ function QuickAdd({
       <div className="flex flex-wrap gap-2.5">
         <ActionButton
           variant="solid"
-          className="h-11 gap-2 px-4 text-[13px]"
+          className="hidden h-11 gap-2 px-4 text-[13px] md:inline-flex"
           onClick={onNew}
         >
           New task <span aria-hidden="true">&rarr;</span>

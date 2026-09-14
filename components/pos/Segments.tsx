@@ -52,7 +52,18 @@ export function Segments<T extends string>({
       ) : (
         <TabBar tabs={tabs} value={value} onChange={onChange} label={label} className={className} tabClassName={tabClassName} />
       )}
-      <div data-segments-pane className="[touch-action:pan-y]" {...swipe}>
+      {/* A row that swipes for itself (a task) marks itself data-swipes, and a
+        * finger that lands on one is its alone: the pane never records the
+        * press, so nothing bubbles up to move a segment as well. */}
+      <div
+        data-segments-pane
+        className="[touch-action:pan-y]"
+        {...swipe}
+        onPointerDown={(event) => {
+          if ((event.target as Element).closest('[data-swipes]')) return
+          swipe.onPointerDown(event)
+        }}
+      >
         {children}
       </div>
     </>
