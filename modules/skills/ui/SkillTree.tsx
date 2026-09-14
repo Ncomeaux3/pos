@@ -189,7 +189,10 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
   }
 
   return (
-    <>
+    // One element, not a fragment: the module route wraps every page in
+    // space-y-5, and as two children the band and the grid picked up 20px
+    // between them, which is exactly how far the page overran the window.
+    <div>
       {/* The band, as POS Skill Tree.dc.html draws it: 56px, full bleed, the
         * crumb, the scoped search and Reset view. No title block: the panes
         * start under the band. The heading is drawn nowhere and present all
@@ -226,7 +229,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
             * everything on it states its colour rather than inheriting an ink.
             * The character, the pips, the hints and the legend sit in its four
             * corners, over the sky. */}
-          <div className="relative flex min-h-[420px] flex-1 flex-col overflow-hidden">
+          <div className="relative flex flex-1 flex-col overflow-hidden md:min-h-[420px]">
             {/* On a phone the character and the pips sit above the sky in
               * flow; from md they float in its top corners as drawn. */}
             <div className="z-10 px-5 pt-[18px] md:pointer-events-none md:absolute md:left-5 md:top-[18px] md:p-0">
@@ -273,13 +276,17 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
               resetToken={resetToken}
             />
 
-            <div className="pointer-events-none absolute bottom-3.5 left-5 z-10 flex max-w-[55%] flex-wrap gap-3.5 text-[11px] text-[#6f8399]">
+            {/* Pointer hints, so not on a phone, where they were sitting on
+              * the bottom leaves and describing a mouse nobody has. */}
+            <div className="pointer-events-none absolute bottom-3.5 left-5 z-10 hidden max-w-[55%] flex-wrap gap-3.5 text-[11px] text-[#6f8399] md:flex">
               <span>Hover: details</span>
               <span>Click: inspect</span>
               <span>Double-click: zoom</span>
               <span>Scroll: zoom · Drag: pan</span>
             </div>
-            <div className="pointer-events-none absolute bottom-3.5 right-5 z-10 flex max-w-[40%] flex-wrap items-center justify-end gap-3 text-[11px] text-[#6f8399]">
+            {/* The legend floats in the sky's corner from md; on a phone the
+              * sky is only as tall as the tree, so it goes under it in flow. */}
+            <div className="pointer-events-none z-10 mx-5 my-2.5 flex flex-wrap items-center justify-end gap-3 text-[11px] text-[#6f8399] md:absolute md:bottom-3.5 md:right-5 md:mx-0 md:my-0 md:max-w-[40%]">
               <span className="inline-flex items-center gap-1.5">
                 <span className="size-2 rounded-full bg-brand shadow-[0_0_8px_var(--accent)]" />
                 gaining
@@ -516,7 +523,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
           </p>
         </aside>
       </div>
-    </>
+    </div>
   )
 }
 
