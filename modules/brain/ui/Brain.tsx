@@ -36,7 +36,7 @@ export type BrainNote = {
   hubs: { id: string; name: string; by: 'rule' | 'model' | 'manual' }[]
 }
 
-export type BrainHub = { id: string; name: string; slug: string; keywords: string[]; count: number }
+export type BrainHub = { id: string; name: string; slug: string; keywords: string[] }
 
 export type BrainData = { notes: BrainNote[]; hubs: BrainHub[] }
 
@@ -172,7 +172,12 @@ export function Brain({ data }: { data: BrainData }) {
         className="-mx-[18px] flex flex-wrap items-center gap-1 border-b border-rule bg-bg-elev px-5 py-2.5 md:-mx-7"
       >
         {[
-          ...data.hubs.map((h) => ({ id: `hub:${h.slug}`, label: h.name, count: h.count })),
+          // Counted over published notes, the same rows the folder lists.
+          ...data.hubs.map((h) => ({
+            id: `hub:${h.slug}`,
+            label: h.name,
+            count: published.filter((n) => n.hubs.some((x) => x.id === h.id)).length,
+          })),
           { id: 'unfiled', label: 'Unfiled', count: published.filter((n) => n.hubs.length === 0).length },
         ].map((h) => {
           const on = folder === h.id

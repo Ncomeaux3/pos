@@ -71,6 +71,7 @@ export function CaptureBox({ notes, setParams }: { notes: BrainNote[]; setParams
       }
       setText('')
       setWorked(false)
+      setRelated(null)
     } finally {
       setRunning(false)
     }
@@ -93,7 +94,11 @@ export function CaptureBox({ notes, setParams }: { notes: BrainNote[]; setParams
     >
       <textarea
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => {
+          setText(e.target.value)
+          // Rows for the last draft must not reappear under the next one.
+          if (e.target.value.trim().length < MIN_RELATED) setRelated(null)
+        }}
         rows={3}
         disabled={running}
         aria-label="Capture"

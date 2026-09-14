@@ -172,6 +172,8 @@ export async function saveHub(input: { id?: string; name: string; keywords: stri
     await refileByRules(id)
     return done()
   } catch (error) {
+    // The slug is unique, so a second hub with the same name lands here.
+    if ((error as { code?: string }).code === '23505') return { ok: false, error: 'A hub with that name exists.' }
     return failed(error)
   }
 }

@@ -62,13 +62,7 @@ export default async function BrainPage() {
           by: h.is_manual ? 'manual' : h.classified_by === 'rule' ? 'rule' : 'model',
         })),
     })),
-    hubs: hubs.map((h) => ({
-      id: h.id,
-      name: h.name,
-      slug: h.slug,
-      keywords: h.keywords,
-      count: noteHubs.filter((nh) => nh.hub_id === h.id).length,
-    })),
+    hubs: hubs.map((h) => ({ id: h.id, name: h.name, slug: h.slug, keywords: h.keywords })),
   }
 
   return (
