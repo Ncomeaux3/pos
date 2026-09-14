@@ -25,6 +25,8 @@ push Devices e2e test fail locally until it is added.
 
 ## Done
 
+**Phone shell, Phase 5: Tasks and Goals.** docs/plans/phone-shell.md. Tasks on the phone is three segments (Today, This week, Calendar) with the other four views behind a Filter button, a plus as the header's action, rows that open the drawer on tap and swipe to complete without moving the segment. Goals is Active and Archive segments, rows open a sheet, and the inline add is one field whose Next opens the drawer. Desktop unchanged.
+
 **The fidelity pass, screens eighteen to twenty-one in parallel: Notifications,
 Agent Log, Onboarding, Login.** The third batch on the method below, all core
 screens, so each agent's scope was its route folder alone; Onboarding and

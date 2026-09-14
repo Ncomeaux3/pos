@@ -1089,6 +1089,7 @@ test('settings, notifications', async ({ page }) => {
 
 test('tasks, the board and the quick add parser', async ({ page }) => {
   await page.goto('/tasks')
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
   // No title block: the band carries the crumb with the view, and the count.
   await expectBand(page, page.getByText('Tasks / Today'))
   await expectBand(page, page.getByText(/\d+ open · \d+ done today/))
@@ -1098,9 +1099,14 @@ test('tasks, the board and the quick add parser', async ({ page }) => {
   await expect(page.getByText('Recurring detection tests')).toBeVisible()
   await expect(page.getByText('Read DDIA ch. 5, Replication')).toBeVisible()
 
-  // The tabs in the artboard's order, Calendar before Review.
+  // The tabs in the artboard's order, Calendar before Review. The phone
+  // collapses to three; the rest sit behind the filter toggle.
   const tabs = page.getByRole('tab')
-  await expect(tabs).toHaveText([/Today/, /This week/, /By goal/, /By project/, /Calendar/, /Review/, /Done/])
+  if (mobile) {
+    await expect(tabs).toHaveText([/Today/, /This week/, /Calendar/])
+  } else {
+    await expect(tabs).toHaveText([/Today/, /This week/, /By goal/, /By project/, /Calendar/, /Review/, /Done/])
+  }
 
   // The parser says what it understood before anything is saved.
   const line = page.getByLabel('Add a task')
@@ -1121,18 +1127,27 @@ test('tasks, the board and the quick add parser', async ({ page }) => {
 
 test('tasks, a row expands in place and EDIT opens the form drawer', async ({ page }) => {
   await page.goto('/tasks')
+  const viewport = page.viewportSize()!
+  const mobile = viewport.width < 768
 
-  // One click opens the band under the row: notes, goal, skills, source.
-  await page.getByRole('button', { name: /^Recurring detection tests/ }).click()
-  const row = page.locator('article').filter({ hasText: 'Recurring detection tests' })
-  await expect(row.getByText('Source:')).toBeVisible()
-  await expect(row.getByText('Skills:')).toBeVisible()
-  await expect(row.getByText('Same merchant, amount within 10 percent')).toBeVisible()
-  await expect(page).toHaveURL(/open=/)
-  await shoot(page, 'tasks-expanded')
+  if (mobile) {
+    // No inline expand and no EDIT button at this width: the row itself
+    // opens the drawer.
+    await page.getByRole('button', { name: /^Recurring detection tests/ }).click()
+  } else {
+    // One click opens the band under the row: notes, goal, skills, source.
+    await page.getByRole('button', { name: /^Recurring detection tests/ }).click()
+    const row = page.locator('article').filter({ hasText: 'Recurring detection tests' })
+    await expect(row.getByText('Source:')).toBeVisible()
+    await expect(row.getByText('Skills:')).toBeVisible()
+    await expect(row.getByText('Same merchant, amount within 10 percent')).toBeVisible()
+    await expect(page).toHaveURL(/open=/)
+    await shoot(page, 'tasks-expanded')
 
-  // EDIT opens the drawer, whose state is the URL so the shot survives.
-  await page.getByRole('button', { name: 'Edit Recurring detection tests' }).click()
+    // EDIT opens the drawer, whose state is the URL so the shot survives.
+    await page.getByRole('button', { name: 'Edit Recurring detection tests' }).click()
+  }
+
   await expect(page).toHaveURL(/task=/)
   const drawer = page.getByRole('dialog')
   await expect(drawer.getByText('Tasks / Edit')).toBeVisible()
@@ -1141,12 +1156,13 @@ test('tasks, a row expands in place and EDIT opens the form drawer', async ({ pa
 
   // On the phone the drawer is PosPhone's sheet: full width, on the bottom
   // edge, at most 74% of the screen.
-  const viewport = page.viewportSize()!
-  if (viewport.width < 768) {
+  if (mobile) {
+    // Measured once the 260ms slide in has landed: one tap opens it now, so
+    // the first paint can still be mid flight.
+    await expect.poll(async () => Math.round((await drawer.boundingBox())!.y + (await drawer.boundingBox())!.height)).toBe(viewport.height)
     const box = (await drawer.boundingBox())!
     expect(box.x).toBe(0)
     expect(box.width).toBe(viewport.width)
-    expect(Math.round(box.y + box.height)).toBe(viewport.height)
     expect(box.height).toBeLessThanOrEqual(viewport.height * 0.74 + 1)
   }
 
@@ -1156,7 +1172,7 @@ test('tasks, a row expands in place and EDIT opens the form drawer', async ({ pa
   const toast = page.getByText('Saved')
   await expect(toast).toBeVisible()
   // The toast clears the phone tab bar rather than sitting under it.
-  if (viewport.width < 768) {
+  if (mobile) {
     const bar = (await page.getByRole('navigation', { name: 'Sections' }).boundingBox())!
     const t = (await toast.boundingBox())!
     expect(t.y + t.height).toBeLessThan(bar.y)
@@ -1166,10 +1182,21 @@ test('tasks, a row expands in place and EDIT opens the form drawer', async ({ pa
 
 test('tasks, the six views and the month grid', async ({ page }) => {
   await page.goto('/tasks')
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
+  // Review and By goal moved off the segment row on the phone; the filter
+  // toggle behind the row reaches them instead.
+  const openView = async (name: string | RegExp) => {
+    if (mobile) {
+      await page.getByRole('button', { name: 'Filter task views' }).click()
+      await page.getByRole('radio', { name }).click()
+    } else {
+      await page.getByRole('tab', { name }).click()
+    }
+  }
 
   // Review holds agent-proposed work, which is a real row that does not count
   // until it is accepted.
-  await page.getByRole('tab', { name: /Review/ }).click()
+  await openView(/Review/)
   await expect(page.getByText('Test the bank sync against three months of history')).toBeVisible()
   await expect(page.getByText('AGENT · REVIEW').first()).toBeVisible()
   // The view is in the URL, which is what lets it survive the reload shoot()
@@ -1183,7 +1210,7 @@ test('tasks, the six views and the month grid', async ({ page }) => {
 
   // By goal always offers a No goal column, so nothing is invisible, and it
   // says why there are no goals yet rather than showing an empty rail.
-  await page.getByRole('tab', { name: /By goal/ }).click()
+  await openView(/By goal/)
   await expect(page.getByText('No goal')).toBeVisible()
 
   // The month grid is a view like the others, so it is a tab rather than a
@@ -1198,14 +1225,35 @@ test('tasks, the six views and the month grid', async ({ page }) => {
 
 test('tasks, completing one emits the event that earns XP', async ({ page }) => {
   await page.goto('/tasks')
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
 
   await page.getByRole('button', { name: 'Complete Read DDIA ch. 5, Replication' }).click()
   await expect(page.getByText('Done. Read DDIA ch. 5, Replication')).toBeVisible()
 
-  await page.getByRole('tab', { name: /Done/ }).click()
+  if (mobile) {
+    await page.getByRole('button', { name: 'Filter task views' }).click()
+    await page.getByRole('radio', { name: /Done/ }).click()
+  } else {
+    await page.getByRole('tab', { name: /Done/ }).click()
+  }
   // Exact, because the toast "Done. Read DDIA ch. 5, Replication" is still on
   // screen and a substring match resolved to both.
   await expect(page.getByText('Read DDIA ch. 5, Replication', { exact: true })).toBeVisible()
+})
+
+test('phone Tasks shows three segments', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'The collapsed segment row is a phone thing')
+
+  await page.goto('/tasks')
+  const tabs = page.getByRole('tab')
+  await expect(tabs).toHaveText([/Today/, /This week/, /Calendar/])
+
+  // The other four views sit behind the filter toggle, not lost.
+  await page.getByRole('button', { name: 'Filter task views' }).click()
+  await expect(page.getByRole('radio', { name: /By goal/ })).toBeVisible()
+  await expect(page.getByRole('radio', { name: /By project/ })).toBeVisible()
+  await expect(page.getByRole('radio', { name: /Review/ })).toBeVisible()
+  await expect(page.getByRole('radio', { name: /Done/ })).toBeVisible()
 })
 
 test('tasks, Delete asks and then removes the row', async ({ page }) => {
@@ -1220,9 +1268,10 @@ test('tasks, Delete asks and then removes the row', async ({ page }) => {
 
   await page.getByRole('button', { name: /^Throw away this row/ }).click()
   page.once('dialog', (d) => d.accept())
-  await page
-    .locator('article')
-    .filter({ hasText: 'Throw away this row' })
+  // On the phone the tap opened the drawer, whose footer holds Delete; on
+  // the desktop it expanded the row, which holds its own.
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
+  await (mobile ? page.getByRole('dialog') : page.locator('article').filter({ hasText: 'Throw away this row' }))
     .getByRole('button', { name: 'Delete' })
     .click()
   await expect(page.getByText('Deleted')).toBeVisible()
@@ -1291,18 +1340,31 @@ test('goals, the drawer shows the rule, both projections and what is linked', as
 test('goals, adding one inline from the page', async ({ page }) => {
   await page.goto('/goals')
   await page.waitForLoadState('networkidle')
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
 
   // The form is in the URL, which is what lets a half typed goal survive the
   // reload the theme toggle does.
   await page.getByRole('button', { name: '+ Add a goal inline' }).click()
   await expect(page).toHaveURL(/new=1/)
 
-  // Scoped to the form: "Goal" also names a field in the drawer behind it.
-  const form = page.locator('form').filter({ hasText: 'Deadline' })
-  await form.getByLabel('Goal').fill('Swim 2km without stopping')
-  await form.getByLabel('Target').fill('2')
-  await form.getByLabel('Deadline').fill('2027-03-01')
-  await form.getByRole('button', { name: 'Add', exact: true }).click()
+  if (mobile) {
+    // One field on the phone; Next opens the drawer for the rest.
+    const form = page.locator('form').filter({ hasText: 'Goal' })
+    await form.getByLabel('Goal').fill('Swim 2km without stopping')
+    await form.getByRole('button', { name: 'Next' }).click()
+
+    const drawer = page.getByRole('dialog')
+    await drawer.getByLabel('Target', { exact: true }).fill('2')
+    await drawer.getByLabel('Deadline').fill('2027-03-01')
+    await drawer.getByRole('button', { name: 'Create' }).click()
+  } else {
+    // Scoped to the form: "Goal" also names a field in the drawer behind it.
+    const form = page.locator('form').filter({ hasText: 'Deadline' })
+    await form.getByLabel('Goal').fill('Swim 2km without stopping')
+    await form.getByLabel('Target').fill('2')
+    await form.getByLabel('Deadline').fill('2027-03-01')
+    await form.getByRole('button', { name: 'Add', exact: true }).click()
+  }
 
   // The card, not the toast that also names it.
   await expect(
@@ -2672,10 +2734,27 @@ test('gestures, a swipe moves one tab and a mouse drag does not', async ({ page 
   await expect(page.getByRole('tab', { name: /Week/ })).toHaveAttribute('aria-selected', 'true')
 })
 
+test('goals segment swipe reaches Archive', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Touch gestures are a phone thing')
+
+  await page.goto('/goals')
+  await expect(page.getByRole('tab', { name: /Active/ })).toHaveAttribute('aria-selected', 'true')
+
+  const pane = page.locator('[data-segments-pane]')
+  const box = (await pane.boundingBox())!
+  const y = box.y + 40
+  await pane.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: box.x + box.width - 20, clientY: y })
+  await pane.dispatchEvent('pointerup', { pointerType: 'touch', clientX: box.x + 20, clientY: y })
+
+  await expect(page.getByRole('tab', { name: /Archive/ })).toHaveAttribute('aria-selected', 'true')
+})
+
 test('gestures, swiping a task completes it', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile', 'Touch gestures are a phone thing')
 
-  await page.goto('/tasks')
+  // On This week, not Today: the row sits inside the segment pane, and a
+  // right swipe that also moved the pane would land on Today.
+  await page.goto('/tasks?view=week')
   const card = page
     .locator('article')
     .filter({ hasText: 'Sketch the week ahead' })
@@ -2692,6 +2771,8 @@ test('gestures, swiping a task completes it', async ({ page }, testInfo) => {
   })
 
   await expect(page.getByText(/^Done\. Sketch the week ahead/)).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'This week' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page).toHaveURL(/view=week/)
 })
 
 test('gestures, a swiped task reads as done before the server answers', async ({ page }, testInfo) => {
@@ -2725,7 +2806,13 @@ test('gestures, a swiped task reads as done before the server answers', async ({
 
 test('a drawer is a history entry, so Back closes it', async ({ page }) => {
   await page.goto('/tasks')
-  await page.getByRole('button', { name: 'Edit Recurring detection tests' }).click()
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
+  if (mobile) {
+    // No EDIT button at this width: the row itself opens the drawer.
+    await page.getByRole('button', { name: /^Recurring detection tests/ }).click()
+  } else {
+    await page.getByRole('button', { name: 'Edit Recurring detection tests' }).click()
+  }
   await expect(page).toHaveURL(/task=/)
   await expect(page.getByRole('dialog')).toBeVisible()
 

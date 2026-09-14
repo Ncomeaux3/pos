@@ -133,6 +133,8 @@ Out of scope: charts, the limits drawer body.
 
 Goal: Tasks reads like Todoist; Goals is a list with a sheet.
 
+Done 2026-09-14. Changes from the text below: the four other views (By goal, By project, Review, Done; there is no Inbox view, Review is the nearest) sit behind a Filter button in the segment row's `end` slot, not the header's action, which stays the one New task plus; a task row marks itself `data-swipes` and the Segments pane ignores a press that starts on one, or a right swipe that completes a task on This week would also have moved the pane to Today; Tasks and Goals read `useIsPhone` for the tab list and the add form, so a desktop load paints the phone's three tabs until hydration, the cost the Phase 2 note names. See decisions/log.md.
+
 Change
 - `modules/tasks/ui/Board.tsx`: `TabBar` at 165 becomes `Segments`. Phone segments are Today, Week, Calendar (`modules/tasks/shape.ts:9-16` keeps all views; the phone list is a filter on it). By goal, By project, Inbox, Done become a `PillGroup` filter behind the header action. Quick-add field stays; "New task" button (584-591) becomes the phone `phoneAction` (plus) and stays inline on desktop. Per-row EDIT (453-462) is `hidden md:inline-flex`; on the phone tapping the row opens the drawer.
 - `modules/tasks/ui/TasksPage.tsx`: `phoneAction`.

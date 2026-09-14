@@ -11,7 +11,7 @@ import {
   type TaskRow,
 } from '../data'
 import type { Task } from '../shape'
-import { Board, BoardCrumb } from './Board'
+import { Board, BoardCrumb, NewTaskButton } from './Board'
 
 /**
  * Days from today, at day granularity. Both sides are floored to local
@@ -86,6 +86,7 @@ export default async function TasksPage() {
         eyebrow={<BoardCrumb />}
         title="Tasks"
         hideTitle
+        phoneAction={<NewTaskButton />}
         status={
           <Eyebrow dot="brand" className="whitespace-nowrap">
             {open} open · {doneToday} done today

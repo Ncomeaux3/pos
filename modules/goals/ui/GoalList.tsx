@@ -2,7 +2,9 @@
 
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
-import { ActionButton, Eyebrow, TabBar, useToast } from '@/components/pos'
+import { ActionButton, Eyebrow, useToast } from '@/components/pos'
+import { Segments } from '@/components/pos/Segments'
+import { useIsPhone } from '@/components/pos/useIsPhone'
 import { useSearchState } from '@/components/pos/searchState'
 import type { LinkedItem } from '@/core/module-contract'
 import type { Metric } from '@/core/metrics'
@@ -172,7 +174,7 @@ export function GoalList({
 
   return (
     <div>
-      <TabBar
+      <Segments
         label="Goal status"
         value={tab}
         tabClassName="px-3.5"
@@ -181,67 +183,67 @@ export function GoalList({
           { value: 'active', label: 'Active', count: goals.filter((g) => !g.archived).length },
           { value: 'archive', label: 'Archive', count: goals.filter((g) => g.archived).length },
         ]}
-      />
+      >
+        <div className="flex flex-col gap-[22px] pt-[18px]">
+          {/* A goal is three fields, so the artboard adds one here rather than
+            * behind a screen of its own. More options opens the drawer, where the
+            * unit, the kind and the metric source live. */}
+          {tab === 'active' && (
+            <AddGoal
+              todayIso={todayIso}
+              open={params.get('new') === '1'}
+              onOpen={(on) => setParams({ new: on ? '1' : null })}
+              onMore={(draft) =>
+                setParams(
+                  {
+                    new: null,
+                    goal: 'new',
+                    edit: null,
+                    title: draft.title || null,
+                    target: draft.target || null,
+                    deadline: draft.deadline || null,
+                  },
+                  { push: true },
+                )
+              }
+              onRun={run}
+            />
+          )}
 
-      <div className="flex flex-col gap-[22px] pt-[18px]">
-        {/* A goal is three fields, so the artboard adds one here rather than
-          * behind a screen of its own. More options opens the drawer, where the
-          * unit, the kind and the metric source live. */}
-        {tab === 'active' && (
-          <AddGoal
-            todayIso={todayIso}
-            open={params.get('new') === '1'}
-            onOpen={(on) => setParams({ new: on ? '1' : null })}
-            onMore={(draft) =>
-              setParams(
-                {
-                  new: null,
-                  goal: 'new',
-                  edit: null,
-                  title: draft.title || null,
-                  target: draft.target || null,
-                  deadline: draft.deadline || null,
-                },
-                { push: true },
+          {shown.length === 0 ? (
+            <p className="p-10 text-center text-[13px] text-ink-3">Nothing here yet.</p>
+          ) : (
+            areas.map((area) => {
+              const inArea = shown.filter((g) => g.area === area)
+              const onTrack = inArea.filter(
+                (g) => g.progress.status === 'on_track' || g.progress.status === 'done',
+              ).length
+
+              return (
+                <section key={area}>
+                  <div className="mb-3 flex items-baseline justify-between gap-3 border-b border-rule-2 pb-2">
+                    <span className="text-[15px] text-ink">{area}</span>
+                    <span className="num text-[11px] text-ink-3">
+                      {inArea.length} {inArea.length === 1 ? 'goal' : 'goals'} · {onTrack} on track
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,300px),1fr))] gap-3.5">
+                    {inArea.map((goal) => (
+                      <Card
+                        key={goal.id}
+                        goal={goal}
+                        todayIso={todayIso}
+                        onOpen={() => setParams({ goal: goal.id, edit: null }, { push: true })}
+                        onRun={run}
+                      />
+                    ))}
+                  </div>
+                </section>
               )
-            }
-            onRun={run}
-          />
-        )}
-
-        {shown.length === 0 ? (
-          <p className="p-10 text-center text-[13px] text-ink-3">Nothing here yet.</p>
-        ) : (
-          areas.map((area) => {
-            const inArea = shown.filter((g) => g.area === area)
-            const onTrack = inArea.filter(
-              (g) => g.progress.status === 'on_track' || g.progress.status === 'done',
-            ).length
-
-            return (
-              <section key={area}>
-                <div className="mb-3 flex items-baseline justify-between gap-3 border-b border-rule-2 pb-2">
-                  <span className="text-[15px] text-ink">{area}</span>
-                  <span className="num text-[11px] text-ink-3">
-                    {inArea.length} {inArea.length === 1 ? 'goal' : 'goals'} · {onTrack} on track
-                  </span>
-                </div>
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,300px),1fr))] gap-3.5">
-                  {inArea.map((goal) => (
-                    <Card
-                      key={goal.id}
-                      goal={goal}
-                      todayIso={todayIso}
-                      onOpen={() => setParams({ goal: goal.id, edit: null }, { push: true })}
-                      onRun={run}
-                    />
-                  ))}
-                </div>
-              </section>
-            )
-          })
-        )}
-      </div>
+            })
+          )}
+        </div>
+      </Segments>
 
       {drawer !== null && (
         <GoalDrawer
@@ -290,6 +292,7 @@ function AddGoal({
   const [title, setTitle] = useState('')
   const [target, setTarget] = useState('')
   const [deadline, setDeadline] = useState('')
+  const isPhone = useIsPhone()
 
   if (!open) {
     return (
@@ -309,6 +312,13 @@ function AddGoal({
     <form
       onSubmit={(e) => {
         e.preventDefault()
+        // The phone shows only the title; submitting it is the same as
+        // pressing "More options" on the desktop form. onMore closes the
+        // inline form itself; a second URL write here would drop the drawer.
+        if (isPhone) {
+          if (title.trim()) onMore({ title, target, deadline })
+          return
+        }
         if (!ready) return
         onRun(
           () => writeGoal({ title: title.trim(), target_value: Number(target), deadline }),
@@ -331,7 +341,7 @@ function AddGoal({
           className={cn(field, 'px-2.5 py-2')}
         />
       </label>
-      <label className="flex flex-col gap-1.5">
+      <label className="hidden flex-col gap-1.5 md:flex">
         <Eyebrow>Target</Eyebrow>
         <input
           type="number"
@@ -342,7 +352,7 @@ function AddGoal({
           className={cn(field, 'num px-2.5 py-2')}
         />
       </label>
-      <label className="flex flex-col gap-1.5">
+      <label className="hidden flex-col gap-1.5 md:flex">
         <Eyebrow>Deadline</Eyebrow>
         <input
           type="date"
@@ -353,10 +363,18 @@ function AddGoal({
         />
       </label>
       <div className="flex flex-wrap gap-1.5">
-        <button type="submit" disabled={!ready} className={cn(miniAccent, 'disabled:border-rule-2 disabled:text-ink-4')}>
-          Add
+        <button
+          type="submit"
+          disabled={isPhone ? !title.trim() : !ready}
+          className={cn(miniAccent, 'disabled:border-rule-2 disabled:text-ink-4')}
+        >
+          {isPhone ? 'Next' : 'Add'}
         </button>
-        <button type="button" onClick={() => onMore({ title, target, deadline })} className={mini}>
+        <button
+          type="button"
+          onClick={() => onMore({ title, target, deadline })}
+          className={cn(mini, isPhone && 'hidden')}
+        >
           More options…
         </button>
         <button type="button" onClick={() => onOpen(false)} className={mini}>

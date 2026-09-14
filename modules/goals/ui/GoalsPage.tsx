@@ -94,6 +94,7 @@ export default async function GoalsPage() {
         title="Goals"
         lede="Progress is computed from a metric when one exists, otherwise from check-ins. Status: at risk when pace is under 80% of what the deadline needs; stalled after 30 days without change."
         actions={<NewGoalButton />}
+        phoneAction={<NewGoalButton />}
       />
 
       <GoalList
