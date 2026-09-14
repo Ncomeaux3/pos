@@ -3,6 +3,24 @@
 Schema `brain`, not `second_brain` (decision 14). Screen 08 of the design
 bundle.
 
+## Capture first
+
+One box above the list, no title field: the first line is the title, because
+that is what gets written first anyway. A bare URL goes through `ingest`; a
+"worked on" tick files the text as a `daily`. While typing, `relatedToText`
+runs `search()` over the module once per pause, words first and a Voyage
+query only when words find nothing, so an old note comes back at the moment
+a new one is about the same thing. That is the one resurfacing mechanism;
+there is no weekly email and no per-note summary.
+
+## Hubs are groupings
+
+A hub is a name and keywords, made in the band. A note sits in as many hubs
+as match, which is why a hub is not a folder. `fileByRules` runs at capture
+and on pull; `file_unfiled` catches the misses nightly with one Haiku call
+for every unfiled note; a tick on the note is manual and is never overwritten.
+No hub is made by the model, and no hub has model prose.
+
 ## The review step is a column
 
 SPEC's promise is that the vault is the source of truth and the app never adds

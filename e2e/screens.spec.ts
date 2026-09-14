@@ -2014,6 +2014,25 @@ test('second brain, accepting a draft moves it into the vault', async ({ page })
   await expect(page.getByRole('button', { name: 'Send back to the inbox' })).toHaveCount(0)
 })
 
+// docs/plans/brain-capture.md Phase 2: the capture box above the list. Twenty
+// characters is enough to ask for related notes; the first line is the title.
+test('second brain, the capture box saves a note and shows related while typing', async ({ page }) => {
+  await page.goto('/brain')
+  const box = page.getByTestId('brain-capture')
+  await expect(page.getByTestId('brain-hubs').getByRole('button', { name: /^Unfiled/ })).toBeVisible()
+
+  const title = `Captured ${Date.now()}`
+  await box.getByRole('textbox', { name: 'Capture' }).fill(`${title}\nHybrid search over notes.`)
+  await expect(box.getByText('Related', { exact: true })).toBeVisible()
+
+  await box.getByRole('button', { name: /^Save/ }).click()
+  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(page).toHaveURL(/folder=note/)
+  const rows = page.locator('section').first().getByRole('button', { name: /^Captured/ })
+  await expect(rows.first()).toContainText(title)
+  await expect(page.getByRole('heading', { name: title })).toBeVisible()
+})
+
 test('travel, trips with confirmed spend only', async ({ page }) => {
   await page.goto('/travel')
   await expect(page.getByRole('heading', { name: 'Travel' })).toBeVisible()

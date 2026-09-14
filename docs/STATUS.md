@@ -555,7 +555,8 @@ the module contract grew rather than the screen faking it: `review.wins`,
 `ReviewCheck.percent` and `.movement`, `ReviewItem.at`, and a `goalWeight` on
 `SkillStat`. Where an artboard showed something nothing could produce, it was
 left out and said so, which is why there is no semantic search field on Second
-Brain: no embeddings exist for notes yet.
+Brain: the band's one search box is the rule, and since 2026-09-14 related
+notes surface beside the capture box and on each note instead.
 
 **The Skill Tree took three passes.** The first two approximated from
 screenshots and were wrong in ways the owner could see: the hover card had no

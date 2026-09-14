@@ -74,6 +74,7 @@ Owner: Nick. Solo builder, nights and weekends. Ships incrementally. Do not buil
 - Amended 2026-09-09. Readability extraction is hand rolled with no parser dependency, because the extracted text is shown beside the draft and a bad extraction is therefore visible and correctable rather than silent.
 - Amended 2026-09-09. `ingest` is guarded, alone in this module, because it is the only tool here that spends money. The summary is a capped purpose alongside research: reaching the cap leaves the draft and the source text intact and drops only the summary.
 - Not built: committing an accepted note back to the vault. The vault client is read only by construction and there is no write path to propose through yet.
+- Amended 2026-09-14. POS is the primary store and the vault a pulled archive. One capture box above the list takes text (first line is the title), a bare URL (ingested as today) and a "worked on" entry (kind `daily`). Hubs (`brain.hub`, `brain.note_hub`) are owner-named keyword groupings, filed by rules at capture and by one batched Haiku call nightly for misses; a manual tick wins. Related notes by embedding show while typing and on each note, the one resurfacing mechanism. Not built by decision: per-note summaries, hub summaries, weekly email, vault write back, XP for daily entries, graph view.
 - Embeddings into pgvector on note change. Semantic search tool.
 - Every note is classified to skills. Finishing a book or article emits a skill event.
 
