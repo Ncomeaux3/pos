@@ -68,7 +68,7 @@ export function HubDrawer({ hub, setParams }: { hub: BrainHub | null; setParams:
       >
         <label className="flex flex-col gap-1.5">
           <Eyebrow>Name</Eyebrow>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Search" className={FIELD} />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Hybrid search" className={FIELD} />
         </label>
         <label className="flex flex-col gap-1.5">
           <Eyebrow>Keywords · comma separated</Eyebrow>

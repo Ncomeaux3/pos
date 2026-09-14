@@ -107,7 +107,7 @@ export function CaptureBox({ notes, setParams }: { notes: BrainNote[]; setParams
         </label>
         <ActionButton
           variant="solid"
-          className="h-9 gap-2 px-3.5 text-[13px]"
+          className="h-11 gap-2 px-3.5 text-[13px] md:h-9"
           disabled={!trimmed || running}
           onClick={() => void submit()}
         >
