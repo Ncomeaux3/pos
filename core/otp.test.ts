@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CODE_LENGTH, isCompleteCode, normalizeCode } from './otp'
+import { CODE_LENGTH, isCompleteCode, normalizeCode, verifyWithAnyType } from './otp'
 
 describe('normalizeCode', () => {
   it('keeps a clean code as it is', () => {
@@ -39,5 +39,50 @@ describe('isCompleteCode', () => {
   // arm it a second time with a code the owner is still editing.
   it('is true for a longer run of digits, which the field has already truncated', () => {
     expect(isCompleteCode('4839201')).toBe(true)
+  })
+})
+
+describe('verifyWithAnyType', () => {
+  it('tries magiclink first, because that is what the evidence points at', async () => {
+    const tried: string[] = []
+    const result = await verifyWithAnyType(async (type) => {
+      tried.push(type)
+      return null
+    })
+
+    expect(tried).toEqual(['magiclink'])
+    expect(result).toEqual({ ok: true, type: 'magiclink', error: null })
+  })
+
+  // The bug this exists for: 'email' is what Supabase documents and what the
+  // first build shipped, and it refused every valid code on the real project.
+  it('keeps going past a refusal and succeeds on a later type', async () => {
+    const tried: string[] = []
+    const result = await verifyWithAnyType(async (type) => {
+      tried.push(type)
+      return type === 'recovery' ? null : 'token has expired or is invalid'
+    })
+
+    expect(tried).toEqual(['magiclink', 'email', 'recovery'])
+    expect(result.ok).toBe(true)
+    expect(result.type).toBe('recovery')
+  })
+
+  it('stops at the first success rather than spending the rest', async () => {
+    const tried: string[] = []
+    await verifyWithAnyType(async (type) => {
+      tried.push(type)
+      return type === 'magiclink' ? 'no' : null
+    })
+
+    expect(tried).toEqual(['magiclink', 'email'])
+  })
+
+  it('reports the last error when no type is accepted', async () => {
+    const result = await verifyWithAnyType(async (type) => `refused ${type}`)
+
+    expect(result.ok).toBe(false)
+    expect(result.type).toBeNull()
+    expect(result.error).toBe('refused recovery')
   })
 })

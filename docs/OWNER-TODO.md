@@ -132,7 +132,15 @@ Two sources are built and live in production (PRs #17, #18, #19, all
       pg_dump and the setup scripts are one long session each. Tell me when it
       is redeployed and I will check the runtime errors table is quiet.
 
-- [ ] **19. Sign in email through Resend**, 5 minutes, fixes slow and missing
+- [ ] **19. Sign in email through Resend**, partly done 2026-09-14 and still
+      failing on one field. Custom SMTP is on and pointed at Resend, but the
+      **Sender email address** is a `@gmail.com` address, so Resend refuses
+      every send with `550 "The gmail.com domain is not verified"` and
+      `/auth/v1/otp` returns 500. Either set the sender to
+      `onboarding@resend.dev`, which needs no verification but only delivers to
+      the address the Resend account was created with, or verify `cmxlogic.com`
+      at https://resend.com/domains and send from an address on it. The second
+      also resolves step 17. Original note follows., 5 minutes, fixes slow and missing
       mail. Supabase's built-in SMTP is rate limited and shares sender
       reputation with every other project on it, which is the third of the
       three phone login problems. Supabase dashboard > Project Settings >
