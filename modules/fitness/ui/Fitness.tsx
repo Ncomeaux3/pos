@@ -199,8 +199,9 @@ export function Fitness({ data }: { data: FitnessData }) {
       {tab === 'body' &&
         (data.metrics.length === 0 ? (
           <EmptyState headline="No readings">
-            Body metrics arrive from Apple Health through the Health Auto Export webhook, or you
-            can enter them by hand. One reading per metric per day; a second is a correction.
+            Body metrics arrive from Apple Health, through the Health Auto Export webhook or the
+            Shortcut you build once, or you can enter them by hand. One reading per metric per
+            day; a second is a correction.
           </EmptyState>
         ) : (
           <RowList>

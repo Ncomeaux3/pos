@@ -132,7 +132,7 @@ export default async function FitnessPage() {
     .sort((a, b) => b.best!.weightG - a.best!.weightG || b.best!.reps - a.best!.reps)[0]
 
   const weight = data.metrics.find((m) => m.kind === 'weight')
-  const state = screenState({ workouts: span.count, connected: sync.connected })
+  const state = screenState({ workouts: span.count, metrics: data.metrics.length, connected: sync.connected })
 
   return (
     <div className="flex min-h-full flex-col space-y-7">
@@ -165,7 +165,11 @@ export default async function FitnessPage() {
         title="Fitness"
         lede="Workouts, what they came to, and the body metrics behind them. The coach reads the week and proposes plan changes into Review; nothing here changes the plan itself."
         actions={
-          state === 'live' && (
+          // Only once there is a span to state. A live page reached on
+          // readings alone has no first year, and "0 WORKOUTS · → TODAY" is
+          // not a fact about anything.
+          state === 'live' &&
+          span.count > 0 && (
             <span className="num text-[11px] tracking-[0.08em] text-ink-3">
               {span.count} WORKOUTS · {span.firstYear} → TODAY
             </span>
