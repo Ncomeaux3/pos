@@ -35,6 +35,7 @@ export default async function BrainPage() {
       source: n.source,
       externalId: n.external_id,
       vaultSha: n.vault_sha,
+      filePath: n.file_path,
       updatedAt: new Date(n.updated_at).toISOString(),
       backlinks: links.rows
         .filter((l) => l.to_note_id === n.id)

@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ActionButton, Eyebrow } from '@/components/pos'
+import { ActionButton, Eyebrow, useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { ago, byLine, finishedOn, folderLabel, sourceMeta, subLine, wordCount } from '../shape'
 import { blocks } from '../wikilinks'
 import type { Related } from '../related'
-import { deleteNote, publishNote, relatedForNote, saveNote, setNoteHubs, startFromLink, type ActionResult } from './actions'
+import { deleteNote, noteFileUrl, publishNote, relatedForNote, saveNote, setNoteHubs, startFromLink, type ActionResult } from './actions'
 import { isFinished, type BrainHub, type BrainNote, type SetParams } from './Brain'
 
 // The right pane of POS Second Brain.dc.html: a draft beside the text it was
@@ -32,6 +32,7 @@ export function NotePane({
   setParams: SetParams
   run: Run
 }) {
+  const toast = useToast()
   const [editing, setEditing] = useState(false)
   const [body, setBody] = useState(note.body)
   const [hubsEditing, setHubsEditing] = useState(false)
@@ -253,6 +254,19 @@ export function NotePane({
           </>
         )}
       </div>
+
+      {/* The file this note was transcribed from. A signed URL, fetched on click. */}
+      {note.filePath && (
+        <button
+          type="button"
+          onClick={() =>
+            void noteFileUrl(note.id).then((r) => (r.ok ? window.open(r.url, '_blank', 'noopener') : toast(r.error)))
+          }
+          className="self-start text-[12px] text-ink-3 transition-colors duration-150 hover:text-brand"
+        >
+          File <span aria-hidden="true">&rarr;</span> {note.filePath.slice(note.filePath.indexOf('/') + 1)}
+        </button>
+      )}
 
       {editing ? (
         <textarea

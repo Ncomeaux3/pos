@@ -29,6 +29,7 @@ export type BrainNote = {
   source: string
   externalId: string | null
   vaultSha: string
+  filePath: string
   updatedAt: string
   backlinks: { id: string; title: string; slug: string }[]
   unresolved: string[]

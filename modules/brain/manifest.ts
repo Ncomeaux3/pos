@@ -3,7 +3,7 @@ import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { emit } from '@/core/events'
 import { defineModule, defineTool } from '@/core/module-contract'
-import { captureText } from './capture'
+import { captureText, transcribePending } from './capture'
 import { deleteNote, resolveDanglingLinks, syncLinks, uniqueSlug } from './data'
 import { fileUnfiledNightly } from './hubs'
 import { nightlyDigest, resolveLinks } from './jobs/nightly-digest'
@@ -272,7 +272,11 @@ export default defineModule({
   jobs: [
     // First: everything below reads what the vault brought in.
     { name: 'pull_vault', run: pullVault },
-    { name: 'file_unfiled', run: fileUnfiledNightly },
+    {
+      name: 'file_unfiled',
+      // A file the cap stopped is transcribed first so it can be filed the same night.
+      run: async () => ({ ...(await transcribePending()), ...(await fileUnfiledNightly()) }),
+    },
     { name: 'resolve_links', run: resolveLinks },
     { name: 'nightly_digest', run: nightlyDigest },
   ],

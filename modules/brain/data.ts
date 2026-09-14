@@ -18,13 +18,14 @@ export type NoteRow = {
   external_id: string | null
   vault_sha: string
   committed_sha: string
+  file_path: string
   updated_at: Date
 }
 
 export async function listNotes(filter?: { status?: string; kind?: string }): Promise<NoteRow[]> {
   const { rows } = await db().query<NoteRow>(
     `select id, title, body, slug, kind, status, source_url, source_text, source_meta,
-            source, external_id, vault_sha, committed_sha, updated_at
+            source, external_id, vault_sha, committed_sha, file_path, updated_at
        from brain.note
       where ($1::text is null or status = $1)
         and ($2::text is null or kind = $2)
