@@ -301,7 +301,11 @@ export function Constellation({
   )
 
   return (
-    <div className="relative flex min-h-[320px] flex-1 flex-col">
+    // On a phone the sky is exactly as tall as the view box fitted to its
+    // width (VIEW_W by VIEW_H in ./layout.ts): a fixed minimum left empty sky
+    // under the leaves and pushed the columns under the tab bar. From md it
+    // fills whatever the pane leaves it.
+    <div className="relative flex aspect-[1200/760] flex-none flex-col md:aspect-auto md:min-h-[320px] md:flex-1">
       {/* Absolutely positioned, as the artboard's is, and not for the look:
         * an svg in normal flow with a percentage height dirties layout up its
         * containing-block chain whenever its own layout is invalidated, and
@@ -383,8 +387,8 @@ export function Constellation({
           </radialGradient>
         </defs>
 
-        {/* Dust and nebulae, behind the pan and zoom so the field stays put
-          * while the tree moves over it. Depth without parallax. */}
+        {/* Dust, behind the pan and zoom so the field stays put while the
+          * tree moves over it. Depth without parallax. */}
         {stars.map((s, i) => (
           <circle
             key={i}
@@ -396,11 +400,14 @@ export function Constellation({
             style={{ animationDelay: `${s.delay}s`, animationDuration: `${s.period}s` }}
           />
         ))}
-        {nebulae.map((n, i) => (
-          <circle key={i} cx={n.x} cy={n.y} r={210} fill="url(#skill-neb)" />
-        ))}
 
         <g ref={group} className="skill-view" transform="scale(1) translate(0 0)">
+          {/* The nebulae ride with the tree: each one is anchored to an
+            * attribute, and a bloom that stayed put while its star zoomed away
+            * read as a stain on the glass rather than light around the tree. */}
+          {nebulae.map((n, i) => (
+            <circle key={i} cx={n.x} cy={n.y} r={210} fill="url(#skill-neb)" />
+          ))}
           {edges.map((node) => {
             const from = positionOf(node.parent ?? ROOT_ID)
             if (!from) return null
