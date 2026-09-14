@@ -1,8 +1,8 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { useToast } from '@/components/pos'
+import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
 import { boardScore, parseCapture, quadrant, type Level, type Quadrant } from '../quadrant'
 import { mergeIdeas, saveIdea, type ActionResult } from './actions'
@@ -114,17 +114,7 @@ export function QuadrantPill({ q, className }: { q: Quadrant; className?: string
 }
 
 function useParams() {
-  const router = useRouter()
-  const params = useSearchParams()
-  const setParams = (next: Record<string, string | null>) => {
-    const search = new URLSearchParams(params.toString())
-    for (const [key, value] of Object.entries(next)) {
-      if (value === null) search.delete(key)
-      else search.set(key, value)
-    }
-    const query = search.toString()
-    router.replace(query ? `?${query}` : '?', { scroll: false })
-  }
+  const { params, set: setParams } = useSearchState()
   return { params, setParams }
 }
 
@@ -192,7 +182,7 @@ export function Ideas({ data }: { data: IdeasData }) {
 
   const pairA = data.pair ? data.ideas.find((i) => i.id === data.pair!.a_id) : null
   const pairB = data.pair ? data.ideas.find((i) => i.id === data.pair!.b_id) : null
-  const openIdea = (id: string) => setParams({ idea: id, edit: null })
+  const openIdea = (id: string) => setParams({ idea: id, edit: null }, { push: true })
 
   return (
     <div>
@@ -218,7 +208,7 @@ export function Ideas({ data }: { data: IdeasData }) {
           className={ghost}
           onClick={() => {
             const parsed = parseCapture(draft)
-            setParams({ idea: 'new', edit: null, title: parsed.title || null })
+            setParams({ idea: 'new', edit: null, title: parsed.title || null }, { push: true })
             setDraft('')
           }}
         >

@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Card,
   CardHead,
@@ -13,6 +12,7 @@ import {
   RowList,
   TabBar,
 } from '@/components/pos'
+import { useSearchState } from '@/components/pos/searchState'
 import { distance, duration, mass, pace, sourcesLabel } from '../units'
 
 // Two views over one list, plus the exercise index. The view is in the URL, so
@@ -131,17 +131,10 @@ const order = (kind: string) => {
 }
 
 export function Fitness({ data }: { data: FitnessData }) {
-  const router = useRouter()
-  const params = useSearchParams()
+  const { params, set: setParams } = useSearchState()
   const tab = params.get('tab') ?? 'workouts'
 
-  const setTab = (next: string) => {
-    const search = new URLSearchParams(params.toString())
-    if (next === 'workouts') search.delete('tab')
-    else search.set('tab', next)
-    const query = search.toString()
-    router.replace(query ? `?${query}` : '?', { scroll: false })
-  }
+  const setTab = (next: string) => setParams({ tab: next === 'workouts' ? null : next })
 
   return (
     <div className="space-y-5">

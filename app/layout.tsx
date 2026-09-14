@@ -19,6 +19,8 @@ export const metadata: Metadata = {
 
 // The address bar matches the page ground in whichever theme is active.
 export const viewport: Viewport = {
+  // Cover, so env(safe-area-inset-*) reads the home indicator instead of zero.
+  viewportFit: 'cover',
   themeColor: [
     { media: '(prefers-color-scheme: dark)', color: '#07080A' },
     { media: '(prefers-color-scheme: light)', color: '#F4F2EC' },

@@ -1,9 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { ActionButton, Eyebrow, TabBar, useToast } from '@/components/pos'
+import { useSearchState } from '@/components/pos/searchState'
 import type { LinkedItem } from '@/core/module-contract'
 import type { Metric } from '@/core/metrics'
 import { cn } from '@/lib/utils'
@@ -108,17 +108,7 @@ export function checkinPlaceholder(unit: string): string {
 }
 
 function useParams() {
-  const router = useRouter()
-  const params = useSearchParams()
-  const setParams = (next: Record<string, string | null>) => {
-    const search = new URLSearchParams(params.toString())
-    for (const [key, value] of Object.entries(next)) {
-      if (value === null) search.delete(key)
-      else search.set(key, value)
-    }
-    const query = search.toString()
-    router.replace(query ? `?${query}` : '?', { scroll: false })
-  }
+  const { params, set: setParams } = useSearchState()
   return { params, setParams }
 }
 
@@ -140,7 +130,7 @@ export function NewGoalButton() {
     <ActionButton
       variant="solid"
       className="h-11 gap-2 px-3.5 text-[13px] sm:h-9"
-      onClick={() => setParams({ goal: 'new', edit: null })}
+      onClick={() => setParams({ goal: 'new', edit: null }, { push: true })}
     >
       New goal <span aria-hidden="true">&rarr;</span>
     </ActionButton>
@@ -203,14 +193,17 @@ export function GoalList({
             open={params.get('new') === '1'}
             onOpen={(on) => setParams({ new: on ? '1' : null })}
             onMore={(draft) =>
-              setParams({
-                new: null,
-                goal: 'new',
-                edit: null,
-                title: draft.title || null,
-                target: draft.target || null,
-                deadline: draft.deadline || null,
-              })
+              setParams(
+                {
+                  new: null,
+                  goal: 'new',
+                  edit: null,
+                  title: draft.title || null,
+                  target: draft.target || null,
+                  deadline: draft.deadline || null,
+                },
+                { push: true },
+              )
             }
             onRun={run}
           />
@@ -239,7 +232,7 @@ export function GoalList({
                       key={goal.id}
                       goal={goal}
                       todayIso={todayIso}
-                      onOpen={() => setParams({ goal: goal.id, edit: null })}
+                      onOpen={() => setParams({ goal: goal.id, edit: null }, { push: true })}
                       onRun={run}
                     />
                   ))}

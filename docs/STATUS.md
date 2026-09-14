@@ -551,7 +551,10 @@ blocks it, and nothing in Phase 2 waits on it.
 **The phone shell rebuild, docs/plans/phone-shell.md, approved 2026-09-13.**
 Five phases, one PR each: speed and gestures, the shell (Home, Tasks, Finance,
 Browse), then Dashboard, Finance, Tasks and Goals phone passes. It supersedes
-the PosPhone shell rules above; the brand layer still holds.
+the PosPhone shell rules above; the brand layer still holds. Phase 1 (speed and
+gestures) is built: a loading skeleton on every route, sheets that open on the
+next render, a task that reads done before the server answers, safe-area
+insets, pull to refresh, and Run now on both widths.
 
 See docs/plans/design-build.md.
 

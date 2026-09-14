@@ -7,6 +7,7 @@ import { duration, summarise, type Entry, type Job, type Run } from '@/core/writ
 import { AutonomyPicker } from '../settings/agents/AutonomyPicker'
 import { jobLabel } from './format'
 import { RunLog } from './RunLog'
+import { RunNow } from '../RunNow'
 
 function label(id: string): string {
   if (id === 'system') return 'System'
@@ -90,6 +91,7 @@ export default async function AgentLogPage() {
         dot={!last ? 'idle' : failures > 0 ? 'warn' : 'ok'}
         title="What the agent did while you slept"
         lede="Every write is logged with the value before and after. Undo restores the previous value and pauses the rule that produced it for seven days."
+        actions={<RunNow />}
       />
 
       <div className="flex flex-wrap items-start gap-x-8 gap-y-7">

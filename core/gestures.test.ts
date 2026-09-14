@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { atTop, isLongPress, swipeOf } from './gestures'
+import { atTop, isLongPress, swipeOf, fromEdge } from './gestures'
 
 describe('swipeOf', () => {
   it('needs to travel before it is a swipe', () => {
@@ -55,5 +55,13 @@ describe('isLongPress', () => {
     expect(isLongPress(600, 4, 6)).toBe(true)
     expect(isLongPress(600, 12, 0)).toBe(false)
     expect(isLongPress(600, 0, -12)).toBe(false)
+  })
+})
+
+describe('fromEdge', () => {
+  it('claims the first 20px for the edge', () => {
+    expect(fromEdge(0)).toBe(true)
+    expect(fromEdge(20)).toBe(true)
+    expect(fromEdge(21)).toBe(false)
   })
 })

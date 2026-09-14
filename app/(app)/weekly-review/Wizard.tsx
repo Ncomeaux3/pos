@@ -1,6 +1,5 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import {
   ActionButton,
@@ -14,6 +13,7 @@ import {
   reviewField,
   useToast,
 } from '@/components/pos'
+import { useSearchState } from '@/components/pos/searchState'
 import type { GlanceTile } from '@/core/review-glance'
 import type { Theme } from '@/core/theme'
 import {
@@ -112,17 +112,10 @@ export function Wizard({ data }: { data: WeekData }) {
   // The step lives in the URL. It survives a refresh, which matters more here
   // than anywhere else because the answers are saved as you go and losing your
   // place in a resumed review defeats the point of resuming.
-  const router = useRouter()
-  const params = useSearchParams()
+  const { params, set: setParams } = useSearchState()
   const step = (STEPS.find((s) => s.key === params.get('step'))?.key ?? 'glance') as StepKey
 
-  const setStep = (next: StepKey) => {
-    const search = new URLSearchParams(params.toString())
-    if (next === 'glance') search.delete('step')
-    else search.set('step', next)
-    const query = search.toString()
-    router.replace(query ? `?${query}` : '?', { scroll: false })
-  }
+  const setStep = (next: StepKey) => setParams({ step: next === 'glance' ? null : next })
 
   const [answers, setAnswers] = useState<ReviewAnswers>(data.answers ?? EMPTY_ANSWERS)
   const [ownWin, setOwnWin] = useState('')

@@ -1,6 +1,5 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useSyncExternalStore, useTransition, type ReactNode } from 'react'
 import {
   DataTable,
@@ -18,6 +17,7 @@ import {
   TabBar,
   useToast,
 } from '@/components/pos'
+import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
 import {
   balance,
@@ -173,19 +173,8 @@ function Kpi({
 }
 
 export function Finance({ data }: { data: FinanceData }) {
-  const router = useRouter()
-  const params = useSearchParams()
+  const { params, set: setParams } = useSearchState()
   const tab = (TABS.find((t) => t.value === params.get('tab'))?.value ?? 'overview') as Tab
-
-  const setParams = (next: Record<string, string | null>) => {
-    const search = new URLSearchParams(params.toString())
-    for (const [key, value] of Object.entries(next)) {
-      if (value === null) search.delete(key)
-      else search.set(key, value)
-    }
-    const query = search.toString()
-    router.replace(query ? `?${query}` : '?', { scroll: false })
-  }
 
   const openAccount = data.accounts.find((a) => a.id === params.get('account')) ?? null
   const openBudget = data.budgets.find((b) => b.id === params.get('budget')) ?? null
@@ -288,7 +277,7 @@ export function Finance({ data }: { data: FinanceData }) {
                   cols="minmax(0,1.3fr) minmax(0,1fr) minmax(0,.9fr) minmax(0,.7fr) minmax(0,1fr)"
                 >
                   {data.accounts.map((a) => (
-                    <DataRow key={a.id} onClick={() => setParams({ account: a.id })} className={overviewRow}>
+                    <DataRow key={a.id} onClick={() => setParams({ account: a.id }, { push: true })} className={overviewRow}>
                       <span className="min-w-0 truncate text-[13px] text-ink">
                         {a.name}
                         <span className="label ml-1.5 text-[10px] text-ink-4">{a.txCount} tx →</span>
@@ -407,7 +396,7 @@ export function Finance({ data }: { data: FinanceData }) {
                     </span>
                     <button
                       type="button"
-                      onClick={() => setParams({ limits: '1' })}
+                      onClick={() => setParams({ limits: '1' }, { push: true })}
                       className="label border border-rule-2 px-2 py-1 text-[11px] tracking-[0.08em] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink"
                     >
                       Edit limits
@@ -435,7 +424,7 @@ export function Finance({ data }: { data: FinanceData }) {
                         return (
                           <DataRow
                             key={b.id}
-                            onClick={() => setParams({ budget: b.id })}
+                            onClick={() => setParams({ budget: b.id }, { push: true })}
                             className={cn(overviewRow, 'md:block md:py-1.5')}
                           >
                             <span className="grid items-baseline gap-x-3.5 md:grid-cols-[minmax(0,1fr)_auto_44px]">
@@ -489,7 +478,7 @@ export function Finance({ data }: { data: FinanceData }) {
               key={a.id}
               title={a.name}
               meta={`${a.institution}${a.mask ? ` ${a.mask}` : ''} / ${a.txCount} transactions`}
-              onClick={() => setParams({ account: a.id })}
+              onClick={() => setParams({ account: a.id }, { push: true })}
               right={
                 <>
                   <span className="num text-[14px] text-ink">{balance(a.balanceCents)}</span>
@@ -537,7 +526,7 @@ export function Finance({ data }: { data: FinanceData }) {
               <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                 <button
                   type="button"
-                  onClick={() => setParams({ budget: b.id })}
+                  onClick={() => setParams({ budget: b.id }, { push: true })}
                   className="t-body text-left text-ink"
                 >
                   {b.name}

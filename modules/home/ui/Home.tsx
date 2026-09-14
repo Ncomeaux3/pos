@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
 import { useTransition } from 'react'
 import {
   ActionButton,
@@ -12,6 +11,7 @@ import {
   PillGroup,
   useToast,
 } from '@/components/pos'
+import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
 import {
   addMonths,
@@ -126,23 +126,12 @@ export function jobMeta(job: Service) {
 const MONO = 'label text-[10px] tracking-[0.12em]'
 
 export function Home({ data }: { data: HomeData }) {
-  const router = useRouter()
-  const params = useSearchParams()
+  const { params, set: setParams } = useSearchState()
   const filter = params.get('kind') ?? 'all'
   const month = params.get('month') ?? monthKey(data.todayIso)
   const openAsset = data.assets.find((a) => a.id === params.get('asset')) ?? null
   const openWarranty = data.warranties.find((w) => w.id === params.get('warranty')) ?? null
   const logging = params.get('log') === '1'
-
-  const setParams = (next: Record<string, string | null>) => {
-    const search = new URLSearchParams(params.toString())
-    for (const [key, value] of Object.entries(next)) {
-      if (value === null) search.delete(key)
-      else search.set(key, value)
-    }
-    const query = search.toString()
-    router.replace(query ? `?${query}` : '?', { scroll: false })
-  }
 
   const [, start] = useTransition()
   const toast = useToast()
@@ -224,7 +213,7 @@ export function Home({ data }: { data: HomeData }) {
           <ActionButton
             variant="accent"
             className="h-11 px-4 text-[13px] sm:h-10"
-            onClick={() => setParams({ log: '1' })}
+            onClick={() => setParams({ log: '1' }, { push: true })}
           >
             Log service
           </ActionButton>
@@ -274,7 +263,7 @@ export function Home({ data }: { data: HomeData }) {
                     <button
                       key={asset.id}
                       type="button"
-                      onClick={() => setParams({ asset: asset.id })}
+                      onClick={() => setParams({ asset: asset.id }, { push: true })}
                       className={cn(
                         'block w-full border bg-bg-elev p-[18px] text-left transition-colors duration-150 active:scale-[.985]',
                         state === 'due' ? 'border-warn' : 'border-rule-2',
@@ -436,7 +425,7 @@ export function Home({ data }: { data: HomeData }) {
               <button
                 key={w.id}
                 type="button"
-                onClick={() => setParams({ warranty: w.id })}
+                onClick={() => setParams({ warranty: w.id }, { push: true })}
                 className="flex w-full flex-wrap items-center gap-x-3.5 gap-y-3 border-b border-rule px-3 py-[15px] text-left active:scale-[.985]"
               >
                 <span className="min-w-0 flex-[1_1_200px]">

@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import {
   ActionButton,
@@ -16,6 +15,7 @@ import {
   fieldClass,
   useToast,
 } from '@/components/pos'
+import { useSearchState } from '@/components/pos/searchState'
 import type { Category } from '@/core/connectors'
 import type { Metric } from '@/core/metrics'
 import { cn } from '@/lib/utils'
@@ -209,17 +209,10 @@ const STARTER_GOALS: (GoalSeed & { wants: string | null; blurb: string })[] = [
 ]
 
 export function Onboarding({ data }: { data: SetupData }) {
-  const router = useRouter()
-  const params = useSearchParams()
+  const { params, set: setParams } = useSearchState()
   const step = (STEPS.find((s) => s.key === params.get('step'))?.key ?? 'you') as StepKey
 
-  const setStep = (next: StepKey) => {
-    const search = new URLSearchParams(params.toString())
-    if (next === 'you') search.delete('step')
-    else search.set('step', next)
-    const query = search.toString()
-    router.replace(query ? `?${query}` : '?', { scroll: false })
-  }
+  const setStep = (next: StepKey) => setParams({ step: next === 'you' ? null : next })
 
   const [enabled, setEnabled] = useState(
     data.modules.filter((m) => m.enabled).map((m) => m.id),

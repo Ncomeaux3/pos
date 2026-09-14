@@ -808,14 +808,11 @@ test('dashboard renders the nightly run', async ({ page }) => {
   await page.goto('/')
 
   // Run now is a server action behind requireOwner, not a call to the cron
-  // route, so it needs no secret. The phone band has no button for it, as
-  // its artboard has none (pull to sync is the gesture), so the phone reads
-  // whatever the last run wrote.
-  if ((page.viewportSize()?.width ?? 0) >= 720) {
-    await page.getByRole('button', { name: /^run now$/i }).click()
-    await expect(page.getByText(/^Run clean$|jobs? failed/i)).toBeVisible({ timeout: 20_000 })
-    await page.reload()
-  }
+  // route, so it needs no secret. On both widths: a job runs from a button
+  // that says so, and pulling down is a refresh, not a run.
+  await page.getByRole('button', { name: /^run now$/i }).click()
+  await expect(page.getByText(/^Run clean$|jobs? failed/i)).toBeVisible({ timeout: 20_000 })
+  await page.reload()
 
   // Tile labels are uppercased by CSS, so the DOM still says "Warnings".
   const main = page.getByRole('main')
@@ -1071,6 +1068,7 @@ test('tasks, a row expands in place and EDIT opens the form drawer', async ({ pa
   await expect(row.getByText('Source:')).toBeVisible()
   await expect(row.getByText('Skills:')).toBeVisible()
   await expect(row.getByText('Same merchant, amount within 10 percent')).toBeVisible()
+  await expect(page).toHaveURL(/open=/)
   await shoot(page, 'tasks-expanded')
 
   // EDIT opens the drawer, whose state is the URL so the shot survives.
@@ -1327,6 +1325,7 @@ test('weekly review, six steps and a note built from the answers', async ({ page
   await page.getByLabel('Add a win').fill('Shipped the notifications screen')
   await page.getByRole('button', { name: 'Add' }).click()
   await expect(page.getByText('Shipped the notifications screen')).toBeVisible()
+  await expect(page).toHaveURL(/step=wins/)
   await shoot(page, 'weekly-review-wins')
 
   // Step three: every slipped item needs a decision, and the wizard says how
@@ -1337,6 +1336,7 @@ test('weekly review, six steps and a note built from the answers', async ({ page
   // Deciding one of them is what the step is for, so the count says so.
   await page.getByRole('radio', { name: /^Carry$/ }).first().click()
   await expect(page.getByText(/1 of \d+ decided/)).toBeVisible()
+  await expect(page).toHaveURL(/step=misses/)
 
   await shoot(page, 'weekly-review-misses')
 
@@ -1520,6 +1520,8 @@ test('onboarding, six steps that write as they go', async ({ page }) => {
   // the module back on, rather than disappearing.
   const airlineCategory = page.getByText('Airline loyalty').locator('..')
   await expect(airlineCategory).toContainText('Travel module off')
+  // The step shows before the router has written it; the shot reloads.
+  await expect(page).toHaveURL(/step=connect/)
   await shoot(page, 'onboarding-connections-module-off')
   await airlineCategory.getByRole('button', { name: 'Add Travel module' }).click()
   await expect(page.getByText('Travel module off')).toHaveCount(0)
@@ -1675,6 +1677,7 @@ test('second brain, the inbox holds a draft beside its source', async ({ page })
   for (const name of ['Discard', 'Edit', /^Accept/]) {
     await expect(page.getByRole('button', { name })).toBeVisible()
   }
+  await expect(page).toHaveURL(/note=/)
 
   await shoot(page, 'second-brain')
 })
@@ -1785,6 +1788,7 @@ test('travel, trips with confirmed spend only', async ({ page }) => {
   await expect(page).toHaveURL(/trip=/)
   await page.getByRole('tab', { name: 'Budget' }).click()
   await expect(page.getByText('Planned · total')).toBeVisible()
+  await expect(page).toHaveURL(/tab=budget/)
   await shoot(page, 'travel-budget')
 })
 
@@ -1859,6 +1863,7 @@ test('travel, a parsed booking waits in the trip inbox', async ({ page }) => {
 
   await expect(page.getByText('Check in, Kyoto')).toBeVisible()
   await expect(page.getByText(/confidence 94%/)).toBeVisible()
+  await expect(page).toHaveURL(/tab=inbox/)
   await shoot(page, 'travel-inbox')
 
   await page.getByRole('button', { name: 'Add', exact: true }).first().click()
@@ -2136,6 +2141,7 @@ test('meals, a slot is picked, swapped and cleared from the drawer', async ({ pa
   await page.getByRole('button', { name: 'Plan a meal' }).first().click()
   const drawer = page.getByRole('dialog')
   await expect(drawer.getByText('Pick a recipe')).toBeVisible()
+  await expect(page).toHaveURL(/pick=/)
   await shoot(page, 'meals-pick')
   await drawer.getByRole('button', { name: /Lentil soup/ }).click()
   await expect(drawer).toHaveCount(0)
@@ -2145,6 +2151,7 @@ test('meals, a slot is picked, swapped and cleared from the drawer', async ({ pa
   await expect(drawer.getByRole('heading', { name: 'Turkey chili' })).toBeVisible()
   await expect(drawer.getByText('Serves 6 · per-serving values')).toBeVisible()
   await expect(drawer.getByRole('button', { name: 'Cook' })).toBeVisible()
+  await expect(page).toHaveURL(/recipe=/)
   await shoot(page, 'meals-recipe')
   await drawer.getByRole('button', { name: 'Remove from plan' }).click()
   await expect(drawer).toHaveCount(0)
@@ -2353,6 +2360,7 @@ test('insurance, a policy number is revealed only when asked for', async ({ page
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByText('•••• 7730')).toBeVisible()
   // The drawer is in the URL, so it survives the reloads.
+  await expect(page).toHaveURL(/policy=/)
   await shoot(page, 'insurance-drawer')
   await dialog.getByRole('button', { name: /REVEAL/ }).click()
   await expect(dialog.getByText('LMD-48211-7730')).toBeVisible()
@@ -2391,6 +2399,7 @@ test('insurance, the edit form holds changes until Save', async ({ page }) => {
   await page.getByRole('button', { name: /Apartment, renters/ }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Edit' }).click()
   await expect(page.getByText('Insurance / Edit')).toBeVisible()
+  await expect(page).toHaveURL(/edit=1/)
   await shoot(page, 'insurance-edit')
 
   const dialog = page.getByRole('dialog')
@@ -2430,6 +2439,7 @@ test('meals, cook mode scales what can be scaled and says what cannot', async ({
   await page.goto('/meals?tab=recipes')
   await page.getByRole('button', { name: /^Turkey chili/ }).click()
   await expect(page.getByRole('dialog').getByText(/Use "Add to" above/)).toBeVisible()
+  await expect(page).toHaveURL(/recipe=/)
   await shoot(page, 'meals-recipe-library')
   await page.getByRole('dialog').getByRole('button', { name: 'Cook' }).click()
 
@@ -2444,6 +2454,7 @@ test('meals, cook mode scales what can be scaled and says what cannot', async ({
   // the splash of oil, which is not a measurement.
   await page.getByRole('radio', { name: '12', exact: true }).click()
   await expect(page.getByText('1800 g')).toBeVisible()
+  await expect(page).toHaveURL(/servings=12/)
   await expect(page.getByText('a splash', { exact: true })).toBeVisible()
   await expect(page.getByText(/Half a splash is not a measurement/)).toBeVisible()
 
@@ -2555,6 +2566,69 @@ test('gestures, swiping a task completes it', async ({ page }, testInfo) => {
   })
 
   await expect(page.getByText(/^Done\. Sketch the week ahead/)).toBeVisible()
+})
+
+test('gestures, a swiped task reads as done before the server answers', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Touch gestures are a phone thing')
+
+  // Hold the server action so the only way the row can flip is optimistically.
+  let release!: () => void
+  const held = new Promise<void>((resolve) => (release = resolve))
+  await page.route('**/tasks**', async (route) => {
+    if (!route.request().headers()['next-action']) return route.continue()
+    await held
+    return route.continue()
+  })
+
+  await page.goto('/tasks')
+  const card = page.locator('article').filter({ hasText: 'Lower, deadlift day' }).first()
+  await expect(card.getByRole('button', { name: /^Complete Lower, deadlift/ })).toBeVisible()
+
+  const box = (await card.boundingBox())!
+  const y = box.y + 8
+  await card.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: box.x + 20, clientY: y })
+  await card.dispatchEvent('pointerup', { pointerType: 'touch', clientX: box.x + box.width - 10, clientY: y })
+
+  // Gone from Today while the request is still held, and no toast yet: the
+  // row moved on the guess, not on the answer.
+  await expect(card).toHaveCount(0)
+  await expect(page.getByText(/^Done\. Lower, deadlift/)).toHaveCount(0)
+  release()
+  await expect(page.getByText(/^Done\. Lower, deadlift/)).toBeVisible()
+})
+
+test('a drawer is a history entry, so Back closes it', async ({ page }) => {
+  await page.goto('/tasks')
+  await page.getByRole('button', { name: 'Edit Recurring detection tests' }).click()
+  await expect(page).toHaveURL(/task=/)
+  await expect(page.getByRole('dialog')).toBeVisible()
+
+  // Opening pushed, not replaced: the phone's Back gesture and button, and the
+  // browser's, land on the list with the drawer gone.
+  await page.goBack()
+  await expect(page).not.toHaveURL(/task=/)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('gestures, pulling down from the top refreshes the screen', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Touch gestures are a phone thing')
+
+  await page.goto('/finance')
+  // The listener is registered by an effect after hydration; wait for the
+  // page to go quiet so the first pointer event is not dropped on the floor.
+  await page.waitForLoadState('networkidle')
+  const x = 200
+  await page.dispatchEvent('body', 'pointerdown', { pointerType: 'touch', clientX: x, clientY: 120 })
+  await page.dispatchEvent('body', 'pointermove', { pointerType: 'touch', clientX: x, clientY: 180 })
+  await expect(page.getByText('Release to refresh')).toBeVisible()
+  // The release asks the router for the page again: one RSC request.
+  const fetched = page.waitForRequest((r) => r.url().includes('/finance') && r.headers()['rsc'] === '1')
+  await page.dispatchEvent('body', 'pointerup', { pointerType: 'touch', clientX: x, clientY: 220 })
+  await fetched
+
+  // The strip says so while the fetch runs, then goes; the page is still Finance.
+  await expect(page.getByText(/Refreshing|Release to refresh/)).toHaveCount(0, { timeout: 15_000 })
+  await expect(page.getByRole('heading', { name: 'Finance', level: 1 })).toBeVisible()
 })
 
 test('gestures, holding a dashboard tile enters arrange mode', async ({ page }, testInfo) => {

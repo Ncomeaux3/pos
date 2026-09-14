@@ -6,6 +6,7 @@ import { getSidebarCollapsed, getTheme } from '@/core/theme'
 import { CommandPalette } from '@/components/pos/CommandPalette'
 import { MobileTabBar, Sidebar } from '@/components/pos/Sidebar'
 import { ToastProvider } from '@/components/pos'
+import { PullToRefresh } from '@/components/pos/PullToRefresh'
 import { toggleSidebar, toggleTheme } from './shell-actions'
 
 async function pendingProposals(): Promise<number> {
@@ -41,6 +42,7 @@ export default async function AppLayout({ children }: LayoutProps<'/'>) {
       />
       <MobileTabBar nav={nav} footer={NAV_FOOTER} reviewCount={reviewCount} />
       <CommandPalette nav={[...nav, ...NAV_FOOTER, ...offRail]} />
+      <PullToRefresh />
 
       <main
         // The sidebar is fixed so the rail never scrolls with the page; this
@@ -49,7 +51,7 @@ export default async function AppLayout({ children }: LayoutProps<'/'>) {
         // 18px of side padding on a phone, not 28: the artboard's body runs
         // `14px 18px 22px`, and 28 on a 402px screen was costing 20px of a
         // column that was already truncating its own rows.
-        className="min-w-0 flex-1 p-[18px] pb-28 md:p-7 md:pb-7 md:[margin-left:var(--rail)]"
+        className="min-w-0 flex-1 p-[18px] pb-[calc(var(--tabbar)+18px)] md:p-7 md:pb-7 md:[margin-left:var(--rail)]"
       >
         {children}
       </main>
