@@ -206,7 +206,7 @@ export function Travel({ data }: { data: TravelData }) {
           <h1 className="text-[28px] font-normal leading-none tracking-[-0.03em] text-ink">Travel</h1>
           <p className="mt-2 hidden text-[13px] text-ink-3 md:block">
             Upcoming trips in green, past in grey, wishlist dotted. Drag to rotate, scroll to zoom,
-            double-click to fly in. Hover a pin for details.
+            tap a pin to open it, double-click to fly in.
           </p>
         </div>
         <div className="flex shrink-0 gap-2">

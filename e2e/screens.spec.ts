@@ -1872,7 +1872,7 @@ test('travel, the globe is drawn from real coordinates', async ({ page }) => {
 
   // A grey pin opens its trip, or itself when it has none: the seeded places
   // have none.
-  await past.locator('circle').click({ force: true })
+  await past.locator('circle').first().click({ force: true })
   await expect(page.getByRole('dialog', { name })).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog')).toHaveCount(0)
@@ -1881,6 +1881,34 @@ test('travel, the globe is drawn from real coordinates', async ({ page }) => {
   await page.keyboard.press('Enter')
   await expect(page.getByRole('dialog', { name })).toBeVisible()
   await expect(page.getByRole('dialog')).toContainText('Visited')
+})
+
+test('travel, a pin opens on a tap and stays shut through a drag', async ({ page }) => {
+  await page.goto('/travel')
+  const globe = page.getByRole('group', { name: /Globe showing \d+ places/ })
+  await expect(globe).toBeVisible()
+  const pin = globe.locator('[data-pin="past"]').filter({ hasText: 'Mexico City' })
+  // The finger-sized target is the first, transparent circle; the visible
+  // dot is a hair across. A press 9px off the dot's centre still lands.
+  const dot = (await pin.locator('circle').last().boundingBox())!
+  await page.mouse.click(dot.x + dot.width / 2 + 9, dot.y + dot.height / 2)
+  await expect(page).toHaveURL(/place=/)
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+
+  // A drag that starts on a pin turns the globe and opens nothing.
+  await page.goto('/travel')
+  await expect(globe).toBeVisible()
+  const land = globe.locator('[data-land]')
+  const home = (await land.getAttribute('d')) ?? ''
+  const box = (await pin.locator('circle').last().boundingBox())!
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width / 2 + 40, box.y + box.height / 2, { steps: 4 })
+  await page.mouse.up()
+  await expect.poll(() => land.getAttribute('d')).not.toBe(home)
+  await expect(page).not.toHaveURL(/place=/)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 
 test('travel, a parsed booking waits in the trip inbox', async ({ page }) => {

@@ -29,6 +29,10 @@ const FLAT_LAND = landPath(RINGS, { lambda: 0, phi: 0 }, 'flat')
 const LABEL_ZOOM = 2
 /** A label's height on screen, in pixels. */
 const LABEL_PX = 9
+/** A pin's hit radius in viewBox units at 1x: 7.5 units is about 12px on screen, a 24px target. */
+const HIT = 7.5
+/** How far a pointer travels before a press becomes a drag, in client pixels. */
+const DRAG_PX = 4
 
 /** Client pixels to viewBox units, so a zoom can anchor on the cursor. */
 function toBox(svg: SVGSVGElement, clientX: number, clientY: number) {
@@ -67,6 +71,10 @@ export function Globe({
   const [mode, setMode] = useState<'globe' | 'flat'>('globe')
   // Every pointer that is down, where it last was. One turns, two pinch.
   const pointers = useRef(new Map<number, { x: number; y: number }>())
+  // Where the first pointer went down, and whether it has moved far enough
+  // to count as a drag. A finger that wobbles on a pin is a tap.
+  const start = useRef<{ x: number; y: number } | null>(null)
+  const dragged = useRef(false)
   const [{ scale, half }, setBox] = useState<ReturnType<typeof measure>>({ scale: 1, half: { x: R + 4, y: R + 4 } })
 
   // Measured on mount, on resize and when the viewBox changes with the mode.
@@ -101,6 +109,11 @@ export function Globe({
   const move = (e: React.PointerEvent<SVGSVGElement>) => {
     const prev = pointers.current.get(e.pointerId)
     if (!prev) return
+    if (!dragged.current) {
+      const from = start.current ?? prev
+      if (Math.hypot(e.clientX - from.x, e.clientY - from.y) < DRAG_PX) return
+      dragged.current = true
+    }
     const svg = e.currentTarget
     const other = [...pointers.current.entries()].find(([id]) => id !== e.pointerId)?.[1]
     if (other) {
@@ -155,7 +168,13 @@ export function Globe({
         aria-label={`Globe showing ${pins.length} places`}
         // No pointer capture: with it a click on a pin lands on the svg
         // instead of the pin, so a pin could never be picked.
-        onPointerDown={(e) => pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })}
+        onPointerDown={(e) => {
+          if (e.isPrimary) {
+            start.current = { x: e.clientX, y: e.clientY }
+            dragged.current = false
+          }
+          pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+        }}
         onPointerMove={move}
         onPointerUp={lift}
         onPointerCancel={lift}
@@ -224,7 +243,9 @@ export function Globe({
                 tabIndex={onPick ? 0 : undefined}
                 aria-label={onPick ? title : undefined}
                 className={onPick ? 'cursor-pointer' : undefined}
-                onClick={() => onPick?.(pin.id)}
+                onClick={() => {
+                  if (!dragged.current) onPick?.(pin.id)
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault()
@@ -234,6 +255,8 @@ export function Globe({
                 onDoubleClick={() => flyTo(pin)}
               >
                 <title>{title}</title>
+                {/* The target: about 24px across on screen whatever the zoom, so a finger lands. */}
+                <circle cx={cx} cy={cy} r={HIT / zoom} fill="transparent" />
                 {pin.kind === 'wishlist' ? (
                   <circle cx={cx} cy={cy} r={3.5 / zoom} fill="none" stroke="var(--ink-2)" strokeWidth={1} strokeDasharray="1.5 1.5" vectorEffect="non-scaling-stroke" />
                 ) : (
