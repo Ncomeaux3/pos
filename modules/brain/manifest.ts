@@ -3,7 +3,9 @@ import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { emit } from '@/core/events'
 import { defineModule, defineTool } from '@/core/module-contract'
+import { captureText } from './capture'
 import { deleteNote, resolveDanglingLinks, syncLinks, uniqueSlug } from './data'
+import { fileUnfiledNightly } from './hubs'
 import { nightlyDigest, resolveLinks } from './jobs/nightly-digest'
 import { pullVault } from './jobs/pull-vault'
 import { ingestUrl } from './ingest'
@@ -22,6 +24,13 @@ export default defineModule({
       description: 'Inbox depth, what was written this week, and how many links point at nothing.',
       input: z.object({}),
       run: () => nightlyDigest(),
+    }),
+
+    capture: defineTool({
+      description:
+        'Save typed text as a note. First line is the title. worked marks a "worked on" entry (kind daily). An agent writes a draft.',
+      input: z.object({ text: z.string().min(1).max(200_000), worked: z.boolean().optional() }),
+      run: (input, ctx) => captureText(input, ctx.source === 'agent' ? 'agent' : 'manual'),
     }),
 
     ingest: defineTool({
@@ -263,6 +272,7 @@ export default defineModule({
   jobs: [
     // First: everything below reads what the vault brought in.
     { name: 'pull_vault', run: pullVault },
+    { name: 'file_unfiled', run: fileUnfiledNightly },
     { name: 'resolve_links', run: resolveLinks },
     { name: 'nightly_digest', run: nightlyDigest },
   ],

@@ -11,6 +11,9 @@ export type BrainDigest = {
   unresolved: number
   /** Published notes not yet written to the vault. */
   uncommitted: number
+  /** Published notes with no hub yet, rule or model. */
+  unfiled: number
+  hubs: { name: string; count: number }[]
 }
 
 export async function nightlyDigest(): Promise<BrainDigest> {
@@ -37,6 +40,20 @@ export async function nightlyDigest(): Promise<BrainDigest> {
     `select count(distinct to_slug)::text as n from brain.link where to_note_id is null`,
   )
 
+  const { rows: unfiled } = await db().query<{ n: string }>(
+    `select count(*)::text as n from brain.note n
+      where status = 'published'
+        and not exists (select 1 from brain.note_hub where note_id = n.id)`,
+  )
+
+  const { rows: hubs } = await db().query<{ name: string; count: string }>(
+    `select h.name, count(nh.note_id)::text as count
+       from brain.hub h
+       left join brain.note_hub nh on nh.hub_id = h.id
+      group by h.id, h.name
+      order by count(nh.note_id) desc, h.name`,
+  )
+
   return {
     inbox: Number(rows[0].inbox),
     published: Number(rows[0].published),
@@ -44,6 +61,8 @@ export async function nightlyDigest(): Promise<BrainDigest> {
     byKind: Object.fromEntries(kinds.map((k) => [k.kind, Number(k.n)])),
     unresolved: Number(dangling[0].n),
     uncommitted: Number(rows[0].uncommitted),
+    unfiled: Number(unfiled[0].n),
+    hubs: hubs.map((h) => ({ name: h.name, count: Number(h.count) })),
   }
 }
 
