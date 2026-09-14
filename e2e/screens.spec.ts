@@ -1938,6 +1938,29 @@ test('travel, cents per point uses only numbers you supply', async ({ page }) =>
   await shoot(page, 'travel-loyalty')
 })
 
+// Geocoding happens in a server action, so page.route on the Open-Meteo URL
+// (the plan's original idea) cannot intercept it: the fetch runs on the
+// server, not in the page. This test hits the real API instead and is
+// skipped in CI, where there is no network.
+test('travel, typing a destination suggests places and fills the coordinates', async ({ page }) => {
+  test.skip(!!process.env.CI, 'needs network')
+  await page.goto('/travel')
+  await page.waitForLoadState('networkidle')
+  await page.getByRole('button', { name: /New trip/ }).click()
+
+  const destination = page.getByRole('dialog').getByLabel('Destination', { exact: true })
+  await destination.fill('Austin')
+  const option = page.locator('#destination-hits option[value*="Austin"]').first()
+  await expect(option).toHaveCount(1, { timeout: 10_000 })
+  const label = (await option.getAttribute('value')) ?? ''
+
+  await destination.fill(label)
+  await expect(page.getByRole('dialog').getByLabel('Lat', { exact: true })).not.toHaveValue('')
+  await expect(page.getByRole('dialog').getByLabel('Lon', { exact: true })).not.toHaveValue('')
+  await expect(page.getByRole('dialog').getByLabel('Lat', { exact: true })).toHaveValue(/^-?\d+(\.\d+)?$/)
+  await expect(page.getByRole('dialog').getByLabel('Lon', { exact: true })).toHaveValue(/^-?\d+(\.\d+)?$/)
+})
+
 test('fitness, workouts with pace derived rather than stored', async ({ page }) => {
   await page.goto('/fitness')
   await expect(page.getByRole('heading', { name: 'Fitness' })).toBeVisible()

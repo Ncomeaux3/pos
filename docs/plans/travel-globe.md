@@ -101,6 +101,8 @@ Verify: `pnpm test:e2e` travel, ui-verifier at 402 with a tap recorded, spec-rev
 
 Branch `travel-geocode`. Complexity medium. Model Opus.
 
+**Done 2026-09-13.** Research note at `docs/research/open-meteo-geocoding.md`: no key, 10,000 calls a day and 600 a minute on the free tier, attribution "Location data based on GeoNames". The e2e test hits the real API and skips under CI, because the fetch runs inside a server action where `page.route` cannot reach it. `suggestPlaces` calls `requireOwner()` like every other action in the file: unguarded means no proposal, not no login.
+
 ### 3.1 Research note
 
 `/research` Open-Meteo geocoding into `docs/research/open-meteo-geocoding.md`: terms for non-commercial use, any daily or per-second limit, attribution wording, response shape. Log the decision. If the terms turn out unfit, stop and say so; Nominatim is the fallback and the plan below changes only `geocode.ts`.

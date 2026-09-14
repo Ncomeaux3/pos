@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requireOwner } from '@/core/auth'
 import { db } from '@/core/db'
 import { callTool } from '@/core/tools'
+import { geocode, type Hit } from '../geocode'
 
 // Server actions are standalone POST endpoints addressed by id, so the (app)
 // layout does not run for them and each one authenticates independently.
@@ -154,4 +155,10 @@ export async function savePacking(input: {
   remove?: boolean
 }): Promise<ActionResult> {
   return through('write_packing', input)
+}
+
+/** Destination suggestions while typing. Unguarded: no money spent, nothing written. */
+export async function suggestPlaces(query: string): Promise<Hit[]> {
+  await requireOwner()
+  return geocode(query)
 }
