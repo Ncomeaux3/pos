@@ -33,11 +33,25 @@ in the request that approved it.
 | Chat | No in-app chat. Review and Agent Log grow | A full chat thread; deferring the question |
 | First integrations | The three already written, then Gmail read, Calendar and GitHub propose | Gmail first |
 | Voice | Out of v2 | Web Speech; hosted STT; self-hosted |
+| Default level | The migration backfills `read` for rows already connected, `none` for everything else and everything future | `none` for all four (breaks three live syncs for a day); `read` as the default (drops the guarantee) |
+| Sync scope | Every outbound verb goes through one executor, nightly syncs included | agent-initiated calls only; syncs read-only by construction |
+| Start | After OWNER-TODO 12 to 17, the owner's own data | phone polish first; phase 0 now |
 
-## Phase 0: verbs and permission on what is already connected
+## When this starts
+
+After OWNER-TODO steps 12 to 17 (2026-09-14): the Obsidian vault, SimpleFIN,
+the Health readings Shortcut, workouts, push on the phone, and the digest
+recipient. All owner work, and phase 0 is worth more once the three
+integrations it covers carry real data rather than skipping every night. Phase
+4 also needs the VAPID pair that step 16 adds, or its approval push is dark.
+
+The phone polish pass and the per-module phone passes are independent of this
+and can run in either order around it.
+
+## Phase 0: verbs, permission and the verb executor
 
 No new provider. This phase proves the permission model against SimpleFIN, the
-Obsidian vault and Apple Health, none of which needs an OAuth app.
+Obsidian vault and both Apple Health routes, none of which needs an OAuth app.
 
 ### Changes
 
@@ -51,13 +65,24 @@ Obsidian vault and Apple Health, none of which needs an OAuth app.
   wrong: `none` refuses a UI call, and `autonomy = 'act'` does not raise a
   `propose` level integration.
 - Migration `<ts>_core_integration_verbs.sql`: `permission_level` on
-  `core.connections` defaulting to `'none'`, and `core.connection_verb_grants`
-  with the five statements every new core table needs (updated_at trigger, RLS,
-  owner policy, read policy, three grants), per the note in core_platform.
+  `core.connections` defaulting to `'none'`, one `update ... where status =
+  'connected'` backfilling those rows to `'read'` so the nightly run keeps
+  working, and `core.connection_verb_grants` with the five statements every new
+  core table needs (updated_at trigger, RLS, owner policy, read policy, three
+  grants), per the note in core_platform.
 - `core/credentials.ts`: `getPermission(integrationId)` and
   `setPermission(integrationId, level, verbId?)`. Disconnect grows into one
   transaction that also deletes grants and cancels approved-not-executed
   actions for that integration.
+- `core/verbs.ts` (new): `runVerb(integrationId, verbId, args)`, the one path
+  to the network for an integration client. Consults `decide()`, resolves
+  credentials, enforces `rateLimit` and `cacheTtl`, sends through
+  `core/fetching.ts` against the manifest's `hosts`, records the call. A
+  refusal is an error the caller reports, which for a sync job means the job
+  records why it did nothing, the same way an unconnected sync already skips.
+- `integrations/simplefin/client.ts`, `github_vault`, `health_auto_export`,
+  `apple_shortcuts`: their outbound calls move onto `runVerb`. This is most of
+  the phase, and it is what makes revocation actually stop a sync.
 - `integrations/simplefin/manifest.ts`, `github_vault`, `health_auto_export`,
   `apple_shortcuts`: declare their verbs and `hosts`. All are read today, so
   every verb is `direction: 'read'`, `risk: 'none'`.
@@ -72,16 +97,23 @@ Obsidian vault and Apple Health, none of which needs an OAuth app.
 2. The contract type and the migration. Check: `supabase migration up` against
    the live local database, never `db reset`. Commit:
    `feat: integrations declare verbs and carry a permission level`.
-3. The four manifests plus `getPermission`/`setPermission` and the disconnect
-   transaction, with a test proving a disconnect cancels an approved action.
+3. `core/verbs.ts` with its test first: a verb at `none` refuses; a refused
+   sync records why rather than throwing past the runner; a client cannot reach
+   the network except through it. Commit:
+   `feat: one executor for every outbound integration call`.
+4. The four manifests and clients plus `getPermission`/`setPermission` and the
+   disconnect transaction, with a test proving a disconnect cancels an approved
+   action. Check: one nightly run locally, all four syncs behaving as before.
    Commit: `feat: permission and verbs on the four integrations that exist`.
-4. The Settings rows, and `ui-verifier` at 402 and 1440. Commit:
+5. The Settings rows, and `ui-verifier` at 402 and 1440. Commit:
    `feat: Settings sets an integration's permission level per verb`.
 
 ### Done when
 
-Each of the four integrations declares verbs, carries a level, and `decide()`
-is enforced on every call. A level of `none` refuses a read from the UI.
+Each of the four integrations declares verbs, carries a level, and reaches the
+network only through `runVerb`. A level of `none` refuses a read from the UI
+and refuses a nightly sync, which records why. The nightly run is otherwise
+unchanged, proven by one full local run.
 
 ## Phase 1: the ledger
 

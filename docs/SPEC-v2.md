@@ -119,6 +119,13 @@ core.connection_verb_grants           -- new
   unique (integration_id, verb_id)
 ```
 
+The migration backfills `permission_level = 'read'` for every row already at
+status `connected`, and leaves `'none'` as the default for every other row and
+every future one (2026-09-14). Three integrations are live in the nightly run
+and a strict default would refuse their syncs on the next run. The guarantee
+that a newly connected provider can do nothing until the owner says so is
+unaffected: it applies to every row created after this migration.
+
 No new credential store. Secrets stay in `core.connections.credentials_encrypted`,
 and the agent never reads them: a verb call names the integration id, and
 `getCredentials()` resolves it inside the executor. The resolved secret never
@@ -137,9 +144,12 @@ external verbs. They compose in one function, `decide()`, in `core/permission.ts
 and the most restrictive answer wins.
 
 ```
-decide({ source, autonomy, moduleGuarded, level, verbGrant, risk, tainted })
+decide({ source, autonomy, level, verbGrant, direction, risk, tainted })
   -> 'execute' | 'propose' | 'refuse'
 ```
+
+`source` is `'ui' | 'agent' | 'job'`. A job is the third because nightly syncs
+are covered: see 4.5.
 
 Rules, in order:
 
@@ -155,6 +165,28 @@ Rules, in order:
 
 Autonomy never raises an integration above its level. `act` means the agent
 does not need approval for a module write; it does not mean it may send mail.
+A `job` source is not a UI source: nobody pressed a button, so a job's write
+verb proposes exactly as an agent's does.
+
+### 4.5 Every outbound verb goes through one executor, syncs included
+
+Decided 2026-09-14. A nightly sync job does not pass through `callTool` today:
+`runJob` calls the job directly and the job calls its integration client. So
+without this rule the permission model would cover agent-initiated calls only,
+and "revoking a credential stops everything" would be false, since a sync would
+keep pulling until the connection was deleted.
+
+`core/verbs.ts` is the one executor. An integration client calls
+`runVerb(integrationId, verbId, args)`; it consults `decide()`, resolves
+credentials, enforces `rateLimit` and `cacheTtl`, sends the request through
+`core/fetching.ts` against the manifest's `hosts`, and records the call. A
+client that reaches the network any other way fails a test.
+
+A sync at level `none` refuses, and the job records why. That is the shape the
+nightly run already relies on: every unconnected sync skips and says so rather
+than failing the run, and a refused one reads the same way.
+
+Cost: the four existing clients are edited in phase 0. That is the phase.
 
 ## 5. Subsystem 2: the action ledger
 
@@ -522,7 +554,7 @@ can do without changing whether it is safe.
 
 | Phase | Deliverable | Done when |
 |---|---|---|
-| 0 | Verbs and permission on the three integrations already written | SimpleFIN, the vault and Apple Health each declare verbs, carry a level, and `decide()` is enforced on every call. No new OAuth work. |
+| 0 | Verbs, permission and the verb executor on the integrations already written | SimpleFIN, the vault and both Apple Health routes declare verbs, carry a level, and reach the network only through `runVerb`. A level of `none` refuses a sync and the job says so. No new OAuth work. |
 | 1 | Ledger extension and state machine | An approved action executes exactly once, and a duplicate idempotency key is rejected by Postgres rather than by application code. |
 | 2 | Auto-approve rules and taint | `risk = high` cannot be auto-approved and neither can an action derived from fetched content, both proven by failing-first tests. |
 | 3 | Run budgets and the Postgres queue | A runaway run terminates on each of the three budgets and records `termination_reason`. |

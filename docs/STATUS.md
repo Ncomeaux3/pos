@@ -596,6 +596,11 @@ Vercel Hobby with the $10 cap, which is what fixes its shape: no long-lived
 process, no external queue, and a run that advances only when something drains
 the queue. Phases 0 to 4 are the product.
 
+It starts after OWNER-TODO steps 12 to 17. Phase 0 covers the three
+integrations that currently skip every night, so its done condition needs real
+data behind them, and phase 4's approval push needs the VAPID pair. The phone
+polish pass is independent and can run either side of it.
+
 ## Open questions for the owner
 
 - Voyage is capped at 3 requests a minute without a payment method. Search is
