@@ -121,6 +121,16 @@ Two sources are built and live in production (PRs #17, #18, #19, all
       orchestrator queues one only when there is an alert, and the database is
       empty. The first alert proves delivery; a refused send shows as a failed
       `notify` job in Agent Log.
+- [ ] **18. `DATABASE_URL` to transaction mode**, 2 minutes. Vercel > pos >
+      Settings > Environment Variables > `DATABASE_URL` (Production): change
+      `:5432` to `:6543`, nothing else, save, then Deployments > Redeploy the
+      latest. Step 6 chose the session pooler, and session mode caps clients at
+      the dashboard Pool Size of 15; four warm functions at 4 connections each
+      hit it on 2026-09-14 and every module page 500ed with `EMAXCONNSESSION`
+      (31 in 7 days, Travel four times in a row at 08:50 CDT). Leave
+      `BACKUP_DATABASE_URL` and the laptop's `.env.production` on 5432:
+      pg_dump and the setup scripts are one long session each. Tell me when it
+      is redeployed and I will check the runtime errors table is quiet.
 
 ## Decisions I would like from you
 
