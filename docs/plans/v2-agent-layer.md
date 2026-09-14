@@ -36,6 +36,8 @@ in the request that approved it.
 | Default level | The migration backfills `read` for rows already connected, `none` for everything else and everything future | `none` for all four (breaks three live syncs for a day); `read` as the default (drops the guarantee) |
 | Sync scope | Every outbound verb goes through one executor, nightly syncs included | agent-initiated calls only; syncs read-only by construction |
 | Start | After OWNER-TODO 12 to 17, the owner's own data | phone polish first; phase 0 now |
+| Gmail | `gmail.readonly`, publishing status In production and unverified, client query scoped to one label | whole mailbox; `gmail.metadata` (headers only); swapping Calendar into phase 5 |
+| Auto-approve | `core.auto_approve_rules` ships empty, rules written after four weeks of manual approval | seeding rules for the read verbs on day one |
 
 ## When this starts
 
@@ -158,7 +160,8 @@ rejected by Postgres rather than by application code.
 ### Changes
 
 - Migration: `core.auto_approve_rules` with `max_risk` constrained to exclude
-  `high`, and `derived_from_external` already added in phase 1.
+  `high`, and `derived_from_external` already added in phase 1. No seed rows:
+  decided 2026-09-14, rules get written after four weeks of manual approval.
 - `core/permission.ts`: rule matching, the daily limit counted through
   `core.today()`, and the two refusals (high risk, tainted).
 - `core/actions.ts`: a run marks itself tainted when a read verb returns
@@ -187,7 +190,7 @@ condition only, so the order and the stopping points are fixed now.
 |---|---|---|
 | 3 | Run budgets on `core.job_runs`, `core.run_queue`, `/api/agent/tick` | A runaway run terminates on each of the three budgets and records `termination_reason` |
 | 4 | Review and Agent Log grow the action surface; three notification rules | An approval from the phone executes the action and the Agent Log shows it |
-| 5 | Gmail at `read` | Real mail fetched through `core/fetching.ts`, `cacheTtl` honoured, every message tainted |
+| 5 | Gmail at `read`, scoped to one label | Real mail fetched from the POS label through `runVerb`, `cacheTtl` honoured, every message tainted |
 | 6 | Google Calendar and GitHub at `propose` | Each executes one approved write verb end to end |
 | 7 | `core.facts`, extraction, forget | A tombstoned fact does not reappear after a full re-extraction |
 | 8 | Nightly suggestion pass, `core.suggestion_suppression` | Suggestions appear in Review; three dismissals disable the class |
@@ -212,6 +215,19 @@ themes, and `spec-reviewer` before the PR. `prod-auditor` on phase 10.
 Every phase that adds a migration applies it with `supabase migration up`
 against the live local database. `supabase db reset` destroys the provider keys
 in `core.connections` and is not used.
+
+## Phase 5 prerequisite, owner work
+
+Gmail needs a Google Cloud project before phase 5 starts, and one setting in it
+decides whether the nightly sync survives its first week. OWNER-TODO item 19
+carries it. The short version: create the project, add the Gmail API, request
+`gmail.readonly`, set publishing status to **In production**, do not submit for
+verification, and click through the unverified screen when connecting. Left at
+Testing, every refresh token expires after 7 days.
+
+Research is in docs/SPEC-v2.md section 14, and every claim in it is marked
+verify: Google's documentation domains were blocked by the session's egress
+proxy, so it rests on secondary sources.
 
 ## Out of scope
 

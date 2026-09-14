@@ -559,7 +559,7 @@ can do without changing whether it is safe.
 | 2 | Auto-approve rules and taint | `risk = high` cannot be auto-approved and neither can an action derived from fetched content, both proven by failing-first tests. |
 | 3 | Run budgets and the Postgres queue | A runaway run terminates on each of the three budgets and records `termination_reason`. |
 | 4 | Approval surface and push | An approval from the phone executes the action and the Agent Log shows it. |
-| 5 | Gmail at `read` | Real mail fetched, `cacheTtl` honoured, every message treated as tainted input. |
+| 5 | Gmail at `read`, one label | Real mail fetched from the POS label, `cacheTtl` honoured, every message treated as tainted input. |
 | 6 | Google Calendar and GitHub at `propose` | Each executes one approved write verb end to end. |
 | 7 | Facts and forget | Facts extracted, and a tombstoned fact verified not to reappear after a full re-extraction. |
 | 8 | Nightly suggestion pass | Suggestions appear in Review, dismissal suppresses the class, three dismissals disable it. |
@@ -587,18 +587,50 @@ Before v2 is considered shipped:
       `core/fetching.ts`, verified by test
 - [ ] A clean clone runs in demo mode with zero credentials configured
 
-## 14. Open decisions for v2
+## 14. Gmail, decided 2026-09-14
 
-Two left. Both block a specific phase and neither blocks starting.
+Researched before phase 5 was scheduled, because the answer could have made it
+a different phase. Google's own documentation domains are blocked by the
+session's egress proxy, so every claim here came from secondary sources and is
+marked verify until checked on the console.
 
-1. **Auto-approve seed rules.** Which verbs are safe enough on day one.
-   Blocks phase 2. My recommendation is none: ship the table empty, run four
-   weeks on manual approval, and write rules against what was actually
-   approved every time without hesitation.
-2. **Whether Gmail reads the whole mailbox or one label.** Blocks phase 5. A
-   label the owner files things into is a smaller blast radius for a first
-   connector than full mailbox read.
+**Scope: `gmail.readonly`.** It is a restricted scope. A verified app using one
+needs a CASA third-party security assessment revalidated every 12 months, at a
+few hundred to a few thousand dollars a year. POS never enters that path: an
+unverified app under 100 users keeps working, and the owner clicks through the
+unverified screen once. Verify.
 
-Resolved on 2026-09-14, recorded in decisions/log.md: runner topology, ledger
-shape, integration extension over a parallel registry, cost cap, plan location,
-no in-app chat, first connectors, voice deferred, secret store, queue.
+**Publishing status: In production, verification not submitted.** This is the
+setting that matters and it is easy to get wrong. A project left at Testing
+expires every refresh token after 7 days, which would break the nightly sync
+within a week of connecting and read as a credential bug. Verify.
+
+**The 100-user cap is per project and permanent.** Irrelevant at one user. It
+would be fatal to a hosted multi-tenant POS, which v2 is explicitly not, and it
+does not touch the self-host template: a fork registers its own Google project.
+
+**One label, not the mailbox.** The Gmail connector lists only messages
+carrying a label the owner files into. Said precisely, because the weaker
+version of this claim is the tempting one: `gmail.readonly` grants read on the
+whole mailbox and Google enforces no label restriction on the token. The limit
+lives in the client's query and nowhere else. What it buys is real but narrower
+than it sounds: less mail through the model, a smaller injection surface, and a
+filing decision that belongs to the owner rather than to a heuristic. It is not
+containment of the credential.
+
+A future write verb does not raise the tier: `gmail.modify` is restricted too,
+so the assessment question is answered the same way. `gmail.metadata` is
+restricted as well and returns headers only, so it is not a cheaper substitute.
+Verify both.
+
+## 15. Open decisions for v2
+
+None. The two open on 2026-09-14 are resolved above and in decisions/log.md:
+Gmail reads one label at `gmail.readonly`, and `core.auto_approve_rules` ships
+empty.
+
+Shipping that table empty is the decision most likely to be revisited, which is
+the point of it. Four weeks of manual approval produce a list of what was
+approved every time without hesitation, and rules written against that list are
+evidence. Rules written now would be a guess about which verbs feel safe before
+one has ever run.

@@ -109,6 +109,31 @@ Two sources are built and live in production (PRs #17, #18, #19, all
       native iOS companion app (exact, but a new codebase and a $99 a year
       developer account).
 
+## v2 phase 5: Gmail
+
+Not needed until v2 phase 5, which starts after items 12 to 17. Listed now
+because the research that produced it is fresh and one setting in it is easy to
+get wrong in a way that looks like a bug six days later.
+
+- [ ] **19. Google Cloud project for Gmail**, free, about 15 minutes. Create a
+      project at console.cloud.google.com, enable the Gmail API, create an
+      OAuth client of type Web application with the POS callback as its
+      redirect URI, and add the scope `https://www.googleapis.com/auth/gmail.readonly`.
+      Then the setting that matters: set the OAuth consent screen's publishing
+      status to **In production**. Do not submit for verification. Leaving it
+      at Testing expires every refresh token after 7 days, so the nightly sync
+      would work for a week and then fail, looking like a credential problem
+      rather than a dropdown. You will see an "unverified app" warning when you
+      connect; click through it. That is the documented path for an app under
+      100 users, and it is why POS never needs the CASA security assessment a
+      restricted scope otherwise carries (a few hundred to a few thousand
+      dollars a year). Also create a Gmail label and file into it whatever you
+      want POS to read: the connector queries that label alone.
+
+      Every claim here is marked verify. Google's documentation domains were
+      blocked by the proxy when this was researched, so it rests on secondary
+      sources. Check the console before trusting the 7-day figure.
+
 ## Left over from the first run
 
 - [ ] **16. Enable push on the phone.** Add POS to the Home Screen, open it

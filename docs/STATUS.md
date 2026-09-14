@@ -586,8 +586,8 @@ outside Next.
 docs/SPEC-v2.md and docs/plans/v2-agent-layer.md. The agent layer: per-verb
 permission on integrations, an action state machine over core.proposals, run
 budgets, a Postgres queue, a memory tier, a nightly suggestion pass, and plans
-in the goals schema. Nine decisions were taken with the owner the same day and
-are in decisions/log.md; two stay open in docs/DECISIONS.md.
+in the goals schema. Fourteen v2 decisions were taken with the owner over
+2026-09-14 and are in decisions/log.md; none stay open.
 
 The draft spec proposed six things that already ship under other names (the
 credential vault, the connector registry, the approval gate, the audit trail,
