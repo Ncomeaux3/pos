@@ -79,6 +79,8 @@ Verify: `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm test:e2e` travel tests
 
 Branch `travel-globe-tap`. Complexity low. Model Opus (the repro step needs judgement); the edits alone are quick-builder sized.
 
+**Done 2026-09-13.** The repro at 402 with touch could not miss: taps at the centre, 6 px and 10 px off and a 3 px wobble all opened the place, so the fix is the plan's two items. The hit radius is 7.5 viewBox units, not 12: a unit is about 1.65 px at both widths, so 7.5 is the 24 px target and 12 would be 40 px and overlap the next pin.
+
 ### 2.1 Reproduce first
 
 Playwright at 402 px with `hasTouch`, tap the first past pin's centre with `page.touchscreen.tap`, record whether `?place=` or `?trip=` lands in the URL. Then tap 6 px off centre. Then tap and move 3 px. Write the result into the PR description. If the centre tap already works, the fix is the hit area and the threshold; if it does not, debug before editing (systematic-debugging skill).
