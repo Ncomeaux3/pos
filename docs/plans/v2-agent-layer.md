@@ -52,8 +52,16 @@ and can run in either order around it.
 
 ## Phase 0: verbs, permission and the verb executor
 
-No new provider. This phase proves the permission model against SimpleFIN, the
-Obsidian vault and both Apple Health routes, none of which needs an OAuth app.
+No new provider. This phase proves the permission model against the three
+integrations with outbound clients (SimpleFIN, the Obsidian vault, Strava) and
+gates the two inbound ones (`health_auto_export`, `apple_shortcuts`) at the
+webhook route. None needs an OAuth app to be registered. The 2026-09-14 answer
+named "Apple Health" among the outbound three; that was my framing error, since
+both Apple Health routes are pushes with no outbound call. Strava is the third
+outbound client and takes that place.
+
+The three infrastructure providers core uses directly (anthropic, voyage,
+resend) declare no verbs and are untouched. See SPEC-v2 4.5.
 
 ### Changes
 
@@ -76,18 +84,27 @@ Obsidian vault and both Apple Health routes, none of which needs an OAuth app.
   `setPermission(integrationId, level, verbId?)`. Disconnect grows into one
   transaction that also deletes grants and cancels approved-not-executed
   actions for that integration.
+- `core/fetching.ts`: `request(url, { method, headers, body, ... })` with the
+  same three layers `get()` has; `get()` becomes a call to it. Needed because
+  the file is GET-only today and SimpleFIN claims its token with a POST.
+  `fetching.test.ts` gains the POST and header cases against the same real
+  local server the GET tests already use.
 - `core/verbs.ts` (new): `runVerb(integrationId, verbId, args)`, the one path
-  to the network for an integration client. Consults `decide()`, resolves
-  credentials, enforces `rateLimit` and `cacheTtl`, sends through
-  `core/fetching.ts` against the manifest's `hosts`, records the call. A
-  refusal is an error the caller reports, which for a sync job means the job
-  records why it did nothing, the same way an unconnected sync already skips.
-- `integrations/simplefin/client.ts`, `github_vault`, `health_auto_export`,
-  `apple_shortcuts`: their outbound calls move onto `runVerb`. This is most of
+  to the network for an integration that declares verbs. Consults `decide()`,
+  resolves credentials, enforces `rateLimit` and `cacheTtl`, sends through
+  `request()` against the manifest's `hosts`, records the call. A refusal is
+  an error the caller reports, which for a sync job means the job records why
+  it did nothing, the same way an unconnected sync already skips.
+- `integrations/simplefin/client.ts`, `github_vault/client.ts`,
+  `strava/client.ts`: their `fetch` calls move onto `runVerb`. This is most of
   the phase, and it is what makes revocation actually stop a sync.
-- `integrations/simplefin/manifest.ts`, `github_vault`, `health_auto_export`,
-  `apple_shortcuts`: declare their verbs and `hosts`. All are read today, so
-  every verb is `direction: 'read'`, `risk: 'none'`.
+- `integrations/simplefin/manifest.ts`, `github_vault`, `strava`: declare
+  their verbs and `hosts`. All are read today, so every verb is
+  `direction: 'read'`, `risk: 'none'`.
+- `app/api/integrations/[id]/webhook/route.ts`: a push for an integration at
+  level `none` is refused with 403 and logged to `core.request_log` before the
+  secret check, so a disabled inbound integration cannot be probed for its
+  secret either. `health_auto_export` and `apple_shortcuts` declare no verbs.
 - `app/(app)/settings/connections/`: a level selector per provider card and, on
   an expanded card, a per-verb override row. The card already carries auth
   chip, status dot and the test strip; this is one more row, not a redesign.
@@ -103,24 +120,39 @@ Obsidian vault and both Apple Health routes, none of which needs an OAuth app.
    sync records why rather than throwing past the runner; a client cannot reach
    the network except through it. Commit:
    `feat: one executor for every outbound integration call`.
-4. The four manifests and clients plus `getPermission`/`setPermission` and the
-   disconnect transaction, with a test proving a disconnect cancels an approved
-   action. Check: one nightly run locally, all four syncs behaving as before.
-   Commit: `feat: permission and verbs on the four integrations that exist`.
+4. The three manifests and clients, the webhook gate, `getPermission` and
+   `setPermission`, and the disconnect transaction, with a test proving a
+   disconnect cancels an approved action and one proving a level `none` push
+   is refused before the secret is compared. Check: one nightly run locally,
+   all three syncs behaving as before. Commit:
+   `feat: permission and verbs on the integrations that exist`.
 5. The Settings rows, and `ui-verifier` at 402 and 1440. Commit:
    `feat: Settings sets an integration's permission level per verb`.
 
 ### Done when
 
-Each of the four integrations declares verbs, carries a level, and reaches the
-network only through `runVerb`. A level of `none` refuses a read from the UI
-and refuses a nightly sync, which records why. The nightly run is otherwise
-unchanged, proven by one full local run.
+SimpleFIN, the vault and Strava declare verbs, carry a level, and reach the
+network only through `runVerb`; both Apple Health routes carry a level that
+gates their webhook. A level of `none` refuses a read from the UI, refuses a
+nightly sync (which records why), and refuses a push with a 403. The nightly
+run is otherwise unchanged, proven by one full local run.
 
-## Phase 1: the ledger
+## Phase 1: the ledger and the fixture integration
+
+No write verb exists before phase 6, so this phase and the two after it need
+something to execute. `integrations/fixture/` is that: a real manifest with
+`hosts: []`, a client that writes to `fixture.call` in its own schema instead
+of the network, and verbs `read_rows` (read, none), `write_row` (write, low,
+reversible), `write_medium` (write, medium) and `send` (write, high, not
+reversible). Phase 10's demo mode is this integration with seeded rows. It
+ships in the repo, because a fork's tests and demo need it for the same two
+reasons.
 
 ### Changes
 
+- `integrations/fixture/manifest.ts`, `client.ts`, and migration
+  `<ts>_fixture_init.sql` for its one table. It appears on Settings >
+  Connections like any provider; its Test always passes.
 - Migration `<ts>_core_action_ledger.sql`: the twelve columns on
   `core.proposals` from SPEC-v2 5.1, the widened status check, the unique index
   on `idempotency_key` where not null, and `proposal_id` on `core.write_log`.
@@ -143,17 +175,20 @@ unchanged, proven by one full local run.
 1. `core/idempotency.test.ts` red, then green. Commit:
    `feat: the same intent proposed twice is one idempotency key`.
 2. The migration. Commit: `feat: core.proposals carries an action through to its result`.
-3. `core/actions.ts` with its test first: nothing executes outside `approved`;
-   a duplicate key raises a Postgres unique violation, not an application
-   error; an expired approval does not execute. Commit:
+3. The fixture integration. Commit:
+   `feat: a fixture integration so the ledger has something to execute`.
+4. `core/actions.ts` with its test first, every case against the fixture:
+   nothing executes outside `approved`; a duplicate key raises a Postgres
+   unique violation, not an application error; an expired approval does not
+   execute; a fixture `write_row` approved once executes once. Commit:
    `feat: the action state machine`.
-4. The audit view and the Agent Log reading it. Commit:
+5. The audit view and the Agent Log reading it. Commit:
    `feat: the audit trail is a view over the ledger`.
 
 ### Done when
 
-An approved action executes exactly once, and a duplicate idempotency key is
-rejected by Postgres rather than by application code.
+An approved fixture write executes exactly once, and a duplicate idempotency
+key is rejected by Postgres rather than by application code.
 
 ## Phase 2: auto-approve and taint
 
@@ -195,7 +230,7 @@ condition only, so the order and the stopping points are fixed now.
 | 7 | `core.facts`, extraction, forget | A tombstoned fact does not reappear after a full re-extraction |
 | 8 | Nightly suggestion pass, `core.suggestion_suppression` | Suggestions appear in Review; three dismissals disable the class |
 | 9 | `goals.plan`, `goals.plan_step` | One goal produces a versioned plan with mixed task and action steps |
-| 10 | Demo mode, persona, the personal-data pre-commit check | A clean clone runs on fixtures with zero credentials configured |
+| 10 | Demo mode, persona, the personal-data pre-commit check | A clean clone runs on the fixture integration with zero credentials configured |
 
 Phases 0 to 4 are the product. Stopping there leaves an agent doing real work
 on real accounts under approval.

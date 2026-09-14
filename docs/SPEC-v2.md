@@ -67,7 +67,7 @@ where `is_manual = true`.
 
 | Level | Meaning |
 |---|---|
-| `none` | Registered and disabled. The default for every integration, including one with saved credentials. Nothing may call it, the owner's own UI included. |
+| `none` | Registered and disabled. The default for every integration connected after v2 ships, credentials saved or not. Nothing may call it, the owner's own UI included. |
 | `read` | Read verbs may run. A write verb refuses. |
 | `propose` | Write verbs become actions in the ledger. Nothing executes without approval. |
 | `write` | Write verbs may execute when an auto-approve rule matches. Everything else still asks. |
@@ -157,10 +157,13 @@ Rules, in order:
    integration's level.
 2. Effective level `none` refuses, whatever the source.
 3. A write verb under `read` refuses.
-4. `source = 'agent'` and `autonomy = 'observe'` proposes.
+4. A write verb from `source = 'agent'` at `autonomy = 'observe'` proposes.
+   Read verbs are not affected: there is nothing to approve about a read, which
+   is the same reason `query` is never guarded today.
 5. A write verb under `propose` proposes.
-6. A write verb under `write` proposes unless an auto-approve rule matches
-   (section 5.3).
+6. A write verb under `write` executes only when an auto-approve rule matches
+   (section 5.3), `risk` is below `high`, and `tainted` is false. Otherwise it
+   proposes.
 7. A read verb at `read` or above executes.
 
 Autonomy never raises an integration above its level. `act` means the agent
@@ -180,13 +183,38 @@ keep pulling until the connection was deleted.
 `runVerb(integrationId, verbId, args)`; it consults `decide()`, resolves
 credentials, enforces `rateLimit` and `cacheTtl`, sends the request through
 `core/fetching.ts` against the manifest's `hosts`, and records the call. A
-client that reaches the network any other way fails a test.
+client of an integration that declares verbs and reaches the network any other
+way fails a test.
 
 A sync at level `none` refuses, and the job records why. That is the shape the
 nightly run already relies on: every unconnected sync skips and says so rather
 than failing the run, and a refused one reads the same way.
 
-Cost: the four existing clients are edited in phase 0. That is the phase.
+**Which integrations this covers.** Three have outbound clients and declare
+verbs in phase 0: SimpleFIN, the Obsidian vault (`github_vault`) and Strava.
+Two are inbound webhooks, `health_auto_export` and `apple_shortcuts`: they make
+no outbound call, so they declare no verbs, and their permission level gates
+the webhook route instead. A push at level `none` is refused with a 403 and a
+`core.request_log` row, which is what the Test button on those cards already
+reads. The earlier framing of "Apple Health" as an outbound integration was
+wrong and is corrected here.
+
+Three more are infrastructure providers core uses directly and no agent calls:
+`anthropic` (the SDK in `core/llm.ts`), `voyage` (`core/search.ts`) and
+`resend` (`core/notify.ts`). They declare no verbs and are outside the
+executor. Routing the Anthropic SDK through `core/fetching.ts` would mean
+reimplementing the SDK's transport for nothing an agent can touch.
+
+**`core/fetching.ts` grows a `request()`.** Today it exposes `get()` only.
+SimpleFIN claims its setup token with a POST and sends Basic auth; Strava and
+the vault send bearer headers; Gmail and Calendar will need POST and PATCH
+with JSON bodies. `request(url, { method, headers, body })` carries the same
+three layers `get()` has (literal rules, every DNS record checked, the
+connection pinned to the checked address, redirects re-checked per hop) and
+`get()` becomes a call to it.
+
+Cost: three clients rewired, two webhook routes gated, and `request()`. That
+is phase 0.
 
 ## 5. Subsystem 2: the action ledger
 
@@ -217,7 +245,7 @@ core.proposals  (existing columns unchanged)
   + result                jsonb
   + error                 text
   + derived_from_external boolean not null default false
-  + preview_text          text
+  + suggestion_class      text          -- set by the nightly pass, see 7.4
 
   status check widened to:
     pending | approved | rejected | dismissed | executing | succeeded | failed | expired
@@ -253,8 +281,11 @@ Rules:
 - A failed action never auto-retries when the verb is `reversible: false`. It
   surfaces for a decision.
 - On success the executor emits to `core.events`, writes `core.write_log`, and
-  registers or updates `core.entities` with `is_manual = false`. It never
-  overwrites a row where `is_manual = true`.
+  stores the provider's response in `result`. Where the verb produces a module
+  row (a calendar event filed into Travel, a GitHub issue filed into Tasks) that
+  row goes through `register()` like any other with `is_manual = false`, and is
+  never written over a row where `is_manual = true`. A verb with no module row,
+  such as sending mail, registers nothing: the ledger row is its record.
 - An auto-approved action writes the same full row as a human-approved one.
   The only difference is `approved_by`.
 
@@ -311,7 +342,9 @@ core.job_runs
 
 Cents, not dollars. Money is integer cents everywhere in this system.
 
-Every agent run carries all three budgets. Hitting any one terminates the run
+The three budget columns are nullable and null means unbounded, which is what
+the nightly run has had all along. Phase 3 gives the nightly run defaults from
+`core.settings` and every agent run carries all three budgets. Hitting any one terminates the run
 and writes `termination_reason`. Without this, one bad loop spends a month of
 budget in a night. `trigger_source` already exists and grows two values:
 `agent` and `plan`.
@@ -334,8 +367,9 @@ Postgres backed, no Redis, no external queue. A worker leases a row with
 
 **The limit, stated plainly.** On Vercel Hobby there is one cron and it is
 daily. A queued run advances only when something drains the queue: the nightly
-cron, the Run now button, an MCP call, or an authenticated POST to
-`/api/agent/tick`. Nothing advances in between. A run that pauses for approval
+cron, the Run now button, an MCP call, or a POST to `/api/agent/tick` bearing
+`CRON_SECRET` or the owner's session, the same two credentials the nightly
+route accepts. Nothing advances in between. A run that pauses for approval
 at 10am does not resume at 10:05 because the owner approved from their phone;
 it resumes on the next drain, and the approval push says so.
 
@@ -385,11 +419,19 @@ Nightly, in the existing run, after digests and before the orchestrator.
 3. One Haiku call over the candidates plus relevant facts, capped at five
    suggestions. `purpose: 'suggestion'`, a new capped purpose in `core/llm.ts`,
    so the soft cap stops it the way it stops research.
-4. Each suggestion is a row in `core.proposals` with `integration_id = null`,
-   `tool = 'suggest'`, `risk = 'none'`, status `pending`.
+4. Each suggestion is an ordinary `core.proposals` row: a real module tool and
+   a payload it will accept, `agent = 'suggest'`, `risk = 'none'`, status
+   `pending`, and `suggestion_class` set. Approving it runs the tool through
+   `approve()` exactly as any proposal is run today.
 
-A suggestion is a proposed action with no side effect. One approval surface,
-one audit trail.
+The draft had a synthetic `verb = 'suggest'` with no side effect. That would
+have made `approve()` throw, since no module owns a tool by that name, and it
+would have left the owner with nothing to approve. A suggestion that is worth
+showing is one with a concrete next step behind it: a task to write, a goal to
+check in on, a subscription to flag. The model's job is to pick the tool and
+fill the payload; the rules-first filter and the payload validation decide
+whether it is shown at all. One approval surface, one audit trail, no new
+column beyond `suggestion_class`.
 
 ### 7.4 Dismissal is signal
 
@@ -447,8 +489,10 @@ Ad hoc questions go through Claude Code or the Claude app over `/api/mcp`.
 
 The approval surface is the two screens that already exist:
 
-- **Review** gains external actions: the risk chip, `preview_text`, the expiry
-  countdown, and the integration and verb on the card. Approving an external
+- **Review** gains external actions: the risk chip, the expiry countdown, and
+  the integration and verb on the card. The card's sentence is the existing
+  `title`, which the caller writes in the owner's words; the draft's
+  `preview_text` was a second name for it and is not added. Approving an external
   action queues its execution and drains the queue in the same request.
 - **Agent Log** gains run budgets, `termination_reason`, and the action audit
   view, so a run reads as what it spent and what it touched.
@@ -459,7 +503,10 @@ No new screen, no message table, no streaming.
 
 Three new rules in `core.notification_rules`:
 
-- `action_needs_approval`, urgent when `risk >= medium`
+- `action_needs_approval`, marked urgent, fired only for `risk >= medium`. A
+  rule is urgent or it is not, so the risk gate is in the caller: lower risk
+  actions wait in Review and appear in the morning digest, which is what the
+  draft's "push is for things that block progress" meant.
 - `run_failed`
 - `budget_hit`
 
@@ -490,7 +537,9 @@ class. This does not happen by itself: the executor sets the flag, and a test
 proves an action derived from a fetched message reaches `pending` rather than
 `approved`.
 
-**Least privilege.** Every integration starts at `none`. Grants are per verb.
+**Least privilege.** Every integration connected after v2 ships starts at
+`none`; the three live before it were backfilled to `read` (4.3). Grants are
+per verb.
 
 **Egress.** There is no runner-level network policy on Vercel Hobby, so the
 draft's egress allowlist is not implementable as written. What is implementable
@@ -548,14 +597,23 @@ fails quietly once.
 
 ## 12. Build order
 
-Ten phases. Phases 0 to 4 are the product: stopping there leaves an agent doing
-real work on real accounts under approval. Everything after increases what it
-can do without changing whether it is safe.
+Eleven phases, numbered 0 to 10. Phases 0 to 4 are the product: stopping
+there leaves an agent doing real work on real accounts under approval.
+Everything after increases what it can do without changing whether it is safe.
+
+No write verb exists before phase 6: SimpleFIN, the vault and Strava are all
+read, and Apple Health is inbound. So phases 1, 2 and 4 cannot prove their done
+conditions against a real provider. Phase 1 adds `integrations/fixture/`, an
+integration whose client writes to a table in its own schema rather than to
+the network, with one read verb and one write verb at each risk class. Every
+ledger, auto-approve, taint and approval test runs against it, and phase 10's
+demo mode is the same integration with fixture rows behind it. It ships in the
+repo because a fork needs it for the same two reasons.
 
 | Phase | Deliverable | Done when |
 |---|---|---|
 | 0 | Verbs, permission and the verb executor on the integrations already written | SimpleFIN, the vault and both Apple Health routes declare verbs, carry a level, and reach the network only through `runVerb`. A level of `none` refuses a sync and the job says so. No new OAuth work. |
-| 1 | Ledger extension and state machine | An approved action executes exactly once, and a duplicate idempotency key is rejected by Postgres rather than by application code. |
+| 1 | Ledger extension, state machine, the fixture integration | An approved fixture write verb executes exactly once, and a duplicate idempotency key is rejected by Postgres rather than by application code. |
 | 2 | Auto-approve rules and taint | `risk = high` cannot be auto-approved and neither can an action derived from fetched content, both proven by failing-first tests. |
 | 3 | Run budgets and the Postgres queue | A runaway run terminates on each of the three budgets and records `termination_reason`. |
 | 4 | Approval surface and push | An approval from the phone executes the action and the Agent Log shows it. |
@@ -564,7 +622,7 @@ can do without changing whether it is safe.
 | 7 | Facts and forget | Facts extracted, and a tombstoned fact verified not to reappear after a full re-extraction. |
 | 8 | Nightly suggestion pass | Suggestions appear in Review, dismissal suppresses the class, three dismissals disable it. |
 | 9 | Plans in the goals schema | One goal produces a versioned plan with mixed task and action steps, and an invalidating event marks it stale. |
-| 10 | Demo mode, persona, template check | A clean clone runs on fixtures with zero credentials configured. |
+| 10 | Demo mode, persona, template check | A clean clone runs on the fixture integration with zero credentials configured. |
 
 ## 13. Verification checklist
 
@@ -583,8 +641,12 @@ Before v2 is considered shipped:
 - [ ] A run exceeding any of the three budgets terminates and records
       `termination_reason`
 - [ ] A tombstoned fact does not reappear after a full re-extraction
-- [ ] An integration client cannot reach the network except through
-      `core/fetching.ts`, verified by test
+- [ ] An integration that declares verbs cannot reach the network except
+      through `runVerb`, verified by test
+- [ ] A nightly sync at level `none` refuses, records why, and the run
+      continues
+- [ ] A write verb from a job source cannot execute without an approval or a
+      matching rule
 - [ ] A clean clone runs in demo mode with zero credentials configured
 
 ## 14. Gmail, decided 2026-09-14
