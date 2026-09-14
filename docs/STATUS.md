@@ -333,9 +333,11 @@ suggested from the project, the add-a-skill select and learned rules.
 **The fidelity pass, screen five: Travel.** docs/plans/travel-fidelity.md.
 The artboard's page: band with the summary, the loyalty strip with Manage
 (a drawer with the balances and the cents-per-point calculator), the title
-with Add to wishlist and New trip, the globe with the continents as a dot
-matrix (`modules/travel/land.json`, 4,859 points sampled once from Natural
-Earth by `scripts/land-dots.mts`; no d3 at runtime), pins by status, legend
+with Add to wishlist and New trip, the globe with filled continents and
+country borders (`modules/travel/land.json`, 285 Natural Earth rings decoded
+once by `scripts/land-rings.mts`, cut at the horizon in `globe.ts`; no d3 at
+runtime; since 2026-09-13, in place of the artboard's dot matrix, opening
+level on the US), pins by status, legend
 and controls, an alert slot fed by travel notifications; Upcoming as cards
 with booking segments and the next step; Past beside Wishlist (trips with
 status idea). The trip drawer at 560px: Itinerary by day with inline edit

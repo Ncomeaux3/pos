@@ -1,10 +1,10 @@
-// The arithmetic behind scripts/land-dots.mts, kept apart so it can be tested
+// The arithmetic behind scripts/land-rings.mts, kept apart so it can be tested
 // without fetching anything.
 
 type Topology = {
   transform: { scale: [number, number]; translate: [number, number] }
   arcs: number[][][]
-  objects: { land: { type: string; geometries?: unknown[]; arcs?: unknown } }
+  objects: Partial<Record<'land' | 'countries', { type: string; geometries?: unknown[]; arcs?: unknown }>>
 }
 
 /** A ring is a closed list of [lon, lat]. */
@@ -22,9 +22,12 @@ export function decodeTopology(topo: Topology): Ring[] {
       return [x * scale[0] + translate[0], y * scale[1] + translate[1]] as [number, number]
     })
   })
-  const geometries: { type: string; arcs: unknown }[] = (
-    topo.objects.land.geometries ?? [topo.objects.land]
-  ) as { type: string; arcs: unknown }[]
+  const object = topo.objects.countries ?? topo.objects.land
+  if (!object) throw new Error('topology has neither countries nor land')
+  const geometries: { type: string; arcs: unknown }[] = (object.geometries ?? [object]) as {
+    type: string
+    arcs: unknown
+  }[]
 
   const ring = (indexes: number[]): Ring => {
     const out: Ring = []
@@ -59,21 +62,4 @@ export function pointInRings(lat: number, lon: number, rings: Ring[]): boolean {
     }
   }
   return inside
-}
-
-/**
- * A grid a degree and a half apart in latitude, spaced by cos(lat) in longitude so the
- * dots stay evenly spread on the sphere rather than bunching at the poles.
- * Antarctica is skipped below 60S: the artboard's globe does not draw it and
- * it would be a solid band on a flat map.
- */
-export function sampleLand(rings: Ring[], step = 1.5): [number, number][] {
-  const dots: [number, number][] = []
-  for (let lat = -60; lat <= 84; lat += step) {
-    const stride = step / Math.max(0.2, Math.cos((lat * Math.PI) / 180))
-    for (let lon = -180; lon < 180; lon += stride) {
-      if (pointInRings(lat, lon, rings)) dots.push([Math.round(lat * 10) / 10, Math.round(lon * 10) / 10])
-    }
-  }
-  return dots
 }

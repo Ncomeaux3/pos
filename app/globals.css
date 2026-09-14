@@ -32,6 +32,9 @@
   --ink-4: #3a3d44;
   --rule: rgba(255, 255, 255, 0.07);
   --rule-2: rgba(255, 255, 255, 0.14);
+  /* The dark side of the Travel globe: the deep tone here, the ink in light,
+     since a shadow must darken in both themes and no other token does. */
+  --shade: #050608;
 
   /* One accent for every theme. The soft fill is baked at 0.14 alpha rather
    * than derived, which is the value the design system ships. */
@@ -56,6 +59,7 @@
   --bg: #f4f2ec;
   --bg-elev: #fbfaf6;
   --bg-deep: #ece9e0;
+  --shade: #0c0e11;
   --ink: #0c0e11;
   --ink-2: #3a3d44;
   --ink-3: #6b7079;
