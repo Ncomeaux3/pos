@@ -3,6 +3,7 @@ import { register } from '@/core/entities'
 import { getCredentials } from '@/core/credentials'
 import { notes, read, VaultError } from '@/integrations/github_vault/client'
 import { resolveDanglingLinks, syncLinks } from '../data'
+import { fileByRules } from '../hubs'
 import { slugify } from '../wikilinks'
 
 // Pull the Obsidian vault. The vault is the source of truth, so this direction
@@ -168,6 +169,7 @@ export async function pullVault(): Promise<PullResult> {
       text: body.slice(0, 4000),
       emit: false,
     })
+    await fileByRules(note.id, titleOf(file.path, body), body)
 
     written++
   }
