@@ -127,8 +127,16 @@ export function sourcesLabel(rows: { source: string }[]): string {
 /**
  * Which screen the page draws. A missing provider is a banner, not a wall:
  * any workout at all, whatever its source, means the overview.
+ *
+ * Readings count the same way. The phone sources send body metrics and no
+ * workouts, so counting workouts alone left a Fitness page with a week of
+ * readings on it still drawing the Connect Strava card.
  */
-export function screenState(args: { workouts: number; connected: boolean }): 'setup' | 'setup-connected' | 'live' {
-  if (args.workouts > 0) return 'live'
+export function screenState(args: {
+  workouts: number
+  metrics: number
+  connected: boolean
+}): 'setup' | 'setup-connected' | 'live' {
+  if (args.workouts > 0 || args.metrics > 0) return 'live'
   return args.connected ? 'setup-connected' : 'setup'
 }
