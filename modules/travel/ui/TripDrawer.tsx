@@ -1,10 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { ActionButton, Eyebrow, Overlay, fieldClass, useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { actualFor, budgetTotals, parseCategory } from '../budget'
+import type { Hit } from '../geocode'
 import {
   decideItem,
   deleteBudgetLine,
@@ -14,6 +15,7 @@ import {
   saveItem,
   savePacking,
   saveTrip,
+  suggestPlaces,
   type ActionResult,
 } from './actions'
 import { dateRange, money, nights, type Trip, type TravelData } from './Travel'
@@ -636,6 +638,31 @@ function TripForm({
   })
   const set = (key: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF((v) => ({ ...v, [key]: e.target.value }))
   const title = trip ? 'Edit details' : mode === 'wish' ? 'Add to wishlist' : 'New trip'
+
+  // Destination suggestions: debounced so typing does not fire a request per
+  // keystroke; picking a suggestion exactly fills lat/lon too, but a typed
+  // number still wins because Lat and Lon stay plain inputs.
+  const [hits, setHits] = useState<Hit[]>([])
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const latestQuery = useRef('')
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current) }, [])
+  const onDestination = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    const picked = hits.find((h) => h.label === value)
+    setF((v) => ({
+      ...v,
+      destination: picked ? picked.label.split(',')[0] : value,
+      ...(picked ? { lat: String(picked.lat), lon: String(picked.lon) } : {}),
+    }))
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      // A slow answer to an earlier query must not replace a newer list.
+      suggestPlaces(value).then((found) => {
+        if (value === latestQuery.current) setHits(found)
+      })
+    }, 300)
+    latestQuery.current = value
+  }
   const save = () => {
     if (!f.name.trim()) return
     const num = (v: string) => (v.trim() === '' ? null : Number(v))
@@ -673,9 +700,12 @@ function TripForm({
       title={title}
       footer={
         <>
-          <button type="button" onClick={onClose} className="text-[13px] text-ink-3 hover:text-ink">
-            Cancel
-          </button>
+          <div className="flex flex-col items-start gap-1">
+            <button type="button" onClick={onClose} className="text-[13px] text-ink-3 hover:text-ink">
+              Cancel
+            </button>
+            <span className="text-[11px] leading-none text-ink-3">Location search by Open-Meteo and GeoNames</span>
+          </div>
           <ActionButton variant="solid" size="lg" className="h-[38px] gap-2 px-3.5 text-[13px]" onClick={save}>
             {trip ? 'Save' : mode === 'wish' ? 'Add' : 'Create'} <span aria-hidden="true">&rarr;</span>
           </ActionButton>
@@ -690,7 +720,12 @@ function TripForm({
         <div className="grid grid-cols-[1fr_96px_96px] gap-3">
           <label className="flex flex-col gap-1.5">
             <Eyebrow>Destination</Eyebrow>
-            <input value={f.destination} onChange={set('destination')} placeholder="City" className={field} />
+            <input value={f.destination} onChange={onDestination} placeholder="City, country" list="destination-hits" className={field} />
+            <datalist id="destination-hits">
+              {hits.map((h) => (
+                <option key={`${h.label} ${h.lat} ${h.lon}`} value={h.label} />
+              ))}
+            </datalist>
           </label>
           <label className="flex flex-col gap-1.5">
             <Eyebrow>Lat</Eyebrow>

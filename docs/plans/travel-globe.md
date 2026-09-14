@@ -29,6 +29,8 @@ Endpoint verified 2026-09-13 from the Open-Meteo docs page: `GET https://geocodi
 
 Branch `travel-globe-land`. Complexity medium. Model Opus.
 
+**Done 2026-09-13.** 285 rings, 129 KB. Two things later phases should know: the horizon join pairs each exit with the nearest entry walking the rim in the ring's lon/lat winding (not the clipped polygon's shoelace sign, which is unreliable for slivers at the rim), with a chord fallback when crossings do not alternate; and Fiji, Russia and Wrangel Island are unwrapped past 180 in `land.json`, so anything reading it must not assume longitudes in [-180, 180]. Phase 2's tap fix will find a 1px `--bg-deep` halo already on filled pins.
+
 ### 1.1 Rings data
 
 - `scripts/land-dots-lib.ts`: keep `decodeTopology` and `pointInRings`, delete `sampleLand` (unused after this phase). Widen `Topology.objects` to accept a `countries` object as well as `land`.
@@ -77,6 +79,8 @@ Verify: `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm test:e2e` travel tests
 
 Branch `travel-globe-tap`. Complexity low. Model Opus (the repro step needs judgement); the edits alone are quick-builder sized.
 
+**Done 2026-09-13.** The repro at 402 with touch could not miss: taps at the centre, 6 px and 10 px off and a 3 px wobble all opened the place, so the fix is the plan's two items. The hit radius is 7.5 viewBox units, not 12: a unit is about 1.65 px at both widths, so 7.5 is the 24 px target and 12 would be 40 px and overlap the next pin.
+
 ### 2.1 Reproduce first
 
 Playwright at 402 px with `hasTouch`, tap the first past pin's centre with `page.touchscreen.tap`, record whether `?place=` or `?trip=` lands in the URL. Then tap 6 px off centre. Then tap and move 3 px. Write the result into the PR description. If the centre tap already works, the fix is the hit area and the threshold; if it does not, debug before editing (systematic-debugging skill).
@@ -98,6 +102,8 @@ Verify: `pnpm test:e2e` travel, ui-verifier at 402 with a tap recorded, spec-rev
 ## Phase 3: destination geocoding
 
 Branch `travel-geocode`. Complexity medium. Model Opus.
+
+**Done 2026-09-13.** Research note at `docs/research/open-meteo-geocoding.md`: no key, 10,000 calls a day and 600 a minute on the free tier, attribution "Location data based on GeoNames". The e2e test hits the real API and skips under CI, because the fetch runs inside a server action where `page.route` cannot reach it. `suggestPlaces` calls `requireOwner()` like every other action in the file: unguarded means no proposal, not no login.
 
 ### 3.1 Research note
 

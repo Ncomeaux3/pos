@@ -8,11 +8,13 @@ for. Screen 13 of the design bundle.
 The plan budgeted for `d3-geo`, `topojson-client` and a world-atlas file, which
 together buy country outlines and cost about 100kB of download.
 
-`globe.ts` is an orthographic projection in about forty lines, tested, with a
-lat/lon graticule instead of coastlines. The dots are the information and the
-sphere is context for them, so the trade was easy. If coastlines ever matter,
-`project()` is exactly the function d3 would be replacing, and the note in that
-file says so.
+`globe.ts` is an orthographic projection, tested, with nothing imported. The
+land is `land.json`: the Natural Earth 110m country polygons as rings, decoded
+once by `scripts/land-rings.mts` and committed (285 rings, about 130kB before
+gzip). `ringPath` fills each ring and cuts it at the horizon, joining the cuts
+with an arc along the rim; `landPath` is one SVG path for all of them, drawn
+with the even-odd rule so lakes and enclaves are holes. `project()` is exactly
+the function d3 would be replacing, and the note in that file says so.
 
 Two things the test pins that are easy to get wrong:
 

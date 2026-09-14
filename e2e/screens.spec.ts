@@ -1857,17 +1857,22 @@ test('travel, the globe is drawn from real coordinates', async ({ page }) => {
   await page.goto('/travel')
 
   // Hand rolled orthographic projection, no d3 and no world-atlas download;
-  // the land is a committed list of points.
+  // the land is a committed list of rings.
   const globe = page.getByRole('group', { name: /Globe showing \d+ places/ })
   await expect(globe).toBeVisible()
 
   // Only the near side is drawn, so the pins on screen are fewer than the six
-  // seeded places spread across four continents, and the land is many dots.
+  // seeded places spread across four continents. It opens level on the US,
+  // so Austin is on the near side.
   const pins = globe.locator('[data-pin]')
   expect(await pins.count()).toBeGreaterThan(1)
-  // One path for the land, a dash per point: thousands of them on the near side.
-  const dashes = await globe.locator('[data-land]').getAttribute('d')
-  expect((dashes?.match(/M/g) ?? []).length).toBeGreaterThan(500)
+  await expect(globe.locator('[data-pin="past"] title', { hasText: 'Austin' })).toHaveCount(1)
+  // One path for the land: a closed subpath per ring on the near side, and
+  // a ring cut by the horizon is joined along the rim with an arc.
+  const land = globe.locator('[data-land]')
+  const home = (await land.getAttribute('d')) ?? ''
+  expect((home.match(/Z/g) ?? []).length).toBeGreaterThan(100)
+  expect(home).toContain('A')
 
   // The pin's own tooltip is what makes a dot identifiable at all: a visited
   // place names itself and its country.
@@ -1889,11 +1894,17 @@ test('travel, the globe is drawn from real coordinates', async ({ page }) => {
   await page.mouse.move(sbox.x + sbox.width / 2 + 40, sbox.y + sbox.height * 0.7, { steps: 4 })
   await page.mouse.up()
   await expect.poll(async () => (await pin.boundingBox())!.x).toBeGreaterThan(before)
+  // The drag moved the land too, and Reset brings it back to the same view.
+  expect(await land.getAttribute('d')).not.toBe(home)
+  await page.getByTestId('travel-globe').getByRole('button', { name: 'Reset view' }).click()
+  await expect(land).toHaveAttribute('d', home)
 
   // Past 2x every pin names itself; two presses of + is 2.25x. The wheel
   // handler is a native non-passive listener, so the page under the globe
-  // does not scroll when it zooms.
-  const past = globe.locator('[data-pin="past"]').first()
+  // does not scroll when it zooms. The zoom is about the centre, so a pin
+  // far from it leaves the box: Lisbon at the rim, and Austin at 30 north
+  // clears the top at 2.25x. Mexico City at 19 north stays.
+  const past = globe.locator('[data-pin="past"]').filter({ hasText: 'Mexico City' })
   await expect(past.locator('[data-label]')).toHaveCount(0)
   const controls = page.getByTestId('travel-globe')
   await controls.getByRole('button', { name: 'Zoom in' }).click()
@@ -1903,7 +1914,7 @@ test('travel, the globe is drawn from real coordinates', async ({ page }) => {
 
   // A grey pin opens its trip, or itself when it has none: the seeded places
   // have none.
-  await past.locator('circle').click({ force: true })
+  await past.locator('circle').first().click({ force: true })
   await expect(page.getByRole('dialog', { name })).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog')).toHaveCount(0)
@@ -1912,6 +1923,34 @@ test('travel, the globe is drawn from real coordinates', async ({ page }) => {
   await page.keyboard.press('Enter')
   await expect(page.getByRole('dialog', { name })).toBeVisible()
   await expect(page.getByRole('dialog')).toContainText('Visited')
+})
+
+test('travel, a pin opens on a tap and stays shut through a drag', async ({ page }) => {
+  await page.goto('/travel')
+  const globe = page.getByRole('group', { name: /Globe showing \d+ places/ })
+  await expect(globe).toBeVisible()
+  const pin = globe.locator('[data-pin="past"]').filter({ hasText: 'Mexico City' })
+  // The finger-sized target is the first, transparent circle; the visible
+  // dot is a hair across. A press 9px off the dot's centre still lands.
+  const dot = (await pin.locator('circle').last().boundingBox())!
+  await page.mouse.click(dot.x + dot.width / 2 + 9, dot.y + dot.height / 2)
+  await expect(page).toHaveURL(/place=/)
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+
+  // A drag that starts on a pin turns the globe and opens nothing.
+  await page.goto('/travel')
+  await expect(globe).toBeVisible()
+  const land = globe.locator('[data-land]')
+  const home = (await land.getAttribute('d')) ?? ''
+  const box = (await pin.locator('circle').last().boundingBox())!
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width / 2 + 40, box.y + box.height / 2, { steps: 4 })
+  await page.mouse.up()
+  await expect.poll(() => land.getAttribute('d')).not.toBe(home)
+  await expect(page).not.toHaveURL(/place=/)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 
 test('travel, a parsed booking waits in the trip inbox', async ({ page }) => {
@@ -1967,6 +2006,29 @@ test('travel, cents per point uses only numbers you supply', async ({ page }) =>
   await page.getByLabel('Points required').fill('60000')
   await expect(page.getByText('pay cash', { exact: true })).toBeVisible()
   await shoot(page, 'travel-loyalty')
+})
+
+// Geocoding happens in a server action, so page.route on the Open-Meteo URL
+// (the plan's original idea) cannot intercept it: the fetch runs on the
+// server, not in the page. This test hits the real API instead and is
+// skipped in CI, where there is no network.
+test('travel, typing a destination suggests places and fills the coordinates', async ({ page }) => {
+  test.skip(!!process.env.CI, 'needs network')
+  await page.goto('/travel')
+  await page.waitForLoadState('networkidle')
+  await page.getByRole('button', { name: /New trip/ }).click()
+
+  const destination = page.getByRole('dialog').getByLabel('Destination', { exact: true })
+  await destination.fill('Austin')
+  const option = page.locator('#destination-hits option[value*="Austin"]').first()
+  await expect(option).toHaveCount(1, { timeout: 10_000 })
+  const label = (await option.getAttribute('value')) ?? ''
+
+  await destination.fill(label)
+  await expect(page.getByRole('dialog').getByLabel('Lat', { exact: true })).not.toHaveValue('')
+  await expect(page.getByRole('dialog').getByLabel('Lon', { exact: true })).not.toHaveValue('')
+  await expect(page.getByRole('dialog').getByLabel('Lat', { exact: true })).toHaveValue(/^-?\d+(\.\d+)?$/)
+  await expect(page.getByRole('dialog').getByLabel('Lon', { exact: true })).toHaveValue(/^-?\d+(\.\d+)?$/)
 })
 
 test('fitness, workouts with pace derived rather than stored', async ({ page }) => {

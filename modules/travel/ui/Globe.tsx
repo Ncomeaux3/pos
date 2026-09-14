@@ -3,27 +3,36 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import land from '../land.json'
-import { R, clampView, flat, graticule, landPath, project, visible, zoomAt, type Half, type Rotation, type View } from '../globe'
+import { R, clampView, flat, graticule, landPath, project, visible, zoomAt, type Half, type Ring, type Rotation, type View } from '../globe'
 
-// The globe, as POS Travel.dc.html draws it: the continents as a dot matrix,
-// a pin per place coloured by what it is, the legend bottom left, the four
-// controls bottom right and an alert top right when there is one. Drag to
-// turn it (or pan, flat), scroll, pinch or the buttons to zoom about the
-// cursor, ⟲ to reset, FLAT to unroll it, double-click a pin to fly to it.
-// Past 2x every pin names itself, at the same size on screen whatever the
-// zoom.
+// The globe: filled continents with country borders on a tinted, lit sphere
+// (2026-09-13, in place of the artboard's dot matrix), a pin per place
+// coloured by what it is, the legend bottom left, the four controls bottom
+// right and an alert top right when there is one. It opens level on the
+// continental US. Drag to turn it (or pan, flat), scroll, pinch or the
+// buttons to zoom about the cursor, ⟲ to reset, FLAT to unroll it,
+// double-click a pin to fly to it. Past 2x every pin names itself, at the
+// same size on screen whatever the zoom.
 //
 // No d3, no topojson, no world-atlas: see ../globe.ts.
 
 export type PinKind = 'upcoming' | 'past' | 'wishlist'
 export type Pin = { id: string; name: string; country: string; lat: number; lon: number; kind: PinKind }
 
-const DOTS = land as [number, number][]
+const RINGS = land as Ring[]
 const HOME: View = { zoom: 1, tx: 0, ty: 0 }
+/** Level, centred on the continental US. Reset comes back here too. */
+const LEVEL: Rotation = { lambda: 98, phi: 0 }
+/** The flat land is drawn once, unpanned, and shifted with a transform. */
+const FLAT_LAND = landPath(RINGS, { lambda: 0, phi: 0 }, 'flat')
 /** The zoom from which every pin is named. Below it only the next trip is. */
 const LABEL_ZOOM = 2
 /** A label's height on screen, in pixels. */
 const LABEL_PX = 9
+/** A pin's hit radius in viewBox units at 1x: 7.5 units is about 12px on screen, a 24px target. */
+const HIT = 7.5
+/** How far a pointer travels before a press becomes a drag, in client pixels. */
+const DRAG_PX = 4
 
 /** Client pixels to viewBox units, so a zoom can anchor on the cursor. */
 function toBox(svg: SVGSVGElement, clientX: number, clientY: number) {
@@ -56,20 +65,16 @@ export function Globe({
   alert?: ReactNode
   className?: string
 }) {
-  // Open on the next trip when there is one, else on the artboard's view of
-  // the Americas. The mean of every pin was the middle of an ocean.
-  const home = (): Rotation => {
-    const next = pins.find((p) => p.kind === 'upcoming') ?? pins[0]
-    if (!next) return { lambda: 98, phi: -25 }
-    // project() centres a point when phi equals its latitude.
-    return { lambda: -next.lon, phi: next.lat }
-  }
   const svgRef = useRef<SVGSVGElement>(null)
-  const [rotation, setRotation] = useState<Rotation>(home)
+  const [rotation, setRotation] = useState<Rotation>(LEVEL)
   const [view, setView] = useState<View>(HOME)
   const [mode, setMode] = useState<'globe' | 'flat'>('globe')
   // Every pointer that is down, where it last was. One turns, two pinch.
   const pointers = useRef(new Map<number, { x: number; y: number }>())
+  // Where the first pointer went down, and whether it has moved far enough
+  // to count as a drag. A finger that wobbles on a pin is a tap.
+  const start = useRef<{ x: number; y: number } | null>(null)
+  const dragged = useRef(false)
   const [{ scale, half }, setBox] = useState<ReturnType<typeof measure>>({ scale: 1, half: { x: R + 4, y: R + 4 } })
 
   // Measured on mount, on resize and when the viewBox changes with the mode.
@@ -104,6 +109,11 @@ export function Globe({
   const move = (e: React.PointerEvent<SVGSVGElement>) => {
     const prev = pointers.current.get(e.pointerId)
     if (!prev) return
+    if (!dragged.current) {
+      const from = start.current ?? prev
+      if (Math.hypot(e.clientX - from.x, e.clientY - from.y) < DRAG_PX) return
+      dragged.current = true
+    }
     const svg = e.currentTarget
     const other = [...pointers.current.entries()].find(([id]) => id !== e.pointerId)?.[1]
     if (other) {
@@ -134,7 +144,7 @@ export function Globe({
 
   const zoomBy = (factor: number) => setView((v) => zoomAt(v, factor, 0, 0, mode, half))
   const reset = () => {
-    setRotation(home())
+    setRotation(LEVEL)
     setView(HOME)
   }
   const flyTo = (pin: Pin) => {
@@ -158,7 +168,13 @@ export function Globe({
         aria-label={`Globe showing ${pins.length} places`}
         // No pointer capture: with it a click on a pin lands on the svg
         // instead of the pin, so a pin could never be picked.
-        onPointerDown={(e) => pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })}
+        onPointerDown={(e) => {
+          if (e.isPrimary) {
+            start.current = { x: e.clientX, y: e.clientY }
+            dragged.current = false
+          }
+          pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+        }}
         onPointerMove={move}
         onPointerUp={lift}
         onPointerCancel={lift}
@@ -168,33 +184,56 @@ export function Globe({
         <g transform={`translate(${view.tx} ${view.ty}) scale(${zoom})`}>
           {mode === 'globe' ? (
             <>
-              <circle cx={0} cy={0} r={R} fill="var(--bg-deep)" stroke="var(--rule-2)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+              <defs>
+                {/* Lit from the upper left: clear there, shading to the dark at the rim. */}
+                <radialGradient id="globe-light" cx="35%" cy="35%" r="70%">
+                  <stop offset="0" stopColor="var(--shade)" stopOpacity={0} />
+                  <stop offset="0.6" stopColor="var(--shade)" stopOpacity={0.15} />
+                  <stop offset="1" stopColor="var(--shade)" stopOpacity={0.55} />
+                </radialGradient>
+                <radialGradient id="globe-rim" cx="50%" cy="50%" r="50%">
+                  <stop offset={R / (R + 5) - 0.02} stopColor="var(--accent)" stopOpacity={0} />
+                  <stop offset={R / (R + 5)} stopColor="var(--accent)" stopOpacity={0.25} />
+                  <stop offset="1" stopColor="var(--accent)" stopOpacity={0} />
+                </radialGradient>
+              </defs>
+              <circle cx={0} cy={0} r={R + 5} fill="url(#globe-rim)" pointerEvents="none" />
+              <circle cx={0} cy={0} r={R} fill={OCEAN} stroke="var(--rule-2)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
               {graticule(rotation).map((d, i) => (
                 <path key={i} transform={`scale(${R})`} d={d} fill="none" stroke="var(--rule)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
               ))}
+              {/* The land: every ring filled and outlined, cut at the horizon, in the unit circle scaled up. */}
+              <path data-land transform={`scale(${R})`} d={landPath(RINGS, rotation, 'globe')} {...LAND} />
+              <circle cx={0} cy={0} r={R} fill="url(#globe-light)" pointerEvents="none" />
             </>
           ) : (
-            <rect x={-R * 2} y={-R} width={R * 4} height={R * 2} fill="var(--bg-deep)" stroke="var(--rule-2)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+            <>
+              <defs>
+                <clipPath id="flat-box">
+                  <rect x={-R * 2} y={-R} width={R * 4} height={R * 2} />
+                </clipPath>
+                {/* Styled here, not on the group: vector-effect does not inherit through a use. */}
+                <path id="flat-land" transform={`scale(${R * 2})`} d={FLAT_LAND} {...LAND} />
+              </defs>
+              <rect x={-R * 2} y={-R} width={R * 4} height={R * 2} fill={OCEAN} stroke="var(--rule-2)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+              {/* Panned by the same shift `flat()` gives the pins, wrapped like it is so the copy either side always covers the seam. */}
+              <g clipPath="url(#flat-box)">
+                <g transform={`translate(${((((rotation.lambda + 180) % 360) + 360) % 360 - 180) / 180 * 2 * R} 0)`}>
+                  <use href="#flat-land" x={-4 * R} />
+                  <use href="#flat-land" />
+                  <use href="#flat-land" x={4 * R} />
+                </g>
+              </g>
+            </>
           )}
-
-          {/* The land: one path, a dot per point, in the unit box scaled up. */}
-          <path
-            data-land
-            transform={`scale(${mode === 'globe' ? R : R * 2})`}
-            d={landPath(DOTS, rotation, mode)}
-            fill="none"
-            stroke="var(--ink-3)"
-            strokeOpacity={0.7}
-            strokeWidth={1.6}
-            strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
-          />
 
           {shown.map((pin) => {
             const { x, y } = place(pin)
             const s = mode === 'globe' ? R : R * 2
-            const cx = x * s
-            const cy = y * s
+            // Rounded: the server's and the browser's sin can differ in the last
+            // digit, and React reports that as a hydration mismatch.
+            const cx = +(x * s).toFixed(3)
+            const cy = +(y * s).toFixed(3)
             const title = pin.country ? `${pin.name}, ${pin.country}` : pin.name
             return (
               <g
@@ -204,7 +243,9 @@ export function Globe({
                 tabIndex={onPick ? 0 : undefined}
                 aria-label={onPick ? title : undefined}
                 className={onPick ? 'cursor-pointer' : undefined}
-                onClick={() => onPick?.(pin.id)}
+                onClick={() => {
+                  if (!dragged.current) onPick?.(pin.id)
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault()
@@ -214,10 +255,12 @@ export function Globe({
                 onDoubleClick={() => flyTo(pin)}
               >
                 <title>{title}</title>
+                {/* The target: about 24px across on screen whatever the zoom, so a finger lands. */}
+                <circle cx={cx} cy={cy} r={HIT / zoom} fill="transparent" />
                 {pin.kind === 'wishlist' ? (
                   <circle cx={cx} cy={cy} r={3.5 / zoom} fill="none" stroke="var(--ink-2)" strokeWidth={1} strokeDasharray="1.5 1.5" vectorEffect="non-scaling-stroke" />
                 ) : (
-                  <circle cx={cx} cy={cy} r={(pin.kind === 'upcoming' ? 4 : 3.5) / zoom} fill={pin.kind === 'upcoming' ? 'var(--accent)' : 'var(--ink-3)'} />
+                  <circle cx={cx} cy={cy} r={(pin.kind === 'upcoming' ? 4 : 3.5) / zoom} fill={pin.kind === 'upcoming' ? 'var(--accent)' : 'var(--ink-3)'} stroke="var(--bg-deep)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
                 )}
                 {/* Named at a fixed size on screen: the text is divided by the zoom the group multiplies by. */}
                 {(pin.kind === 'upcoming' || zoom >= LABEL_ZOOM) && (
@@ -275,6 +318,17 @@ export function Globe({
     </div>
   )
 }
+
+/** Filled land with borders, for the globe path and the flat one. */
+const LAND = {
+  fill: 'var(--ink-4)',
+  fillRule: 'evenodd',
+  stroke: 'var(--ink-3)',
+  strokeWidth: 0.6,
+  vectorEffect: 'non-scaling-stroke',
+} as const
+/** The sea: a little accent mixed into the deep background, since there is no blue token. */
+const OCEAN = 'color-mix(in srgb, var(--accent) 18%, var(--bg-deep))'
 
 const control =
   'grid size-[26px] place-items-center border border-rule-2 bg-bg text-[13px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink'

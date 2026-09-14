@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { R, ZOOM_MAX, clampView, flat, graticule, landPath, project, visible, zoomAt, type Rotation } from './globe'
+import { R, ZOOM_MAX, clampView, flat, graticule, landPath, project, ringPath, visible, zoomAt, type Ring, type Rotation } from './globe'
 
 // An orthographic projection, hand rolled.
 //
-// The alternative was d3-geo plus topojson plus a 100kB world-atlas data file,
-// which the plan budgeted for. It buys coastlines. The dots are the
-// information and the globe is context for them, so this draws a graticule
-// instead and costs no dependency and no download.
+// The alternative was d3-geo plus topojson, which the plan budgeted for. The
+// land is committed rings instead, filled and clipped at the horizon here, so
+// the globe costs no dependency and nothing loads at runtime.
 
 const NONE: Rotation = { lambda: 0, phi: 0 }
 
@@ -98,14 +97,126 @@ describe('flat and landPath', () => {
     expect(flat(0, 45, { lambda: 0, phi: 0 }).y).toBeCloseTo(-0.25)
   })
 
-  it('landPath draws a dash per visible point and all of them flat', () => {
-    const dots: [number, number][] = [
-      [0, 0],
-      [0, 180],
-    ]
+  it('landPath fills every ring flat and only the near side on the globe', () => {
+    const rings: Ring[] = [square(0, 0), square(180, 0)]
     const front = { lambda: 0, phi: 0 }
-    expect(landPath(dots, front, 'globe').match(/M/g)?.length).toBe(1)
-    expect(landPath(dots, front, 'flat').match(/M/g)?.length).toBe(2)
+    expect(landPath(rings, front, 'globe').match(/Z/g)?.length).toBe(1)
+    expect(landPath(rings, front, 'flat').match(/Z/g)?.length).toBe(2)
+    expect(landPath(rings, front, 'flat')).not.toContain('A')
+  })
+})
+
+/** A closed ten degree square about a point, counter-clockwise in lon/lat. */
+function square(lon: number, lat: number): Ring {
+  return [
+    [lon - 5, lat - 5],
+    [lon + 5, lat - 5],
+    [lon + 5, lat + 5],
+    [lon - 5, lat + 5],
+    [lon - 5, lat - 5],
+  ]
+}
+
+/** Every number in a path, so a point can be checked against the unit circle. */
+function points(d: string): [number, number][] {
+  const out: [number, number][] = []
+  for (const m of d.matchAll(/[ML](-?[\d.]+),(-?[\d.]+)/g)) out.push([Number(m[1]), Number(m[2])])
+  for (const m of d.matchAll(/A1 1 0 [01] [01] (-?[\d.]+),(-?[\d.]+)/g)) out.push([Number(m[1]), Number(m[2])])
+  return out
+}
+
+describe('ringPath', () => {
+  it('draws a ring on the near side as straight edges and closes it', () => {
+    const d = ringPath(square(0, 0), NONE)
+    expect(d.startsWith('M')).toBe(true)
+    expect(d.match(/L/g)?.length).toBe(3)
+    expect(d.endsWith('Z')).toBe(true)
+    expect(d).not.toContain('A')
+  })
+
+  it('draws nothing for a ring on the far side', () => {
+    expect(ringPath(square(0, 0), { lambda: 180, phi: 0 })).toBe('')
+  })
+
+  it('cuts a ring that straddles the horizon and joins the cut with one arc along the rim', () => {
+    const d = ringPath(square(90, 0), NONE)
+    expect(d.match(/A/g)?.length).toBe(1)
+    expect(d).not.toContain('NaN')
+    expect(d.endsWith('Z')).toBe(true)
+    const pts = points(d)
+    expect(pts.length).toBeGreaterThan(3)
+    for (const [x, y] of pts) expect(Math.hypot(x, y)).toBeLessThanOrEqual(1 + 1e-4)
+    // The two crossings sit on the rim itself.
+    const arc = d.match(/A1 1 0 [01] [01] (-?[\d.]+),(-?[\d.]+)/)!
+    expect(Math.hypot(Number(arc[1]), Number(arc[2]))).toBeCloseTo(1, 3)
+  })
+
+  it('flips the arc sweep when the ring is wound the other way', () => {
+    const sweep = (d: string) => d.match(/A1 1 0 [01] ([01])/)![1]
+    const forward = ringPath(square(90, 0), NONE)
+    const backward = ringPath([...square(90, 0)].reverse(), NONE)
+    expect(sweep(forward)).not.toBe(sweep(backward))
+  })
+
+  it('joins a notch that dips behind the horizon with a short arc, not the long way round', () => {
+    // The near-side square with a bite out of its horizon-facing edge, which
+    // is Côte d'Ivoire seen from the US: two exits and two entries. Each exit
+    // must join the nearest entry along the rim, or one arc circles the disk
+    // and even-odd fills the sea.
+    const notched: Ring = [
+      [85, -5],
+      [95, -5],
+      [95, 5],
+      [85, 5],
+      [85, 2],
+      [92, 1],
+      [85, 0],
+      [85, -5],
+    ]
+    const d = ringPath(notched, NONE)
+    const arcs = [...d.matchAll(/A1 1 0 ([01]) [01]/g)].map((m) => m[1])
+    expect(arcs).toEqual(['0', '0'])
+    expect(d.match(/Z/g)?.length).toBe(2)
+    for (const [x, y] of points(d)) expect(Math.hypot(x, y)).toBeLessThanOrEqual(1 + 1e-4)
+  })
+
+  it('closes with chords when the crossings do not alternate around the rim', () => {
+    // A bow tie across the horizon: its crossings read exit, entry, entry,
+    // exit around the rim, which no simple curve gives. A country seen edge
+    // on can do the same through rounding, and a rim arc paired wrongly would
+    // enclose the whole disk. Chords keep the error the size of the sliver.
+    const bowTie: Ring = [
+      [85, -5],
+      [95, -5],
+      [85, 5],
+      [95, 8],
+      [85, -5],
+    ]
+    const d = ringPath(bowTie, NONE)
+    expect(d).not.toContain('A')
+    expect(d).not.toContain('NaN')
+    expect(d.match(/Z/g)?.length).toBe(2)
+  })
+
+  it('survives a run of vertices at the pole seen edge on', () => {
+    const cap: Ring = [
+      [-180, -90],
+      [-90, -90],
+      [0, -90],
+      [90, -90],
+      [180, -90],
+      [180, -70],
+      [90, -70],
+      [0, -70],
+      [-90, -70],
+      [-180, -70],
+      [-180, -90],
+    ]
+    const d = ringPath(cap, NONE)
+    expect(d).not.toContain('NaN')
+    expect(d.startsWith('M')).toBe(true)
+    expect(d.endsWith('Z')).toBe(true)
+    for (const [x, y] of points(d)) expect(Math.hypot(x, y)).toBeLessThanOrEqual(1 + 1e-4)
   })
 })
 
