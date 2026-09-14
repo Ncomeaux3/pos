@@ -125,9 +125,12 @@ jobs:
       # playwright.config starts the dev server itself.
       - run: pnpm test:e2e
 
+      # The results directory is hidden, and upload-artifact skips hidden
+      # paths unless told otherwise: every failed run so far uploaded nothing.
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-failures
           path: e2e/.results/
+          include-hidden-files: true
           retention-days: 7
