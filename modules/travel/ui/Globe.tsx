@@ -284,7 +284,8 @@ export function Globe({
 
       {alert && <div className="absolute right-3 top-3 max-w-[min(360px,70%)]">{alert}</div>}
 
-      <div className="pointer-events-none absolute bottom-2.5 left-3 flex flex-wrap gap-3.5 text-[10px] uppercase tracking-[0.06em] text-ink-3">
+      {/* Below md the legend takes its own line above the controls; the band is too narrow for both corners. */}
+      <div className="pointer-events-none absolute bottom-2.5 left-3 flex flex-wrap gap-3.5 text-[10px] uppercase tracking-[0.06em] text-ink-3 max-md:bottom-[42px]">
         <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-brand" />Upcoming</span>
         <span className="flex items-center gap-1.5"><span className="size-[7px] rounded-full bg-ink-3" />Past</span>
         <span className="flex items-center gap-1.5"><span className="size-[7px] rounded-full border border-dashed border-ink-2" />Wishlist</span>

@@ -245,6 +245,13 @@ test('home shows Run now on the phone', async ({ page }, testInfo) => {
   // The phone header's own Run now, first in DOM order; the desktop band's
   // copy of the same button sits after it, hidden below md.
   await expect(page.getByRole('button', { name: 'Run now' }).first()).toBeVisible()
+
+  // A Today page fits in two swipes: the seed's warnings and proposals show
+  // two and one rows here, the rest behind a link.
+  await expect(page.getByRole('button', { name: /^Dismiss / })).toHaveCount(2)
+  await expect(page.getByRole('link', { name: /and \d+ more/ })).toHaveCount(2)
+  await expect(page.getByRole('button', { name: 'Approve' })).toHaveCount(1)
+  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(1800)
 })
 
 test('dashboard, the week ahead and arranging the tiles', async ({ page }) => {
@@ -1266,6 +1273,18 @@ test('tasks, the six views and the month grid', async ({ page }) => {
   await expect(page).toHaveURL(/month=1/)
   await shoot(page, 'tasks-calendar')
   await expect(page.getByRole('button', { name: 'Previous month' })).toBeVisible()
+
+  if (mobile) {
+    // The grid fits the pane: no sideways scroll, and a day's task is a dot
+    // that opens it.
+    const pane = page.locator('[data-segments-pane]')
+    expect(await pane.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true)
+    const dot = pane.locator('button:has(> span.rounded-full)').first()
+    const title = (await dot.getAttribute('aria-label')) ?? ''
+    await dot.click()
+    await expect(page.getByRole('dialog', { name: /Tasks \/ Edit/ })).toBeVisible()
+    await expect(page.getByRole('dialog').getByLabel('Title')).toHaveValue(title)
+  }
 })
 
 test('tasks, completing one emits the event that earns XP', async ({ page }) => {

@@ -73,17 +73,20 @@ export function Calendar({
         </span>
       </div>
 
+      {/* Below md the seven columns share the pane: two letter heads, short
+        * cells, a dot per task. From md up the grid is the artboard's 560px. */}
       <div className="overflow-x-auto">
-        <div className="min-w-[560px] border border-rule">
+        <div className="border border-rule md:min-w-[560px]">
           <div className="grid grid-cols-7 gap-px bg-rule">
             {DOWS.map((d) => (
-              <span key={d} className="num bg-bg-elev px-2.5 py-2 text-[10px] tracking-[0.08em] text-ink-3">
-                {d.toUpperCase()}
+              <span key={d} className="num bg-bg-elev px-1 py-1 text-[10px] tracking-[0.08em] text-ink-3 md:px-2.5 md:py-2">
+                <span className="md:hidden">{d.slice(0, 2).toUpperCase()}</span>
+                <span className="hidden md:inline">{d.toUpperCase()}</span>
               </span>
             ))}
             {cells.map((day, i) => {
               if (day === null) {
-                return <div key={`pad-${i}`} className="min-h-24 bg-bg-deep" />
+                return <div key={`pad-${i}`} className="min-h-14 bg-bg-deep md:min-h-24" />
               }
 
               const days = offsetOf(day)
@@ -97,7 +100,7 @@ export function Calendar({
                 <div
                   key={day}
                   className={cn(
-                    'min-w-0 min-h-24 px-2.5 py-2',
+                    'min-w-0 min-h-14 px-1 py-1 md:min-h-24 md:px-2.5 md:py-2',
                     isToday ? 'bg-brand-soft' : 'bg-bg',
                     // A past day is de-emphasised by ink, never by opacity: the
                     // design's rule is that a greyed row stays readable.
@@ -118,7 +121,28 @@ export function Calendar({
                     )}
                   </div>
 
-                  <div className="mt-1.5 flex min-w-0 flex-col gap-[3px]">
+                  {/* The phone's row of dots: one 16 by 24px button per task, named by
+                    * its title. ponytail: under the 24px target guideline; a day sheet
+                    * listing the tasks is the upgrade if taps miss. */}
+                  <div className="mt-1 flex md:hidden">
+                    {items.slice(0, 3).map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => onOpen(t)}
+                        aria-label={t.title}
+                        className="grid h-6 w-4 shrink-0 place-items-center"
+                      >
+                        <span
+                          className={cn(
+                            'size-1.5 rounded-full',
+                            t.priority === 'P1' ? 'bg-bad' : t.status === 'review' ? 'bg-warn' : 'bg-ink-3',
+                          )}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-1.5 hidden min-w-0 flex-col gap-[3px] md:flex">
                     {items.slice(0, 3).map((t) => (
                       <button
                         key={t.id}

@@ -703,10 +703,10 @@ function TripForm({
       footer={
         <>
           <div className="flex flex-col items-start gap-1">
-            <button type="button" onClick={onClose} className="text-[13px] text-ink-3 hover:text-ink">
+            <button type="button" onClick={onClose} className="text-[13px] text-ink-2 hover:text-ink">
               Cancel
             </button>
-            <span className="text-[11px] leading-none text-ink-3">Location search by Open-Meteo and GeoNames</span>
+            <span className="text-[11px] leading-none text-ink-2">Location search by Open-Meteo and GeoNames</span>
           </div>
           <ActionButton variant="solid" size="lg" className="h-[38px] gap-2 px-3.5 text-[13px]" onClick={save}>
             {trip ? 'Save' : mode === 'wish' ? 'Add' : 'Create'} <span aria-hidden="true">&rarr;</span>
