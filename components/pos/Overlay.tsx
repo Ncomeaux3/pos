@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useId, useRef, useSyncExternalStore, type ReactNode } from 'react'
+import { useEffect, useEffectEvent, useId, useRef, useSyncExternalStore, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 import { useSwipe } from './gestures'
@@ -65,11 +65,17 @@ export function Overlay({
   // cascading render.
   const mounted = useSyncExternalStore(subscribeToNothing, () => true, () => false)
 
+  // Escape goes through an effect event so the effect below depends on `open`
+  // alone. Most callers pass a fresh closure every render, and with `onClose`
+  // in the deps the effect re-ran, and refocused the panel, on every keystroke
+  // in a drawer that owns its own input state.
+  const onEscape = useEffectEvent(() => onClose())
+
   useEffect(() => {
     if (!open) return
 
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') onEscape()
     }
     document.addEventListener('keydown', onKey)
 
@@ -83,7 +89,7 @@ export function Overlay({
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = overflow
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open || !mounted) return null
 

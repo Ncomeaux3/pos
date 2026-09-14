@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import {
-  BandSearch,
   Card,
   CardHead,
   Chip,
@@ -9,9 +8,9 @@ import {
   Eyebrow,
   HeatStrip,
   PaceBar,
+  PageHeader,
   Row,
   RowList,
-  SearchButton,
 } from '@/components/pos'
 import { db } from '@/core/db'
 import { Bento, ArrangeToggle, type Tile } from './Bento'
@@ -104,6 +103,13 @@ const money = (cents: number) => `$${(cents / 100).toFixed(2)}`
  */
 const ORDER = ['warnings', 'finance', 'tasks', 'review', 'goals', 'skills', 'jobs', 'llm', 'timeline']
 
+/**
+ * Phone Home is a Today page: the headline plus these five (2026-09-13
+ * decision). Every other tile's grid cell is `phone: false`, which Bento
+ * hides below md so no tile leaves a blank 200px row behind it.
+ */
+const PHONE_TILES = new Set(['warnings', 'finance', 'tasks', 'review', 'timeline'])
+
 /** The tile's border is the quiet rule, not rule-2; module tiles lift on hover. */
 const tileClass = 'flex h-full flex-col gap-3 border-rule'
 
@@ -145,6 +151,7 @@ export default async function DashboardPage() {
   const unsorted: Tile[] = [
     {
       id: 'warnings',
+      phone: PHONE_TILES.has('warnings'),
       node: (
         <Card className={tileClass}>
           {/* The eyebrow itself turns amber while there is something open;
@@ -173,6 +180,7 @@ export default async function DashboardPage() {
     },
     {
       id: 'review',
+      phone: PHONE_TILES.has('review'),
       node: (
         <Card className={tileClass}>
           <CardHead
@@ -206,6 +214,7 @@ export default async function DashboardPage() {
     },
     {
       id: 'timeline',
+      phone: PHONE_TILES.has('timeline'),
       node: (
         <Card className={tileClass}>
           <CardHead label="Next 7 days" meta={`${diary.length} item${diary.length === 1 ? '' : 's'}`} plainMeta />
@@ -234,6 +243,7 @@ export default async function DashboardPage() {
 
       return {
         id: m.module,
+        phone: PHONE_TILES.has(m.module),
         node: (
           <Card className={cn(tileClass, 'transition-colors duration-150 hover:border-rule-2')}>
             {/* The head is the way in, as the artboard has it: the name and
@@ -271,6 +281,7 @@ export default async function DashboardPage() {
 
     {
       id: 'jobs',
+      phone: PHONE_TILES.has('jobs'),
       node: (
         <Card className={tileClass}>
           <CardHead
@@ -297,6 +308,7 @@ export default async function DashboardPage() {
     },
     {
       id: 'llm',
+      phone: PHONE_TILES.has('llm'),
       node: (
         <Card className={tileClass}>
           <CardHead
@@ -362,27 +374,27 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      {/* Two bands, as the design has it: a thin breadcrumb row with the
-        * actions, then the summary as the page's opening statement. The two
-        * were merged into one PageHeader, which made the headline a title and
-        * shrank it to a title's size. */}
-      {/* The band is 56px, full bleed, with the actions on the right: the
-        * page's 28px padding is cancelled so the band's rule runs edge to edge
-        * and its contents sit on the artboard's centre line. On a phone the
-        * band wraps, so the height is a minimum there. */}
-      <header className="-mx-[18px] -mt-[14px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 md:-mx-7 md:-mt-7 md:h-14 md:flex-nowrap md:px-7 md:py-0">
-        <span className="eyebrow shrink-0 whitespace-nowrap text-ink-3">
-          Dashboard <span className="text-ink-4">/</span> {today}
-        </span>
-        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-4 md:flex-nowrap">
-          {/* On a phone the artboard carries a 44px search icon in this band,
-              not a field. Same destination either way: the palette. */}
-          <SearchButton href="/search" className="md:hidden" />
-          <BandSearch className="hidden min-w-[220px] flex-1 md:flex" />
-          <ArrangeToggle />
-          <RunNow />
-        </div>
-      </header>
+      {/* Band one only: the headline below is the page's opening statement,
+        * drawn to the artboard's size; the h1 is PageHeader's "Home". On the phone this is
+        * the back-control-less title row (Home is a tab root) with Run now as
+        * the one action. */}
+      <PageHeader
+        eyebrow={
+          <>
+            Dashboard <span className="text-ink-4">/</span> {today}
+          </>
+        }
+        title="Home"
+        hideTitle
+        searchPlaceholder="What are you looking for?"
+        phoneAction={<RunNow />}
+        status={
+          <>
+            <ArrangeToggle />
+            <RunNow />
+          </>
+        }
+      />
 
       <section className="mt-[26px]">
         <span className="eyebrow text-ink-3">
@@ -401,7 +413,7 @@ export default async function DashboardPage() {
           * first thing on the page and reads as a sentence, not a heading, and
           * the parts of it that name something you can open are links, which
           * is the artboard's one piece of colour in the sentence. */}
-        <h1 className="mt-3 max-w-[920px] text-pretty text-[clamp(22px,2.2vw,30px)] font-normal leading-[1.25] tracking-[-0.03em] text-ink">
+        <p className="mt-3 max-w-[920px] text-pretty text-[clamp(22px,2.2vw,30px)] font-normal leading-[1.25] tracking-[-0.03em] text-ink">
           {segments.length > 0
             ? segments.map((s, i) =>
                 s.href ? (
@@ -417,7 +429,7 @@ export default async function DashboardPage() {
                 ),
               )
             : (latest?.headline ?? 'Nothing has run yet.')}
-        </h1>
+        </p>
         {/* Hidden on a phone, as everywhere else: none of the four phone
           * artboards puts a paragraph under its opening line. */}
         <p className="mt-2 hidden text-[13px] text-ink-3 md:block">

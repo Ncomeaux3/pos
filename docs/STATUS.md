@@ -26,6 +26,7 @@ push Devices e2e test fail locally until it is added.
 ## Done
 
 **Phone shell, Phase 5: Tasks and Goals.** docs/plans/phone-shell.md. Tasks on the phone is three segments (Today, This week, Calendar) with the other four views behind a Filter button, a plus as the header's action, rows that open the drawer on tap and swipe to complete without moving the segment. Goals is Active and Archive segments, rows open a sheet, and the inline add is one field whose Next opens the drawer. Desktop unchanged.
+**Phone shell, Phase 3: Dashboard.** docs/plans/phone-shell.md. Home's inline header is `PageHeader` (title Home, Run now as the phone's one action; the desktop band keeps crumb, search, Arrange and Run now). Phone Home is the headline plus five tiles, warnings, finance, tasks, review and timeline, in one column; every other tile and Arrange are desktop only. Open: the phone page is 2141px with the seeded data against the plan's 1800px, which only the tile bodies can shorten.
 
 **The fidelity pass, screens eighteen to twenty-one in parallel: Notifications,
 Agent Log, Onboarding, Login.** The third batch on the method below, all core
@@ -568,7 +569,10 @@ Travel, Weekly review) carry it in that band; `Segments` wraps a
 section row and the pane that swipes it (Meals first, Finance, Tasks and Goals
 in their own passes); a drag from the left edge past 90px goes back; the
 sheet's handle drags closed. Finance's Sync button is desktop only until Phase
-4; Fitness's is its phone action already. Phases 3 to 5 are next.
+4; Fitness's is its phone action already. Phase 3 (Dashboard) is built: Home
+is the headline and five tiles on the phone. Open from it: the phone page is
+2141px tall against the plan's 1800px, and only the tile bodies (out of scope
+for the shell) can shorten it. Phases 4 and 5 are next.
 
 See docs/plans/design-build.md.
 
