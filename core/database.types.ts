@@ -304,6 +304,7 @@ export type Database = {
           output_tokens: number
           purpose: string
           updated_at: string
+          web_searches: number
         }
         Insert: {
           cost_cents?: number
@@ -316,6 +317,7 @@ export type Database = {
           output_tokens?: number
           purpose: string
           updated_at?: string
+          web_searches?: number
         }
         Update: {
           cost_cents?: number
@@ -328,6 +330,64 @@ export type Database = {
           output_tokens?: number
           purpose?: string
           updated_at?: string
+          web_searches?: number
+        }
+        Relationships: []
+      }
+      notification_rules: {
+        Row: {
+          channels: string[]
+          created_at: string
+          id: string
+          key: string
+          label: string
+          lead_days: number
+          module: string
+          muted: boolean
+          position: number
+          sample_body: string
+          sample_title: string
+          snooze_until: string | null
+          timing: string
+          trigger_text: string
+          updated_at: string
+          urgent: boolean
+        }
+        Insert: {
+          channels?: string[]
+          created_at?: string
+          id?: string
+          key: string
+          label: string
+          lead_days?: number
+          module: string
+          muted?: boolean
+          position?: number
+          sample_body?: string
+          sample_title?: string
+          snooze_until?: string | null
+          timing?: string
+          trigger_text: string
+          updated_at?: string
+          urgent?: boolean
+        }
+        Update: {
+          channels?: string[]
+          created_at?: string
+          id?: string
+          key?: string
+          label?: string
+          lead_days?: number
+          module?: string
+          muted?: boolean
+          position?: number
+          sample_body?: string
+          sample_title?: string
+          snooze_until?: string | null
+          timing?: string
+          trigger_text?: string
+          updated_at?: string
+          urgent?: boolean
         }
         Relationships: []
       }
@@ -340,6 +400,7 @@ export type Database = {
           due_at: string
           id: string
           read_at: string | null
+          rule_id: string | null
           sent_at: string | null
           snooze_until: string | null
           title: string
@@ -354,6 +415,7 @@ export type Database = {
           due_at?: string
           id?: string
           read_at?: string | null
+          rule_id?: string | null
           sent_at?: string | null
           snooze_until?: string | null
           title: string
@@ -368,6 +430,7 @@ export type Database = {
           due_at?: string
           id?: string
           read_at?: string | null
+          rule_id?: string | null
           sent_at?: string | null
           snooze_until?: string | null
           title?: string
@@ -380,6 +443,13 @@ export type Database = {
             columns: ["digest_run_id"]
             isOneToOne: false
             referencedRelation: "job_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "notification_rules"
             referencedColumns: ["id"]
           },
         ]
@@ -444,6 +514,42 @@ export type Database = {
         }
         Relationships: []
       }
+      push_subscription: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          failure_count: number
+          id: string
+          label: string
+          last_sent_at: string | null
+          p256dh: string
+          updated_at: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          failure_count?: number
+          id?: string
+          label?: string
+          last_sent_at?: string | null
+          p256dh: string
+          updated_at?: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          failure_count?: number
+          id?: string
+          label?: string
+          last_sent_at?: string | null
+          p256dh?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       request_log: {
         Row: {
           created_at: string
@@ -482,6 +588,47 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      reviews: {
+        Row: {
+          answers: Json
+          closed_at: string | null
+          created_at: string
+          id: string
+          note_ref: string | null
+          priorities: string[]
+          updated_at: string
+          week_of: string
+        }
+        Insert: {
+          answers?: Json
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          note_ref?: string | null
+          priorities?: string[]
+          updated_at?: string
+          week_of: string
+        }
+        Update: {
+          answers?: Json
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          note_ref?: string | null
+          priorities?: string[]
+          updated_at?: string
+          week_of?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_note_ref_fkey"
+            columns: ["note_ref"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       settings: {
         Row: {
@@ -551,6 +698,7 @@ export type Database = {
       write_log: {
         Row: {
           actor: string
+          apply_payload: Json | null
           created_at: string
           diff: Json
           entity_ref: string | null
@@ -558,6 +706,7 @@ export type Database = {
           kind: string
           module: string
           reason: string
+          revert_payload: Json | null
           run_id: string | null
           title: string
           tool: string
@@ -566,6 +715,7 @@ export type Database = {
         }
         Insert: {
           actor?: string
+          apply_payload?: Json | null
           created_at?: string
           diff?: Json
           entity_ref?: string | null
@@ -573,6 +723,7 @@ export type Database = {
           kind: string
           module: string
           reason: string
+          revert_payload?: Json | null
           run_id?: string | null
           title: string
           tool: string
@@ -581,6 +732,7 @@ export type Database = {
         }
         Update: {
           actor?: string
+          apply_payload?: Json | null
           created_at?: string
           diff?: Json
           entity_ref?: string | null
@@ -588,6 +740,7 @@ export type Database = {
           kind?: string
           module?: string
           reason?: string
+          revert_payload?: Json | null
           run_id?: string | null
           title?: string
           tool?: string
@@ -616,7 +769,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      today: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never
@@ -652,12 +805,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -681,11 +834,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -706,11 +859,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -731,11 +884,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -748,11 +901,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
