@@ -1,61 +1,63 @@
-# Second Brain: capture, hubs, related
+# Second Brain: capture, hubs, related (cheapest build)
 
-Branch `brain-capture`. Decisions logged 2026-09-14 in decisions/log.md.
+Branch `brain-capture` (exists, cut from origin/main, holds this plan and the
+decisions). Supersedes the 2026-09-14 first draft of this file on two points,
+both to make the build cheaper: a "worked on" entry is kind `daily` rather
+than a new `log` kind, and a file is kind `note` with `file_path` set rather
+than a new `file` kind. No constraint change, no e2e change.
 
 ## Context
 
 The owner's Obsidian vault holds a lot he dropped in and never read again. The
 module as built is a lens on that vault (pull, wikilinks, an inbox for URL
-drafts). It has no capture path of its own, no notion of topic beyond the seven
-`kind` folders, and nothing that brings an old note back when a new one is
-about the same thing.
+drafts). It has no capture path of its own, no topic beyond the seven `kind`
+folders, and nothing that brings an old note back when a new one is about the
+same thing.
 
-Research (2026-09-14, sourced in the session): every published practice names
-the same failure, collecting without using. What people report actually using
-is backlinks, hub notes per topic (Milo's Maps of Content), and related notes
-surfaced at write time by embeddings (Reflect, Mem). The full graph view is
-widely called decorative past a couple hundred notes. No published figures exist
-for how many notes get reopened; treat any such number as verify.
+Research (2026-09-14): every published practice names the same failure,
+collecting without using. What people report using is backlinks, hub notes
+per topic, and related notes surfaced at write time by embeddings. The graph
+view is widely called decorative. No published reopen rates exist (verify).
 
-Decisions taken with the owner this session:
+Decisions with the owner (logged in decisions/log.md 2026-09-14): POS is the
+primary store, vault stays a read-only pulled archive. One capture box for
+text, URL, "worked on", file. Hubs are owner-named keyword groupings, rules
+first, model only for a miss, no model prose, no model-created hubs. Related
+notes while writing is the one resurfacing mechanism. Files produce
+transcribed text only. Extend in place inside screen 08. Not built: per-note
+summaries, weekly email, hub summaries, Shortcut webhook, vault write back,
+XP for log entries, graph view.
 
-- POS is the primary store from here. The vault stays a read-only archive that
-  keeps being pulled. No write back (unchanged from spec).
-- Capture shapes: quick text, URL or video, "what I worked on", files and
-  images. All from the PWA capture box; no Shortcut webhook.
-- Automatic on capture: related notes by meaning, filing into topic hubs.
-  Not chosen: per-note model summaries, extending links to projects and goals.
-- Resurfacing: related notes while writing. Not chosen: weekly email, hub
-  summaries, random note review.
-- A hub is a grouping you browse, no model prose. Owner creates hubs with
-  keywords; rules file first, Haiku only for a miss; the model never creates a
-  hub; unfiled notes sit in Unfiled.
-- A work log entry is a note of kind `log`, dated. No XP rule beyond what
-  classify_to_skills gives any note.
-- A file produces extracted text only, one Haiku call, published immediately.
-- Extend the brain module in place, inside the screen 08 grammar. No new
-  artboard.
+## Running cost, per month, single user
 
-## What already exists and is reused
+- Embeddings: Voyage free tier, 200M tokens, already connected. $0.
+- Related while typing: `search()` runs full text first and embeds the query
+  only when text is thin; once per typing pause. $0.
+- Hub filing at capture: keyword rules. $0.
+- Hub filing for misses: one batched Haiku call a night for every unfiled
+  published note (cap 50 notes, 2000 chars each), not one call per capture.
+  Under $0.01 a night at Haiku input pricing in `core/llm.ts`. Delete the job
+  and it is $0.
+- Files: one Haiku call per file. Roughly $0.002 for a photo, $0.015 for a
+  ten page PDF (estimate from Haiku input price, verify against
+  `core.llm_calls` after the first one). Phase 3 only, so the rest ships
+  without it.
+- Storage: Supabase free tier, private `brain` bucket through `core/files.ts`.
 
-- `core.embeddings` + `integrations/voyage` + `core/search.ts`: `search()`
-  hybrid retrieval with `module` and `semantic` options, `embedChanged()`
-  batched embedding, `contentHash`. Voyage connected, 3 RPM free tier.
-- `modules/ideas/data.ts:relatedNotes` is the nearest-neighbour SQL pattern.
-- `modules/skills/classify.ts:matchByRules` is the rules-first pattern (word
-  boundary keyword regex). Copy the shape, not the function: hubs are per
-  module and per note, skills are per entity.
-- `core/files.ts:upload` (module bucket, relative path), `signedUrl`, `remove`.
-- `core/llm.ts:complete` takes `Anthropic.MessageParam[]`, so an image or a
-  PDF document block passes through unchanged. Purpose `classification` for
-  filing, `summary` for transcription (both capped).
-- `modules/brain/manifest.ts` `write` tool: the insert, `syncLinks`,
-  `resolveDanglingLinks`, `register` sequence. Capture calls the same helpers.
-- `modules/brain/ingest.ts:ingestUrl` for the URL path, unchanged.
-- `modules/brain/ui/actions.ts` server actions, `Brain.tsx` band/list/pane,
-  `NotePane.tsx` cells (Linked skills, Backlinks), `shape.ts` `KINDS`.
+## Reused, unchanged
 
-## Migration: `supabase/migrations/<ts>_brain_hubs.sql`
+`core/search.ts` (`search`, `embedChanged`), `core.embeddings`,
+`integrations/voyage`, `modules/ideas/data.ts:relatedNotes` SQL shape,
+`modules/skills/classify.ts:matchByRules` shape, `core/files.ts:upload` and
+`signedUrl`, `core/llm.ts:complete` (takes `Anthropic.MessageParam[]`, so a
+document or image block passes through), `modules/brain/ingest.ts:ingestUrl`,
+`modules/brain/data.ts` (`syncLinks`, `resolveDanglingLinks`, `uniqueSlug`),
+`core/entities.ts:register`, the `write` tool's insert sequence in
+`modules/brain/manifest.ts:105-150`.
+
+## Phase 1: data, hubs, capture logic. Complexity low. quick-builder.
+
+Migration `supabase/migrations/<ts>_brain_hubs.sql`:
 
 ```sql
 create table brain.hub (
@@ -65,7 +67,6 @@ create table brain.hub (
   keywords text[] not null default '{}',
   created_at timestamptz not null default now()
 );
-
 -- Same shape as core.skill_links. A note can sit in more than one hub, which
 -- is the whole reason a hub is not a folder.
 create table brain.note_hub (
@@ -78,143 +79,218 @@ create table brain.note_hub (
   primary key (note_id, hub_id)
 );
 create index note_hub_hub_idx on brain.note_hub (hub_id);
-
-alter table brain.note drop constraint note_kind_check;  -- name: verify with \d
-alter table brain.note add constraint note_kind_check
-  check (kind in ('article','book','video','note','project','person','daily','log','file'));
+-- Relative to the brain bucket. Empty for a note with no file.
 alter table brain.note add column file_path text not null default '';
 ```
 
-Grants: `alter default privileges` on the schema already covers pos_readonly
-select. Run `pnpm gen:types` after.
+`pos_readonly` select is covered by the schema's default privileges. Apply
+with `supabase migration up` (never reset), then `pnpm gen:types`.
 
-## Code
+`modules/brain/hubs.ts` with `hubs.test.ts` written first:
+- `matchHubs(text, hubs: {id, keywords}[]): string[]`. Pure. Word boundary,
+  case insensitive, code fences and inline code masked the way
+  `wikilinks.ts` does. Copy the regex escape from `classify.ts`.
+- `fileByRules(noteId, title, body)`: `matchHubs` over `title + '\n' + body`
+  against every hub; insert `note_hub (note_id, hub_id, 1, 'rule')` with
+  `on conflict do nothing` (so a manual row is never overwritten).
+- `refileByRules(hubId)`: after a hub's keywords change, run `fileByRules`
+  over published notes that have no `note_hub` row at all.
+- `setHubs(noteId, hubIds[])`: delete rows where `not is_manual`, insert
+  `(…, 1, 'manual', true)` for each id.
+- `fileUnfiledNightly()`: select up to 50 published notes with no `note_hub`
+  row; if zero hubs exist or zero notes, return. One `complete({ model:
+  'claude-haiku-4-5', purpose: 'classification', module: 'brain' })` with the
+  hub list (slug, name, keywords) and each note as `id, title, first 2000
+  chars`, asking for JSON `[{ note_id, hub_slug, confidence }]`. Insert
+  `('model', confidence)` on conflict do nothing. `SoftCapExceeded` or
+  `NotConnected` returns `{ filed: 0, reason }` and leaves them unfiled.
 
-### `modules/brain/hubs.ts` (test first: `hubs.test.ts`)
+Tests (vitest, `db` mocked the way `ingest.test.ts` mocks): match, no match,
+keyword inside a code fence does not match, `on conflict` path leaves a
+manual row, `fileUnfiledNightly` makes no model call when nothing is unfiled.
 
-- `matchHubs(text, hubs): string[]` pure, word-boundary keyword match, code
-  fences masked the way `wikilinks.ts` masks them.
-- `fileNote(noteId, title, body)`: rules; if hits, insert `note_hub` rows
-  `('rule', 1)`. If none, one `complete({ model: haiku, purpose:
-  'classification', module: 'brain' })` with hub names + keywords + first
-  2000 chars, asking for JSON `[{slug, confidence}]`; insert `('model',
-  confidence)`. Zero hubs or `SoftCapExceeded` or `NotConnected` leaves the
-  note unfiled. Never insert over a row where `is_manual`; never delete
-  manual rows.
-- `refileByRules(hubId)`: after keywords change, run rules over unfiled
-  published notes only.
-- `setHubs(noteId, hubIds[])`: manual edit from the pane; writes
-  `('manual', 1, is_manual = true)` and removes non-manual rows.
+`modules/brain/capture.ts` with `capture.test.ts` first:
+- `captureText({ text, worked: boolean })`: title = first line trimmed to
+  120 chars; body = the rest, or the whole text when one line. `kind =
+  worked ? 'daily' : 'note'`. `status 'published'`, `source 'manual'`,
+  `uniqueSlug`, insert, `syncLinks`, `resolveDanglingLinks`, `register`
+  (no eventType), `fileByRules`, then `embedChanged()` so the note is
+  related-able now rather than after the nightly run.
+- URL is not here: the UI calls the existing `ingestFromUrl` action.
+- Tests: title and body split; one line text; `worked` sets `daily`;
+  `fileByRules` and `embedChanged` are called (mocked).
 
-Tests: match, no match, keyword inside a code fence does not match, manual
-row survives a refile, rules skip the model (mock `complete` and assert not
-called).
+`modules/brain/related.ts`:
+- `relatedTo(noteId, limit = 5, threshold = 0.7)`: the
+  `modules/ideas/data.ts:relatedNotes` SQL restricted to one source entity
+  and to `brain.note.status = 'published'`, excluding itself. Returns `{ id,
+  slug, title, similarity }`. Threshold comment copied from
+  `core/search.ts`. Empty when the source has no embedding yet.
+- `relatedToText(text)`: `search(text, { module: 'brain', limit: 6 })`,
+  filtered to published notes. Returns the same shape with `similarity` from
+  `score`.
 
-### `modules/brain/capture.ts` (test first: `capture.test.ts`)
+Manifest (`modules/brain/manifest.ts`): tool `capture` (input `{ text,
+worked? }`, calls `captureText` with `ctx.source`; when the source is
+`agent` the note is a `draft`, the same rule `write` applies, so an agent
+still cannot publish). Job `{ name:
+'file_unfiled', run: fileUnfiledNightly }` after `pull_vault`. `pull-vault.ts`
+calls `fileByRules` after each `register`. `nightly-digest.ts` adds
+`unfiled: number` and `hubs: { name, count }[]`.
 
-`capture(input)` where input is one of `{ text, log?: boolean }`, `{ url }`,
-`{ file: { name, type, bytes } }`.
+No `hub_write` or `set_hubs` MCP tools. Hubs are made in the UI. No seed
+changes.
 
-- url: `ingestUrl` path as the `ingest` tool does today (draft). Return id.
-- text: title = first line trimmed to 120 chars, body = rest (or whole text
-  when one line). kind = `log` if flagged else `note`. status published,
-  source manual. Then `syncLinks`, `resolveDanglingLinks`, `register`.
-- file: `upload('brain', '<noteId>/<name>', bytes, type)`; then
-  `complete()` with a document block (`application/pdf`) or image block,
-  system "Transcribe every word you can read. No commentary." purpose
-  `summary`, model haiku; body = result, title = file name, kind `file`,
-  `file_path` set, published. On cap or not connected: note saves with the
-  file and an empty body plus a line saying transcription is pending; the
-  nightly job retries.
-- every path except url then: `fileNote`, then `embedChanged()` so the note
-  is related-able now, not tomorrow.
+Exit: `pnpm test` green with the two new test files, `pnpm lint`, `pnpm
+typecheck`, `supabase migration up` applied locally, `brain.get_digest` over
+`/api/mcp` returns `unfiled`. One PR.
 
-Tests: text splits title and body; one line text; log sets kind; url routes
-to ingest (mock); file path calls upload and complete with a document block
-(mock both) and stores `file_path`.
+## Phase 2: screen 08 changes. Complexity medium. Opus.
 
-### `modules/brain/related.ts`
+`modules/brain/ui/actions.ts`: `captureText`, `relatedForDraft(text)`,
+`saveHub({ id?, name, keywords })` (slug from `uniqueSlug`'s helper or a
+plain slugify; `refileByRules` after), `setNoteHubs(noteId, hubIds)`. Each
+returns `ActionResult` like the neighbours and calls `revalidatePath`.
 
-`relatedTo(noteId, limit = 5, threshold = 0.7)`: nearest published brain
-notes by `core.embeddings` cosine, the `modules/ideas/data.ts:relatedNotes`
-SQL restricted to one source note. `relatedToText(text)` = `search(text, {
-module: 'brain', limit: 5 })`, published only (filter hits by status via a
-join, or filter in TS from the ids). Returns `{ id, title, hubs[] }`.
-Threshold comment copies the calibration note from `core/search.ts`.
+`modules/brain/ui/Brain.tsx`:
+- Band: after the existing `brain-folders` group (untouched, so
+  `e2e/screens.spec.ts:1916` keeps passing), a second group `data-testid=
+  "brain-hubs"`: each hub as a chip with count, then "Unfiled", then a "+
+  Hub" chip that opens a two-field form (name, keywords comma separated) in
+  the existing drawer pattern (`IngestDrawer.tsx` is the shape to copy).
+  Folder param values `hub:<slug>` and `unfiled`. List filter for those two.
+- List: `CaptureBox.tsx` pinned above the rows on every folder.
 
-### Manifest
+`modules/brain/ui/CaptureBox.tsx` (client): one textarea, no title field; a
+"worked on" checkbox; submit. If the trimmed text is a single URL
+(`/^https?:\/\/\S+$/`), the button reads "Ingest" and calls the existing
+`ingestFromUrl`. Otherwise "Save" calls `captureText`. Below the box a
+"Related" list: a `setTimeout` of 1000ms reset on each change, fires
+`relatedForDraft` when text is 20+ chars, never more than one in flight.
+Rows are title plus hub names; click opens the note. Under 20 chars: nothing.
+On an error from `relatedForDraft`: one line "Related notes unavailable" (a
+429 from Voyage lands here; `search()` already falls back to text).
+Attach button is Phase 3; do not draw it yet.
 
-- Tools: `capture` (text | url only; files are UI only), `hub_write`
-  ({ id?, name, keywords[] }), `set_hubs` ({ note_id, hub_ids[] }).
-  `capture` with a url reaches `ingest`, which stays guarded; text capture is
-  unguarded like `write`.
-- Jobs: add `{ name: 'file_unfiled', run: fileUnfiled }` after `pull_vault`
-  (retries unfiled published notes and pending transcriptions; batch cap 50 a
-  night). `pull_vault` calls `fileNote` for each new note.
-- `nightly-digest.ts`: add `unfiled` count and `hubsGrownThisWeek` [{name,
-  added}].
-- `entityTypes` unchanged. `kind` zod enum gains `log`, `file`.
+`modules/brain/ui/NotePane.tsx`: a "Hubs" chip row under the head (each
+hub, plus "Edit" that turns the row into checkboxes over every hub and saves
+with `setNoteHubs`; by-line "rule" / "model" / "manual" the way Linked skills
+shows `byLine`). A "Related" cell beside Linked skills and Backlinks, up to
+five rows from `relatedTo`, "None yet" when empty. Both cells follow the
+cell spec in docs/plans/brain-fidelity.md L42.
 
-### UI (screen 08 grammar, `modules/brain/ui/`)
+`modules/brain/shape.ts`: nothing. `daily` already has a folder label.
 
-- `actions.ts`: `captureText`, `captureUrl`, `captureFile` (FormData),
-  `relatedForDraft(text)`, `saveHub`, `setNoteHubs`.
-- `Brain.tsx`: band gains a "Hubs" group after the kind folders: each hub
-  with count, then "Unfiled". Folder param `hub:<slug>` and `unfiled`.
-  List gets `CaptureBox.tsx` pinned above rows on every folder.
-- `CaptureBox.tsx`: textarea (no title field), paste detection (a lone URL
-  turns the submit into "Ingest"), attach button (image/*, application/pdf),
-  "worked on" toggle, submit. Below it, "Related" list: fires
-  `relatedForDraft` 1s after typing stops and at 20+ chars, at most once per
-  pause. Empty states: fewer than 20 chars shows nothing; Voyage not
-  connected shows "Connect Voyage in Settings for related notes".
-- `NotePane.tsx`: a "Hubs" chip row (click to edit, multi-select of hubs,
-  saves manual) and a "Related" cell beside Linked skills and Backlinks,
-  five rows, click opens the note. A `file` note shows a signed link to the
-  file above the body.
-- `shape.ts`: `KINDS` gains `log`, `file`; `folderLabel` for both.
-- Seed (`seed.ts`, demo mode): two hubs with keywords, one log note, no file.
+Docs: `modules/brain/README.md` gains "Capture first" and "Hubs are
+groupings" (short, in the existing voice). `docs/SPEC.md` Second Brain: one
+amendment paragraph dated 2026-09-14. `docs/STATUS.md`: replace the stale
+"no embeddings exist for notes yet" sentence at L543.
 
-### Docs
+e2e: one test appended to `e2e/screens.spec.ts` after the existing brain
+test: type 25 characters into the capture box, expect the Related heading;
+save; expect the note as the first row. Under 40 lines.
 
-- `modules/brain/README.md`: a section "Capture first" and "Hubs are
-  groupings" in the existing voice.
-- `docs/SPEC.md` Second Brain: amend 2026-09-14 with the decisions above.
-- `docs/STATUS.md`: replace the stale "no embeddings exist for notes yet"
-  line.
-- `docs/SETUP-INTEGRATIONS.md`: nothing new (Voyage and Anthropic already
-  documented).
+Exit: `pnpm test`, `pnpm lint`, `pnpm typecheck`, `pnpm test:e2e` (the two
+brain tests), `ui-verifier` once at 402 and 1440 on `/brain` against the
+screen 08 artboard, `spec-reviewer` on the staged diff. One PR.
 
-## Out of scope (say so in the PR)
+## Phase 3: files. Complexity medium. Opus. Optional, ship without it.
 
-Per-note summaries, weekly email, hub summaries, Shortcut webhook, vault
-write back, XP for log entries, a graph view, model-proposed hubs.
+`modules/brain/capture.ts` gains `captureFile({ name, type, bytes })`:
+insert the note first (title = file name, kind `note`, body `''`,
+published), `upload('brain', '<noteId>/<name>', bytes, type)`, set
+`file_path`, then one `complete({ model: 'claude-haiku-4-5', purpose:
+'summary', module: 'brain', system: 'Transcribe every word you can read.
+No commentary.', messages: [{ role: 'user', content: [<document or image
+block>] }] })`; document block for `application/pdf`, image block for
+`image/*`; reject anything else and files over 10 MB before upload. Body =
+the text. On `SoftCapExceeded` or `NotConnected` the body is one line,
+"Transcription pending", and `fileUnfiledNightly` also retries notes whose
+`file_path` is set and body is that line (one file per night, so a cap is
+not hit twice). Then `fileByRules` and `embedChanged`.
 
-## Verification
+Test: `captureFile` calls `upload` and `complete` with a document block for
+a PDF and an image block for a PNG (both mocked), stores `file_path`.
 
-1. `pnpm test` green with the four new test files. `pnpm lint`,
-   `pnpm typecheck` via test-runner.
-2. `supabase migration up` on the live local DB (not reset), then
-   `pnpm gen:types`.
-3. `pnpm dev`, then in the browser: create hub "Postgres" with keywords
-   [postgres, pgvector]; capture "pgvector hnsw index notes" as text; the
-   note lands in Postgres via rule (pane shows the chip, by-line "rule");
-   capture a two-line text with no keywords, confirm it goes to Unfiled or a
-   model hub and `core.llm_calls` has one classification row; type a third
-   note mentioning hnsw and see the first note in Related before submitting;
-   attach a one-page PDF and confirm body text and `core.llm_calls` summary
-   row; paste a URL and confirm it lands in the inbox as before.
-4. `ui-verifier` at 402 and 1440 on the Second Brain screen against the
-   screen 08 artboard: band, capture box, pane cells.
-5. Call `brain.capture` and `brain.hub_write` over `/api/mcp` with the bearer
-   token; `brain.get_digest` shows `unfiled`.
-6. `spec-reviewer` on the staged diff before the PR. PR titled
-   "feat: second brain capture, hubs and related notes".
+UI: attach button in `CaptureBox.tsx` (`accept="image/*,application/pdf"`),
+`captureFile` action over `FormData`. `NotePane.tsx`: for a note with
+`file_path`, a "File" link above the body from `signedUrl`.
 
-## Ceilings to mark in code (`ponytail:` comments)
+Exit: `pnpm test`, `pnpm lint`, `pnpm typecheck`; attach a one page PDF and
+a photo locally, confirm body text and two rows in `core.llm_calls` with
+`purpose = 'summary'`. `ui-verifier` on `/brain` at 402 and 1440. One PR.
 
-- Voyage 3 RPM: related-for-draft is once per pause; if it 429s, show the
-  text-only hits and say so.
-- Filing calls Haiku once per unfiled capture; a 200-note vault pull could
-  make 200 calls. Batch in `file_unfiled` (one call, many notes) if that day
-  comes.
+## Ceilings (`ponytail:` comments in code)
+
+- `hubs.ts fileUnfiledNightly`: 50 notes per call; page it if Unfiled ever
+  holds more.
+- `CaptureBox.tsx`: related fires once per pause against a 3 RPM Voyage
+  ceiling; text-only hits when it 429s.
+- `capture.ts captureFile`: 10 MB and one call per file; chunk PDFs by page
+  if a large one ever matters.
+
+## Build instructions
+
+Run from `~/VsCode/pos`. One Claude Code session per phase, Opus, effort at
+the default. Do not open a session for Phase 3 unless files are wanted now.
+
+Before each phase:
+
+```
+git switch brain-capture && git pull --ff-only 2>/dev/null; git status --short
+```
+
+Phase 1 session. Paste as the first message:
+
+```
+Implement Phase 1 of docs/plans/brain-capture.md. Branch brain-capture is
+checked out; branch phase-1 from it as brain-capture-1. Read the plan, then
+modules/brain/README.md, modules/brain/manifest.ts, modules/brain/data.ts,
+modules/brain/ingest.test.ts (for the db mock), modules/skills/classify.ts,
+modules/ideas/data.ts lines 60 to 110, and core/search.ts lines 300 to 350.
+Do not read anything else unless a step needs it. Delegate the migration,
+shape of hubs.ts and related.ts, and the digest change to quick-builder with
+the plan text as the brief; write hubs.test.ts and capture.test.ts yourself
+before their code. Do not touch modules/brain/ui. Run pnpm test on the two
+new files yourself; send the full suite, lint and typecheck to test-runner
+once at the end. Apply the migration with supabase migration up, never
+reset, then pnpm gen:types. Commit after each file pair with a conventional
+message. Open a PR with gh titled "feat: second brain hubs and capture
+logic", body lists what Phase 2 and 3 still owe. Do not merge. Stop at the
+PR.
+```
+
+Merge the PR yourself after CI is green. Then Phase 2 session, first
+message:
+
+```
+Implement Phase 2 of docs/plans/brain-capture.md on a branch
+brain-capture-2 from origin/main (Phase 1 is merged). Read the plan, then
+modules/brain/ui/Brain.tsx, NotePane.tsx, IngestDrawer.tsx, actions.ts,
+docs/plans/brain-fidelity.md, and e2e/screens.spec.ts lines 1904 to 1940.
+Nothing else unless a step needs it. Build CaptureBox.tsx, the hubs band
+group, the two NotePane cells and the four actions exactly as the plan
+describes; no attach button. Add the one e2e test. Update the README, SPEC
+amendment and the STATUS line. Send test, lint, typecheck and test:e2e to
+test-runner once at the end; run ui-verifier once on /brain at 402 and 1440
+against the screen 08 artboard and fix Must fix items only; then
+spec-reviewer on the staged diff. Commit per component. PR titled "feat:
+second brain capture box, hubs and related notes". Do not merge. Stop at
+the PR.
+```
+
+Phase 3 session, only if wanted, first message:
+
+```
+Implement Phase 3 of docs/plans/brain-capture.md on brain-capture-3 from
+origin/main. Read the plan, modules/brain/capture.ts and its test,
+modules/brain/ui/CaptureBox.tsx, NotePane.tsx, core/files.ts and core/llm.ts
+lines 86 to 112. Write the captureFile test first. Send the suite, lint and
+typecheck to test-runner once; ui-verifier once on /brain at 402 and 1440.
+PR titled "feat: second brain file capture with transcription". Do not
+merge. Stop at the PR.
+```
+
+What each session must not do: run `supabase db reset`; add a dependency;
+start agents beyond quick-builder, test-runner, ui-verifier and
+spec-reviewer; build anything from the Out of scope list.
