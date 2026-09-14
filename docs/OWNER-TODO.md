@@ -152,8 +152,14 @@ Two sources are built and live in production (PRs #17, #18, #19, all
       was created with, so if that is not your owner email, verify a domain
       first or this makes delivery worse rather than better. Leave it alone
       until then; the code path works on Supabase's mailer, just slowly.
-- [ ] **20. Sign in email template**, 2 minutes, required before the code
-      screen has a code to check. Supabase dashboard > Authentication > Email
+- [ ] **20. Sign in email template and OTP length**, 4 minutes, required
+      before the code screen has a code to check. Set Authentication >
+      Providers > Email > **Email OTP Length** to 6, matching `otp_expiry` and
+      `otp_length` in `supabase/config.toml`. The project shipped set to 8
+      while local was 6, and the login screen assumed 6 and silently truncated
+      every code; the screen no longer assumes a length, but local and
+      production disagreeing is how that got to production in the first place.
+      Then the template: Supabase dashboard > Authentication > Email
       Templates > Magic Link: paste the contents of
       `supabase/templates/magic_link.html`, subject "Your POS sign-in code".
       Without `{{ .Token }}` in the template Supabase sends a link alone and

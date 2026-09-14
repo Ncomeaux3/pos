@@ -717,7 +717,7 @@ test('login, code sent', async ({ page, context }) => {
   await expect(page.getByText(/expires/i)).toBeVisible()
   // The field a phone actually types into, and the autofill hint that makes
   // iOS offer the code above the keyboard rather than sending them to Mail.
-  const code = page.getByLabel(/six digit code/i)
+  const code = page.getByLabel(/sign in code/i)
   await expect(code).toBeVisible()
   await expect(code).toHaveAttribute('autocomplete', 'one-time-code')
   await expect(code).toHaveAttribute('inputmode', 'numeric')
@@ -725,20 +725,25 @@ test('login, code sent', async ({ page, context }) => {
   await shoot(page, 'login-sent')
 })
 
-test('the code field keeps only digits and submits itself on the sixth', async ({ page, context }) => {
+test('the code field keeps every digit of a code longer than six', async ({ page, context }) => {
   await context.clearCookies()
   await page.goto('/login?sent=1&email=owner%40example.com')
 
-  const code = page.getByLabel(/six digit code/i)
-  // What a paste out of a mail app looks like. Five digits is not a code yet,
-  // so nothing is submitted and the punctuation is gone.
-  await code.pressSequentially('48-39 2')
-  await expect(code).toHaveValue('48392')
-  await expect(page).toHaveURL(/sent=1/)
+  const code = page.getByLabel(/sign in code/i)
+  // Email OTP Length is a Supabase project setting from 6 to 10. A field that
+  // stops at 6 silently drops the end of an 8 digit code and then reports the
+  // owner's correct code as wrong, which is what shipped on 2026-09-14.
+  await code.pressSequentially('4839-20 17')
+  await expect(code).toHaveValue('48392017')
 
-  // The sixth digit submits. The code is not a real one, so the screen comes
-  // back with the field marked rather than signing anyone in.
-  await code.pressSequentially('0')
+  // Nothing is submitted on its own: the length that would trigger it is a
+  // guess this app does not get to make.
+  await expect(page).toHaveURL(/sent=1/)
+  await expect(page.getByText(/wrong or expired/i)).toHaveCount(0)
+
+  // The code is not a real one, so the screen comes back with the field marked
+  // rather than signing anyone in.
+  await page.getByRole('button', { name: /^sign in$/i }).click()
   await expect(page.getByText(/wrong or expired/i)).toBeVisible()
 })
 

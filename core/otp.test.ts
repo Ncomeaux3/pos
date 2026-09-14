@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CODE_LENGTH, isCompleteCode, normalizeCode, verifyWithAnyType } from './otp'
+import { MAX_CODE_LENGTH, isCompleteCode, normalizeCode, verifyWithAnyType } from './otp'
 
 describe('normalizeCode', () => {
   it('keeps a clean code as it is', () => {
@@ -15,9 +15,19 @@ describe('normalizeCode', () => {
     expect(normalizeCode('Code: 483920.')).toBe('483920')
   })
 
-  it('never returns more than the code length, so a paste of the whole email cannot become a guess', () => {
-    expect(normalizeCode('4839201234567890')).toHaveLength(CODE_LENGTH)
-    expect(normalizeCode('4839201234567890')).toBe('483920')
+  // The bug this exists for: Email OTP Length is a Supabase project setting
+  // from 6 to 10, and this project issues 8. A build that capped at 6 threw the
+  // last two digits away before anything was submitted and then told the owner
+  // their correct code was wrong.
+  it('keeps every digit of a code longer than six', () => {
+    expect(normalizeCode('48392017')).toBe('48392017')
+    expect(normalizeCode('4839 2017')).toBe('48392017')
+    expect(normalizeCode('4839201234')).toBe('4839201234')
+  })
+
+  it('caps at the longest code Supabase can issue, so a paste of the whole email cannot become a guess', () => {
+    expect(normalizeCode('4839201234567890')).toHaveLength(MAX_CODE_LENGTH)
+    expect(normalizeCode('4839201234567890')).toBe('4839201234')
   })
 
   it('returns nothing when there are no digits at all', () => {
@@ -28,17 +38,18 @@ describe('normalizeCode', () => {
 })
 
 describe('isCompleteCode', () => {
-  it('is true only at exactly six digits', () => {
+  it('is true from six digits, the shortest Supabase issues', () => {
     expect(isCompleteCode('483920')).toBe(true)
     expect(isCompleteCode('483 920')).toBe(true)
     expect(isCompleteCode('48392')).toBe(false)
     expect(isCompleteCode('')).toBe(false)
   })
 
-  // The field submits itself on the sixth digit. A seventh keystroke must not
-  // arm it a second time with a code the owner is still editing.
-  it('is true for a longer run of digits, which the field has already truncated', () => {
-    expect(isCompleteCode('4839201')).toBe(true)
+  // Length is Supabase's to choose. Anything at or above the shortest it can
+  // issue is worth sending; Supabase is what says whether it is right.
+  it('is true for the longer codes a project can be configured to send', () => {
+    expect(isCompleteCode('48392017')).toBe(true)
+    expect(isCompleteCode('4839201234')).toBe(true)
   })
 })
 

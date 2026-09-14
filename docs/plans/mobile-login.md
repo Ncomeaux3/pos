@@ -102,3 +102,27 @@ falls back rather than an install locked out.
 - `pnpm lint`, `pnpm typecheck`, `pnpm test`.
 - The passkey ceremony cannot be tested headlessly without a virtual
   authenticator, and is not covered. It is owner-verified on the phone.
+
+## Corrected again, 2026-09-14 evening
+
+The code screen shipped with the length written into it: a six digit cap in
+`normalizeCode`, `maxLength={6}` on the field, and a submit fired on the sixth
+digit. Email OTP Length is a Supabase project setting from 6 to 10, and this
+project issues 8. The field threw the last two digits away before anything was
+submitted and the screen reported the owner's correct code as wrong.
+
+The length is Supabase's to choose. `normalizeCode` now caps at 10, the
+longest it can issue, so a real code is never cut short; `isCompleteCode` asks
+for at least 6 rather than exactly 6; and the field no longer submits itself,
+because the length that would trigger it is the guess that caused this. The
+owner presses the button and Supabase decides whether the code is right.
+
+The project setting and `supabase/config.toml` disagreed, which is what let it
+through: local was 6 and the hosted project was 8, so nothing local could have
+reproduced it. OWNER-TODO 20 now says to set them the same.
+
+This also weakens the case for the verification type change in the commit
+before it. Truncation alone explains every refusal, so `type: 'email'` may
+never have been wrong. The fallback stays because it costs one extra call only
+when the first type is refused, and it means one undocumented GoTrue internal
+cannot lock the owner out, but it should not be read as a diagnosed bug.

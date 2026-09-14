@@ -1,20 +1,22 @@
 'use client'
 
 import { useState } from 'react'
-import { normalizeCode } from '@/core/otp'
+import { MAX_CODE_LENGTH, MIN_CODE_LENGTH, normalizeCode } from '@/core/otp'
 
 /**
- * The six digit field. One input rather than six boxes: six boxes need focus
- * management, paste splitting and backspace handling to behave, and a phone
- * keyboard fills a single field correctly without any of it.
+ * The code field. One input rather than a box per digit: boxes need focus
+ * management, paste splitting and backspace handling to behave, a phone
+ * keyboard fills a single field correctly without any of it, and a row of six
+ * boxes is a build that has decided how long the code is.
  *
  * autoComplete one-time-code is what makes iOS offer the code above the
  * keyboard instead of making the owner switch to Mail and back.
  *
- * It submits itself on the sixth digit. The code is the whole form, so a Sign
- * in button pressed after it is a second tap for nothing. The button stays for
- * the keyboard, for a paste that does not fire the same events, and for anyone
- * the autosubmit misses.
+ * It does not submit itself. The first build submitted on the sixth digit,
+ * which silently truncated the 8 digit code this project actually issues and
+ * reported the owner's correct code as wrong. Submitting on a length this app
+ * has guessed is the bug, so the owner presses the button and Supabase decides
+ * whether the code is right.
  */
 export function CodeInput({ invalid }: { invalid: boolean }) {
   const [code, setCode] = useState('')
@@ -29,19 +31,17 @@ export function CodeInput({ invalid }: { invalid: boolean }) {
       inputMode="numeric"
       autoComplete="one-time-code"
       pattern="[0-9]*"
-      maxLength={6}
+      // The longest Supabase can issue, so a real code is never cut short.
+      maxLength={MAX_CODE_LENGTH}
+      minLength={MIN_CODE_LENGTH}
       autoFocus
       required
       placeholder="000000"
       aria-invalid={invalid || undefined}
       value={code}
-      onChange={(event) => {
-        const next = normalizeCode(event.target.value)
-        setCode(next)
-        if (next.length === 6) event.target.form?.requestSubmit()
-      }}
+      onChange={(event) => setCode(normalizeCode(event.target.value))}
       className={
-        'num w-full rounded-md border bg-bg-deep px-3 py-3 text-center text-[26px] tracking-[0.34em] ' +
+        'num w-full rounded-md border bg-bg-deep px-3 py-3 text-center text-[26px] tracking-[0.28em] ' +
         'text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand ' +
         (invalid ? 'border-bad' : 'border-rule-2')
       }

@@ -36,7 +36,7 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
               <Eyebrow dot="ok">Code sent</Eyebrow>
               <h1 className="t-headline text-ink">Enter the code</h1>
               <p className="t-caption text-ink-3">
-                If that address owns this install, a six digit code is on its way
+                If that address owns this install, a sign in code is on its way
                 {email && (
                   <>
                     {' '}
@@ -55,12 +55,12 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
             <form action={verifyCode} className="space-y-3">
               <input type="hidden" name="email" value={email} />
               <label htmlFor="code" className="label block text-[10px] tracking-[0.1em] text-ink-3">
-                Six digit code
+                Sign in code
               </label>
               <CodeInput invalid={error === 'code'} />
               {error === 'code' && (
                 <p className="label text-[10px] tracking-[0.1em] text-bad">
-                  That code is wrong or expired. Ask for another.
+                  That code is wrong or expired. Enter all of it, or ask for another.
                 </p>
               )}
               <div className="flex justify-end pt-1">
@@ -105,7 +105,7 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
                 Personal Operating System
               </h1>
               <p className="t-caption text-ink-3">
-                One owner, one login. Use the passkey on this device, or have a six digit code sent
+                One owner, one login. Use the passkey on this device, or have a sign in code sent
                 to the owner email.
               </p>
             </div>
