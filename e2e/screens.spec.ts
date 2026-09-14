@@ -1536,7 +1536,8 @@ test('finance, the detector found the subscriptions and left the rest alone', as
   // in the Upcoming card, which the detector also feeds.
   const mobile = (page.viewportSize()?.width ?? 0) < 768
   await page.goto(mobile ? '/finance?tab=subscriptions' : '/finance')
-  const scope = mobile ? page : page.getByTestId('finance-upcoming')
+  // The desktop cards are in the phone's DOM too, hidden, so scope to the pane.
+  const scope = mobile ? page.locator('[data-segments-pane]') : page.getByTestId('finance-upcoming')
 
   // Seeded recurring merchants, found by detectRecurring rather than listed by
   // the fixture.
@@ -1604,6 +1605,22 @@ test('finance, the limits drawer holds edits until Done', async ({ page }) => {
   await expect(page.getByText('No changes')).toBeVisible()
   await page.getByRole('button', { name: 'Done' }).click()
   await expect(page).not.toHaveURL(/limits=1/)
+})
+
+test('finance segments swipe from overview to accounts and the URL follows', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Touch gestures are a phone thing')
+
+  await page.goto('/finance')
+  await expect(page.getByRole('tab', { name: /Overview/ })).toHaveAttribute('aria-selected', 'true')
+
+  const pane = page.locator('[data-segments-pane]')
+  const box = (await pane.boundingBox())!
+  const y = box.y + 40
+  await pane.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: box.x + box.width - 20, clientY: y })
+  await pane.dispatchEvent('pointerup', { pointerType: 'touch', clientX: box.x + 20, clientY: y })
+
+  await expect(page.getByRole('tab', { name: /Accounts/ })).toHaveAttribute('aria-selected', 'true')
+  await expect(page).toHaveURL(/tab=accounts/)
 })
 
 test('onboarding, six steps that write as they go', async ({ page }) => {
