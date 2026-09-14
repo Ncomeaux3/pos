@@ -119,6 +119,8 @@ Out of scope: tile internals.
 
 Goal: one section per screen, no truncation, sheets from rows.
 
+Done 2026-09-14. Changes from the text below: the desktop dashboard is CSS-gated (`hidden md:block`) now that `useDesktop` is gone, so it sits hidden in the phone's DOM and a mobile test scopes to the segment pane; `KpiStrip` and `NetWorthCard` are local components because the phone Overview and the desktop share them; the same `SyncBand` element fills `status` and `phoneAction`, its reading already hidden below md; `DataTable` is untouched, since Finance no longer draws one below md (Transactions is its own grid, already name over meta with the amount right, and only needed to wrap instead of truncate); the phone Budgets segment carries Edit limits, which was reachable before only because the phone rendered the desktop grid. See decisions/log.md.
+
 Change
 - `modules/finance/ui/Finance.tsx`: `TabBar` at 227 becomes `Segments` with the pane wrapping the five `tab ===` blocks (244, 485, 528, 560, 594). Overview on the phone: the two-up KPIs, sparkline, then three summary rows (Accounts, Budgets, Subscriptions) that switch segment. Account and budget rows open `Overlay` through `push: true`. Remove `useDesktop`.
 - `modules/finance/ui/FinancePage.tsx:112`: `phoneAction` is the Sync button alone; provider and time stay in the desktop band.

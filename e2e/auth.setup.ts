@@ -13,15 +13,22 @@ const STATE = 'e2e/.auth/owner.json'
 // signing in at all.
 const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:3000'
 
-type MailpitSummary = { ID: string; Created: string }
+type MailpitSummary = { ID: string }
 
-async function newestLinkFor(email: string, after: number): Promise<string | null> {
+async function messagesFor(email: string): Promise<MailpitSummary[]> {
   const list = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:${email}`)}&limit=5`)
-  if (!list.ok) return null
-
+  if (!list.ok) return []
   const { messages = [] } = (await list.json()) as { messages?: MailpitSummary[] }
-  for (const m of messages) {
-    if (new Date(m.Created).getTime() < after) continue
+  return messages
+}
+
+// New means an ID not seen before the form was sent, not a Created time after
+// it: Mailpit stamps mail with the Docker VM's clock, which drifts behind the
+// laptop's under load (7 s measured), and a time filter then rejects every
+// fresh message as old.
+async function newestLinkFor(email: string, seen: Set<string>): Promise<string | null> {
+  for (const m of await messagesFor(email)) {
+    if (seen.has(m.ID)) continue
 
     const body = await fetch(`${MAILPIT}/api/v1/message/${m.ID}`)
     if (!body.ok) continue
@@ -38,7 +45,7 @@ setup('sign in as the owner', async ({ page }) => {
   expect(email, 'OWNER_EMAIL must be set in .env').toBeTruthy()
 
   // Anything already in the mailbox is from an earlier run.
-  const sentAfter = Date.now() - 1000
+  const seen = new Set((await messagesFor(email!)).map((m) => m.ID))
 
   await page.goto('/login')
   await page.getByLabel(/owner email/i).fill(email!)
@@ -50,7 +57,7 @@ setup('sign in as the owner', async ({ page }) => {
   // a run once failed here with the message already in Mailpit a moment later.
   let link: string | null = null
   for (let i = 0; i < 120 && !link; i++) {
-    link = await newestLinkFor(email!, sentAfter)
+    link = await newestLinkFor(email!, seen)
     if (!link) await page.waitForTimeout(500)
   }
   expect(link, 'no magic link arrived in Mailpit within 60s').toBeTruthy()
