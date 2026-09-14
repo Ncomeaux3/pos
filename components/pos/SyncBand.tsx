@@ -47,7 +47,12 @@ export function SyncBand({
 
   return (
     <>
-      <Eyebrow dot={!connected ? 'idle' : status === 'failed' ? 'bad' : at ? 'ok' : 'idle'}>
+      {/* The reading is desktop only: passed as a phoneAction, the band is
+        * the button alone, which is all the phone's right slot has room for. */}
+      <Eyebrow
+        className="hidden md:inline-flex"
+        dot={!connected ? 'idle' : status === 'failed' ? 'bad' : at ? 'ok' : 'idle'}
+      >
         {provider ?? 'Manual entry'}
         {' · '}
         {!connected

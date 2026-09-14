@@ -2,6 +2,7 @@
 
 import { useTransition } from 'react'
 import { ActionButton, BandSearch, SearchButton, useToast } from '@/components/pos'
+import { BackControl } from '@/components/pos/BackControl'
 import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
 import { deleteTrip, setTripStatus, type ActionResult } from './actions'
@@ -150,6 +151,7 @@ export function Travel({ data }: { data: TravelData }) {
   return (
     <>
       <header className="-mx-[18px] -mt-[18px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 md:-mx-7 md:-mt-7 md:h-14 md:flex-nowrap md:px-7 md:py-0">
+        <BackControl />
         <span className="eyebrow shrink-0 whitespace-nowrap text-ink-3">
           Travel <span className="text-ink-4">/</span> Trips
         </span>

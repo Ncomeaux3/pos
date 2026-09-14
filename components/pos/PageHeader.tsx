@@ -1,10 +1,16 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { BandSearch, SearchButton } from './BandSearch'
+import { BackControl } from './BackControl'
+import { BandSearch } from './BandSearch'
 import { Eyebrow, type DotTone } from './text'
 
 /**
- * The two bands every prototype opens with.
+ * The two bands every prototype opens with, and the phone's one row.
+ *
+ * Below md there is no band: a 44px back control when the screen is not a tab
+ * root, the title, and at most one action on the right. Breadcrumb, search,
+ * lede and status are the desktop's; the phone reaches search through Browse
+ * and the palette.
  *
  * Band one is the thin strip across the top of the column: a breadcrumb
  * eyebrow on the left, the search box in the middle, and the module's status
@@ -24,6 +30,8 @@ export function PageHeader({
   lede,
   actions,
   status,
+  /** The phone's one action, top right. Falls back to `actions`. */
+  phoneAction,
   hideTitle = false,
   search = true,
   className,
@@ -37,6 +45,7 @@ export function PageHeader({
   actions?: ReactNode
   /** Sync state or a count, right of band one. Falls back to nothing. */
   status?: ReactNode
+  phoneAction?: ReactNode
   /**
    * The band alone. Tasks and Skill Tree draw no title block; the h1 stays for
    * the reader and the search placeholder, off screen.
@@ -47,38 +56,44 @@ export function PageHeader({
   className?: string
 }) {
   return (
-    <div className={cn(!hideTitle && 'space-y-5', className)}>
-      {/* The negative margins cancel `main`'s padding, which is 18px on a
-        * phone and 28 from md up. */}
-      <div className="-mx-[18px] -mt-[18px] flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-rule px-[18px] py-3.5 md:-mx-7 md:-mt-7 md:h-14 md:flex-nowrap md:px-7 md:py-0">
+    <div className={cn(!hideTitle && 'space-y-3 md:space-y-5', className)}>
+      {/* The phone row. The h1 is this one below md and the band's from md up;
+        * a screen has one heading either way. */}
+      <div className="flex min-h-11 items-center gap-2 md:hidden">
+        <BackControl />
+        <h1 className="min-w-0 flex-1 truncate text-[20px] font-normal leading-none tracking-[-0.03em] text-ink">
+          {title}
+        </h1>
+        {/* One action top right. A module with no phone pass keeps its
+          * desktop buttons here, so nothing it can do on a laptop is out of
+          * reach on the phone. */}
+        {(phoneAction ?? actions) && (
+          <div className="ml-auto flex shrink-0 items-center gap-2">{phoneAction ?? actions}</div>
+        )}
+      </div>
+
+      {/* The negative margins cancel `main`'s padding, 28px from md up. */}
+      <div className="-mx-7 -mt-7 hidden h-14 items-center gap-x-4 border-b border-rule px-7 md:flex">
         <Eyebrow dot={dot}>{eyebrow}</Eyebrow>
-        {/* A full width search field is a desktop affordance: on the phone
-          * artboard search is a 44px button in this band that opens a sheet.
-          * The button asks the palette for itself through the same event the
-          * field does, so there is still one query in one place. */}
-        {search && <SearchButton className="ml-auto md:hidden" />}
         {search && (
           <BandSearch
-            className="order-last hidden w-full md:order-none md:ml-auto md:flex"
+            className="ml-auto"
             placeholder={typeof title === 'string' ? `Search ${title.toLowerCase()}` : undefined}
           />
         )}
-        {status && <div className={cn('flex items-center gap-3 md:order-last', !search && 'ml-auto')}>{status}</div>}
+        {status && <div className={cn('flex items-center gap-3', !search && 'ml-auto')}>{status}</div>}
       </div>
 
       {hideTitle ? (
-        <h1 className="sr-only">{title}</h1>
+        <h1 className="sr-only hidden md:block">{title}</h1>
       ) : (
-      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+      <header className="hidden flex-wrap items-end justify-between gap-x-6 gap-y-4 md:flex">
         <div className="min-w-0 space-y-2">
           <h1 className="t-headline text-ink">{title}</h1>
-          {/* Hidden on a phone. None of the four phone artboards carries a
-            * description under its title, and at 402px this paragraph was
-            * costing most of a screen before any content. */}
-          {lede && <p className="t-lede hidden max-w-[78ch] text-ink-3 md:block">{lede}</p>}
+          {lede && <p className="t-lede max-w-[78ch] text-ink-3">{lede}</p>}
         </div>
         {/* ml-auto so the actions stay right aligned even after they wrap onto
-            their own line, which they do as soon as the lede is long. */}
+          * their own line, which they do as soon as the lede is long. */}
         {actions && <div className="ml-auto flex flex-wrap items-center gap-2">{actions}</div>}
       </header>
       )}

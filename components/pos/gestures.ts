@@ -1,13 +1,14 @@
 'use client'
 
 import { useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react'
-import { fromEdge, isLongPress, LONG_PRESS_MS, swipeOf } from '@/core/gestures'
+import { edgeBack, fromEdge, isLongPress, LONG_PRESS_MS, swipeOf } from '@/core/gestures'
 
 // The pointer half of the gestures. The decision about what counts as a swipe
 // lives in core/gestures.ts, where it can be tested without a browser.
 //
-// Four gestures: swipe between tabs, swipe a task to complete it, pull down to
-// sync, and long press a dashboard tile to arrange.
+// Five gestures: swipe between segments, swipe a task to complete it, pull down
+// to refresh, long press a dashboard tile to arrange, and drag from the left
+// edge to go back.
 
 export type SwipeHandlers = {
   onPointerDown: (event: ReactPointerEvent) => void
@@ -121,4 +122,40 @@ export function useLongPress(onFire: () => void): LongPressHandlers {
     onPointerCancel: clear,
     onPointerLeave: clear,
   }
+}
+
+/**
+ * Swipe-back for the whole window: a touch drag from the left edge that
+ * travels far enough calls `onBack` when it lifts.
+ *
+ * Listens on the window rather than an element because the edge is the
+ * screen's, not any one component's. `useSwipe` refuses edge starts, so the
+ * two never fire for the same drag.
+ */
+export function useEdgeBack(onBack: (() => void) | null) {
+  useEffect(() => {
+    if (!onBack) return
+    let start: { x: number; y: number } | null = null
+
+    const down = (event: PointerEvent) => {
+      start = event.pointerType === 'touch' && fromEdge(event.clientX) ? { x: event.clientX, y: event.clientY } : null
+    }
+    const up = (event: PointerEvent) => {
+      const from = start
+      start = null
+      if (from && edgeBack(from.x, event.clientX - from.x, event.clientY - from.y)) onBack()
+    }
+    const cancel = () => {
+      start = null
+    }
+
+    window.addEventListener('pointerdown', down)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', cancel)
+    return () => {
+      window.removeEventListener('pointerdown', down)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', cancel)
+    }
+  }, [onBack])
 }

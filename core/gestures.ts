@@ -70,3 +70,16 @@ export const EDGE_PX = 20
 export function fromEdge(x: number): boolean {
   return x <= EDGE_PX
 }
+
+/** How far a drag from the edge travels before it is a request to go back. */
+export const EDGE_BACK_PX = 90
+
+/**
+ * Whether a drag that started at `startX` and travelled (dx, dy) is swipe-back.
+ *
+ * From the edge strip, mostly horizontal, and past 90px: a shorter drag is a
+ * finger that brushed the edge on its way to something else.
+ */
+export function edgeBack(startX: number, dx: number, dy: number): boolean {
+  return fromEdge(startX) && swipeOf(dx, dy, { minDistance: EDGE_BACK_PX }) === 'right'
+}

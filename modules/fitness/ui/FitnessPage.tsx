@@ -149,6 +149,17 @@ export default async function FitnessPage() {
             onSync={syncFitness}
           />
         }
+        // The same band as the phone's one action: the pull is the thing to
+        // do from a phone after a run.
+        phoneAction={
+          <SyncBand
+            provider={sync.provider}
+            at={sync.at}
+            status={sync.status}
+            connected={sync.connected}
+            onSync={syncFitness}
+          />
+        }
         // The setup state is the card alone: its own h1 is inside it.
         hideTitle={state !== 'live'}
         title="Fitness"
