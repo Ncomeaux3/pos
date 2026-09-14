@@ -13,6 +13,13 @@ query only when words find nothing, so an old note comes back at the moment
 a new one is about the same thing. That is the one resurfacing mechanism;
 there is no weekly email and no per-note summary.
 
+A file (PDF, JPEG, PNG, GIF or WebP, up to 10 MB) is a note with `file_path`
+set: the name is the title and one Haiku call transcribes it into the body,
+so it files and searches like typed text. The bytes sit in the private
+`brain` bucket behind a signed URL. When the spend cap or a missing key stops
+the call the body reads "Transcription pending" and the nightly
+`file_unfiled` job retries one such file a night.
+
 ## Hubs are groupings
 
 A hub is a name and keywords, made in the band. A note sits in as many hubs
