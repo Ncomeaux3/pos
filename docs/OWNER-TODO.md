@@ -114,67 +114,53 @@ Two sources are built and live in production (PRs #17, #18, #19, all
 - [ ] **16. Enable push on the phone.** Add POS to the Home Screen, open it
       from there, Settings > Notifications > Devices, enable. First use of
       the VAPID pair you generated for step 5.
-- [ ] **17. Digest email recipient.** Resend without a verified domain
-      delivers only to the address the Resend account was created with. If
-      that is not your owner email, set Settings > Notifications > digest
-      email to the Resend address. No digest has been sent yet: the
-      orchestrator queues one only when there is an alert, and the database is
-      empty. The first alert proves delivery; a refused send shows as a failed
-      `notify` job in Agent Log.
-- [ ] **18. `DATABASE_URL` to transaction mode**, 2 minutes. Vercel > pos >
-      Settings > Environment Variables > `DATABASE_URL` (Production): change
-      `:5432` to `:6543`, nothing else, save, then Deployments > Redeploy the
-      latest. Step 6 chose the session pooler, and session mode caps clients at
-      the dashboard Pool Size of 15; four warm functions at 4 connections each
-      hit it on 2026-09-14 and every module page 500ed with `EMAXCONNSESSION`
-      (31 in 7 days, Travel four times in a row at 08:50 CDT). Leave
-      `BACKUP_DATABASE_URL` and the laptop's `.env.production` on 5432:
-      pg_dump and the setup scripts are one long session each. Tell me when it
-      is redeployed and I will check the runtime errors table is quiet.
-
-- [ ] **19. Sign in email through Resend**, partly done 2026-09-14 and still
-      failing on one field. Custom SMTP is on and pointed at Resend, but the
-      **Sender email address** is a `@gmail.com` address, so Resend refuses
-      every send with `550 "The gmail.com domain is not verified"` and
-      `/auth/v1/otp` returns 500. Either set the sender to
-      `onboarding@resend.dev`, which needs no verification but only delivers to
-      the address the Resend account was created with, or verify `cmxlogic.com`
-      at https://resend.com/domains and send from an address on it. The second
-      also resolves step 17. Original note follows., 5 minutes, fixes slow and missing
-      mail. Supabase's built-in SMTP is rate limited and shares sender
-      reputation with every other project on it, which is the third of the
-      three phone login problems. Supabase dashboard > Project Settings >
-      Authentication > SMTP Settings: enable, host `smtp.resend.com`, port
-      `587`, username `resend`, password the Resend API key already in
-      Settings > Connections, sender an address on a domain verified in
-      Resend. The caveat from step 17 applies here too and matters more: an
-      unverified Resend domain delivers only to the address the Resend account
-      was created with, so if that is not your owner email, verify a domain
-      first or this makes delivery worse rather than better. Leave it alone
-      until then; the code path works on Supabase's mailer, just slowly.
-- [ ] **20. Sign in email template and OTP length**, 4 minutes, required
-      before the code screen has a code to check. Set Authentication >
-      Providers > Email > **Email OTP Length** to 6, matching `otp_expiry` and
-      `otp_length` in `supabase/config.toml`. The project shipped set to 8
-      while local was 6, and the login screen assumed 6 and silently truncated
-      every code; the screen no longer assumes a length, but local and
-      production disagreeing is how that got to production in the first place.
-      Then the template: Supabase dashboard > Authentication > Email
-      Templates > Magic Link: paste the contents of
-      `supabase/templates/magic_link.html`, subject "Your POS sign-in code".
-      Without `{{ .Token }}` in the template Supabase sends a link alone and
-      the six digit field can never be satisfied. The local stack already has
-      it through `supabase/config.toml`.
-- [ ] **21. Turn on passkeys**, 3 minutes, and not before the custom domain is
-      live. Supabase dashboard > Authentication > Passkeys: enable, Relying
-      Party Display Name `POS`, Relying Party ID the bare domain with no
-      scheme or path, Relying Party Origins the `https://` origin. A passkey
-      is bound to the RP ID it was created against, so enrolling against
-      `pos-gilt-rho.vercel.app` and then moving to a custom domain means every
-      passkey stops working and each one is added again. Sign in with the code
-      until the domain is settled, then enable this and add one from Settings
-      > General > Passkeys. Supabase calls the passkey API experimental; if it
-      breaks, the card says passkeys are unavailable and the code still works.
+- [x] **17. Digest email recipient.** Moot, settled 2026-09-14. Everything at
+      `cmxlogic.com` forwards to `nicholascomeaux00@gmail.com`, which is also
+      `OWNER_EMAIL` and the address the Resend account was created with. So
+      Resend's "delivers only to the signup address" limit costs nothing:
+      there is no second address to reach. The `digest_email` setting already
+      points there. Verifying a domain in Resend buys cosmetics and a little
+      deliverability, nothing functional.
+- [x] **18. `DATABASE_URL` to transaction mode.** Done 2026-09-14. Session
+      mode caps clients at the dashboard Pool Size of 15, and four warm
+      functions at 4 connections each hit it, so every module page 500ed with
+      `EMAXCONNSESSION` (31 in 7 days). Production moved to the transaction
+      pooler on 6543. Confirmed from Vercel: zero runtime errors in the three
+      hours after, against nine before. `BACKUP_DATABASE_URL` and the laptop's
+      `.env.production` stay on 5432, because pg_dump and the setup scripts are
+      one long session each.
+- [x] **19. Sign in email through Resend.** Done 2026-09-14. Supabase custom
+      SMTP through `smtp.resend.com`, sender `onboarding@resend.dev`. The first
+      attempt set the sender to a `@gmail.com` address and Resend refused every
+      send with `550 "The gmail.com domain is not verified"`, which surfaced as
+      `/auth/v1/otp` returning 500 and no email at all. Delivery proved by a
+      successful sign in at 19:01 UTC.
+      Worth revisiting only if codes start landing in spam:
+      `onboarding@resend.dev` is Resend's shared sandbox sender, so its
+      reputation is not yours. The fix then is a verified domain in Resend, on
+      a subdomain like `send.cmxlogic.com` rather than the root, so the SPF
+      record cannot collide with the root's existing mail.
+- [x] **20. Sign in email template and OTP length.** Done 2026-09-14. The
+      Magic Link template carries `{{ .Token }}`, so the email holds both a
+      code and a link. Email OTP Length is 6, matching `otp_length` in
+      `supabase/config.toml`; the two disagreeing (8 in production, 6 locally)
+      is how a login screen that assumed 6 truncated every code and reported
+      the owner's correct code as wrong. The screen no longer assumes a length,
+      but keep the two the same.
+- [x] **21. Turn on passkeys.** Done 2026-09-14, against
+      `pos-gilt-rho.vercel.app` rather than waiting for a custom domain, which
+      was the owner's call. Enabled in Authentication > Passkeys with Relying
+      Party Display Name `POS`. One credential registered at 20:04 from Apple
+      Passwords and used to sign in at 20:30, both confirmed in
+      `auth.webauthn_credentials`. It is `backed_up`, so it lives in iCloud
+      Keychain and survives losing the phone rather than being tied to one
+      device.
+      **A passkey is bound to the relying party ID it was created against.**
+      Moving POS to a custom domain makes this one stop working, and it will
+      look like a broken login rather than a config change. When that happens:
+      update the RP ID and origins in the dashboard, delete the old passkey in
+      Settings > General, and add a new one. The emailed code is the way in
+      meanwhile.
 
 ## v2 phase 5: Gmail
 

@@ -18,15 +18,30 @@ polish pass for the items the UI checks flagged (phone Home height, the
 globe legend under the controls at 402, the Calendar grid width, Overlay's
 missing accessible name, the ink-3 and ink-4 contrast tokens) and a phone
 pass per remaining module, which docs/plans/phone-shell.md names as its
-follow-on. Waiting on the owner: OWNER-TODO steps 12 to 21 (Obsidian vault,
-SimpleFIN, the Health readings Shortcut, workouts, push on the phone, the
-digest recipient, and the three login steps: auth mail through Resend, the
-sign in email template, and turning passkeys on once the custom domain is
-live). Laptop notes: `.env` has no VAPID pair, so `pnpm setup`
+follow-on. Waiting on the owner: OWNER-TODO steps 12 to 16 (Obsidian vault,
+SimpleFIN, the Health readings Shortcut, workouts, push on the phone). Steps
+17 to 21 closed on 2026-09-14: the pooler, auth mail through Resend, the sign
+in email template and OTP length, and passkeys, which are enabled and enrolled
+against the Vercel domain. Laptop notes: `.env` has no VAPID pair, so `pnpm setup`
 and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
 ## Done
+
+**Login works on the phone, and by passkey.** docs/plans/mobile-login.md, PRs
+#41, #42, #43 and #45, all merged 2026-09-14. Proven on the live project
+rather than claimed: the emailed code signed the owner in at 19:01
+(`/verify` 200, one call, first type accepted), a passkey registered at 20:04
+and signed in at 20:30, both rows read back from
+`auth.webauthn_credentials`. Three bugs on the way, all in the same fifty
+lines and all from this app deciding things Supabase owns: the verification
+type, and the code length, which production set to 8 while
+`supabase/config.toml` said 6, so the field truncated every code and called
+the owner's correct code wrong. The screen now asserts neither. The app also
+had no sign out at all until #45, which is what made the passkey path
+untestable. Left as it is and worth knowing: the passkey is bound to
+`pos-gilt-rho.vercel.app` and dies silently when a custom domain lands.
+
 
 **Mobile login: a code, then a passkey.** docs/plans/mobile-login.md. The magic
 link failed on the phone three ways at once, and two of them were structural:

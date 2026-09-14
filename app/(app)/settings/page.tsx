@@ -8,6 +8,7 @@ import { clockIn, zoneAbbrIn } from '@/core/today'
 import { SettingsHeader } from './tabs'
 import { CapSlider } from './CapSlider'
 import { Passkeys } from './Passkeys'
+import { Session } from './Session'
 
 async function save(formData: FormData) {
   'use server'
@@ -173,6 +174,8 @@ export default async function SettingsPage({ searchParams }: PageProps<'/setting
         * moment they are clicked, against Supabase Auth rather than
         * core.settings, so they have nothing to do with Save. */}
       <Passkeys />
+
+      <Session email={process.env.OWNER_EMAIL ?? ''} />
     </div>
   )
 }

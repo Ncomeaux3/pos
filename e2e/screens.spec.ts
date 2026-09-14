@@ -676,6 +676,14 @@ test('settings', async ({ page }) => {
   await expect(page.getByRole('slider', { name: 'Cap per month' })).toBeVisible()
   await expect(page.getByText(/0 9 \* \* \* UTC · \d\d:\d\d \w+/)).toBeVisible()
   await expect(page.getByText('Jobs registered')).toBeVisible()
+
+  // The app shipped with no way out at all: no sign out anywhere, which on a
+  // single owner install is easy to miss and impossible to work around, and it
+  // made the passkey path untestable because testing it starts signed out.
+  // Not clicked here: every test in this file shares one stored session, and
+  // signing out revokes the refresh token inside it.
+  await expect(page.getByRole('button', { name: /^sign out$/i })).toBeVisible()
+
   await shoot(page, 'settings')
 })
 
