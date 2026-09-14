@@ -1,9 +1,9 @@
 import { expect, test as setup } from '@playwright/test'
 
-// Logging in for real rather than minting a session: the magic link flow is
-// PKCE, so the code verifier cookie has to be set by the same browser context
-// that asked for the link. Driving the actual form is the only honest way, and
-// it doubles as the login smoke test.
+// Signing in for real rather than minting a session, through the code path
+// because that is what the app leads with now. It is also the path worth
+// guarding: the link broke on the phone precisely because it left the browser
+// that asked for it, and a code typed into this page cannot.
 
 const MAILPIT = process.env.E2E_MAILPIT_URL ?? 'http://127.0.0.1:54324'
 const STATE = 'e2e/.auth/owner.json'
@@ -26,7 +26,7 @@ async function messagesFor(email: string): Promise<MailpitSummary[]> {
 // it: Mailpit stamps mail with the Docker VM's clock, which drifts behind the
 // laptop's under load (7 s measured), and a time filter then rejects every
 // fresh message as old.
-async function newestLinkFor(email: string, seen: Set<string>): Promise<string | null> {
+async function newestCodeFor(email: string, seen: Set<string>): Promise<string | null> {
   for (const m of await messagesFor(email)) {
     if (seen.has(m.ID)) continue
 
@@ -34,8 +34,11 @@ async function newestLinkFor(email: string, seen: Set<string>): Promise<string |
     if (!body.ok) continue
 
     const { Text = '', HTML = '' } = (await body.json()) as { Text?: string; HTML?: string }
-    const match = `${Text}\n${HTML}`.match(/https?:\/\/[^\s"'<>]*(?:\/auth\/v1\/verify|token=)[^\s"'<>]*/)
-    if (match) return match[0].replace(/&amp;/g, '&')
+    // A run of 6 to 10 digits standing alone, because Email OTP Length is a
+    // project setting and this must not assume 6. The link in the same email
+    // holds long hex tokens, so the digit boundaries are what keep them out.
+    const match = `${Text}\n${HTML}`.match(/(?<!\d)\d{6,10}(?!\d)/)
+    if (match) return match[0]
   }
   return null
 }
@@ -55,14 +58,15 @@ setup('sign in as the owner', async ({ page }) => {
   // Sixty seconds, not ten. The mail usually lands in under a second, but on a
   // cold start the dev server is compiling routes while GoTrue is sending, and
   // a run once failed here with the message already in Mailpit a moment later.
-  let link: string | null = null
-  for (let i = 0; i < 120 && !link; i++) {
-    link = await newestLinkFor(email!, seen)
-    if (!link) await page.waitForTimeout(500)
+  let code: string | null = null
+  for (let i = 0; i < 120 && !code; i++) {
+    code = await newestCodeFor(email!, seen)
+    if (!code) await page.waitForTimeout(500)
   }
-  expect(link, 'no magic link arrived in Mailpit within 60s').toBeTruthy()
+  expect(code, 'no sign in code arrived in Mailpit within 60s').toBeTruthy()
 
-  await page.goto(link!)
+  await page.getByLabel(/sign in code/i).fill(code!)
+  await page.getByRole('button', { name: /^sign in$/i }).click()
   await expect(page).toHaveURL(`${BASE_URL}/`)
 
   await page.context().storageState({ path: STATE })

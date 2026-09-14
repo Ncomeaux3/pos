@@ -1,45 +1,15 @@
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
 import { ComeauxverseLockup, Eyebrow, fieldClass } from '@/components/pos'
-import { ownerVerdict } from '@/core/auth'
-import { serverClient } from '@/core/db'
-import { getOrigin } from '@/core/origin'
+import { sendCode, verifyCode } from './actions'
+import { CodeInput } from './CodeInput'
 import { Countdown } from './Countdown'
+import { PasskeyButton } from './PasskeyButton'
 import { SubmitButton } from './SubmitButton'
 
 // Matches supabase/config.toml auth.email.otp_expiry.
-const LINK_TTL_SECONDS = 900
+const CODE_TTL_SECONDS = 900
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-async function sendMagicLink(formData: FormData) {
-  'use server'
-
-  const email = String(formData.get('email') ?? '').trim()
-  if (!EMAIL.test(email)) {
-    // Hand the typed value back so the field is not cleared on a typo.
-    redirect(`/login?error=invalid&email=${encodeURIComponent(email)}`)
-  }
-
-  const verdict = ownerVerdict(email, process.env.OWNER_EMAIL ?? '')
-
-  // Only the owner ever gets a link, and the reply is the same either way, so
-  // the page never confirms which address owns this install. The design's
-  // denied screen would answer exactly the question an attacker is asking.
-  if (verdict.ok) {
-    const supabase = await serverClient()
-    await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${await getOrigin()}/auth/callback`,
-        // No signup flow: one owner, created by pnpm setup.
-        shouldCreateUser: false,
-      },
-    })
-  }
-
-  redirect(`/login?sent=1&email=${encodeURIComponent(email)}`)
-}
 
 export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
   const params = await searchParams
@@ -63,10 +33,10 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
         {sent ? (
           <div className="space-y-5">
             <div className="space-y-3">
-              <Eyebrow dot="ok">Link sent</Eyebrow>
-              <h1 className="t-headline text-ink">Check your inbox</h1>
+              <Eyebrow dot="ok">Code sent</Eyebrow>
+              <h1 className="t-headline text-ink">Enter the code</h1>
               <p className="t-caption text-ink-3">
-                If that address owns this install, a single-use sign in link is on its way
+                If that address owns this install, a sign in code is on its way
                 {email && (
                   <>
                     {' '}
@@ -77,10 +47,31 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
               </p>
             </div>
 
+            {/* The code is typed into the window that asked for it, so the
+              * session lands in this browser. That is the whole reason this
+              * screen exists: a link tapped in a mail app opens somewhere
+              * else, and on a phone somewhere else is a different cookie jar.
+              */}
+            <form action={verifyCode} className="space-y-3">
+              <input type="hidden" name="email" value={email} />
+              <label htmlFor="code" className="label block text-[10px] tracking-[0.1em] text-ink-3">
+                Sign in code
+              </label>
+              <CodeInput invalid={error === 'code'} />
+              {error === 'code' && (
+                <p className="label text-[10px] tracking-[0.1em] text-bad">
+                  That code is wrong or expired. Enter all of it, or ask for another.
+                </p>
+              )}
+              <div className="flex justify-end pt-1">
+                <SubmitButton idle="Sign in" busy="Checking" />
+              </div>
+            </form>
+
             <div className="flex items-baseline justify-between border-y border-rule py-3">
               <span className="label text-[10px] tracking-[0.1em] text-ink-3">Expires</span>
               <span className="num text-[13px]">
-                <Countdown seconds={LINK_TTL_SECONDS} />
+                <Countdown seconds={CODE_TTL_SECONDS} />
               </span>
             </div>
 
@@ -88,7 +79,7 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
               <Link href="/login" className="text-[13px] text-ink-3 transition-colors hover:text-ink">
                 Use a different email
               </Link>
-              <form action={sendMagicLink}>
+              <form action={sendCode}>
                 <input type="hidden" name="email" value={email} />
                 <button
                   type="submit"
@@ -98,6 +89,11 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
                 </button>
               </form>
             </div>
+
+            <p className="t-caption text-ink-4">
+              The same email carries a link. It signs in the browser that opens it, so use it on
+              the machine that asked and the code everywhere else.
+            </p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -109,11 +105,16 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
                 Personal Operating System
               </h1>
               <p className="t-caption text-ink-3">
-                One owner, one login. Enter the owner email and a single-use link comes back.
+                One owner, one login. Use the passkey on this device, or have a sign in code sent
+                to the owner email.
               </p>
             </div>
 
-            <form action={sendMagicLink} className="space-y-3">
+            {/* Renders only where the browser can do WebAuthn, and only after
+              * hydration, so the email form below is never gated on it. */}
+            <PasskeyButton />
+
+            <form action={sendCode} className="space-y-3">
               <div className="space-y-1.5">
                 <label
                   htmlFor="email"
@@ -144,19 +145,25 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
                 )}
                 {error === 'expired' && (
                   <p className="label text-[10px] tracking-[0.1em] text-bad">
-                    That link expired. Ask for another.
+                    That link expired, or it opened in a different browser than the one that asked
+                    for it. Send a code instead.
+                  </p>
+                )}
+                {error === 'missing_code' && (
+                  <p className="label text-[10px] tracking-[0.1em] text-bad">
+                    That link was incomplete. Send a code instead.
                   </p>
                 )}
               </div>
 
               <div className="flex justify-end pt-2">
-                <SubmitButton idle="Send sign-in link" busy="Sending" />
+                <SubmitButton idle="Send sign-in code" busy="Sending" />
               </div>
             </form>
 
             <div className="flex flex-wrap justify-between gap-2 border-t border-rule pt-3">
               <span className="label text-[10px] tracking-[0.1em] text-ink-4">
-                Link expires in 15 min
+                Code expires in 15 min
               </span>
               <span className="label text-[10px] tracking-[0.1em] text-ink-4">
                 No passwords · no signup

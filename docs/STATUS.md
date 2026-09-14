@@ -11,19 +11,42 @@ and Goals phone passes, PRs #21, #27, #33, #34, #36), docs/plans/travel-globe.md
 (filled continents, pin taps, destination geocoding, #26, #28, #29), and the
 backend-live plan's code phases (#13, #17, the cron-silence check). CI runs
 again: the repo is public, `upload-artifact` keeps the hidden Playwright
-results, and the e2e suite waits for hydration and finds its magic link by
-id (#35, #37). The next plan is not written yet; the candidates are a phone
+results, and the e2e suite waits for hydration and signs in with the six digit
+code (#35, #37, and docs/plans/mobile-login.md). The plan after that is not
+written yet; the candidates are a phone
 polish pass for the items the UI checks flagged (phone Home height, the
 globe legend under the controls at 402, the Calendar grid width, Overlay's
 missing accessible name, the ink-3 and ink-4 contrast tokens) and a phone
 pass per remaining module, which docs/plans/phone-shell.md names as its
-follow-on. Waiting on the owner: OWNER-TODO steps 12 to 17 (Obsidian vault,
+follow-on. Waiting on the owner: OWNER-TODO steps 12 to 21 (Obsidian vault,
 SimpleFIN, the Health readings Shortcut, workouts, push on the phone, the
-digest recipient). Laptop notes: `.env` has no VAPID pair, so `pnpm setup`
+digest recipient, and the three login steps: auth mail through Resend, the
+sign in email template, and turning passkeys on once the custom domain is
+live). Laptop notes: `.env` has no VAPID pair, so `pnpm setup`
 and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
 ## Done
+
+**Mobile login: a code, then a passkey.** docs/plans/mobile-login.md. The magic
+link failed on the phone three ways at once, and two of them were structural:
+`signInWithOtp` runs server side, so the PKCE verifier cookie belongs to the
+browser that asked, and a link tapped in Mail opens a webview or Safari that
+does not have it; separately, `display: standalone` gives the home screen app
+its own cookie jar, so a link that did work signed Safari in and left the app
+on the login screen. The sent screen is now a six digit field: the code is
+typed into the window that already asked, so the session lands in that browser
+whatever browser it is. The link still works and is still what the laptop uses.
+Passkeys on top, through Supabase Auth's own WebAuthn (no table, no migration):
+a button on /login and a card in Settings > General that lists, adds and
+removes them. Listing and removing are server side because they are plain
+calls; only creating one needs a browser. Supabase calls the passkey API
+experimental, so every failure path falls back to the code and says so. Waiting
+on the owner: OWNER-TODO 19 (auth mail through Resend, which is the third
+failure), 20 (the email template, required before the code field has anything
+to check) and 21 (turn passkeys on, and not until the custom domain is live,
+because a passkey is bound to the domain it was created on).
+
 
 **Phone shell, Phase 5: Tasks and Goals.** docs/plans/phone-shell.md. Tasks on the phone is three segments (Today, This week, Calendar) with the other four views behind a Filter button, a plus as the header's action, rows that open the drawer on tap and swipe to complete without moving the segment. Goals is Active and Archive segments, rows open a sheet, and the inline add is one field whose Next opens the drawer. Desktop unchanged.
 **Phone shell, Phase 4: Finance.** docs/plans/phone-shell.md. The phone is five segments (Overview, Accounts, Budgets, Subscriptions, Transactions) that swipe and keep `?tab=`; Overview is the two-up KPIs, the net worth chart and three rows that switch segment; account and budget rows open sheets; Sync is the header's one action; nothing truncates below md. The desktop is unchanged, now CSS-gated.

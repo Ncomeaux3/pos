@@ -109,31 +109,6 @@ Two sources are built and live in production (PRs #17, #18, #19, all
       native iOS companion app (exact, but a new codebase and a $99 a year
       developer account).
 
-## v2 phase 5: Gmail
-
-Not needed until v2 phase 5, which starts after items 12 to 17. Listed now
-because the research that produced it is fresh and one setting in it is easy to
-get wrong in a way that looks like a bug six days later.
-
-- [ ] **19. Google Cloud project for Gmail**, free, about 15 minutes. Create a
-      project at console.cloud.google.com, enable the Gmail API, create an
-      OAuth client of type Web application with the POS callback as its
-      redirect URI, and add the scope `https://www.googleapis.com/auth/gmail.readonly`.
-      Then the setting that matters: set the OAuth consent screen's publishing
-      status to **In production**. Do not submit for verification. Leaving it
-      at Testing expires every refresh token after 7 days, so the nightly sync
-      would work for a week and then fail, looking like a credential problem
-      rather than a dropdown. You will see an "unverified app" warning when you
-      connect; click through it. That is the documented path for an app under
-      100 users, and it is why POS never needs the CASA security assessment a
-      restricted scope otherwise carries (a few hundred to a few thousand
-      dollars a year). Also create a Gmail label and file into it whatever you
-      want POS to read: the connector queries that label alone.
-
-      Every claim here is marked verify. Google's documentation domains were
-      blocked by the proxy when this was researched, so it rests on secondary
-      sources. Check the console before trusting the 7-day figure.
-
 ## Left over from the first run
 
 - [ ] **16. Enable push on the phone.** Add POS to the Home Screen, open it
@@ -156,6 +131,75 @@ get wrong in a way that looks like a bug six days later.
       `BACKUP_DATABASE_URL` and the laptop's `.env.production` on 5432:
       pg_dump and the setup scripts are one long session each. Tell me when it
       is redeployed and I will check the runtime errors table is quiet.
+
+- [ ] **19. Sign in email through Resend**, partly done 2026-09-14 and still
+      failing on one field. Custom SMTP is on and pointed at Resend, but the
+      **Sender email address** is a `@gmail.com` address, so Resend refuses
+      every send with `550 "The gmail.com domain is not verified"` and
+      `/auth/v1/otp` returns 500. Either set the sender to
+      `onboarding@resend.dev`, which needs no verification but only delivers to
+      the address the Resend account was created with, or verify `cmxlogic.com`
+      at https://resend.com/domains and send from an address on it. The second
+      also resolves step 17. Original note follows., 5 minutes, fixes slow and missing
+      mail. Supabase's built-in SMTP is rate limited and shares sender
+      reputation with every other project on it, which is the third of the
+      three phone login problems. Supabase dashboard > Project Settings >
+      Authentication > SMTP Settings: enable, host `smtp.resend.com`, port
+      `587`, username `resend`, password the Resend API key already in
+      Settings > Connections, sender an address on a domain verified in
+      Resend. The caveat from step 17 applies here too and matters more: an
+      unverified Resend domain delivers only to the address the Resend account
+      was created with, so if that is not your owner email, verify a domain
+      first or this makes delivery worse rather than better. Leave it alone
+      until then; the code path works on Supabase's mailer, just slowly.
+- [ ] **20. Sign in email template and OTP length**, 4 minutes, required
+      before the code screen has a code to check. Set Authentication >
+      Providers > Email > **Email OTP Length** to 6, matching `otp_expiry` and
+      `otp_length` in `supabase/config.toml`. The project shipped set to 8
+      while local was 6, and the login screen assumed 6 and silently truncated
+      every code; the screen no longer assumes a length, but local and
+      production disagreeing is how that got to production in the first place.
+      Then the template: Supabase dashboard > Authentication > Email
+      Templates > Magic Link: paste the contents of
+      `supabase/templates/magic_link.html`, subject "Your POS sign-in code".
+      Without `{{ .Token }}` in the template Supabase sends a link alone and
+      the six digit field can never be satisfied. The local stack already has
+      it through `supabase/config.toml`.
+- [ ] **21. Turn on passkeys**, 3 minutes, and not before the custom domain is
+      live. Supabase dashboard > Authentication > Passkeys: enable, Relying
+      Party Display Name `POS`, Relying Party ID the bare domain with no
+      scheme or path, Relying Party Origins the `https://` origin. A passkey
+      is bound to the RP ID it was created against, so enrolling against
+      `pos-gilt-rho.vercel.app` and then moving to a custom domain means every
+      passkey stops working and each one is added again. Sign in with the code
+      until the domain is settled, then enable this and add one from Settings
+      > General > Passkeys. Supabase calls the passkey API experimental; if it
+      breaks, the card says passkeys are unavailable and the code still works.
+
+## v2 phase 5: Gmail
+
+Not needed until v2 phase 5, which starts after items 12 to 17. Listed now
+because the research that produced it is fresh and one setting in it is easy to
+get wrong in a way that looks like a bug six days later.
+
+- [ ] **22. Google Cloud project for Gmail**, free, about 15 minutes. Create a
+      project at console.cloud.google.com, enable the Gmail API, create an
+      OAuth client of type Web application with the POS callback as its
+      redirect URI, and add the scope `https://www.googleapis.com/auth/gmail.readonly`.
+      Then the setting that matters: set the OAuth consent screen's publishing
+      status to **In production**. Do not submit for verification. Leaving it
+      at Testing expires every refresh token after 7 days, so the nightly sync
+      would work for a week and then fail, looking like a credential problem
+      rather than a dropdown. You will see an "unverified app" warning when you
+      connect; click through it. That is the documented path for an app under
+      100 users, and it is why POS never needs the CASA security assessment a
+      restricted scope otherwise carries (a few hundred to a few thousand
+      dollars a year). Also create a Gmail label and file into it whatever you
+      want POS to read: the connector queries that label alone.
+
+      Every claim here is marked verify. Google's documentation domains were
+      blocked by the proxy when this was researched, so it rests on secondary
+      sources. Check the console before trusting the 7-day figure.
 
 ## Decisions I would like from you
 

@@ -254,7 +254,7 @@ in `core.connections` and is not used.
 ## Phase 5 prerequisite, owner work
 
 Gmail needs a Google Cloud project before phase 5 starts, and one setting in it
-decides whether the nightly sync survives its first week. OWNER-TODO item 19
+decides whether the nightly sync survives its first week. OWNER-TODO item 22
 carries it. The short version: create the project, add the Gmail API, request
 `gmail.readonly`, set publishing status to **In production**, do not submit for
 verification, and click through the unverified screen when connecting. Left at
