@@ -1,27 +1,27 @@
 # Status
 
 Where the build actually is. Updated at the end of each step. Read this first
-in a fresh session, then `docs/plans/backend-live.md` for what comes next.
+in a fresh session; the paragraph below names the plan that comes next.
 
-Last updated: 2026-09-12. Every screen in the handoff is matched to its
-artboard: twenty-one fidelity passes (Weekly Review, Dashboard, Finance, Skill
-Tree, Travel, Tasks, Goals, Ideas, Health, Settings, Search, then three
-parallel batches: Second Brain, Insurance and Meals; Home, Fitness and Review;
-Notifications, Agent Log, Onboarding and Login), the rail to PosSidebar, and
-the Mobile re-check at 402. Branch `main`. Nothing in the handoff is
-unclaimed: Finance Options is three alternates of Finance and is not built
-(Finance follows POS Finance.dc.html), Backend Handoff is a document. Step 15,
-deploy, is the only Phase 1 step left, and it is now the plan in
-`docs/plans/backend-live.md` (adopted 2026-09-12): a hygiene phase with the
-production login fix, production live, the integrations, the Apple Health
-webhook, a cron-silence check, and PR #10. The owner's ordered steps are in
-`docs/OWNER-TODO.md`. Phase 1 is PR #13: `fieldClass` lives in
-`components/pos/field.ts` so the production login input is styled again; CI
-builds and then serves `/login` from `next start` (the build alone exits 0 on
-the defect, the page is dynamic); the seven e2e failures assert the CI state
-or the seed produces it; `digest_morning_at` is read-only everywhere. One
-thing for the laptop: `.env` has no VAPID pair yet, so `pnpm setup` and the
-push Devices e2e test fail locally until it is added.
+Last updated: 2026-09-14. Branch `main`, production `pos-gilt-rho.vercel.app`
+live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
+steps 1 to 9). Three plans finished this week: docs/plans/phone-shell.md
+(five phases: speed and gestures, the shell, then Dashboard, Finance, Tasks
+and Goals phone passes, PRs #21, #27, #33, #34, #36), docs/plans/travel-globe.md
+(filled continents, pin taps, destination geocoding, #26, #28, #29), and the
+backend-live plan's code phases (#13, #17, the cron-silence check). CI runs
+again: the repo is public, `upload-artifact` keeps the hidden Playwright
+results, and the e2e suite waits for hydration and finds its magic link by
+id (#35, #37). The next plan is not written yet; the candidates are a phone
+polish pass for the items the UI checks flagged (phone Home height, the
+globe legend under the controls at 402, the Calendar grid width, Overlay's
+missing accessible name, the ink-3 and ink-4 contrast tokens) and a phone
+pass per remaining module, which docs/plans/phone-shell.md names as its
+follow-on. Waiting on the owner: OWNER-TODO steps 12 to 17 (Obsidian vault,
+SimpleFIN, the Health readings Shortcut, workouts, push on the phone, the
+digest recipient). Laptop notes: `.env` has no VAPID pair, so `pnpm setup`
+and the push Devices e2e test fail locally; the same test is the only red
+one CI carries as well until the pair is added to the secrets.
 
 ## Done
 

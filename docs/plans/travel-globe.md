@@ -1,6 +1,8 @@
 # Travel globe: filled land, level home, pin taps, city geocoding
 
 Three phases, each its own branch and PR. Phase 1 is the biggest. Nick builds one phase per session.
+
+**Complete 2026-09-14.** All three phases merged: #26, #28, #29. Each phase's Done paragraph below records what changed from its text.
 First task of Phase 1: log the decisions listed at the end in `decisions/log.md`.
 
 ## Context
