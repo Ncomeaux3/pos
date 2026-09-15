@@ -2329,8 +2329,10 @@ test('fitness, workouts with pace derived rather than stored', async ({ page }) 
     await expect(page.getByText('Leg press · best set')).toBeVisible()
     await expect(page.getByText(/360 ×10/)).toBeVisible()
     await expect(page.getByText(/YESTERDAY · LOWER/i)).toBeVisible()
-    await expect(page.getByText(/340 \/ 405/)).toBeVisible()
-    await expect(page.getByText(/STALLED · \d+%/i)).toBeVisible()
+    // Digests are live (v1.1 Phase 5): the goals check-in test earlier in the
+    // run moves Deadlift from 340 stalled to 355 at risk, and the tile follows.
+    await expect(page.getByText(/3(40|55) \/ 405/)).toBeVisible()
+    await expect(page.getByText(/(STALLED|AT RISK) · \d+%/i)).toBeVisible()
     // Load lives in the This week sub-line now, not a tile of its own, and
     // XP is not drawn: the weight lives in the skills schema.
     await expect(page.getByText('duration by kind')).toHaveCount(0)
