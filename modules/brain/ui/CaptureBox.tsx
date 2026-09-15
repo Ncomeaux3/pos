@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ActionButton, Eyebrow, useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import type { Related } from '../related'
-import { captureText, ingestFromUrl, relatedForDraft } from './actions'
+import { captureFile, captureText, ingestFromUrl, relatedForDraft } from './actions'
 import type { BrainNote, SetParams } from './Brain'
 
 // The capture box pinned above the list (plan: docs/plans/brain-capture.md).
@@ -25,6 +25,7 @@ export function CaptureBox({ notes, setParams }: { notes: BrainNote[]; setParams
   const [related, setRelated] = useState<Related[] | 'unavailable' | null>(null)
   const inFlight = useRef(false)
   const pending = useRef<string | null>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
 
   const trimmed = text.trim()
   const isUrl = URL_ONLY.test(trimmed)
@@ -77,6 +78,22 @@ export function CaptureBox({ notes, setParams }: { notes: BrainNote[]; setParams
     }
   }
 
+  // A file is a note too: its name is the title and the transcription the body.
+  const attach = async (file: File) => {
+    if (running) return
+    setRunning(true)
+    try {
+      const form = new FormData()
+      form.set('file', file)
+      const result = await captureFile(form)
+      if (!result.ok) return toast(result.error)
+      toast('Saved')
+      setParams({ folder: 'note', note: result.slug ?? null })
+    } finally {
+      setRunning(false)
+    }
+  }
+
   const hubNames = (id: string) =>
     notes
       .find((n) => n.id === id)
@@ -106,10 +123,32 @@ export function CaptureBox({ notes, setParams }: { notes: BrainNote[]; setParams
         className="w-full resize-y border border-rule-2 bg-bg px-3 py-[9px] text-[13px] leading-[1.6] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand"
       />
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <label className={cn('flex min-h-11 items-center gap-2 text-[12px] text-ink-3 md:min-h-0', isUrl && 'invisible')}>
-          <input type="checkbox" checked={worked} onChange={(e) => setWorked(e.target.checked)} className="accent-brand" />
-          Worked on
-        </label>
+        <div className="flex items-center gap-4">
+          <label className={cn('flex min-h-11 items-center gap-2 text-[12px] text-ink-3 md:min-h-0', isUrl && 'invisible')}>
+            <input type="checkbox" checked={worked} onChange={(e) => setWorked(e.target.checked)} className="accent-brand" />
+            Worked on
+          </label>
+          <button
+            type="button"
+            disabled={running}
+            onClick={() => fileInput.current?.click()}
+            className="min-h-11 text-[12px] text-ink-3 transition-colors duration-150 hover:text-brand disabled:opacity-50 md:min-h-0"
+          >
+            + Attach
+          </button>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="image/*,application/pdf"
+            aria-label="Attach a file"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) void attach(file)
+              e.target.value = ''
+            }}
+          />
+        </div>
         <ActionButton
           variant="solid"
           className="h-11 gap-2 px-3.5 text-[13px] md:h-9"

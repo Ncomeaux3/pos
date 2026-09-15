@@ -3,7 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { requireOwner } from '@/core/auth'
 import { db } from '@/core/db'
+import { signedUrl } from '@/core/files'
 import { callTool } from '@/core/tools'
+import { captureFile as captureFileNote } from '../capture'
 import { refileByRules, setHubs } from '../hubs'
 import { relatedTo, relatedToText, type Related } from '../related'
 import { slugify } from '../wikilinks'
@@ -125,6 +127,35 @@ export async function captureText(input: {
     return { ...done(), slug }
   } catch (error) {
     return failed(error)
+  }
+}
+
+/** Attach a PDF or an image from the capture box. The transcription is the note's body. */
+export async function captureFile(form: FormData): Promise<ActionResult & { slug?: string }> {
+  await requireOwner()
+  try {
+    const file = form.get('file')
+    if (!(file instanceof File)) throw new Error('No file was sent')
+    const { slug } = await captureFileNote({
+      name: file.name,
+      type: file.type,
+      bytes: Buffer.from(await file.arrayBuffer()),
+    })
+    return { ...done(), slug }
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+/** A short lived URL for the file behind a note. Nothing in the bucket is public. */
+export async function noteFileUrl(noteId: string): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  await requireOwner()
+  try {
+    const { rows } = await db().query<{ file_path: string }>(`select file_path from brain.note where id = $1`, [noteId])
+    if (!rows[0]?.file_path) throw new Error('This note has no file behind it')
+    return { ok: true, url: await signedUrl({ module: 'brain', path: rows[0].file_path }) }
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'Failed' }
   }
 }
 
