@@ -92,15 +92,11 @@ export async function closeReview(args: {
 /**
  * Which module takes the week note.
  *
- * Second Brain owns notes once it exists; until then the template's `notes`
- * module does. Resolved through the registry rather than hardcoded, so the
- * close keeps working through that handover and degrades to writing nothing
- * when neither is installed, which is what lets a fork delete both.
+ * Second Brain owns notes. Resolved through the registry rather than
+ * hardcoded, so the close degrades to writing nothing when it is not
+ * installed, which is what lets a fork delete it.
  */
 export async function noteWriter(): Promise<string | null> {
   const { getModule } = await import('./modules')
-  for (const id of ['brain', 'notes']) {
-    if (getModule(id)?.tools.write) return id
-  }
-  return null
+  return getModule('brain')?.tools.write ? 'brain' : null
 }

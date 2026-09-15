@@ -1,7 +1,6 @@
 import { db } from '@/core/db'
 import { embedChanged } from '@/core/search'
 import { propose } from '@/core/proposals'
-import { seed } from '@/modules/notes/seed'
 import { seed as seedTasks } from '@/modules/tasks/seed'
 import { seed as seedGoals } from '@/modules/goals/seed'
 import { seed as seedFinance } from '@/modules/finance/seed'
@@ -15,7 +14,7 @@ import { seed as seedHome } from '@/modules/home/seed'
 import { seed as seedInsurance } from '@/modules/insurance/seed'
 
 // A local database or nothing. This file deletes outright: core.notifications,
-// core.job_runs, core.reviews, every note that is not demo, and several module
+// core.job_runs, core.reviews, every idea that is not demo, and several module
 // rows besides. It is run with --env-file=.env and the app it seeds is `pnpm
 // dev` on the same .env, so the only thing standing between the fixture and
 // the production pooler is which DATABASE_URL happens to be in that file.
@@ -31,12 +30,14 @@ if (!/^postgres(ql)?:\/\/[^@]*@(127\.0\.0\.1|localhost)[:/]/.test(process.env.DA
 // Run by the Playwright setup project before any screen test. The vitest suites
 // use their own pos_test database now, but this still has to be deterministic:
 // the screens are asserted against it.
-// Approving a proposal writes a real note, and those accumulate across runs.
+// Approving a proposal writes a real idea, and those accumulate across runs.
 // The fixture has to be the same every time, so anything that is not part of
-// the demo set goes before it is rebuilt.
-await db().query(`delete from core.entities where module = 'notes' and entity_id in
-                    (select id::text from notes.note where source <> 'demo')`)
-await db().query(`delete from notes.note where source <> 'demo'`)
+// the demo set goes before it is rebuilt. The undo test edits a demo idea's
+// notes, and the ideas seed does not reset that column, so it goes back here.
+await db().query(`delete from core.entities where module = 'ideas' and entity_id in
+                    (select id::text from ideas.idea where source <> 'demo')`)
+await db().query(`delete from ideas.idea where source <> 'demo'`)
+await db().query(`update ideas.idea set notes = '' where source = 'demo' and external_id = 'i-voice'`)
 
 // The weekly review saves answers as you go, so a review left half finished
 // by an earlier pass would be loaded back and added to. The wizard resuming is
@@ -50,7 +51,6 @@ await db().query(`delete from core.reviews`)
 await db().query(`delete from core.connections where status = 'requested'`)
 await db().query(`delete from core.entities where module = 'core' and entity_type = 'review'`)
 
-const notes = await seed()
 // No delete first. The module seed upserts on (source, external_id), so the
 // ids are stable and the fixture is already the same every run. Deleting and
 // reinserting gave every task a new uuid and orphaned its core.entities row,
@@ -122,34 +122,34 @@ const index = await embedChanged()
 
 // Two proposals so the Review screen has both shapes: one a module marked
 // guarded, one it did not.
-await db().query(`delete from core.proposals where agent in ('orchestrator', 'notes.tidy')`)
+await db().query(`delete from core.proposals where agent in ('orchestrator', 'ideas.tidy')`)
 
 await propose({
-  module: 'notes',
+  module: 'ideas',
   tool: 'write',
-  payload: { title: 'Weekly summary of what you wrote', body: 'Drafted from the last seven days.' },
+  payload: { title: 'Weekly summary of what you captured', pitch: 'Drafted from the last seven days.' },
   agent: 'orchestrator',
-  reason: 'Five notes landed this week and none of them link to each other.',
+  reason: 'Five ideas landed this week and none of them link to each other.',
   guarded: true,
-  title: 'Draft a weekly summary note',
+  title: 'Draft a weekly summary idea',
   confidence: 0.86,
-  evidence: '5 notes created in the last 7 days',
-  affects: 'Notes, Skill Tree',
-  diff: [{ field: 'title', before: null, after: 'Weekly summary of what you wrote' }],
+  evidence: '5 ideas captured in the last 7 days',
+  affects: 'Ideas, Skill Tree',
+  diff: [{ field: 'title', before: null, after: 'Weekly summary of what you captured' }],
 })
 
 await propose({
-  module: 'notes',
+  module: 'ideas',
   tool: 'write',
-  payload: { title: 'Sharpen the kitchen knives', body: 'Recurring: every 3 months.' },
-  agent: 'notes.tidy',
-  reason: 'This note has no body and reads like a recurring chore.',
+  payload: { title: 'Sharpen the kitchen knives', pitch: 'Recurring: every 3 months.' },
+  agent: 'ideas.tidy',
+  reason: 'This idea has no pitch and reads like a recurring chore.',
   guarded: false,
-  title: 'Add a body to an empty note',
+  title: 'Add a pitch to a bare idea',
   confidence: 0.64,
-  evidence: '1 note with an empty body',
-  affects: 'Notes',
-  diff: [{ field: 'body', before: '', after: 'Recurring: every 3 months.' }],
+  evidence: '1 idea with an empty pitch',
+  affects: 'Ideas',
+  diff: [{ field: 'pitch', before: '', after: 'Recurring: every 3 months.' }],
 })
 
 // Alerts for the Notifications screen, tied back to the seeded rules so the
@@ -185,13 +185,13 @@ await db().query(
 
 // Two nightly runs with their writes, so the Agent Log has an accordion to
 // open. The first is partial with a failed job; the second is clean. Every
-// entry that carries a revert payload gets an Undo button, and the notes ones
-// genuinely revert: they call notes.write with the previous title.
+// entry that carries a revert payload gets an Undo button, and the ideas one
+// genuinely reverts: it calls ideas.write with the previous notes.
 // Every prior run goes, not just the demo ones. The Agent Log shows the last
 // seven, the dashboard's Run now button adds a real one on nearly every e2e
 // pass, and after a few passes the seeded runs fall out of the window and the
 // screen has nothing to show. These are local run logs, the same class of
-// throwaway as the notes and proposals cleared above.
+// throwaway as the ideas and proposals cleared above.
 //
 // write_log.run_id and notifications.digest_run_id are both on delete set
 // null, so nothing else is lost with them.
@@ -209,7 +209,7 @@ const { rows: runRows } = await db().query<{ id: string }>(
   [
     JSON.stringify({
       jobs: [
-        { module: 'notes', name: 'nightly-digest', status: 'ok', durationMs: 31000 },
+        { module: 'ideas', name: 'nightly-digest', status: 'ok', durationMs: 31000 },
         { module: 'skills', name: 'nightly-digest', status: 'ok', durationMs: 6000 },
         { module: 'core', name: 'embed', status: 'ok', durationMs: 22000 },
         {
@@ -224,7 +224,7 @@ const { rows: runRows } = await db().query<{ id: string }>(
     }),
     JSON.stringify({
       jobs: [
-        { module: 'notes', name: 'nightly-digest', status: 'ok', durationMs: 28000 },
+        { module: 'ideas', name: 'nightly-digest', status: 'ok', durationMs: 28000 },
         { module: 'skills', name: 'nightly-digest', status: 'ok', durationMs: 5000 },
         { module: 'core', name: 'embed', status: 'ok', durationMs: 19000 },
       ],
@@ -234,22 +234,28 @@ const { rows: runRows } = await db().query<{ id: string }>(
 
 const [recent, older] = runRows.map((r) => r.id)
 
+// The ideas row is written before the skills row on purpose: the Agent Log
+// filter pills are asserted to read in sidebar order (Skill Tree 20 before
+// Ideas 80), which only proves anything when the write order disagrees.
+const { rows: [bareIdea] } = await db().query<{ id: string }>(
+  `select id from ideas.idea where source = 'demo' and external_id = 'i-voice'`,
+)
 await db().query(
   `insert into core.write_log
      (run_id, module, tool, kind, title, reason, diff, actor, revert_payload, apply_payload, created_at)
    values
-     ($1, 'skills', 'write', 'classified',
-      'Assigned skills to 3 notes',
-      'Two matched keyword rules from skills.yaml; one went to the model at 0.71 confidence.',
-      $3::jsonb, 'demo', null, null, now() - interval '10 minutes'),
-     ($1, 'notes', 'write', 'created',
-      'Drafted the weekly summary note',
-      'Five notes landed this week and none of them linked to each other.',
+     ($1, 'ideas', 'write', 'created',
+      'Drafted the weekly summary idea',
+      'Five ideas landed this week and none of them linked to each other.',
       $4::jsonb, 'demo', null,
       $5::jsonb, now() - interval '10 minutes' + interval '40 seconds'),
-     ($2, 'notes', 'write', 'updated',
-      'Gave an empty note a body',
-      'The note had a title and nothing under it, and read like a recurring chore.',
+     ($1, 'skills', 'write', 'classified',
+      'Assigned skills to 3 ideas',
+      'Two matched keyword rules from skills.yaml; one went to the model at 0.71 confidence.',
+      $3::jsonb, 'demo', null, null, now() - interval '10 minutes'),
+     ($2, 'ideas', 'write', 'updated',
+      'Gave a bare idea some notes',
+      'The idea had a title and nothing under it, and read like a recurring chore.',
       $6::jsonb, 'demo',
       $7::jsonb, $8::jsonb, now() - interval '12 minutes')`,
   [
@@ -259,11 +265,11 @@ await db().query(
       { field: 'Skill links', before: '11', after: '14' },
       { field: 'Unclassified', before: '3', after: '0' },
     ]),
-    JSON.stringify([{ field: 'title', before: null, after: 'Weekly summary of what you wrote' }]),
-    JSON.stringify({ title: 'Weekly summary of what you wrote', body: 'Drafted from the last seven days.' }),
-    JSON.stringify([{ field: 'body', before: '', after: 'Recurring: every 3 months.' }]),
-    JSON.stringify({ title: 'Sharpen the kitchen knives', body: '' }),
-    JSON.stringify({ title: 'Sharpen the kitchen knives', body: 'Recurring: every 3 months.' }),
+    JSON.stringify([{ field: 'title', before: null, after: 'Weekly summary of what you captured' }]),
+    JSON.stringify({ title: 'Weekly summary of what you captured', pitch: 'Drafted from the last seven days.' }),
+    JSON.stringify([{ field: 'notes', before: '', after: 'Recurring: every 3 months.' }]),
+    JSON.stringify({ id: bareIdea.id, notes: '' }),
+    JSON.stringify({ id: bareIdea.id, notes: 'Recurring: every 3 months.' }),
   ],
 )
 
@@ -361,5 +367,5 @@ if (hae.length === 0) {
 const { assembleSummary } = await import('@/core/orchestrator')
 await assembleSummary()
 
-console.log(`seeded ${notes} notes, indexed ${index.indexed}, embedded ${index.embedded}, 2 proposals, 7 alerts, 2 runs, ${taskCount} tasks, ${goalCount} goals, ${txCount} transactions, ${detected.found} subscriptions detected, ${brainCount} notes, ${travelCount} travel rows, ${fitCount} workouts, ${healthCount} health rows, ${mealCount} meal rows, ${ideaCount} ideas, ${homeCount} home rows, ${policyCount} policies, ${coached.proposed} coach proposal`)
+console.log(`indexed ${index.indexed}, embedded ${index.embedded}, 2 proposals, 7 alerts, 2 runs, ${taskCount} tasks, ${goalCount} goals, ${txCount} transactions, ${detected.found} subscriptions detected, ${brainCount} notes, ${travelCount} travel rows, ${fitCount} workouts, ${healthCount} health rows, ${mealCount} meal rows, ${ideaCount} ideas, ${homeCount} home rows, ${policyCount} policies, ${coached.proposed} coach proposal`)
 process.exit(0)

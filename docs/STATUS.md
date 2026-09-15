@@ -13,7 +13,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-14. Branch `main`, production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-15. Branch `main`, production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -38,6 +38,18 @@ and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
 ## Done
+
+**v1.1 Phase 2, delete the notes stub** (2026-09-15, branch
+`phase-2-delete-notes-stub`). `modules/notes/` is gone and migration
+`20260915060000_notes_drop.sql` clears its `core.entities`, `core.digests` and
+`core.jobs` rows and drops the schema; `20260905223936_notes_init.sql` stays as
+history. `core/reviews.ts` writes the week note to Second Brain only. The MCP
+and proposals suites and the e2e seed lean on `ideas.write` (one table,
+unguarded) instead; the e2e Agent Log fixture writes its ideas row before the
+skills row so the sidebar-order assertion still proves something. Start a new
+module by copying `modules/ideas`. After `supabase db push` and the deploy,
+press Run now once: the dashboard tiles still read `core.dashboard_summary`
+until Phase 5, so the Notes tile lingers until the next run rewrites it.
 
 **v1.1 Phase 1, diagnose and small fixes** (2026-09-14, branch
 `phase-1-diagnose-fixes`). The nightly email finding, from production
