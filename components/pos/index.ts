@@ -14,6 +14,7 @@ export {
   type RadarAxis,
   type TimelineItem,
 } from './charts'
+export { LineChart } from './LineChart'
 export { Chip, StatusChip, type ChipTone } from './Chip'
 export { Card, CardHead, MetricStrip, MetricTile, type DeltaTone } from './Card'
 export { PageHeader } from './PageHeader'

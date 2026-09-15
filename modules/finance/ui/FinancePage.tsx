@@ -10,7 +10,7 @@ import {
   upcomingCharges,
 } from '../data'
 import { monthPace } from '../money'
-import { spine } from '../series'
+import { spine } from '@/core/series'
 import { Finance, type FinanceData } from './Finance'
 import { syncFinance } from './sync'
 
