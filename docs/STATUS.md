@@ -699,6 +699,32 @@ The registry cycle that blocked steps 12 and 13 is fixed: both registries load
 in a plain Node process, which is what lets `pnpm setup` and the cron job work
 outside Next.
 
+## v2, specified 2026-09-14, not started
+
+docs/SPEC-v2.md and docs/plans/v2-agent-layer.md. The agent layer: per-verb
+permission on integrations, an action state machine over core.proposals, run
+budgets, a Postgres queue, a memory tier, a nightly suggestion pass, and plans
+in the goals schema. Sixteen v2 entries were written to decisions/log.md on
+2026-09-14, fourteen of them answers from the owner and two corrections made
+after; none stay open.
+
+The draft spec proposed six things that already ship under other names (the
+credential vault, the connector registry, the approval gate, the audit trail,
+the runs table, the push channel), so v2 extends rather than adds. It stays on
+Vercel Hobby with the $10 cap, which is what fixes its shape: no long-lived
+process, no external queue, and a run that advances only when something drains
+the queue. Phases 0 to 4 are the product.
+
+It starts after v1.1 and after OWNER-TODO steps 12 to 16. v1.1
+(docs/plans/pos-v1-1.md) is the in-flight plan and its phase 12 hardens exactly
+what v2 then builds on, so v2 waits rather than hardening the same routes
+twice. Phase 0 covers the integrations that currently skip every night, so it
+is worth more with real data behind them, and phase 4's approval push needs the
+VAPID pair. Strava does not gate it: item 11 is deferred and v1.1 moved workouts
+to Apple Health, so phase 0 wires the Strava client onto the executor without
+depending on a live connection. The phone polish pass is independent and can run
+either side of it.
+
 ## Open questions for the owner
 
 - Voyage is capped at 3 requests a minute without a payment method. Search is
