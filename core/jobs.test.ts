@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
 import { pruneRequestLog, runJob } from './jobs'
-import { pending, queue, renderEmail } from './notify'
+import { pending, queue, renderEmail, snoozeNotification, unreadWarnings } from './notify'
 import { buildSummary } from './orchestrator'
 
 beforeEach(async () => {
@@ -174,12 +174,18 @@ describe('buildSummary', () => {
 })
 
 describe('assembleSummary', () => {
-  it('queues nothing on a night with nothing wrong', async () => {
+  // Decided 2026-09-14: the email goes out every night. A quiet night says so
+  // rather than saying nothing, because silence and a broken cron look the
+  // same from the inbox.
+  it('queues one digest on a night with nothing wrong', async () => {
     const { assembleSummary } = await import('./orchestrator')
     const result = await assembleSummary()
 
-    expect(result.queued).toBe(false)
-    expect(await pending()).toHaveLength(0)
+    expect(result.queued).toBe(true)
+    const items = await pending()
+    expect(items).toHaveLength(1)
+    expect(items[0].title).toBe('Nothing needs you today')
+    expect(items[0].urgency).toBe('normal')
   })
 
   it('queues exactly one notification however many alerts there are', async () => {
@@ -208,6 +214,21 @@ describe('assembleSummary', () => {
   })
 })
 
+describe('snoozeNotification', () => {
+  it('hides the row from the dashboard and the sender until the day comes', async () => {
+    await queue({ title: 'Statement due', body: '' })
+    const [{ id }] = await unreadWarnings()
+
+    await snoozeNotification(id, 1)
+    // Snoozed is neither read nor sent: it comes back tomorrow, on both paths.
+    expect(await unreadWarnings()).toHaveLength(0)
+    expect(await pending()).toHaveLength(0)
+
+    await snoozeNotification(id, 0)
+    expect(await unreadWarnings()).toHaveLength(1)
+  })
+})
+
 describe('sendPending', () => {
   it('skips quietly when nothing is waiting', async () => {
     const { sendPending } = await import('./notify')
@@ -219,6 +240,10 @@ describe('sendPending', () => {
 
     const original = process.env.OWNER_EMAIL
     delete process.env.OWNER_EMAIL
+    // Sending is off in a test by default, and that skip comes first. This one
+    // is about the address being missing, so it has to get past the first gate
+    // to reach the gate it is testing.
+    process.env.EMAIL_SEND = '1'
     try {
       const { sendPending } = await import('./notify')
       const result = await sendPending()
@@ -228,7 +253,72 @@ describe('sendPending', () => {
       expect(result.skipped).toMatch(/OWNER_EMAIL/)
       expect(await pending()).toHaveLength(1)
     } finally {
+      delete process.env.EMAIL_SEND
       if (original) process.env.OWNER_EMAIL = original
+    }
+  })
+
+  it('refuses to send outside production, and leaves the rows queued', async () => {
+    await queue({ title: 'Chase Sapphire due in 3 days', body: '$1,842 statement' })
+
+    // No VERCEL_ENV and no EMAIL_SEND, which is a local run and an e2e pass
+    // alike. The e2e suite presses Run now, that used to be a real digest, and
+    // the fixture above is the copy that reached the owner's inbox.
+    const { sendPending } = await import('./notify')
+    const result = await sendPending()
+
+    expect(result).toMatchObject({ sent: 0, emails: 0 })
+    expect(result.skipped).toMatch(/off outside production/)
+    // Queued, not marked sent: production still owes this one.
+    expect(await pending()).toHaveLength(1)
+  })
+
+  it('lets production through to the address check', async () => {
+    await queue({ title: 'Something', body: '' })
+
+    const original = process.env.VERCEL_ENV
+    process.env.VERCEL_ENV = 'production'
+    const email = process.env.OWNER_EMAIL
+    delete process.env.OWNER_EMAIL
+    try {
+      const { sendPending } = await import('./notify')
+      // Past the sending gate, stopped by the missing address rather than by it.
+      expect((await sendPending()).skipped).toMatch(/OWNER_EMAIL/)
+    } finally {
+      if (original) process.env.VERCEL_ENV = original
+      else delete process.env.VERCEL_ENV
+      if (email) process.env.OWNER_EMAIL = email
+    }
+  })
+})
+
+describe('sendingAllowed', () => {
+  it('is production, or an explicit ask, and nothing else', async () => {
+    const { sendingAllowed } = await import('@/integrations/resend/client')
+    const vercel = process.env.VERCEL_ENV
+    const send = process.env.EMAIL_SEND
+
+    try {
+      delete process.env.VERCEL_ENV
+      delete process.env.EMAIL_SEND
+      expect(sendingAllowed()).toBe(false)
+
+      // A preview deployment carries the same DATABASE_URL shape as production
+      // and must not mail anyone.
+      process.env.VERCEL_ENV = 'preview'
+      expect(sendingAllowed()).toBe(false)
+
+      process.env.VERCEL_ENV = 'production'
+      expect(sendingAllowed()).toBe(true)
+
+      delete process.env.VERCEL_ENV
+      process.env.EMAIL_SEND = '1'
+      expect(sendingAllowed()).toBe(true)
+    } finally {
+      if (vercel) process.env.VERCEL_ENV = vercel
+      else delete process.env.VERCEL_ENV
+      if (send) process.env.EMAIL_SEND = send
+      else delete process.env.EMAIL_SEND
     }
   })
 })

@@ -11,6 +11,7 @@ import {
   upcomingCharges,
 } from '../data'
 import { percent } from '../money'
+import { spine } from '../series'
 
 export type FinanceDigest = {
   netWorthCents: number
@@ -21,8 +22,12 @@ export type FinanceDigest = {
   upcomingCents: number
   upcomingCount: number
   nextCharge: { name: string; inDays: number } | null
-  /** Net worth over the last 30 days, in dollars, for the tile's sparkline. */
-  netWorthSeries: number[]
+  /**
+   * Net worth over the last 30 days, in dollars, for the tile's sparkline.
+   * One entry per day; null before the first balance was ever recorded, so the
+   * tile draws the days it has rather than stretching them over the month.
+   */
+  netWorthSeries: (number | null)[]
   /** Categories past the alert threshold, and the threshold they were judged by. */
   overBudget: { name: string; percent: number }[]
   alertThreshold: number
@@ -57,7 +62,9 @@ export async function nightlyDigest(): Promise<FinanceDigest> {
   // The change comes from the series, not from summing per account deltas: an
   // account opened inside the window has no thirty day balance and would
   // otherwise count its whole balance as growth.
-  const change = series.length > 1 ? netWorth - series[0].cents : 0
+  const days = spine(series, 30, today)
+  const firstKnown = days.find((d) => d.observed)?.cents ?? null
+  const change = firstKnown === null ? 0 : netWorth - firstKnown
 
   const { rows: unusual } = await db().query<{
     descriptor: string
@@ -80,7 +87,7 @@ export async function nightlyDigest(): Promise<FinanceDigest> {
     debtCents: assets - netWorth,
     // Dollars, not cents: the line is a shape, and the numbers beside it are
     // where the precision belongs.
-    netWorthSeries: series.map((p) => Math.round(p.cents / 100)),
+    netWorthSeries: days.map((d) => (d.cents === null ? null : Math.round(d.cents / 100))),
     upcomingCents: upcoming.reduce((sum, c) => sum + Number(c.amount_cents), 0),
     upcomingCount: upcoming.length,
     nextCharge: upcoming[0]

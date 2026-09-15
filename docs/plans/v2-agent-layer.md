@@ -8,8 +8,10 @@ The draft spec Nick brought on 2026-09-14 was written against a v1 that does
 not exist any more: it proposed a credential vault, a connector registry, an
 approval gate, an audit trail, a runs table and a push channel, all six of
 which ship today under other names. The review found six conflicts, four of
-them with logged decisions. Nine were resolved with Nick the same day
-(AskUserQuestion, two rounds) and are in decisions/log.md.
+them with logged decisions. Fourteen questions were put to Nick the same day
+(AskUserQuestion, two rounds); those answers plus two corrections I made after
+them are the sixteen 2026-09-14 v2 entries in decisions/log.md, and the table
+below is that list.
 
 What that leaves is genuinely new: per-verb permission on integrations, an
 action state machine over the existing proposals table, run budgets, a Postgres
@@ -35,17 +37,38 @@ in the request that approved it.
 | Voice | Out of v2 | Web Speech; hosted STT; self-hosted |
 | Default level | The migration backfills `read` for rows already connected, `none` for everything else and everything future | `none` for all four (breaks three live syncs for a day); `read` as the default (drops the guarantee) |
 | Sync scope | Every outbound verb goes through one executor, nightly syncs included | agent-initiated calls only; syncs read-only by construction |
-| Start | After OWNER-TODO 12 to 17, the owner's own data | phone polish first; phase 0 now |
+| Start | After v1.1 ships and OWNER-TODO 12 to 16, the owner's own data | phone polish first; phase 0 now |
 | Gmail | `gmail.readonly`, publishing status In production and unverified, client query scoped to one label | whole mailbox; `gmail.metadata` (headers only); swapping Calendar into phase 5 |
 | Auto-approve | `core.auto_approve_rules` ships empty, rules written after four weeks of manual approval | seeding rules for the read verbs on day one |
+| Secret store and queue | Secrets stay in `core.connections`; the queue is a Postgres table | A second credential store; Redis or a hosted queue |
+| Phase 0 scope (correction) | The three outbound clients are SimpleFIN, `github_vault` and Strava; the two Apple Health routes are inbound and gated at the webhook | Apple Health as the third outbound client, which was my framing error |
+| Phase 1 fixture (correction) | `integrations/fixture/` ships in the repo so phases 1, 2 and 4 have a write verb to prove themselves against | Proving the ledger on module tool proposals only; pulling Calendar forward |
 
 ## When this starts
 
-After OWNER-TODO steps 12 to 17 (2026-09-14): the Obsidian vault, SimpleFIN,
-the Health readings Shortcut, workouts, push on the phone, and the digest
-recipient. All owner work, and phase 0 is worth more once the three
-integrations it covers carry real data rather than skipping every night. Phase
-4 also needs the VAPID pair that step 16 adds, or its approval push is dark.
+Two things come first, and neither was in view when this was written on
+2026-09-14.
+
+**v1.1.** docs/plans/pos-v1-1.md is twelve phases of bug fixes, speed work and
+features on the modules that already ship, and it is the in-flight plan. v2
+starts after it. Phase 12 of v1.1 is the hardening pass (error pages, `pnpm
+audit` in CI, `maxDuration` on the API routes, a secret rotation note), and v2
+adds API routes and a queue on top of exactly those, so taking it first means
+not doing it twice.
+
+**OWNER-TODO steps 12 to 16** (2026-09-14): the Obsidian vault, SimpleFIN, the
+Health readings Shortcut, workouts, and push on the phone. All owner work. Step
+17 was on this list when it was written and is already settled, so it is off it.
+Phase 0 is worth more once the integrations it covers carry real data rather
+than skipping every night, and phase 4 needs the VAPID pair that step 16 adds,
+or its approval push is dark.
+
+Strava is the exception and does not gate anything. Item 11 is deferred, and
+v1.1 moved workouts to Apple Health because a Strava API app now needs a paid
+Strava subscription. Phase 0 still wires `integrations/strava/client.ts` onto
+`runVerb`, because the client is written and the rule is that every outbound
+client goes through the executor; it just may never carry real data, so nothing
+in phase 0's done condition depends on a live Strava connection.
 
 The phone polish pass and the per-module phone passes are independent of this
 and can run in either order around it.
@@ -153,7 +176,7 @@ reasons.
 - `integrations/fixture/manifest.ts`, `client.ts`, and migration
   `<ts>_fixture_init.sql` for its one table. It appears on Settings >
   Connections like any provider; its Test always passes.
-- Migration `<ts>_core_action_ledger.sql`: the twelve columns on
+- Migration `<ts>_core_action_ledger.sql`: the thirteen columns on
   `core.proposals` from SPEC-v2 5.1, the widened status check, the unique index
   on `idempotency_key` where not null, and `proposal_id` on `core.write_log`.
   Additive only. Existing rows get `risk = 'none'` and nulls, which is what
@@ -250,6 +273,12 @@ themes, and `spec-reviewer` before the PR. `prod-auditor` on phase 10.
 Every phase that adds a migration applies it with `supabase migration up`
 against the live local database. `supabase db reset` destroys the provider keys
 in `core.connections` and is not used.
+
+Since 2026-09-15, CI fails a PR that adds a file under `supabase/migrations`
+until the PR description carries `db push: done` or `db push: not needed`.
+Phases 0, 1, 2, 3, 7 and 9 each add one, so each of those PRs carries the line,
+and `supabase db push` is run by hand before the merge that deploys the code
+reading the new schema.
 
 ## Phase 5 prerequisite, owner work
 

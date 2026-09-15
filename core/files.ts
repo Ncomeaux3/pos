@@ -76,6 +76,16 @@ export async function signedUrl(
   return data.signedUrl
 }
 
+/** The stored bytes, for a job that has to read a file back (a retried transcription). */
+export async function download(file: StoredFile): Promise<Blob> {
+  const { data, error } = await serviceClient()
+    .storage.from(bucketFor(file.module))
+    .download(file.path)
+
+  if (error || !data) throw error ?? new Error('No file returned')
+  return data
+}
+
 export async function remove(file: StoredFile): Promise<void> {
   const { error } = await serviceClient()
     .storage.from(bucketFor(file.module))

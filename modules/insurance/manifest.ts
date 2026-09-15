@@ -251,6 +251,7 @@ export default defineModule({
         title: `${r.name} renews`,
         meta: r.carrier || 'No carrier recorded',
         at: r.expires_on,
+        href: `/insurance?policy=${r.id}`,
       }))
     },
   },

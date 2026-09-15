@@ -152,18 +152,17 @@ test('dashboard shell', async ({ page }) => {
     const eyebrows = await bento
       .locator(':scope > div')
       .evaluateAll((tiles) => tiles.map((t) => t.querySelector('.eyebrow')?.textContent?.trim()))
-    expect(eyebrows.slice(0, 9)).toEqual([
+    expect(eyebrows.slice(0, 8)).toEqual([
       'Warnings',
       'Finance',
       'Tasks · today',
       'Review · agent proposals',
       'Goals',
       'Skill Tree',
-      'System',
       'Model spend · month',
       'Next 7 days',
     ])
-    expect(eyebrows.slice(9)).toEqual([
+    expect(eyebrows.slice(8)).toEqual([
       'Second Brain',
       'Insurance',
       'Ideas',
@@ -172,7 +171,6 @@ test('dashboard shell', async ({ page }) => {
       'Home & Assets',
       'Meals',
       'Travel',
-      'Notes',
     ])
     const tile = await bento.locator(':scope > div > div').first().evaluate((el) => {
       const cs = getComputedStyle(el)
@@ -263,7 +261,10 @@ test('dashboard, the week ahead and arranging the tiles', async ({ page }) => {
   await expect(page.getByText('Next 7 days')).toBeVisible()
   // Dated by the module that owns it, not by core. The strip's entry is a
   // link named by its day; the Tasks tile lists the same title as a button.
-  await expect(page.getByRole('link', { name: /Pay the Amex statement$/ })).toBeVisible()
+  const amex = page.getByRole('link', { name: /Pay the Amex statement$/ })
+  await expect(amex).toBeVisible()
+  // The row opens the task's own drawer, not the module root (v1.1 Phase 1).
+  await expect(amex).toHaveAttribute('href', /\?task=/)
 
   // Arrange is desktop only (2026-09-13 decision): the toggle lives in the
   // desktop band and stays hidden below md.
@@ -280,12 +281,6 @@ test('dashboard, the week ahead and arranging the tiles', async ({ page }) => {
   } else {
     await expect(page.getByRole('link', { name: 'Arrange' })).toBeHidden()
   }
-})
-
-test('notes, the stub module page', async ({ page }) => {
-  await page.goto('/notes')
-  await expect(page.getByRole('heading', { name: 'Notes' })).toBeVisible()
-  await shoot(page, 'notes')
 })
 
 test('skill tree, constellation and the selected skill panel', async ({ page }) => {
@@ -341,7 +336,7 @@ test('skill tree, constellation and the selected skill panel', async ({ page }) 
   await expect(page.locator('.skill-view circle[fill="url(#skill-neb)"]')).toHaveCount(attributeCount)
   await shoot(page, 'skills')
 
-  // The demo seed classifies notes through the keyword rules, so Engineering
+  // The demo seed classifies ideas and tasks through the keyword rules, so Engineering
   // has real XP and real events without anything being staged for the shot.
   await page.getByRole('button', { name: /^Engineering$|^ENGINE$/i }).first().click()
   await expect(detailPane.getByText(/to Lv \d/)).toBeVisible()
@@ -613,7 +608,7 @@ test('search, empty and with results', async ({ page }) => {
   await page.getByLabel(/search everything/i).press('Enter')
 
   await expect(page).toHaveURL(/q=deadlift/)
-  await expect(page.getByText('Deadlift form check')).toBeVisible()
+  await expect(page.getByText('Deadlift 405')).toBeVisible()
   // The scope chips carry counts once there is a query, and only list modules
   // that actually have a hit.
   await expect(page.getByRole('link', { name: /^Everything \d+$/ })).toBeVisible()
@@ -623,7 +618,7 @@ test('search, empty and with results', async ({ page }) => {
   await shoot(page, 'search-results')
 
   // A row opens the preview drawer, in the URL, with the fields strip.
-  await page.getByRole('button', { name: /Deadlift form check/ }).click()
+  await page.getByRole('button', { name: /Deadlift 405/ }).click()
   await expect(page).toHaveURL(/open=/)
   const drawer = page.getByRole('dialog')
   await expect(drawer.getByText('Module', { exact: true })).toBeVisible()
@@ -653,12 +648,8 @@ test('command palette opens on cmd k and finds an entity', async ({ page }) => {
   await expect(palette.getByText('Go to')).toBeVisible()
   await expect(palette.getByRole('button', { name: /Settings/ })).toBeVisible()
   await expect(palette.getByRole('button', { name: /Finance G 02/ })).toBeVisible()
-  // Notes left the numbered rail to match the artboard; the palette is where
-  // an enabled module with no row on the rail is still one keystroke away.
-  await expect(palette.getByRole('button', { name: /^Notes/ })).toBeVisible()
-
   await page.getByLabel(/command palette search/i).fill('deadlift')
-  await expect(palette.getByRole('button', { name: /Deadlift form check/ })).toBeVisible()
+  await expect(palette.getByRole('button', { name: /Deadlift 405/ })).toBeVisible()
   await shoot(page, 'command-palette')
 
   await page.keyboard.press('Escape')
@@ -808,7 +799,7 @@ test('review inbox, list and sticky detail panel', async ({ page }) => {
 
   await expect(page.getByRole('tab', { name: /Pending/ })).toHaveAttribute('aria-selected', 'true')
 
-  const list = page.getByRole('button', { name: /Draft a weekly summary note/ })
+  const list = page.getByRole('button', { name: /Draft a weekly summary idea/ })
   await expect(list).toBeVisible()
   // The bulk action never offers to approve a guarded write, and one of the two
   // seeded proposals is guarded.
@@ -816,8 +807,8 @@ test('review inbox, list and sticky detail panel', async ({ page }) => {
 
   // The card: "{agent} · {when}", the state word and the meta line as plain
   // text, no chips.
-  const first = page.getByRole('button', { name: /Add a body to an empty note/ })
-  await expect(first).toHaveText(/notes\.tidy · (\d\d:\d\d today|yesterday|\d+ days ago)/)
+  const first = page.getByRole('button', { name: /Add a pitch to a bare idea/ })
+  await expect(first).toHaveText(/ideas\.tidy · (\d\d:\d\d today|yesterday|\d+ days ago)/)
   await expect(first).toContainText('PENDING')
   await expect(first).toContainText('64% confident')
   await expect(list).toContainText('GUARDED')
@@ -851,7 +842,7 @@ test('review inbox, list and sticky detail panel', async ({ page }) => {
   await list.click()
   await expect(page).toHaveURL(/sel=/)
   await expect(page.getByText(/none of them link to each other/i)).toBeVisible()
-  const guarded = page.getByText(/approving writes to Notes immediately/i)
+  const guarded = page.getByText(/approving writes to Ideas immediately/i)
   await expect(guarded).toBeVisible()
   await expect(guarded).not.toContainText('is_manual')
 
@@ -865,21 +856,21 @@ test('review inbox, list and sticky detail panel', async ({ page }) => {
 test('approving a proposal runs the tool and moves the row', async ({ page }) => {
   await page.goto('/review')
 
-  await page.getByRole('button', { name: /Add a body to an empty note/ }).click()
+  await page.getByRole('button', { name: /Add a pitch to a bare idea/ }).click()
   await page.getByRole('button', { name: /^approve$/i }).click()
 
   await expect(page.getByText(/^Approved:/)).toBeVisible()
 
   await page.goto('/review?tab=approved')
-  await expect(page.getByRole('button', { name: /Add a body to an empty note/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Add a pitch to a bare idea/ })).toBeVisible()
   // The write stays: reopening would run the tool again, so there is no Undo
   // here, only the record of what ran.
-  await expect(page.getByText('Approved. notes.write ran.')).toBeVisible()
+  await expect(page.getByText('Approved. ideas.write ran.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Undo' })).toHaveCount(0)
   await shoot(page, 'review-approved')
 
   // And the write actually happened: approve() calls the module's own tool.
-  await page.goto('/notes')
+  await page.goto('/ideas')
   await expect(page.getByText('Recurring: every 3 months.').first()).toBeVisible()
 })
 
@@ -904,7 +895,7 @@ test('review, inbox clear', async ({ page }) => {
   // Runs after the approval test, so two guarded proposals are left. Both go,
   // the empty inbox is shot, both come back.
   await page.goto('/review')
-  for (const name of [/Draft a weekly summary note/, /Add a little weight/]) {
+  for (const name of [/Draft a weekly summary idea/, /Add a little weight/]) {
     await page.getByRole('button', { name }).click()
     await page.getByRole('button', { name: 'Dismiss' }).click()
     await expect(page.getByText('Dismissed', { exact: true })).toBeVisible()
@@ -966,15 +957,37 @@ test('dashboard renders the nightly run', async ({ page }) => {
   // Tile labels are uppercased by CSS, so the DOM still says "Warnings".
   const main = page.getByRole('main')
   await expect(main.getByText('Warnings')).toBeVisible()
+  // The System tile is gone (v1.1 Phase 1): the run line at the top of the
+  // page is the health corner and links to the Agent Log.
+  await expect(main.getByRole('link', { name: /Agent Log$/ })).toHaveAttribute('href', '/agent-log')
   if (!mobile) {
-    // System, Model spend and Notes are desktop only tiles on the phone
+    // Model spend and the module tiles are desktop only on the phone
     // (2026-09-13 decision): Home is warnings, finance, tasks, review, timeline.
-    await expect(main.getByText('System')).toBeVisible()
     await expect(main.getByText('Model spend')).toBeVisible()
     // One tile per module that wrote a digest, so the page needs no knowledge of
     // any module to show its numbers. The tile's head is the link in, as drawn.
-    await expect(main.getByRole('link', { name: /open notes/i })).toBeVisible()
+    await expect(main.getByRole('link', { name: /open ideas/i })).toBeVisible()
   }
+
+  // Snooze holds the notification row itself, not its rule, so the row is gone
+  // now and still gone after a reload (v1.1 Phase 1; before this the button
+  // wrote to a rule id that did not exist and the row came straight back).
+  const snoozeButton = main.getByRole('button', { name: 'Snooze' }).first()
+  await expect(snoozeButton).toBeVisible()
+  const snoozedTitle = (await snoozeButton.locator('../..').locator('span.text-ink').first().textContent()) ?? ''
+  expect(snoozedTitle).not.toBe('')
+  await snoozeButton.click()
+  // The row goes optimistically; wait for the server action itself before
+  // reloading, or the reload can race the write it is meant to prove.
+  const acted = page.waitForResponse(
+    (r) => r.request().method() === 'POST' && 'next-action' in r.request().headers(),
+  )
+  await main.getByRole('button', { name: '1d' }).first().click()
+  await expect(main.getByText(snoozedTitle, { exact: true })).toHaveCount(0)
+  await acted
+  await page.reload()
+  await expect(main.getByText('Warnings')).toBeVisible()
+  await expect(main.getByText(snoozedTitle, { exact: true })).toHaveCount(0)
 
   await shoot(page, 'dashboard-live')
 })
@@ -1101,7 +1114,7 @@ test('agent log, the run accordion and the rail', async ({ page }) => {
   // The accordion opens on the newest run that wrote something, skipping past
   // however many empty Run now records an earlier test left behind. No click
   // needed, and that is the point being asserted.
-  await expect(page.getByText('Assigned skills to 3 notes')).toBeVisible()
+  await expect(page.getByText('Assigned skills to 3 ideas')).toBeVisible()
   await expect(page.getByText('Skill links')).toBeVisible()
 
   // A failed job shows the raw provider message, not a paraphrase.
@@ -1114,7 +1127,7 @@ test('agent log, the run accordion and the rail', async ({ page }) => {
 
   // The Jobs rail humanises a snake or dash case job name rather than
   // inventing artboard prose it does not run.
-  await expect(page.getByText('Notes / Nightly digest')).toBeVisible()
+  await expect(page.getByText('Ideas / Nightly digest')).toBeVisible()
 
   // The rail: run KPIs (headed "This run", the artboard's wording), the job
   // list, undo history and the autonomy selector.
@@ -1122,12 +1135,12 @@ test('agent log, the run accordion and the rail', async ({ page }) => {
   await expect(page.getByText('Undo history / 0')).toBeVisible()
   await expect(page.getByRole('radiogroup', { name: 'Agent autonomy' })).toBeVisible()
 
-  // The filter pills read in the sidebar's module order (Notes is order 10,
-  // Skill Tree and Tasks are order 20), not the order entries happened to be
-  // written in.
+  // The filter pills read in the sidebar's module order (Skill Tree is order
+  // 20, Ideas is 80), not the order entries happened to be written in: the
+  // seed writes the ideas row first.
   const pills = page.getByRole('radiogroup', { name: 'Filter the log by module' }).getByRole('radio')
   const labels = await pills.allTextContents()
-  expect(labels.indexOf('Notes')).toBeLessThan(labels.indexOf('Skill Tree'))
+  expect(labels.indexOf('Skill Tree')).toBeLessThan(labels.indexOf('Ideas'))
 
   await shoot(page, 'agent-log')
 })
@@ -1147,8 +1160,8 @@ test('agent log, undo reverts a write and offers a redo', async ({ page }) => {
   // once it opens.
   // Same reason: open the run that holds the reversible write by name, rather
   // than by its position in a list the dev database keeps adding to.
-  await page.getByRole('button', { name: /1 write across Notes/ }).click()
-  await expect(page.getByText('Gave an empty note a body')).toBeVisible()
+  await page.getByRole('button', { name: /1 write across Ideas/ }).click()
+  await expect(page.getByText('Gave a bare idea some notes')).toBeVisible()
 
   await page.getByRole('button', { name: 'Undo' }).first().click()
 
@@ -1611,7 +1624,15 @@ test('finance, net worth and the budget pace marks', async ({ page }) => {
   // Three on the page: the lede, the KPI tile and the chart card. The chart's
   // accessible name is the unambiguous one, and it is also the assertion worth
   // making, because it names the range the line actually covers.
-  await expect(page.getByRole('img', { name: /Net worth over \d+ days/ })).toBeVisible()
+  //
+  // Both numbers, not just the first. The axis is thirty days whatever came
+  // back from the query, and the second number is how many of those days a
+  // balance was actually recorded on. The seed writes 31 days and the window
+  // holds 30 of them, so a chart that has gone back to drawing one point per
+  // row rather than one per day fails here rather than looking plausible.
+  await expect(
+    page.getByRole('img', { name: /Net worth over 30 days, 30 of them recorded/ }),
+  ).toBeVisible()
 
   const mobile = (page.viewportSize()?.width ?? 0) < 768
   if (!mobile) {
@@ -2012,6 +2033,24 @@ test('second brain, accepting a draft moves it into the vault', async ({ page })
   await expect(row).toBeVisible()
   await expect(row).toContainText(/FINISHED · \w{3} \d+/)
   await expect(page.getByRole('button', { name: 'Send back to the inbox' })).toHaveCount(0)
+})
+
+// docs/plans/brain-capture.md Phase 2: the capture box above the list. Twenty
+// characters is enough to ask for related notes; the first line is the title.
+test('second brain, the capture box saves a note and shows related while typing', async ({ page }) => {
+  await page.goto('/brain')
+  const box = page.getByTestId('brain-capture')
+  await expect(page.getByTestId('brain-hubs').getByRole('button', { name: /^Unfiled/ })).toBeVisible()
+
+  const title = `Captured ${Date.now()}`
+  await box.getByRole('textbox', { name: 'Capture' }).fill(`${title}\nHybrid search over notes.`)
+  await expect(box.getByText('Related', { exact: true })).toBeVisible()
+
+  await box.getByRole('button', { name: /^Save/ }).click()
+  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(page).toHaveURL(/folder=note/)
+  await expect(page.getByRole('button', { name: /^Captured/ }).first()).toContainText(title)
+  await expect(page.getByRole('heading', { name: title })).toBeVisible()
 })
 
 test('travel, trips with confirmed spend only', async ({ page }) => {

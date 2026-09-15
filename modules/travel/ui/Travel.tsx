@@ -36,6 +36,17 @@ export type TravelData = {
     packed: number
     toPack: number
   }[]
+  /** Every trip's cities, in the owner's order. Flat, joined by tripId. */
+  destinations: {
+    id: string
+    tripId: string
+    name: string
+    lat: number | null
+    lon: number | null
+    startsOn: string | null
+    endsOn: string | null
+    position: number
+  }[]
   itinerary: {
     id: string
     tripId: string
@@ -132,15 +143,36 @@ export function Travel({ data }: { data: TravelData }) {
   const pastSpend = past.reduce((sum, t) => sum + t.spentCents, 0)
 
   // Pins: upcoming trips in the accent with a label, places visited in grey,
-  // wishes as dashed rings. A trip with no coordinates draws nothing.
+  // wishes as dashed rings.
+  //
+  // One pin per destination, because a trip through four cities is four places
+  // on the globe and drawing only the first was the whole reason destinations
+  // exist. A trip with no destination rows falls back to its own coordinates,
+  // which is every trip written through write_trip without a set. A trip with
+  // neither draws nothing.
+  const tripPins = (trips: TravelData['trips'], kind: Pin['kind'], prefix: string): Pin[] =>
+    trips.flatMap((t) => {
+      const placed = data.destinations.filter(
+        (d) => d.tripId === t.id && d.lat !== null && d.lon !== null,
+      )
+      if (placed.length > 0) {
+        return placed.map((d) => ({
+          id: `${prefix}-${d.id}`,
+          name: d.name || t.name,
+          country: '',
+          lat: d.lat!,
+          lon: d.lon!,
+          kind,
+        }))
+      }
+      if (t.lat === null || t.lon === null) return []
+      return [{ id: `${prefix}-${t.id}`, name: t.destination || t.name, country: '', lat: t.lat, lon: t.lon, kind }]
+    })
+
   const pins: Pin[] = [
-    ...upcoming
-      .filter((t) => t.lat !== null && t.lon !== null)
-      .map((t) => ({ id: `trip-${t.id}`, name: t.destination || t.name, country: '', lat: t.lat!, lon: t.lon!, kind: 'upcoming' as const })),
+    ...tripPins(upcoming, 'upcoming', 'trip'),
     ...data.places.map((p) => ({ id: `place-${p.id}`, name: p.name, country: p.country, lat: p.lat, lon: p.lon, kind: 'past' as const })),
-    ...wishlist
-      .filter((t) => t.lat !== null && t.lon !== null)
-      .map((t) => ({ id: `wish-${t.id}`, name: t.destination || t.name, country: '', lat: t.lat!, lon: t.lon!, kind: 'wishlist' as const })),
+    ...tripPins(wishlist, 'wishlist', 'wish'),
   ]
 
   const openTrip = data.trips.find((t) => t.id === params.get('trip')) ?? null

@@ -1,6 +1,14 @@
 import { db } from '@/core/db'
 import { ownerToday } from '@/core/today'
-import { listBudgetLines, listItinerary, listLoyalty, listPacking, listPlaces, listTrips } from '../data'
+import {
+  listBudgetLines,
+  listDestinations,
+  listItinerary,
+  listLoyalty,
+  listPacking,
+  listPlaces,
+  listTrips,
+} from '../data'
 import { Travel, type TravelData } from './Travel'
 
 /** The unread travel alerts, for the band on the globe. */
@@ -27,9 +35,10 @@ async function checkinRule(): Promise<{ trigger: string } | null> {
 }
 
 export default async function TravelPage() {
-  const [trips, itinerary, packing, places, loyalty, lines, alerts, checkin, todayIso] =
+  const [trips, destinations, itinerary, packing, places, loyalty, lines, alerts, checkin, todayIso] =
     await Promise.all([
       listTrips(),
+      listDestinations(),
       listItinerary(),
       listPacking(),
       listPlaces(),
@@ -59,6 +68,16 @@ export default async function TravelPage() {
       pendingCount: Number(t.pending_count),
       packed: Number(t.packed),
       toPack: Number(t.to_pack),
+    })),
+    destinations: destinations.map((d) => ({
+      id: d.id,
+      tripId: d.trip_id,
+      name: d.name,
+      lat: d.lat,
+      lon: d.lon,
+      startsOn: d.starts_on,
+      endsOn: d.ends_on,
+      position: d.position,
     })),
     itinerary: itinerary.map((i) => ({
       id: i.id,

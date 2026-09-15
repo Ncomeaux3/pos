@@ -164,9 +164,9 @@ Two sources are built and live in production (PRs #17, #18, #19, all
 
 ## v2 phase 5: Gmail
 
-Not needed until v2 phase 5, which starts after items 12 to 17. Listed now
-because the research that produced it is fresh and one setting in it is easy to
-get wrong in a way that looks like a bug six days later.
+Not needed until v2 phase 5, which starts after v1.1 ships and after items 12
+to 16. Listed now because the research that produced it is fresh and one setting
+in it is easy to get wrong in a way that looks like a bug six days later.
 
 - [ ] **22. Google Cloud project for Gmail**, free, about 15 minutes. Create a
       project at console.cloud.google.com, enable the Gmail API, create an

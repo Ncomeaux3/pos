@@ -249,6 +249,7 @@ export default defineModule({
           title: s.title,
           meta: `${s.asset_name} / ${dueLabel(toSchedule(s), today)}`,
           at: s.due_on,
+          href: `/home?asset=${s.asset_id}`,
         }))
     },
 

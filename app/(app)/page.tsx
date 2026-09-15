@@ -6,7 +6,6 @@ import {
   Chip,
   EmptyState,
   Eyebrow,
-  HeatStrip,
   PaceBar,
   PageHeader,
   Row,
@@ -14,10 +13,11 @@ import {
 } from '@/components/pos'
 import { db } from '@/core/db'
 import { Bento, ArrangeToggle, type Tile } from './Bento'
-import { JobRows, SevenDays } from './DashboardTiles'
+import { SevenDays } from './DashboardTiles'
 import { ProposalList, WarningList } from './Inbox'
 import { getModules } from '@/core/modules'
 import { getNav, getOffRailNav } from '@/core/nav'
+import { unreadWarnings } from '@/core/notify'
 import { upcoming } from '@/core/review-registry'
 import { headlineSegments, jobStates, latestSummary } from '@/core/orchestrator'
 import { getSettings } from '@/core/settings'
@@ -37,7 +37,7 @@ import { RunNow } from './RunNow'
  */
 async function nextSevenDays(
   todayIso: string,
-): Promise<{ id: string; title: string; meta: string; at: string; module: string }[]> {
+): Promise<{ id: string; title: string; meta: string; at: string; module: string; href?: string }[]> {
   const week = new Date(`${todayIso}T12:00:00`)
   week.setDate(week.getDate() + 7)
   const until = week.toISOString().slice(0, 10)
@@ -47,14 +47,6 @@ async function nextSevenDays(
     .flatMap((i) => (i.at && i.at >= todayIso && i.at < until ? [{ ...i, at: i.at }] : []))
     .sort((a, b) => a.at.localeCompare(b.at))
     .slice(0, 6)
-}
-
-async function unreadWarnings() {
-  const { rows } = await db().query<{ id: string; title: string; body: string; urgency: string }>(
-    `select id, title, body, urgency from core.notifications
-      where read_at is null order by (urgency = 'urgent') desc, due_at desc limit 4`,
-  )
-  return rows
 }
 
 async function pendingProposals() {
@@ -101,7 +93,7 @@ const money = (cents: number) => `$${(cents / 100).toFixed(2)}`
  * else that wrote a digest follows in rail order; a device's own arrangement
  * still wins over both once it has one.
  */
-const ORDER = ['warnings', 'finance', 'tasks', 'review', 'goals', 'skills', 'jobs', 'llm', 'timeline']
+const ORDER = ['warnings', 'finance', 'tasks', 'review', 'goals', 'skills', 'llm', 'timeline']
 
 /**
  * Phone Home is a Today page: the headline plus these five (2026-09-13
@@ -117,8 +109,7 @@ export default async function DashboardPage() {
   // The owner's date, not the server's: on Vercel those differ all evening.
   // Two forms of it, and they are not interchangeable. `todayIso` is what
   // dates are compared against; `today` is the label in the band.
-  const settings = await getSettings()
-  const todayIso = await ownerToday()
+  const [settings, todayIso] = await Promise.all([getSettings(), ownerToday()])
   // "Fri Sep 11", the artboard's band date, in the owner's zone.
   const today = new Intl.DateTimeFormat('en-US', {
     timeZone: settings.timezone,
@@ -228,6 +219,7 @@ export default async function DashboardPage() {
               meta: d.meta,
               at: d.at,
               module: d.module,
+              href: d.href,
             }))}
           />
         </Card>
@@ -281,33 +273,6 @@ export default async function DashboardPage() {
       }
     }),
 
-    {
-      id: 'jobs',
-      phone: PHONE_TILES.has('jobs'),
-      node: (
-        <Card className={tileClass}>
-          <CardHead
-            label="System"
-            meta={`${jobs.filter((j) => j.status === 'ok').length} ok${failed.length > 0 ? ` · ${failed.length} failed` : ''}`}
-            plainMeta
-          />
-          <HeatStrip
-            cells={jobs.map((j) => ({ label: `${j.module}.${j.name}`, status: j.status }))}
-            className="grid grid-cols-11 gap-[3px]"
-            cellClassName="h-3.5"
-          />
-          <JobRows
-            jobs={jobs.map((j) => ({
-              name: `${j.module}.${j.name}`,
-              status: j.status,
-              at: j.lastRun ? new Date(j.lastRun).toISOString() : null,
-              tookMs: j.tookMs,
-            }))}
-            timezone={settings.timezone}
-          />
-        </Card>
-      ),
-    },
     {
       id: 'llm',
       phone: PHONE_TILES.has('llm'),
@@ -399,7 +364,10 @@ export default async function DashboardPage() {
       />
 
       <section className="mt-[26px]">
-        <span className="eyebrow text-ink-3">
+        {/* One line at every width: the "Nightly summary" prefix is desktop
+          * only, since with "Agent Log" on the end it wraps at 402 and the
+          * phone Home has a height budget. */}
+        <Link href="/agent-log" className="eyebrow text-ink-3 hover:text-ink">
           <span
             className="status-dot"
             data-tone={failed.length > 0 ? 'bad' : latest ? 'ok' : 'idle'}
@@ -407,10 +375,13 @@ export default async function DashboardPage() {
           />
           {/* The run's own clock, in the owner's zone, as the artboard writes
             * it: "Last run 04:02 CDT · ok". */}
-          {latest
-            ? `Nightly summary · Last run ${clockIn(new Date(latest.runAt), settings.timezone)} ${zoneAbbrIn(settings.timezone)} · ${failed.length > 0 ? `${failed.length} failed` : 'ok'}`
-            : 'No run yet'}
-        </span>
+          <span>
+            <span className="max-md:hidden">Nightly summary · </span>
+            {latest
+              ? `Last run ${clockIn(new Date(latest.runAt), settings.timezone)} ${zoneAbbrIn(settings.timezone)} · ${failed.length > 0 ? `${failed.length} failed` : 'ok'} · Agent Log`
+              : 'No run yet · Agent Log'}
+          </span>
+        </Link>
         {/* The opening statement, at the size the design gives it. It is the
           * first thing on the page and reads as a sentence, not a heading, and
           * the parts of it that name something you can open are links, which

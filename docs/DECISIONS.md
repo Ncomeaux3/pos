@@ -2,15 +2,7 @@
 
 Claude Code must ask about every unresolved item here before scaffolding. Record the answer, date, and reason in decisions/log.md, then mark it resolved.
 
-## Open for v2
-
-(none open)
-
-The fourteen resolved on 2026-09-14 are in decisions/log.md and docs/SPEC-v2.md:
-runner topology, ledger shape, integration extension, cost cap, plan location,
-no in-app chat, first connectors, voice, secret store and queue, the default
-permission level, sync scope, start order, Gmail's scope and OAuth posture, and
-an empty auto-approve table.
+(none open, for v1.1 or for v2)
 
 ## Resolved
 All eleven original items plus the architecture, platform, and template decisions were resolved on 2026-09-05. See decisions/log.md for each choice, its reason, and what was rejected. See docs/ARCHITECTURE.md for how they fit together.
@@ -29,3 +21,48 @@ All eleven original items plus the architecture, platform, and template decision
 - Notification channel: email via Resend. (2026-09-05)
 - MCP layout: one server, namespaced tools. (2026-09-05)
 - Job runner: one Vercel cron. (2026-09-05)
+
+v1.1, all 2026-09-14, from the /adopt-repo interview; reasons in decisions/log.md, plan in docs/plans/pos-v1-1.md:
+
+- Delivery order: bugs, then speed, then features, fitness last, one hardening phase.
+- Workouts source: Health Auto Export Premium ($1.99 a month). Strava API apps need a paid subscription; the free Shortcut cannot read workouts.
+- Dashboard editing: show, hide and order, one layout saved in core.settings for both widths. No per-device layouts, no named views.
+- Dashboard freshness: a module's digest is recomputed by callTool after every write; tiles read the latest digests. The headline stays nightly.
+- Travel: trips gain destinations with their own dates; a guarded merge_trip folds one trip into another. No script migration of the four existing trips.
+- Goals > projects > tasks: a task inherits its project's goal unless it names its own.
+- Skill picker on every entity drawer through one shared component and link/unlink tools.
+- The phase-1 notes stub module is deleted; Second Brain is the notes module.
+- Fitness scope: Trends, history filters, plan form, Apple arrival on the Sync band. Full app parity (per-workout screens, PRs) is not in v1.1.
+- Prod-audit gaps get one hardening phase (Phase 12).
+- Existing tests are trusted as the regression net.
+- The digest email goes out every night, "Nothing needs you today" included.
+- Phone for the iOS splash image: iPhone 16 Pro Max (440 x 956 points at 3x).
+- Date inputs stay native `<input type="date">` everywhere; no picker library.
+- Vercel functions stay in iad1 beside the owner; pdx1 measured slower on the whole. The database region is the remaining lever and is an owner decision. (2026-09-15)
+
+v2, all 2026-09-14, from the spec review; the sixteen entries are in decisions/log.md, the spec in docs/SPEC-v2.md and the plan in docs/plans/v2-agent-layer.md:
+
+- Runner topology, ledger shape, integration extension, cost cap, plan location, no in-app chat, first integrations, voice out, secret store and queue, the default permission level, sync scope, start order, Gmail's scope and OAuth posture, and an empty auto-approve table. Fourteen answers from the owner.
+- Two corrections made after them: phase 0's three outbound clients are SimpleFIN, the vault and Strava (Apple Health is inbound), and phase 1 adds `integrations/fixture/` so the ledger has a write verb to prove itself against.
+
+## Production readiness
+
+From the prod-auditor report of 2026-09-14 (8 present, 5 partial, 0 absent, no critical findings). Every row is decided, scheduled to a phase of docs/plans/pos-v1-1.md, or not needed with a reason.
+
+| Layer | Decision | Phase | Notes |
+|---|---|---|---|
+| 1. Frontend | Present | | `pnpm build` and a served /login check in CI; tokens in app/globals.css; Playwright at 1440 and 402 |
+| 2. APIs and backend logic | Present | | zod on every route, `{ error }` JSON, refusal tests in core/*.test.ts |
+| 3. Database and storage | Present | | 30 migrations, replayed into pos_test by CI |
+| 4. Auth and permissions | Present | | proxy.ts, requireOwner(), bearer on /api/mcp and /api/cron, passkeys |
+| 5. Hosting and deployment | Present | | Vercel git integration, previews per branch, rollback in docs/SETUP-SUPABASE.md section 7 |
+| 6. Cloud and compute | Partial | 12 | maxDuration only on the cron; add to MCP, webhook, OAuth routes |
+| 7. CI/CD and version control | Partial | 12 | CI runs but is not a merge gate; repo is public now so branch protection should be available |
+| 8. Security and data access | Partial | 12 | .env gitignored, CSP, dependabot; add `pnpm audit` to CI |
+| 9. Rate limiting | Present | | core/ratelimit.ts, 60 per minute per IP, 429 with retry-after |
+| 10. Caching and CDN | Present | | Request-scoped React cache() on settings, today and skill names since Phase 3; no TTL caches by decision, single user and freshness wins |
+| 11. Load balancing and scaling | Present | | Pooler in transaction mode; pool max 8 per instance, measured against 4 on 2026-09-15 |
+| 12. Observability and logs | Partial | 12 | core.request_log, core.jobs, digest email on failure. Add error.tsx and global-error.tsx. Not needed: Sentry or another error tracker, by the cost cap and single user |
+| 13. Availability and recovery | Present | 12 | Nightly pg_dump to pos-backups, restore drilled 2026-09-08; add the storage bucket to the dump |
+| Cost ceiling | $0 to $10 a month, llm_soft_cap_cents 1000 enforced in core/llm.ts | 11 | Health Auto Export Premium adds $1.99 a month |
+| Secrets rotation | Absent | 12 | One paragraph in docs/SETUP-SUPABASE.md: who rotates each secret, where, and what it breaks |

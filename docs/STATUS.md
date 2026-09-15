@@ -3,9 +3,20 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session; the paragraph below names the plan that comes next.
 
-Last updated: 2026-09-14. Branch `main`, production `pos-gilt-rho.vercel.app`
+**Next plan: docs/plans/pos-v1-1.md** (2026-09-14, from /adopt-repo). Twelve
+phases from the owner's first week of live use: diagnosis and small bugs, the
+notes stub deleted, server and client speed, dashboard layout and freshness,
+goals > projects > tasks, the skill picker, skill tree gestures, travel
+destinations, the net worth chart, fitness trends and history, hardening.
+Decisions in decisions/log.md under that date; DECISIONS.md carries the
+production readiness table. Also merged 2026-09-14 and not yet written up below:
+docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
+hubs, related notes and file capture with transcription.
+
+Last updated: 2026-09-15. Branch `main`, production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
-steps 1 to 9). Three plans finished this week: docs/plans/phone-shell.md
+steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
+#48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
 (five phases: speed and gestures, the shell, then Dashboard, Finance, Tasks
 and Goals phone passes, PRs #21, #27, #33, #34, #36), docs/plans/travel-globe.md
 (filled continents, pin taps, destination geocoding, #26, #28, #29), and the
@@ -27,6 +38,57 @@ and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
 ## Done
+
+**v1.1 Phase 2, delete the notes stub** (2026-09-15, branch
+`phase-2-delete-notes-stub`). `modules/notes/` is gone and migration
+`20260915060000_notes_drop.sql` clears its `core.entities`, `core.digests` and
+`core.jobs` rows and drops the schema; `20260905223936_notes_init.sql` stays as
+history. `core/reviews.ts` writes the week note to Second Brain only. The MCP
+and proposals suites and the e2e seed lean on `ideas.write` (one table,
+unguarded) instead; the e2e Agent Log fixture writes its ideas row before the
+skills row so the sidebar-order assertion still proves something. Start a new
+module by copying `modules/ideas`. After `supabase db push` and the deploy,
+press Run now once: the dashboard tiles still read `core.dashboard_summary`
+until Phase 5, so the Notes tile lingers until the next run rewrites it.
+
+**v1.1 Phase 1, diagnose and small fixes** (2026-09-14, branch
+`phase-1-diagnose-fixes`). The nightly email finding, from production
+`core.dashboard_summary` and `core.jobs`: the Vercel cron fired at 09:02 UTC
+every night from 2026-09-10 to 2026-09-14, all five core jobs `ok`. Four of
+those nights had zero alerts, so `orchestrate` logged `queued: false` and
+`notify` sent nothing, by the old design. The one night with alerts
+(2026-09-13, two of them) queued one digest and `core.notifications` shows it
+sent at 09:02:37. Nothing is unsent, so the Resend list was not needed. The
+cron is attached to production and the sender works; silence was the rule,
+and the rule is now changed: a quiet night queues "Nothing needs you today".
+Also in this phase: Snooze on the dashboard held a rule id that did not exist
+(it now snoozes the notification row), Next 7 days rows open their own drawer,
+the System tile is the run line at the top linking to the Agent Log, a time on
+a task can be cleared, the iPhone 16 Pro Max startup image is set, and
+`/splash/` joins `/icons/` outside the auth proxy. Goal deadline in Chrome 153:
+typed dates work once the page is hydrated; a two-digit year gives year 0026,
+which is under `min` and blocks the submit with the browser's own message, and
+keys typed before hydration are dropped. No handler swallows keys. For Phase 6.
+Push, from the owner pressing the button on production: signed in, `/sw.js` is 200, so the proxy is cleared; the failure is `VAPID_PUBLIC_KEY` in Vercel not decoding as base64url (`atob` throws before subscribe). The pair was regenerated and set again, redeployed, and the desktop subscribed; see docs/PUSH.md, "Why enabling failed".
+
+**Second Brain is capture first.** docs/plans/brain-capture.md, PRs #48, #49
+and #50, all merged 2026-09-14. POS is the primary store for notes now and the
+vault a pulled archive. One box above the list takes text (first line is the
+title), a bare URL (ingested as before), a "worked on" entry (kind `daily`)
+and a file. Hubs (`brain.hub`, `brain.note_hub`) are owner-named keyword
+groupings shown as a second chip group in the band: rules file a note at
+capture, one batched Haiku call a night files the misses (50 notes, under a
+cent), a manual tick wins. Related notes by embedding show under the box while
+typing and in a cell on each note; that is the one resurfacing mechanism. A
+file (PDF, JPEG, PNG, GIF or WebP, 10 MB) is a note with `file_path` set in
+the private `brain` bucket and one Haiku `summary` call for the body; proven
+locally with a PDF at 0.18 cents and a PNG at 0.08. A cap leaves the body as
+"Transcription pending" and the nightly job retries one file. Not built by
+decision: per-note summaries, hub summaries, weekly email, vault write back,
+XP for daily entries, graph view, MCP tools for hubs. Follow-ups nobody
+scheduled: attaching the same file twice makes a second note and a second
+call; no progress text during the roughly 7 s transcription; a saved note
+opens below the fold at 402.
 
 **Login works on the phone, and by passkey.** docs/plans/mobile-login.md, PRs
 #41, #42, #43 and #45, all merged 2026-09-14. Proven on the live project
@@ -555,7 +617,8 @@ the module contract grew rather than the screen faking it: `review.wins`,
 `ReviewCheck.percent` and `.movement`, `ReviewItem.at`, and a `goalWeight` on
 `SkillStat`. Where an artboard showed something nothing could produce, it was
 left out and said so, which is why there is no semantic search field on Second
-Brain: no embeddings exist for notes yet.
+Brain: the band's one search box is the rule, and since 2026-09-14 related
+notes surface beside the capture box and on each note instead.
 
 **The Skill Tree took three passes.** The first two approximated from
 screenshots and were wrong in ways the owner could see: the hover card had no
@@ -624,8 +687,9 @@ outside Next.
 docs/SPEC-v2.md and docs/plans/v2-agent-layer.md. The agent layer: per-verb
 permission on integrations, an action state machine over core.proposals, run
 budgets, a Postgres queue, a memory tier, a nightly suggestion pass, and plans
-in the goals schema. Fourteen v2 decisions were taken with the owner over
-2026-09-14 and are in decisions/log.md; none stay open.
+in the goals schema. Sixteen v2 entries were written to decisions/log.md on
+2026-09-14, fourteen of them answers from the owner and two corrections made
+after; none stay open.
 
 The draft spec proposed six things that already ship under other names (the
 credential vault, the connector registry, the approval gate, the audit trail,
@@ -634,10 +698,15 @@ Vercel Hobby with the $10 cap, which is what fixes its shape: no long-lived
 process, no external queue, and a run that advances only when something drains
 the queue. Phases 0 to 4 are the product.
 
-It starts after OWNER-TODO steps 12 to 17. Phase 0 covers the three
-integrations that currently skip every night, so its done condition needs real
-data behind them, and phase 4's approval push needs the VAPID pair. The phone
-polish pass is independent and can run either side of it.
+It starts after v1.1 and after OWNER-TODO steps 12 to 16. v1.1
+(docs/plans/pos-v1-1.md) is the in-flight plan and its phase 12 hardens exactly
+what v2 then builds on, so v2 waits rather than hardening the same routes
+twice. Phase 0 covers the integrations that currently skip every night, so it
+is worth more with real data behind them, and phase 4's approval push needs the
+VAPID pair. Strava does not gate it: item 11 is deferred and v1.1 moved workouts
+to Apple Health, so phase 0 wires the Strava client onto the executor without
+depending on a live connection. The phone polish pass is independent and can run
+either side of it.
 
 ## Open questions for the owner
 

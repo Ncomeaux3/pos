@@ -1,10 +1,10 @@
 import { db } from '@/core/db'
 import { getSkillNames } from '@/core/modules'
-import { listNotes, listSkillLinks } from '../data'
+import { listHubs, listNoteHubs, listNotes, listSkillLinks } from '../data'
 import { Brain, type BrainData } from './Brain'
 
 export default async function BrainPage() {
-  const [notes, links, skillLinks, skillNames] = await Promise.all([
+  const [notes, links, skillLinks, skillNames, hubs, noteHubs] = await Promise.all([
     listNotes(),
     // Backlinks and dangling targets for every note in one pass. One query
     // rather than one per note: the panel needs them for whichever note is
@@ -14,9 +14,12 @@ export default async function BrainPage() {
     ),
     listSkillLinks(),
     getSkillNames(),
+    listHubs(),
+    listNoteHubs(),
   ])
 
   const byId = new Map(notes.map((n) => [n.id, n]))
+  const hubById = new Map(hubs.map((h) => [h.id, h]))
 
   const data: BrainData = {
     notes: notes.map((n) => ({
@@ -32,6 +35,7 @@ export default async function BrainPage() {
       source: n.source,
       externalId: n.external_id,
       vaultSha: n.vault_sha,
+      filePath: n.file_path,
       updatedAt: new Date(n.updated_at).toISOString(),
       backlinks: links.rows
         .filter((l) => l.to_note_id === n.id)
@@ -51,7 +55,15 @@ export default async function BrainPage() {
           confidence: Number(l.confidence),
           by: l.is_manual ? 'manual' : l.classified_by === 'rule' ? 'rule' : 'model',
         })),
+      hubs: noteHubs
+        .filter((h) => h.note_id === n.id && hubById.has(h.hub_id))
+        .map((h) => ({
+          id: h.hub_id,
+          name: hubById.get(h.hub_id)!.name,
+          by: h.is_manual ? 'manual' : h.classified_by === 'rule' ? 'rule' : 'model',
+        })),
     })),
+    hubs: hubs.map((h) => ({ id: h.id, name: h.name, slug: h.slug, keywords: h.keywords })),
   }
 
   return (

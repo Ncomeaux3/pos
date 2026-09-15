@@ -248,7 +248,8 @@ const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
  * would make the unread count on the warnings tile grow by however many things
  * happened to be wrong rather than by how many nights have passed.
  *
- * A night with nothing wrong queues nothing. Silence is the correct output.
+ * A night with nothing wrong still queues one row, "Nothing needs you today",
+ * decided 2026-09-14: from the inbox, silence and a broken cron look the same.
  */
 export async function assembleSummary(): Promise<{ headline: string | null; queued: boolean }> {
   const summary = await buildSummary()
@@ -260,9 +261,8 @@ export async function assembleSummary(): Promise<{ headline: string | null; queu
     [JSON.stringify(summary), headline],
   )
 
-  if (summary.alerts.length === 0) return { headline, queued: false }
-
   const { queue } = await import('./notify')
+  const quiet = summary.alerts.length === 0
   const worst = summary.alerts.find((a) => a.tone === 'bad') ?? summary.alerts[0]
 
   // A digest that has not been sent or read yet is superseded by this one
@@ -279,8 +279,10 @@ export async function assembleSummary(): Promise<{ headline: string | null; queu
 
   await queue({
     channel: 'digest',
-    title: headline ?? worst.title,
-    body: summary.alerts.map((a) => `${a.title}${a.detail ? `. ${a.detail}` : ''}`).join('\n'),
+    title: quiet ? 'Nothing needs you today' : (headline ?? worst.title),
+    body: quiet
+      ? (headline ?? '')
+      : summary.alerts.map((a) => `${a.title}${a.detail ? `. ${a.detail}` : ''}`).join('\n'),
     urgency: summary.alerts.some((a) => a.tone === 'bad') ? 'urgent' : 'normal',
   })
 

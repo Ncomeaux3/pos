@@ -1,6 +1,7 @@
 # SPEC v2: the agent layer
 
 Status: specified, not started. Supersedes the draft SPEC-v2 of 2026-09-14.
+Re-checked against main on 2026-09-15, after the first four v1.1 phases merged.
 Load on demand. Do not load into every session.
 
 v2 gives the agent hands. It connects to external accounts, proposes work
@@ -8,8 +9,8 @@ against them, and executes what the owner approves, writing the result back
 into the POS the same way a module write lands today.
 
 The draft this replaces was written as though v1 were a bare core with an
-orchestrator stub. It is not. Thirteen modules ship, the nightly run is 30
-jobs, and five of the draft's subsystems are already half built under other
+orchestrator stub. It is not. Twelve modules ship, the nightly run is 30
+jobs, and six of the draft's subsystems are already half built under other
 names. Everything below is written against what exists.
 
 ## 1. What already exists
@@ -49,7 +50,7 @@ moment it is proposed to the moment it succeeds or fails.
 All met as of 2026-09-14. Recorded so a later reader can check the ground has
 not moved:
 
-- `core.events` append only, emitting from thirteen modules
+- `core.events` append only, emitting from twelve modules
 - `core.entities` registering every module row through `register()`
 - Classification rules-first: `classify()` runs keyword rules in the write
   path, the model runs in a nightly batch
@@ -89,6 +90,7 @@ none behaves exactly as it does today.
 export default defineIntegration({
   id: 'gmail',
   label: 'Gmail',
+  description: 'Reads the messages you file into one label.',
   auth: { type: 'oauth2', authorizeUrl, tokenUrl, scopes: [...] },
   hosts: ['gmail.googleapis.com', 'oauth2.googleapis.com'],
   verbs: [
@@ -560,7 +562,9 @@ weekly for the first month.
 ## 10. Cost
 
 The cap stays $10 a month, decided 2026-09-05 and reaffirmed 2026-09-14. Total
-model spend across the entire build to date is $2.32.
+model spend across the build was $2.32 as of 2026-09-14. That is a reading of
+`core.llm_calls` on one day, not a standing figure: re-read it rather than
+quoting it.
 
 The draft estimated "low tens of dollars per month" for the nightly suggestion
 pass. That number does not survive arithmetic. At the prices in `core/llm.ts`
@@ -605,14 +609,15 @@ No write verb exists before phase 6: SimpleFIN, the vault and Strava are all
 read, and Apple Health is inbound. So phases 1, 2 and 4 cannot prove their done
 conditions against a real provider. Phase 1 adds `integrations/fixture/`, an
 integration whose client writes to a table in its own schema rather than to
-the network, with one read verb and one write verb at each risk class. Every
+the network, with one read verb and one write verb at each of low, medium and
+high risk. Every
 ledger, auto-approve, taint and approval test runs against it, and phase 10's
 demo mode is the same integration with fixture rows behind it. It ships in the
 repo because a fork needs it for the same two reasons.
 
 | Phase | Deliverable | Done when |
 |---|---|---|
-| 0 | Verbs, permission and the verb executor on the integrations already written | SimpleFIN, the vault and both Apple Health routes declare verbs, carry a level, and reach the network only through `runVerb`. A level of `none` refuses a sync and the job says so. No new OAuth work. |
+| 0 | Verbs, permission and the verb executor on the integrations already written | SimpleFIN, the vault and Strava declare verbs, carry a level, and reach the network only through `runVerb`; both Apple Health routes carry a level that gates their webhook, and declare no verbs because neither makes an outbound call (4.5). A level of `none` refuses a sync and the job says so. No new OAuth work. |
 | 1 | Ledger extension, state machine, the fixture integration | An approved fixture write verb executes exactly once, and a duplicate idempotency key is rejected by Postgres rather than by application code. |
 | 2 | Auto-approve rules and taint | `risk = high` cannot be auto-approved and neither can an action derived from fetched content, both proven by failing-first tests. |
 | 3 | Run budgets and the Postgres queue | A runaway run terminates on each of the three budgets and records `termination_reason`. |
