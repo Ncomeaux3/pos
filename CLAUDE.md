@@ -9,6 +9,7 @@ Owner: Nick. Solo, nights and weekends. Finish one module before starting the ne
 - The v1.1 build plan: docs/plans/pos-v1-1.md (one phase per session, /build-phase)
 - How it is built: docs/ARCHITECTURE.md (read before touching core, a manifest, or a migration)
 - Full module spec: @docs/SPEC.md (use /module <name> to load one module's section)
+- Skill Tree full spec: docs/SKILLS.md (the 2026-09-15 rewrite; plan in docs/plans/skills-v2.md, queued after v1.1)
 - The next version: docs/SPEC-v2.md and docs/plans/v2-agent-layer.md (the agent layer, specified 2026-09-14, not started)
 - Unresolved choices: @docs/DECISIONS.md (ask before scaffolding anything they affect)
 - About the owner and how he works: context/owner.md
