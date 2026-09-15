@@ -3,6 +3,16 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session; the paragraph below names the plan that comes next.
 
+**Next plan: docs/plans/pos-v1-1.md** (2026-09-14, from /adopt-repo). Twelve
+phases from the owner's first week of live use: diagnosis and small bugs, the
+notes stub deleted, server and client speed, dashboard layout and freshness,
+goals > projects > tasks, the skill picker, skill tree gestures, travel
+destinations, the net worth chart, fitness trends and history, hardening.
+Decisions in decisions/log.md under that date; DECISIONS.md carries the
+production readiness table. Also merged 2026-09-14 and not yet written up below:
+docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
+hubs, related notes and file capture with transcription.
+
 Last updated: 2026-09-14. Branch `main`, production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Three plans finished this week: docs/plans/phone-shell.md
