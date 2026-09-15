@@ -64,7 +64,7 @@ export function PlanDrawer({ plan, onClose }: { plan: Plan | null; onClose: () =
           exercise: it.exercise,
           sets: String(it.sets),
           reps: it.reps,
-          targetLb: it.targetWeightG === null ? '' : String(Math.round((it.targetWeightG / GRAMS_PER_POUND) * 10) / 10),
+          targetLb: it.targetWeightG === null ? '' : String(Math.round(it.targetWeightG / GRAMS_PER_POUND)),
           notes: it.notes,
         }))
       : [blankItem()],
@@ -172,64 +172,74 @@ export function PlanDrawer({ plan, onClose }: { plan: Plan | null; onClose: () =
         </label>
 
         <div>
-          <div className="grid grid-cols-[64px_1fr_44px_56px_64px_24px] gap-1.5 text-[10px] uppercase tracking-[0.06em] text-ink-4">
-            <span>Day</span>
-            <span>Exercise</span>
-            <span>Sets</span>
-            <span>Reps</span>
-            <span>Lb</span>
-            <span />
-          </div>
-          <div className="mt-1.5 flex flex-col gap-1.5">
+          <Eyebrow>Exercises</Eyebrow>
+          {/* Two lines a row: the name line, then the three numbers with their
+            * own captions. Six cells on one line clipped "AMRAP" at 1440 and
+            * the exercise name itself in the 402 sheet. */}
+          <div className="mt-1.5 flex flex-col gap-2.5">
             {items.map((row, i) => (
-              <div key={row.key} className="grid grid-cols-[64px_1fr_44px_56px_64px_24px] gap-1.5">
-                <input
-                  aria-label={`Day ${i + 1}`}
-                  value={row.dayLabel}
-                  onChange={(e) => patch(row.key, { dayLabel: e.target.value })}
-                  placeholder="Upper"
-                  maxLength={60}
-                  className={fieldClass}
-                />
-                <input
-                  aria-label={`Exercise ${i + 1}`}
-                  value={row.exercise}
-                  onChange={(e) => patch(row.key, { exercise: e.target.value })}
-                  maxLength={200}
-                  className={fieldClass}
-                />
-                <input
-                  type="number"
-                  min={1}
-                  max={20}
-                  aria-label={`Sets ${i + 1}`}
-                  value={row.sets}
-                  onChange={(e) => patch(row.key, { sets: e.target.value })}
-                  className={fieldClass}
-                />
-                <input
-                  aria-label={`Reps ${i + 1}`}
-                  value={row.reps}
-                  onChange={(e) => patch(row.key, { reps: e.target.value })}
-                  placeholder="8-12"
-                  maxLength={40}
-                  className={fieldClass}
-                />
-                <input
-                  type="number"
-                  aria-label={`Target lb ${i + 1}`}
-                  value={row.targetLb}
-                  onChange={(e) => patch(row.key, { targetLb: e.target.value })}
-                  className={fieldClass}
-                />
-                <button
-                  type="button"
-                  aria-label={`Remove exercise ${i + 1}`}
-                  onClick={() => setItems((rows) => rows.filter((r) => r.key !== row.key))}
-                  className="self-center text-[13px] text-ink-4 transition-colors duration-150 hover:text-bad"
-                >
-                  &#10005;
-                </button>
+              <div key={row.key} className="flex flex-col gap-1.5 border-b border-rule pb-2.5 last:border-0">
+                <div className="grid grid-cols-[96px_1fr_24px] gap-1.5">
+                  <input
+                    aria-label={`Day ${i + 1}`}
+                    value={row.dayLabel}
+                    onChange={(e) => patch(row.key, { dayLabel: e.target.value })}
+                    placeholder="Upper"
+                    maxLength={60}
+                    className={fieldClass}
+                  />
+                  <input
+                    aria-label={`Exercise ${i + 1}`}
+                    value={row.exercise}
+                    onChange={(e) => patch(row.key, { exercise: e.target.value })}
+                    placeholder="Exercise"
+                    maxLength={200}
+                    className={fieldClass}
+                  />
+                  <button
+                    type="button"
+                    aria-label={`Remove exercise ${i + 1}`}
+                    onClick={() => setItems((rows) => rows.filter((r) => r.key !== row.key))}
+                    className="self-center text-[13px] text-ink-3 transition-colors duration-150 hover:text-bad"
+                  >
+                    &#10005;
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <label className="flex items-center gap-1.5 text-[11px] text-ink-3">
+                    Sets
+                    <input
+                      type="number"
+                      min={1}
+                      max={20}
+                      aria-label={`Sets ${i + 1}`}
+                      value={row.sets}
+                      onChange={(e) => patch(row.key, { sets: e.target.value })}
+                      className={fieldClass}
+                    />
+                  </label>
+                  <label className="flex items-center gap-1.5 text-[11px] text-ink-3">
+                    Reps
+                    <input
+                      aria-label={`Reps ${i + 1}`}
+                      value={row.reps}
+                      onChange={(e) => patch(row.key, { reps: e.target.value })}
+                      placeholder="8-12"
+                      maxLength={40}
+                      className={fieldClass}
+                    />
+                  </label>
+                  <label className="flex items-center gap-1.5 text-[11px] text-ink-3">
+                    Lb
+                    <input
+                      type="number"
+                      aria-label={`Target lb ${i + 1}`}
+                      value={row.targetLb}
+                      onChange={(e) => patch(row.key, { targetLb: e.target.value })}
+                      className={fieldClass}
+                    />
+                  </label>
+                </div>
               </div>
             ))}
           </div>

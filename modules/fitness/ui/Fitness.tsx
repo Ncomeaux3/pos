@@ -281,20 +281,26 @@ export function Fitness({ data }: { data: FitnessData }) {
                   </option>
                 ))}
               </select>
-              <input
-                type="date"
-                aria-label="From"
-                value={filter.from ?? ''}
-                onChange={(e) => setFilter({ from: e.target.value })}
-                className={cn(fieldClass, 'w-auto py-1.5')}
-              />
-              <input
-                type="date"
-                aria-label="To"
-                value={filter.to ?? ''}
-                onChange={(e) => setFilter({ to: e.target.value })}
-                className={cn(fieldClass, 'w-auto py-1.5')}
-              />
+              <label className="flex items-center gap-1.5 text-[11px] text-ink-3">
+                From
+                <input
+                  type="date"
+                  aria-label="From"
+                  value={filter.from ?? ''}
+                  onChange={(e) => setFilter({ from: e.target.value })}
+                  className={cn(fieldClass, 'w-auto py-1.5')}
+                />
+              </label>
+              <label className="flex items-center gap-1.5 text-[11px] text-ink-3">
+                To
+                <input
+                  type="date"
+                  aria-label="To"
+                  value={filter.to ?? ''}
+                  onChange={(e) => setFilter({ to: e.target.value })}
+                  className={cn(fieldClass, 'w-auto py-1.5')}
+                />
+              </label>
               {filtering && (
                 <button
                   type="button"
@@ -458,7 +464,7 @@ export function Fitness({ data }: { data: FitnessData }) {
                     <button
                       type="button"
                       onClick={() => setPlanOpen(true)}
-                      className="ml-3 text-brand hover:underline"
+                      className="ml-3 uppercase tracking-[0.1em] text-ink-3 hover:text-ink hover:underline"
                     >
                       Edit
                     </button>
