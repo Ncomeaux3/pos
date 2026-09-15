@@ -8,17 +8,17 @@ Order: bugs first, then speed, then features, fitness, hardening. Phases marked 
 
 | Phase | Goal | Complexity | Parallel-safe with | Depends on | Status | PR |
 |---|---|---|---|---|---|---|
-| 1 Diagnose and small fixes | Push and email diagnosed with evidence; snooze, deep links, health corner, time clear, splash, nightly email fixed | medium | 3, 8, 9, 10 | none | Done 2026-09-14: push was a malformed VAPID key, email was the quiet-night skip; PR open | #53 |
-| 2 Delete notes stub | modules/notes and every test and seed that leans on it gone | medium | 3, 8, 9, 10 | none | Done 2026-09-15: folder, schema and fixtures gone; tests and seed lean on ideas; PR open | |
-| 3 Speed, server | Server time per screen measured and waterfalls removed | medium | 1, 2, 8, 9, 10 | none | Done 2026-09-15: `/` 43 percent off, `/tasks` shell-bound at the 250 ms floor; pdx1 tried and reverted; PR open | |
-| 4 Speed, client | Task view switch is instant, no refetch | low | 8, 9, 10 | 3 | Done 2026-09-15: view and tab switches write the URL natively, 4 RSC requests to 0; Calendar and drawer load on demand with their own Suspense boundary; PR open | |
-| 5 Dashboard | Layout saved server-side, live tiles, drill-ins, smaller tiles | high | 8, 9, 10 | 3, 4 | Done 2026-09-15: layout in core.settings with hide/show, tiles read core.digests recomputed after every write, warning rows link, auto-height tiles; PR open | |
-| 6 Goals, projects, tasks | Projects link to goals, tasks inherit, project UI, per-view plus, any due date | high | 8, 9, 10 | 4 | Done 2026-09-15: one coalesce for the board and the linked seam, write_project and a Projects drawer, per-column plus, native date; PR open | #62 |
-| 7a Skill picker, core | link/unlink tools, one reader, one component; tasks, goals, ideas, brain | medium | 8, 9, 10 | 6 | Done 2026-09-15: `skills.link` and `skills.unlink`, `core/skill-links.ts` as the one reader (fitness's `fitnessGoal` reads through it too), `SkillPicker` on the four drawers with per-chip badges; PR open | |
+| 1 Diagnose and small fixes | Push and email diagnosed with evidence; snooze, deep links, health corner, time clear, splash, nightly email fixed | medium | 3, 8, 9, 10 | none | Done 2026-09-14: push was a malformed VAPID key, email was the quiet-night skip | #53 |
+| 2 Delete notes stub | modules/notes and every test and seed that leans on it gone | medium | 3, 8, 9, 10 | none | Done 2026-09-15: folder, schema and fixtures gone; tests and seed lean on ideas; migration pushed | #56 |
+| 3 Speed, server | Server time per screen measured and waterfalls removed | medium | 1, 2, 8, 9, 10 | none | Done 2026-09-15: `/` 43 percent off, `/tasks` shell-bound at the 250 ms floor; pdx1 tried and reverted | #58 |
+| 4 Speed, client | Task view switch is instant, no refetch | low | 8, 9, 10 | 3 | Done 2026-09-15: view and tab switches write the URL natively, 4 RSC requests to 0; Calendar and drawer load on demand with their own Suspense boundary | #61 |
+| 5 Dashboard | Layout saved server-side, live tiles, drill-ins, smaller tiles | high | 8, 9, 10 | 3, 4 | Done 2026-09-15: layout in core.settings with hide/show, tiles read core.digests recomputed after every write, warning rows link, auto-height tiles; migration pushed | #64 |
+| 6 Goals, projects, tasks | Projects link to goals, tasks inherit, project UI, per-view plus, any due date | high | 8, 9, 10 | 4 | Done 2026-09-15: one coalesce for the board and the linked seam, write_project and a Projects drawer, per-column plus, native date; migration pushed | #62 |
+| 7a Skill picker, core | link/unlink tools, one reader, one component; tasks, goals, ideas, brain | medium | 8, 9, 10 | 6 | Done 2026-09-15: `skills.link` and `skills.unlink`, `core/skill-links.ts` as the one reader (fitness's `fitnessGoal` reads through it too), `SkillPicker` on the four drawers with per-chip badges | #68 |
 | 7b Skill picker, rest | Trip, policy, recipe, workout, home, health drawers | low | 8, 9, 10 | 7a | Not started | |
-| 8 Skill tree gestures | Phone drag and pinch behave like the globe | medium | 1 to 7, 9, 10 | none | Not started | |
-| 9 Travel destinations | Multi-destination trips, all pinned, merge into | high | 1 to 8, 10 | none | Not started | |
-| 10 Finance chart | Net worth on a 30-day date axis with the average | low | 1 to 9 | none | Done 2026-09-15: spine() on a date axis, nulls break the line, padded y, stats over recorded days. The LineChart extraction and the two-day e2e were not done and moved to Phase 11, which is the phase that needs them | |
+| 8 Skill tree gestures | Phone drag and pinch behave like the globe | medium | 1 to 7, 9, 10 | none | Done 2026-09-15: `data-gesture-surface` opts both canvases out of pull-to-refresh and edge-back, the globe's pointers Map ported, pinch() unit tested; owner still to confirm pinch on the phone | #65 |
+| 9 Travel destinations | Multi-destination trips, all pinned, merge into | high | 1 to 8, 10 | none | Merged 2026-09-15 in two PRs, migration pushed: destinations table, write_trip, pins, places, digest, merge_trip tool, multi-row TripForm and its e2e. Open: the Merge into drawer select with confirm, the mergeTrip action, and the merge half of the e2e | #59, #60 |
+| 10 Finance chart | Net worth on a 30-day date axis with the average | low | 1 to 9 | none | Done 2026-09-15: spine() on a date axis, nulls break the line, padded y, stats over recorded days. The LineChart extraction and the two-day e2e were not done and moved to Phase 11, which is the phase that needs them | #57 |
 | 11 Fitness | Trends, history filters, plan form, Apple arrival on Sync | high | none | 10, 7b | Not started | |
 | 12 Hardening | error pages, audit step, branch protection, route limits, rotation doc | low | none | all | Not started | |
 
@@ -218,14 +218,16 @@ Complexity: medium
 Parallel-safe with: 1 to 7, 9, 10
 Files: `modules/skills/ui/Constellation.tsx`, `modules/skills/view.ts` and `view.test.ts`, `components/pos/PullToRefresh.tsx`, `components/pos/gestures.ts` (`useEdgeBack`), `modules/travel/ui/Globe.tsx` (attribute only), `e2e/screens.spec.ts`.
 
-- [ ] Diagnosis first at 402 with `hasTouch`: drag down on the sky at `scrollY` 0 and watch for "Release to refresh"; drag right from the left 20 px and watch for a back navigation; second finger mid-pan and watch the jump. Three candidates the globe does not suffer: `PullToRefresh` listens on `document` (`PullToRefresh.tsx:49`) and fires on a downward drag from the top (the sky sits at the top on a phone, the globe does not); `useEdgeBack` listens on `window`; `Constellation` keeps one `drag.current`, so a second pointer overwrites the start and there is no pinch.
-- [ ] Test first in `view.test.ts`: pure `pinch(view, before, after, midpoint)` scales zoom by `after / before` about the midpoint, clamped.
-- [ ] Port the globe's pointer model (`Globe.tsx:72-143`) into `Constellation.tsx`: `pointers` Map by `pointerId`, one pointer pans, two pinch about the midpoint, `onPointerLeave` lifts, 4 px slop, no capture (the `panned` ref already guards clicks). Keep the wheel listener and the fly.
-- [ ] Mark the sky `data-gesture-surface`; `PullToRefresh` `down()` and `useEdgeBack` `down()` ignore a target inside it, the same `closest()` clause `PullToRefresh` already uses for `[role="dialog"]`. The globe gets the attribute too.
-- [ ] e2e mobile: a touch drag on the sky changes the group transform, no "Release to refresh", URL unchanged; a drag from x 8 to x 120 stays on `/skills`.
+- [x] Diagnosis first at 402 with `hasTouch`: drag down on the sky at `scrollY` 0 and watch for "Release to refresh"; drag right from the left 20 px and watch for a back navigation; second finger mid-pan and watch the jump. Three candidates the globe does not suffer: `PullToRefresh` listens on `document` (`PullToRefresh.tsx:49`) and fires on a downward drag from the top (the sky sits at the top on a phone, the globe does not); `useEdgeBack` listens on `window`; `Constellation` keeps one `drag.current`, so a second pointer overwrites the start and there is no pinch.
+- [x] Test first in `view.test.ts`: pure `pinch(view, before, after, midpoint)` scales zoom by `after / before` about the midpoint, clamped.
+- [x] Port the globe's pointer model (`Globe.tsx:72-143`) into `Constellation.tsx`: `pointers` Map by `pointerId`, one pointer pans, two pinch about the midpoint, `onPointerLeave` lifts, 4 px slop, no capture (the `panned` ref already guards clicks). Keep the wheel listener and the fly.
+- [x] Mark the sky `data-gesture-surface`; `PullToRefresh` `down()` and `useEdgeBack` `down()` ignore a target inside it, the same `closest()` clause `PullToRefresh` already uses for `[role="dialog"]`. The globe gets the attribute too.
+- [x] e2e mobile: a touch drag on the sky changes the group transform, no "Release to refresh", URL unchanged; a drag from x 8 to x 120 stays on `/skills`.
 
 Exit checks: `view.test.ts` green; owner confirms pinch on the phone (Playwright cannot dispatch two touches; say so in the PR).
 Depends on: none. Out of scope: momentum, double-tap zoom.
+
+Done 2026-09-15 in PR #65. Not run there: the ui-verifier pass at 402 and 1440 (no Docker in that container; the `screens` CI job ran the e2e) and the two-finger pinch, which needs the owner's phone. Later phases: any new canvas that handles its own pointers takes `data-gesture-surface` and gets the same opt-out for free.
 
 ## Phase 9: travel destinations and merge
 
@@ -234,17 +236,19 @@ Complexity: high
 Parallel-safe with: 1 to 8, 10
 Files: migration `2026091500xxxx_travel_destinations.sql`, `modules/travel/data.ts`, `modules/travel/manifest.ts`, `modules/travel/ui/actions.ts`, `modules/travel/ui/TripDrawer.tsx`, `modules/travel/ui/Travel.tsx`, `modules/travel/ui/TravelPage.tsx`, `modules/travel/jobs/nightly-digest.ts`, `modules/travel/README.md`, `e2e/seed.mts`, `e2e/screens.spec.ts`.
 
-- [ ] Migration: `travel.destination (id, trip_id not null references travel.trip on delete cascade, name not null, lat, lon numeric(8,5), starts_on, ends_on, position int default 0, created_at, updated_at, check (ends_on >= starts_on))` with the trigger, RLS, policies and grants block copied from `20260911230000_travel_budget_lines.sql`. Backfill: one row per trip where `destination <> '' or lat is not null`, copying `destination, lat, lon, starts_on, ends_on`. Copy rather than fall back: pins, the digest and `completeFinishedTrips` then read one table.
-- [ ] Trip columns stay and mean the summary: `write_trip` takes `destinations: [{ id?, name, lat, lon, starts_on, ends_on }]`, replaces the set, and writes `trip.starts_on / ends_on` as min and max and `trip.destination / lat / lon` from the first row. Every existing reader keeps working untouched.
-- [ ] `data.ts` `listDestinations()`; `TravelPage` maps them into `data.destinations`.
-- [ ] `TripForm`: destination, lat, lon, depart, return become one row of a list; a plus under the rows adds another; each row keeps the `suggestPlaces` datalist logic and gets a remove. Wishlist mode keeps one row.
-- [ ] Pins (`Travel.tsx:136`): one upcoming pin per destination with coordinates; a trip with no rows falls back to its own lat/lon.
-- [ ] `completeFinishedTrips`: one `place_visited` per destination with coordinates, `external_id 'dest-<id>'`, `visited_on` the destination's `ends_on`; keep `'trip-<id>'` for a trip with none.
-- [ ] Merge: tool `merge_trip { id, into }`, guarded. Every row pointing at A (`itinerary_item`, `packing_item`, `budget_line`, `destination`, `place_visited`) is re-pointed at B, A's own place and dates become one more destination of B, B's span is recomputed, A and its `core.entities` row are deleted. Nothing summed except the span. Drawer: "Merge into" select of other trips with a confirm. Action `mergeTrip`.
-- [ ] Digest: span unchanged; destination count added to the payload.
-- [ ] e2e: seed one trip with two destinations, both pins render; add a third in the form; merge a second trip in, pin count grows by one, old trip gone.
+- [x] Migration: `travel.destination (id, trip_id not null references travel.trip on delete cascade, name not null, lat, lon numeric(8,5), starts_on, ends_on, position int default 0, created_at, updated_at, check (ends_on >= starts_on))` with the trigger, RLS, policies and grants block copied from `20260911230000_travel_budget_lines.sql`. Backfill: one row per trip where `destination <> '' or lat is not null`, copying `destination, lat, lon, starts_on, ends_on`. Copy rather than fall back: pins, the digest and `completeFinishedTrips` then read one table.
+- [x] Trip columns stay and mean the summary: `write_trip` takes `destinations: [{ id?, name, lat, lon, starts_on, ends_on }]`, replaces the set, and writes `trip.starts_on / ends_on` as min and max and `trip.destination / lat / lon` from the first row. Every existing reader keeps working untouched.
+- [x] `data.ts` `listDestinations()`; `TravelPage` maps them into `data.destinations`.
+- [x] `TripForm`: destination, lat, lon, depart, return become one row of a list; a plus under the rows adds another; each row keeps the `suggestPlaces` datalist logic and gets a remove. Wishlist mode keeps one row.
+- [x] Pins (`Travel.tsx:136`): one upcoming pin per destination with coordinates; a trip with no rows falls back to its own lat/lon.
+- [x] `completeFinishedTrips`: one `place_visited` per destination with coordinates, `external_id 'dest-<id>'`, `visited_on` the destination's `ends_on`; keep `'trip-<id>'` for a trip with none.
+- [ ] (tool done in #59, drawer and action open) Merge: tool `merge_trip { id, into }`, guarded. Every row pointing at A (`itinerary_item`, `packing_item`, `budget_line`, `destination`, `place_visited`) is re-pointed at B, A's own place and dates become one more destination of B, B's span is recomputed, A and its `core.entities` row are deleted. Nothing summed except the span. Drawer: "Merge into" select of other trips with a confirm. Action `mergeTrip`.
+- [x] Digest: span unchanged; destination count added to the payload.
+- [ ] (two-destination half done in #60, merge half open) e2e: seed one trip with two destinations, both pins render; add a third in the form; merge a second trip in, pin count grows by one, old trip gone.
 
 Exit checks: a unit test for the span recompute (pure); suites green.
+
+Progress 2026-09-15: #59 (migration `20260915140000_travel_destinations.sql`, pushed to production; `span.ts` and `span.test.ts`; `merge_trip` tool) and #60 (`rows.ts` and `rows.test.ts`, one `DestinationRow` component per row with its own debounced suggestions, empty coordinates sent as null not 0). What is left is one low-complexity PR: the "Merge into" select and confirm in `TripDrawer.tsx`, a `mergeTrip` action in `modules/travel/ui/actions.ts`, and the merge e2e. Parallel-safe with 7a and 7b.
 Depends on: none. Out of scope: per-destination itineraries and budgets.
 
 ## Phase 10: finance net worth chart

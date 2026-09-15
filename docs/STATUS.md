@@ -55,6 +55,20 @@ classify() can put it back; only a manual row is protected. Phase 7b adds
 the same block to trips, policies, recipes, workouts, home assets and health
 records; the fitness page no longer needs `getSkillNames()` until then.
 
+**v1.1 Phase 8, skill tree gestures** (2026-09-15, PR #65, built in a
+Claude Code web session). On the phone a drag down the sky offered to refresh, a
+drag from the left edge went back, and a second finger did nothing. Three
+causes: `PullToRefresh` listens on `document`, `useEdgeBack` on `window`, and
+`Constellation` kept one drag origin. Both canvases now carry
+`data-gesture-surface` and the two listeners ignore a target inside one
+(the `closest()` clause `PullToRefresh` already used for an open sheet).
+`Constellation` keeps the globe's `pointers` Map: one pans, two pinch about
+their midpoint, 4 px slop, no pointer capture so a star tap still selects.
+`pinch()` in `modules/skills/ui/view.ts` is unit tested (scale, midpoint held,
+clamp, identity when the fingers share a point). The mobile e2e covers the
+one-finger half. Not verified: the pinch itself on a real phone (Playwright
+cannot send two touches) and the ui-verifier pass at 402 and 1440.
+
 **v1.1 Phase 6, goals, projects, tasks** (2026-09-15, branch
 `phase-6-projects-goals`). `tasks.project.goal_ref` (migration
 20260915160000, backfilled where a project's open tasks all agreed). A task
