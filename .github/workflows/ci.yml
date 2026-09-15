@@ -134,3 +134,64 @@ jobs:
           path: e2e/.results/
           include-hidden-files: true
           retention-days: 7
+
+  migrations:
+    # A migration in the diff is code that deploys on merge; the schema it needs
+    # only reaches production when someone runs `supabase db push` by hand.
+    # On 2026-09-13 and again on 2026-09-15 that gap shipped code ahead of its
+    # schema and the nightly came back partial, naming a table that did not
+    # exist (finance.settings, then brain.note_hub). CI holds no production
+    # credentials, by choice, so it cannot check whether the push happened. It
+    # asks instead, and the answer has to be written down where the next person
+    # reading the PR can see it.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The diff is against the base commit, which a shallow clone lacks.
+          fetch-depth: 0
+
+      - name: A new migration needs a db push
+        env:
+          # Read as data, never interpolated into the script. A PR body is
+          # written by whoever opened the PR and this repository is public.
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          added=$(git diff --name-only --diff-filter=A "$BASE_SHA" HEAD -- supabase/migrations)
+
+          if [ -z "$added" ]; then
+            echo "No new migrations in this PR."
+            exit 0
+          fi
+
+          echo "This PR adds:"
+          echo "$added" | sed 's/^/  /'
+          echo
+
+          # A line of its own, optionally a bullet or a ticked checkbox, because
+          # that is what a person reaches for. Anchored at both ends so prose
+          # that happens to say "db push" does not clear the gate.
+          if printf '%s' "$PR_BODY" | tr -d '\r' |
+             grep -qiE '^[[:space:]]*([-*][[:space:]]*(\[[ xX]\][[:space:]]*)?)?db push:[[:space:]]*(done|not needed)[[:space:]]*$'; then
+            echo "Acknowledged in the PR description."
+            exit 0
+          fi
+
+          echo "Merging deploys this code to production. The schema it needs does"
+          echo "not follow on its own: supabase db push is manual."
+          echo
+          echo "  supabase db push"
+          echo "  supabase migration list --linked   # local and remote should match"
+          echo
+          echo "Then add one line to the PR description:"
+          echo
+          echo "  db push: done"
+          echo
+          echo "Or, if this migration should not reach production yet:"
+          echo
+          echo "  db push: not needed"
+          exit 1
