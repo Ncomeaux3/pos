@@ -146,10 +146,16 @@ export async function sendPending(): Promise<SendResult> {
   const items = await pending()
   if (items.length === 0) return { sent: 0, emails: 0 }
 
-  const [{ getDashboardHeadline }, { sendEmail }] = await Promise.all([
+  const [{ getDashboardHeadline }, { sendEmail, sendingAllowed }] = await Promise.all([
     import('./orchestrator'),
     import('@/integrations/resend/client'),
   ])
+
+  // A skip, not a failure, and for the same reason as an unset OWNER_EMAIL: the
+  // rows stay queued, and a local run is not a broken one.
+  if (!sendingAllowed()) {
+    return { sent: 0, emails: 0, skipped: 'Email sending is off outside production' }
+  }
 
   const { getSetting } = await import('./settings')
   const to = (await getSetting('digest_email')) || process.env.OWNER_EMAIL
