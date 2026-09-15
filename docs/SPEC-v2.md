@@ -284,10 +284,15 @@ Rules:
   surfaces for a decision.
 - On success the executor emits to `core.events`, writes `core.write_log`, and
   stores the provider's response in `result`. Where the verb produces a module
-  row (a calendar event filed into Travel, a GitHub issue filed into Tasks) that
-  row goes through `register()` like any other with `is_manual = false`, and is
-  never written over a row where `is_manual = true`. A verb with no module row,
-  such as sending mail, registers nothing: the ledger row is its record.
+  row (a calendar event filed into Travel, a GitHub issue filed into Tasks) the
+  executor writes it by calling that module's write tool through `callTool`,
+  not by calling `register()` itself. `callTool` registers the entity, writes
+  the log and, since v1.1 phase 5, recomputes the module's digest, which is what
+  the dashboard tiles read; calling `register()` directly would file the row and
+  leave the tile showing last night's numbers until the next nightly run. The
+  row carries `is_manual = false` and is never written over a row where
+  `is_manual = true`. A verb with no module row, such as sending mail, writes no
+  module row at all: the ledger row is its record.
 - An auto-approved action writes the same full row as a human-approved one.
   The only difference is `approved_by`.
 

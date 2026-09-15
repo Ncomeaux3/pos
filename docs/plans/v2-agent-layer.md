@@ -73,6 +73,67 @@ in phase 0's done condition depends on a live Strava connection.
 The phone polish pass and the per-module phone passes are independent of this
 and can run in either order around it.
 
+## What v1.1 leaves behind, and where v2 lands on it
+
+Written 2026-09-15 by reading docs/plans/pos-v1-1.md against this plan. v1.1
+phases 1, 2, 3 and 10 are merged; 4 to 9, 11 and 12 are not. Every seam below
+is a file or a table both plans touch.
+
+**v1.1 phase 5 changes what a write means.** `callTool` will recompute the
+calling module's digest after every write tool, and the dashboard tiles will
+read `core.digests` rather than the nightly summary. So an approved action that
+files a row into a module writes it through `callTool`, never by calling
+`register()` itself: `register()` alone files the row and leaves the tile on
+last night's numbers. SPEC-v2 5.2 says this. It is the one place where v1.1
+changes an assumption this spec was written under.
+
+**v1.1 phase 5 also adds `core.notifications.href`.** The three notification
+rules in SPEC-v2 8.3 use it: `action_needs_approval` points at the action in
+Review, `run_failed` and `budget_hit` at the Agent Log. Without it an approval
+push is a sentence with nowhere to go.
+
+**v1.1 phase 12 hardens the routes that exist, not the ones v2 adds.** Its
+`maxDuration` list is MCP, webhook and the two OAuth routes. `/api/agent/tick`
+does not exist yet, so phase 3 sets its own `maxDuration` when it adds the
+route, and phase 4 accounts for the approval request draining its own queue
+inside whatever limit the action it runs on carries. Nothing in v1.1 will do
+this for us.
+
+**v1.1 phase 12 turns on branch protection** requiring `check` and `screens`,
+and CLAUDE.md's "branch protection is unavailable on this private free repo"
+goes with it. From then on every v2 phase PR needs both green before it can
+merge, on top of the `db push` line the migration gate already asks for.
+
+**v1.1 phase 12 adds `pnpm audit --prod --audit-level=high` to CI.** v2 adds no
+runtime dependency by design: no queue library, no Redis client, no picker, and
+`request()` is built on the same primitives `get()` already uses. The step stays
+green through v2 unless a phase changes that, which is then the phase's problem
+to argue.
+
+**v1.1 phase 7a writes `core/skill-links.ts` and the `is_manual` rule into one
+reader.** SPEC-v2 5.2's "never written over a row where `is_manual = true`"
+means that reader, once it exists, and not a per-module copy.
+
+**v1.1 phase 6 adds `write_project` and `goal_ref` on `tasks.project`.** A plan
+step of kind `task` (SPEC-v2 8.1) can therefore create its tasks inside one
+project pointed at the goal, instead of setting `goal_ref` on every task it
+makes. Phase 9 decides that; it is an option v1.1 opens, not a dependency.
+
+**Shared files, in order.** `core/tools.ts` (v1.1 phase 5's recompute, then v2
+phase 0's `decide()` beside `shouldGuard()`), `core/jobs.ts` (v1.1 phase 5's
+digest prune, then v2 phase 3's run budgets), `core/settings.ts` (v1.1 phase 5's
+`dashboard_layout`, then v2 phase 3's budget defaults and phase 10's persona),
+and `app/api/integrations/[id]/webhook/route.ts` (v1.1 phase 12's `maxDuration`,
+then v2 phase 0's level gate). All sequential, none of them the same lines.
+
+**One thing to check before phase 0 starts, not now.** v1.1 phase 1 recorded
+that `pnpm typecheck` and `pnpm build` fail on the owner's Mac because
+`Passkeys.tsx`/`passkeys.ts` and `Session.tsx`/`session.ts` are tracked as pairs
+that collide on a case-insensitive filesystem, and parked the rename in "phase
+12 or a small fix PR" without assigning it. Phase 0's exit check is one full
+nightly run locally, so that rename has to have happened by then wherever it
+ends up.
+
 ## Phase 0: verbs, permission and the verb executor
 
 No new provider. This phase proves the permission model against the three
@@ -246,7 +307,7 @@ condition only, so the order and the stopping points are fixed now.
 
 | Phase | Deliverable | Done when |
 |---|---|---|
-| 3 | Run budgets on `core.job_runs`, `core.run_queue`, `/api/agent/tick` | A runaway run terminates on each of the three budgets and records `termination_reason` |
+| 3 | Run budgets on `core.job_runs`, `core.run_queue`, `/api/agent/tick` with its own `maxDuration` | A runaway run terminates on each of the three budgets and records `termination_reason` |
 | 4 | Review and Agent Log grow the action surface; three notification rules | An approval from the phone executes the action and the Agent Log shows it |
 | 5 | Gmail at `read`, scoped to one label | Real mail fetched from the POS label through `runVerb`, `cacheTtl` honoured, every message tainted |
 | 6 | Google Calendar and GitHub at `propose` | Each executes one approved write verb end to end |
