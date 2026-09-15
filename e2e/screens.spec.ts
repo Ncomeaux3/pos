@@ -2471,11 +2471,13 @@ test('travel, typing a destination suggests places and fills the coordinates', a
 
 // v1.1 Phase 9. A trip held one destination, so four trips to the same country
 // were four trips. This is the scenario from docs/plans/pos-v1-1.md: a trip
-// with two destinations, a pin for each, and one taken away again. It builds
+// with two destinations, a pin for each, one taken away again, and a second
+// trip merged in. It builds
 // its own trip and deletes it at the end, because the travel tests that follow
 // read the seeded fixture and a stray trip would change what they count.
 test('travel, a trip holds a list of destinations', async ({ page }) => {
-  // Both confirms in this test are the drawer's: removing a trip asks first.
+  // Both confirms in this test are the drawer's: merging asks first, and so
+  // does removing a trip.
   page.on('dialog', (d) => d.accept())
 
   await page.goto('/travel')
@@ -2562,9 +2564,36 @@ test('travel, a trip holds a list of destinations', async ({ page }) => {
   await expect.poll(pinned).toBe(before + 1)
   await expect(dialog).toContainText(/Apr 2.+Apr 6/)
 
-  // Put the fixture back for the travel tests after this one. Saving returns to
-  // the trip rather than closing, so Delete is right here; reaching for the
-  // card behind the drawer would be clicking through an overlay.
+  // Merging: a second trip to the same country folds into the first as one
+  // more destination. Its pin survives the merge, the trip does not, and the
+  // first trip's span stretches to cover it.
+  await page.keyboard.press('Escape')
+  await expect(page).not.toHaveURL(/trip=/)
+  await page.getByRole('button', { name: /New trip/ }).click()
+  await dialog.getByLabel('Trip', { exact: true }).fill('Madrid, after')
+  await expect(rows).toHaveCount(1)
+  await fill(0, 'Madrid', '40.42', '-3.70', '2027-04-12', '2027-04-18')
+  await dialog.getByRole('button', { name: /^Create/ }).click()
+  await expect(page.getByText('Trip created')).toBeVisible()
+  await expect.poll(pinned).toBe(before + 2)
+
+  await page.getByTestId('travel-sections').getByRole('button', { name: /Madrid, after/ }).first().click()
+  await expect(page).toHaveURL(/trip=/)
+  await dialog.getByLabel('Merge into').selectOption({ label: 'Iberia, spring' })
+  await expect(page.getByText('Trips merged')).toBeVisible()
+  await expect(page).not.toHaveURL(/trip=/)
+  await expect(page.getByTestId('travel-sections')).not.toContainText('Madrid, after')
+  await expect.poll(pinned).toBe(before + 2)
+
+  await page.getByTestId('travel-sections').getByRole('button', { name: /Iberia, spring/ }).first().click()
+  await expect(dialog).toContainText(/Apr 2.+Apr 18/)
+  await page.getByRole('button', { name: 'Edit details' }).click()
+  await expect(rows).toHaveCount(2)
+  await expect(rows.nth(1).getByLabel(/^Destination/)).toHaveValue('Madrid')
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+
+  // Put the fixture back for the travel tests after this one. Deleting the one
+  // trip left takes both pins with it.
   await page.getByRole('button', { name: 'Delete trip' }).click()
   await expect(page.getByText('Trip deleted')).toBeVisible()
   await expect.poll(pinned).toBe(before)
