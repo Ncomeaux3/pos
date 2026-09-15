@@ -57,6 +57,19 @@ export function zoomBy(view: View, factor: number, at: { x: number; y: number })
 }
 
 /**
+ * Two fingers spreading or closing, as a zoom about their midpoint.
+ *
+ * `before` and `after` are the distance between the fingers, in screen
+ * pixels; `at` is their midpoint in viewBox units. Zero or less before means
+ * two pointers in the same place, which has no scale to divide by, so the
+ * view is left alone rather than sent to Infinity.
+ */
+export function pinch(view: View, before: number, after: number, at: { x: number; y: number }): View {
+  if (before <= 0) return view
+  return zoomBy(view, after / before, at)
+}
+
+/**
  * How much bigger a label is drawn as you zoom in.
  *
  * Labels live inside the scaled group, so at zoom 2 they would double with

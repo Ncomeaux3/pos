@@ -21,9 +21,15 @@ export function PullToRefresh() {
 
   useEffect(() => {
     const down = (event: PointerEvent) => {
-      // A pull inside an open sheet scrolls the sheet, not the page behind it.
-      const inSheet = event.target instanceof Element && event.target.closest('[role="dialog"]') !== null
-      if (event.pointerType === 'mouse' || inSheet || !atTop(window.scrollY)) {
+      // A pull inside an open sheet scrolls the sheet, not the page behind it,
+      // and a drag on a canvas that handles its own pointers is that canvas's.
+      // The skill tree sits at the top of the phone screen, so every downward
+      // drag on it used to arm a refresh; the globe never sat high enough to
+      // find this out (v1.1 Phase 8).
+      const mine =
+        event.target instanceof Element &&
+        event.target.closest('[role="dialog"], [data-gesture-surface]') !== null
+      if (event.pointerType === 'mouse' || mine || !atTop(window.scrollY)) {
         from.current = null
         return
       }

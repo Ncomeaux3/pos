@@ -138,7 +138,15 @@ export function useEdgeBack(onBack: (() => void) | null) {
     let start: { x: number; y: number } | null = null
 
     const down = (event: PointerEvent) => {
-      start = event.pointerType === 'touch' && fromEdge(event.clientX) ? { x: event.clientX, y: event.clientY } : null
+      // A pan that begins near the left edge of a canvas is a pan. Without
+      // this, dragging the skill tree rightwards from the edge navigated back
+      // (v1.1 Phase 8).
+      const onCanvas =
+        event.target instanceof Element && event.target.closest('[data-gesture-surface]') !== null
+      start =
+        event.pointerType === 'touch' && !onCanvas && fromEdge(event.clientX)
+          ? { x: event.clientX, y: event.clientY }
+          : null
     }
     const up = (event: PointerEvent) => {
       const from = start

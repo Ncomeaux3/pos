@@ -166,6 +166,11 @@ export function Globe({
         // A group, not an img: an img hides its children and the pins are buttons.
         role="group"
         aria-label={`Globe showing ${pins.length} places`}
+        // Same opt-out as the constellation: this canvas handles its own
+        // pointers, so the page-level pull and edge-back stay out of it. The
+        // globe never sits at the top of the phone screen, so it has not
+        // needed this, but one rule for both canvases beats two.
+        data-gesture-surface=""
         // No pointer capture: with it a click on a pin lands on the svg
         // instead of the pin, so a pin could never be picked.
         onPointerDown={(e) => {

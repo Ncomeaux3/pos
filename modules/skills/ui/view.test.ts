@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { flyAt, labelScale, zoomStep, ZOOM_MAX, ZOOM_MIN, type View } from './view'
+import { flyAt, labelScale, pinch, zoomStep, ZOOM_MAX, ZOOM_MIN, type View } from './view'
 
 // The constellation's zoom is a group transform scale(z) translate(p). These
 // pin the arithmetic the wheel handler applies per event, so a burst of
@@ -62,6 +62,42 @@ describe('labelScale', () => {
     expect(labelScale(2)).toBeCloseTo(Math.pow(0.5, 0.7), 9)
     expect(labelScale(0.1)).toBe(1.6)
     expect(labelScale(10)).toBe(0.6)
+  })
+})
+
+describe('pinch', () => {
+  const at = { x: 0, y: 0 }
+
+  it('scales the zoom by how much the fingers spread', () => {
+    expect(pinch(start, 100, 200, at).zoom).toBeCloseTo(start.zoom * 2, 9)
+    expect(pinch(start, 200, 100, at).zoom).toBeCloseTo(start.zoom / 2, 9)
+  })
+
+  it('leaves the view alone when the fingers have not moved', () => {
+    expect(pinch(start, 120, 120, at)).toEqual(start)
+  })
+
+  it('is the identity when the fingers are in the same place', () => {
+    // Two pointers at one point have no distance between them to divide by.
+    // Without this the zoom goes to Infinity and the tree disappears.
+    expect(pinch(start, 0, 140, at)).toEqual(start)
+    expect(pinch(start, -1, 140, at)).toEqual(start)
+  })
+
+  it('holds the midpoint still, so the tree grows where the fingers are', () => {
+    const mid = { x: 120, y: -40 }
+    const zoomed = pinch(start, 100, 200, mid)
+
+    // The group is scale(z) translate(p), so a point p_v sits on screen at
+    // z * (p_v + pan). The midpoint is the same place before and after.
+    const screen = (v: View) => ({ x: v.zoom * (mid.x + v.pan.x), y: v.zoom * (mid.y + v.pan.y) })
+    expect(screen(zoomed).x).toBeCloseTo(screen(start).x, 6)
+    expect(screen(zoomed).y).toBeCloseTo(screen(start).y, 6)
+  })
+
+  it('clamps, so a fast pinch cannot leave the range the wheel keeps to', () => {
+    expect(pinch(start, 1, 1000, at).zoom).toBe(ZOOM_MAX)
+    expect(pinch(start, 1000, 1, at).zoom).toBe(ZOOM_MIN)
   })
 })
 
