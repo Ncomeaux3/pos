@@ -103,7 +103,8 @@ export type NightlyOptions = {
  */
 export async function runNightly(opts: NightlyOptions = {}): Promise<RunSummary> {
   const started = Date.now()
-  const runId = await startRun(opts.trigger ?? 'cron')
+  const trigger = opts.trigger ?? 'cron'
+  const runId = await startRun(trigger)
   const jobs: JobResult[] = []
 
   const only = opts.module
@@ -126,7 +127,14 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<RunSummary>
     jobs.push(await runJob('core', 'embed', () => embedChanged()))
     jobs.push(await runJob('core', 'digests', () => writeDigests()))
     jobs.push(await runJob('core', 'orchestrate', () => assembleSummary()))
-    jobs.push(await runJob('core', 'notify', () => sendPending()))
+    // Run now recomputes the dashboard; it does not mail you. The cron is the
+    // one thing that sends, which is what makes "one email a day" true rather
+    // than aspirational: every press used to be a digest, and on 2026-09-15 six
+    // presses in two minutes were six emails. Nothing is lost by holding them.
+    // The rows stay queued and go out on the next nightly run.
+    if (trigger !== 'manual') {
+      jobs.push(await runJob('core', 'notify', () => sendPending()))
+    }
     jobs.push(await runJob('core', 'prune', pruneRequestLog))
   }
 
