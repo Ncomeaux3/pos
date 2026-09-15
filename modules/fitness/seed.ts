@@ -40,8 +40,12 @@ const SESSIONS: {
     sets: [['Bench press', 5, 215], ['Barbell row', 8, 175]] },
 ]
 
-/** A gentle downward drift, because a flat line is the one shape a scale never draws. */
-const WEIGHT_LB = [182.4, 182.0, 181.6, 181.9, 181.2, 180.8, 181.0, 180.4]
+/**
+ * A gentle downward drift, because a flat line is the one shape a scale never
+ * draws. Newest first, one reading every third day, so fourteen of them reach
+ * back 40 days and the Trends tab's 30 day range is not the whole series.
+ */
+const WEIGHT_LB = [182.4, 182.0, 181.6, 181.9, 181.2, 180.8, 181.0, 180.4, 180.9, 180.2, 180.6, 179.8, 180.1, 179.6]
 
 export async function seed(): Promise<number> {
   for (const [i, session] of SESSIONS.entries()) {

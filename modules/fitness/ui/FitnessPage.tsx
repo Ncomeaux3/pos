@@ -2,17 +2,19 @@ import type { ReactNode } from 'react'
 import { MetricStrip, MetricTile, PageHeader, SyncBand } from '@/components/pos'
 import { getConnectionStatuses } from '@/core/integrations'
 import { getSkillNames } from '@/core/modules'
-import { listSkillLinks } from '@/core/skill-links'
 import { listProposals } from '@/core/proposals'
 import { syncState } from '@/core/sync'
+import { spine } from '@/core/series'
 import { ownerToday } from '@/core/today'
 import {
   activePlan,
   fitnessGoal,
+  lastArrived,
   latestMetrics,
   listExercises,
   listPlanItems,
-  listWorkouts,
+  metricSeries,
+  screenWorkouts,
   thisWeek,
   workoutSpan,
 } from '../data'
@@ -48,9 +50,9 @@ const Sub = ({ children }: { children: string }) => (
 )
 
 export default async function FitnessPage() {
-  const [workouts, week, metrics, exercises, plan, pending, sync, span, skills, goal, todayIso, connections, names] =
+  const [workouts, week, metrics, exercises, plan, pending, sync, span, goal, todayIso, connections, names, arrived, weightSeries] =
     await Promise.all([
-      listWorkouts(),
+      screenWorkouts(),
       thisWeek(),
       latestMetrics(),
       listExercises(),
@@ -58,40 +60,26 @@ export default async function FitnessPage() {
       listProposals('pending'),
       syncState('fitness'),
       workoutSpan(),
-      listSkillLinks('fitness', 'workout'),
       fitnessGoal(),
       ownerToday(),
       getConnectionStatuses(),
       getSkillNames(),
+      lastArrived(),
+      // Weight is the Trends tab's default and the one metric worth a round
+      // trip before its kind is known; another first kind costs one more below.
+      metricSeries('weight', 30),
     ])
 
   const items = plan ? await listPlanItems(plan.id) : []
 
+  const trendKind = metrics.some((m) => m.kind === 'weight') ? 'weight' : (metrics[0]?.kind ?? null)
+  const trend =
+    trendKind === null
+      ? null
+      : { kind: trendKind, days: spine(trendKind === 'weight' ? weightSeries : await metricSeries(trendKind, 30), 30, todayIso) }
+
   const data: FitnessData = {
-    workouts: workouts.map((w) => ({
-      id: w.id,
-      name: w.name,
-      detail: w.detail,
-      kind: w.kind,
-      startedAt: new Date(w.started_at).toISOString(),
-      source: w.source,
-      // Names through the tree module's seam; an id with no name stays an id.
-      skills: (skills.get(w.id)?.skills ?? []).map((s) => s.name),
-      entityRef: skills.get(w.id)?.entityRef ?? null,
-      links: skills.get(w.id)?.skills ?? [],
-      durationS: w.duration_s,
-      distanceM: w.distance_m,
-      avgHr: w.avg_hr,
-      setCount: Number(w.set_count),
-      best:
-        w.best_weight_g === null || w.best_reps === null
-          ? null
-          : {
-              exercise: w.best_exercise ?? '',
-              weightG: Number(w.best_weight_g),
-              reps: w.best_reps,
-            },
-    })),
+    workouts,
     weekWorkouts: week.length,
     weekMinutes: Math.round(week.reduce((sum, w) => sum + w.duration_s, 0) / 60),
     weekLoad: load(week.map((w) => ({ kind: w.kind, durationS: w.duration_s }))),
@@ -100,6 +88,7 @@ export default async function FitnessPage() {
       value: Number(m.value),
       measuredOn: m.measured_on,
     })),
+    trend,
     exercises: exercises.map((e) => ({ id: e.id, name: e.name, sets: Number(e.sets) })),
     plan:
       plan === null
@@ -149,6 +138,7 @@ export default async function FitnessPage() {
             at={sync.at}
             status={sync.status}
             connected={sync.connected}
+            arrived={arrived}
             onSync={syncFitness}
           />
         }

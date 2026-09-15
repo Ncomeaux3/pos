@@ -2638,7 +2638,8 @@ test('fitness, workouts with pace derived rather than stored', async ({ page }) 
   await expect(page.getByText(/^\w{3} \d{2}$/).first()).toBeVisible()
   await expect(page.getByText(/Leg press 360 lb × 10/)).toBeVisible()
   await expect(page.getByText('58m', { exact: true })).toBeVisible()
-  await expect(page.getByText('Strength', { exact: true }).first()).toBeVisible()
+  // The Kind filter's option carries the same word, hidden; the visible one is the skill.
+  await expect(page.getByText('Strength', { exact: true }).locator('visible=true').first()).toBeVisible()
 
   await shoot(page, 'fitness')
 })
@@ -2660,6 +2661,58 @@ test('fitness, the exercise index and body metrics read in their own units', asy
   await expect(page.getByText(/MEASURED \w{3} \d{2}/i)).toBeVisible()
 
   await shoot(page, 'fitness-body')
+})
+
+test('fitness, trends put a metric on a date axis and fetch the longer ranges', async ({ page }) => {
+  await page.goto('/fitness?tab=trends')
+
+  // The seed writes a weight every third day for 40 days. Thirty days of the
+  // default metric come with the page: ten readings on a thirty day axis, not
+  // ten evenly spaced points. (Eleven if the webhook test's reading landed on
+  // a different owner-day than the seed's.)
+  await expect(page.getByRole('img', { name: /Weight over 30 days, 1[01] of them recorded/ })).toBeVisible()
+  await expect(page.getByText(/Weight · 30 days/)).toBeVisible()
+
+  // The longer ranges come from a server action, and the axis grows with them.
+  await page.getByRole('radio', { name: '90 days' }).click()
+  await expect(page.getByRole('img', { name: /Weight over 90 days, 1[45] of them recorded/ })).toBeVisible()
+
+  // Another metric: the one sleep reading is one point, and it reads in its unit.
+  await page.getByLabel('Metric').selectOption('sleep_minutes')
+  await expect(page.getByRole('img', { name: /Sleep over 90 days, 1 of them recorded/ })).toBeVisible()
+  await expect(page.getByText(/First reading 7h 08m/)).toBeVisible()
+
+  await shoot(page, 'fitness-trends')
+})
+
+test('fitness, the workout filter narrows the list and survives a reload', async ({ page }) => {
+  await page.goto('/fitness')
+  await expect(page.getByText(/Leg press 360 lb × 10/)).toBeVisible()
+
+  // Kind narrows the rows through a server action; the URL carries the filter.
+  await page.getByLabel('Kind').selectOption('run')
+  await expect(page.getByText(/Leg press 360 lb × 10/)).toHaveCount(0)
+  await expect(page.getByText('Easy run').first()).toBeVisible()
+  await expect(page).toHaveURL(/kind=run/)
+
+  // A reload arrives with the filter set and fetches the narrowed list once.
+  await page.reload()
+  await expect(page.getByText('Easy run').first()).toBeVisible()
+  await expect(page.getByText(/Leg press 360 lb × 10/)).toHaveCount(0)
+
+  // A date window on top: the two easy runs are 4 and 16 days back.
+  const day = (back: number) => {
+    const d = new Date()
+    d.setDate(d.getDate() - back)
+    return d.toLocaleDateString('en-CA')
+  }
+  await page.getByLabel('From').fill(day(10))
+  await expect(page.getByText('Easy run')).toHaveCount(1)
+  await expect(page.getByText('Tempo run')).toHaveCount(1)
+
+  await page.getByRole('button', { name: 'Clear' }).click()
+  await expect(page.getByText(/Leg press 360 lb × 10/)).toBeVisible()
+  await expect(page).not.toHaveURL(/kind=/)
 })
 
 test('health, one page with the artboard\'s panes and the status in the band', async ({ page }) => {
@@ -2691,6 +2744,34 @@ test('health, one page with the artboard\'s panes and the status in the band', a
   await shoot(page, 'health')
 })
 
+test('health, a weight posted to the Apple webhook shows on the page', async ({ page }) => {
+  // The secret lives in core.connections and the card is the one place it is
+  // shown, so the test reads it where the owner would.
+  await page.goto('/settings/connections')
+  const card = page.locator('div.border').filter({ has: page.getByText('Health Auto Export', { exact: true }) }).first()
+  await card.getByRole('button', { name: 'REVEAL' }).click()
+  const secret = (await card.locator('span.flex-1.break-all').textContent())?.trim() ?? ''
+  expect(secret.length).toBeGreaterThan(10)
+
+  // 177.7 lb today, in the payload shape the app documents. Health reads the
+  // latest weight live through the registry, no digest in between.
+  const today = new Date().toLocaleDateString('en-CA')
+  const res = await page.request.post('/api/integrations/health_auto_export/webhook', {
+    headers: { 'x-pos-secret': secret },
+    data: { data: { metrics: [{ name: 'weight_body_mass', units: 'lb', data: [{ qty: 177.7, date: `${today} 07:30:00 -0500` }] }] } },
+  })
+  expect(res.status()).toBe(200)
+
+  await page.goto('/health')
+  const weight = page.locator('div.border').filter({ has: page.getByText('FITNESS', { exact: true }) })
+  await expect(weight.getByText('178', { exact: true })).toBeVisible()
+
+  // And the Fitness band now says when Apple data last arrived.
+  if ((page.viewportSize()?.width ?? 0) >= 768) {
+    await page.goto('/fitness')
+    await expect(page.getByText(/Apple data last arrived \d{2}:\d{2}/)).toBeVisible()
+  }
+})
 test('health, the rail says what is owed with the app\'s own actions', async ({ page }) => {
   await page.goto('/health')
 
@@ -3169,6 +3250,37 @@ test('fitness, the plan is what the coach measures a week against', async ({ pag
   await expect(page.getByText('AMRAP')).toBeVisible()
 
   await shoot(page, 'fitness-plan')
+})
+
+test('fitness, the plan drawer edits the plan in force', async ({ page }) => {
+  await page.goto('/fitness?tab=plan')
+  await page.getByRole('button', { name: 'Edit' }).click()
+  const drawer = page.getByRole('dialog')
+  await expect(drawer.getByLabel('Plan name')).toHaveValue('Upper, lower, run')
+
+  // A second day: the row's order is its position, so the new one lands last
+  // and the tab groups it under its own label.
+  await drawer.getByRole('button', { name: 'Add exercise' }).click()
+  const n = await drawer.getByRole('button', { name: /^Remove exercise \d+$/ }).count()
+  await drawer.getByLabel(`Day ${n}`, { exact: true }).fill('Cardio')
+  await drawer.getByLabel(`Exercise ${n}`, { exact: true }).fill('Bike intervals')
+  await drawer.getByLabel(`Reps ${n}`, { exact: true }).fill('6 x 2 min')
+  await drawer.getByRole('button', { name: 'Save plan' }).click()
+  await expect(drawer).toHaveCount(0)
+  await expect(page.getByText('Cardio', { exact: true })).toBeVisible()
+  await expect(page.getByText('Bike intervals')).toBeVisible()
+  await expect(page.getByText('3 x 6 x 2 min')).toBeVisible()
+  // The seeded rows and their notes survived the rewrite.
+  await expect(page.getByText('4 x 5 at 185 lb')).toBeVisible()
+  await expect(page.getByText('Bodyweight is fine.')).toBeVisible()
+
+  // And out again, so the mobile run and the coach see the seeded plan.
+  await page.getByRole('button', { name: 'Edit' }).click()
+  await drawer.getByRole('button', { name: `Remove exercise ${n}` }).click()
+  await drawer.getByRole('button', { name: 'Save plan' }).click()
+  await expect(drawer).toHaveCount(0)
+  await expect(page.getByText('Bike intervals')).toHaveCount(0)
+  await expect(page.getByText('3 days a week')).toBeVisible()
 })
 
 test('fitness, the coach proposes and cannot change the plan itself', async ({ page }) => {
