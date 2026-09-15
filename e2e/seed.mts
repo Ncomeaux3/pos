@@ -14,6 +14,20 @@ import { seed as seedIdeas } from '@/modules/ideas/seed'
 import { seed as seedHome } from '@/modules/home/seed'
 import { seed as seedInsurance } from '@/modules/insurance/seed'
 
+// A local database or nothing. This file deletes outright: core.notifications,
+// core.job_runs, core.reviews, every note that is not demo, and several module
+// rows besides. It is run with --env-file=.env and the app it seeds is `pnpm
+// dev` on the same .env, so the only thing standing between the fixture and
+// the production pooler is which DATABASE_URL happens to be in that file.
+// Same shape of check, and the same reason, as applyMigrations in
+// scripts/setup.ts.
+if (!/^postgres(ql)?:\/\/[^@]*@(127\.0\.0\.1|localhost)[:/]/.test(process.env.DATABASE_URL ?? '')) {
+  throw new Error(
+    'e2e/seed.mts refuses to run: DATABASE_URL is not a local database, and this seed deletes rows. ' +
+      'Start the local stack with `supabase start` and point DATABASE_URL at it.',
+  )
+}
+
 // Run by the Playwright setup project before any screen test. The vitest suites
 // use their own pos_test database now, but this still has to be deterministic:
 // the screens are asserted against it.
