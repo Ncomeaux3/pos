@@ -32,6 +32,7 @@ Owner: Nick. Solo, nights and weekends. Finish one module before starting the ne
 - Commit after each completed step with a descriptive message. Log any decision to decisions/log.md.
 - When compacting, preserve the list of modified files, open questions, and the test command.
 - A red CI check is a merge gate. Branch protection is unavailable on this private free repo, so the rule is manual: never merge a PR while any check is red, and say so if asked to.
+- A PR that adds a migration goes red until its description carries a line reading `db push: done`, or `db push: not needed` when the schema should not move yet. Merging deploys the code; `supabase db push` is manual and does not follow. Twice now the code has arrived in production ahead of its schema and the nightly came back partial naming a table that did not exist.
 
 ## Tools for this project
 - Agents: `quick-builder` for Complexity low phases and small specified edits; `test-runner` for the full suites, lint, typecheck and build; `ui-verifier` after any change to a screen, at 402 and 1440 px, against the artboard in the design bundle; `spec-reviewer` before each PR; `prod-auditor` on the last phase of a plan; `researcher` and `reviewer` (in `.claude/agents/`) for docs lookups and a fresh-context diff review.
