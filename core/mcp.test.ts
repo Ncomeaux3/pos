@@ -31,7 +31,7 @@ beforeEach(async () => {
   await db().query('delete from core.proposals')
   await db().query('delete from core.events')
   await db().query('delete from core.entities')
-  await db().query('delete from notes.note')
+  await db().query('delete from ideas.idea')
   await db().query('delete from core.settings')
 })
 
@@ -40,10 +40,10 @@ describe('registerTools', () => {
     const { tools, server } = collect()
     const names = registerTools(server)
 
-    expect(names).toContain('notes.get_digest')
-    expect(names).toContain('notes.write')
-    // query is provided by core, so notes never declared it.
-    expect(names).toContain('notes.query')
+    expect(names).toContain('ideas.get_digest')
+    expect(names).toContain('ideas.write')
+    // query is provided by core, so ideas never declared it.
+    expect(names).toContain('ideas.query')
     expect(names).toContain('core.search')
     expect(tools).toHaveLength(names.length)
   })
@@ -60,10 +60,10 @@ describe('registerTools', () => {
     const { tools, server } = collect()
     registerTools(server)
 
-    const result = await find(tools, 'notes.write')!.run({ title: 'From MCP', body: '' })
+    const result = await find(tools, 'ideas.write')!.run({ title: 'From MCP' })
     expect(result.isError).toBeFalsy()
 
-    const { rows } = await db().query<{ title: string }>('select title from notes.note')
+    const { rows } = await db().query<{ title: string }>('select title from ideas.idea')
     expect(rows).toMatchObject([{ title: 'From MCP' }])
   })
 
@@ -77,10 +77,10 @@ describe('registerTools', () => {
     const { tools, server } = collect()
     registerTools(server)
 
-    const result = await find(tools, 'notes.write')!.run({ title: 'Held', body: '' })
+    const result = await find(tools, 'ideas.write')!.run({ title: 'Held' })
 
     expect(payload(result)).toMatchObject({ proposed: true })
-    const { rows } = await db().query('select 1 from notes.note')
+    const { rows } = await db().query('select 1 from ideas.idea')
     expect(rows).toHaveLength(0)
   })
 
@@ -88,7 +88,7 @@ describe('registerTools', () => {
     const { tools, server } = collect()
     registerTools(server)
 
-    const result = await find(tools, 'notes.query')!.run({ sql: 'delete from notes.note' })
+    const result = await find(tools, 'ideas.query')!.run({ sql: 'delete from ideas.idea' })
 
     expect(result.isError).toBe(true)
     expect(result.content[0].text).toMatch(/delete/i)

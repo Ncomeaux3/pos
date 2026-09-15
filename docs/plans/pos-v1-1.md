@@ -9,7 +9,7 @@ Order: bugs first, then speed, then features, fitness, hardening. Phases marked 
 | Phase | Goal | Complexity | Parallel-safe with | Depends on | Status | PR |
 |---|---|---|---|---|---|---|
 | 1 Diagnose and small fixes | Push and email diagnosed with evidence; snooze, deep links, health corner, time clear, splash, nightly email fixed | medium | 3, 8, 9, 10 | none | Done 2026-09-14: push was a malformed VAPID key, email was the quiet-night skip; PR open | #53 |
-| 2 Delete notes stub | modules/notes and every test and seed that leans on it gone | medium | 3, 8, 9, 10 | none | Not started | |
+| 2 Delete notes stub | modules/notes and every test and seed that leans on it gone | medium | 3, 8, 9, 10 | none | Done 2026-09-15: folder, schema and fixtures gone; tests and seed lean on ideas; PR open | |
 | 3 Speed, server | Server time per screen measured and waterfalls removed | medium | 1, 2, 8, 9, 10 | none | Not started | |
 | 4 Speed, client | Task view switch is instant, no refetch | low | 8, 9, 10 | 3 | Not started | |
 | 5 Dashboard | Layout saved server-side, live tiles, drill-ins, smaller tiles | high | 8, 9, 10 | 3, 4 | Not started | |
@@ -54,12 +54,12 @@ Complexity: medium
 Parallel-safe with: 3, 8, 9, 10
 Files: `modules/notes/` (delete), migration `supabase/migrations/2026091500xxxx_notes_drop.sql`, `core/events.test.ts`, `core/entities.test.ts`, `core/classifier-seam.test.ts`, `core/proposals.test.ts`, `core/mcp.test.ts`, `core/reviews.ts`, `e2e/seed.mts`, `e2e/screens.spec.ts`, `docs/ARCHITECTURE.md`, `docs/SPEC.md`, `docs/STATUS.md`.
 
-- [ ] Migration: delete `core.entities` rows where `module = 'notes'` (skill_links cascade), then `drop schema notes cascade`. The shipped `20260905223936_notes_init.sql` stays.
-- [ ] `rm -r modules/notes`; `pnpm gen:index` rewrites `modules/_index.ts`. Fix `core/reviews.ts` reference.
-- [ ] Core tests that only need a module string keep `'notes'` as a fake id; `proposals.test.ts` and `mcp.test.ts` that write `notes.note` through `callTool('notes','write')` switch to `ideas.write` (unguarded, one table, registers) and assert against `ideas.idea`.
-- [ ] `e2e/seed.mts`: replace the notes seed with ideas rows for the classified entities and the two proposals with `ideas.write` payloads; keep agent names so Agent Log tests keep their rows.
-- [ ] `e2e/screens.spec.ts`: delete the notes page test; retarget the palette, review approve, agent log and dashboard assertions to Ideas; fix the "3 notes" skill tree copy.
-- [ ] Docs: ARCHITECTURE and SPEC point "copy this folder to start a module" at `modules/ideas`.
+- [x] Migration: delete `core.entities` rows where `module = 'notes'` (skill_links cascade), then `drop schema notes cascade`. The shipped `20260905223936_notes_init.sql` stays.
+- [x] `rm -r modules/notes`; `pnpm gen:index` rewrites `modules/_index.ts`. Fix `core/reviews.ts` reference.
+- [x] Core tests that only need a module string keep `'notes'` as a fake id; `proposals.test.ts` and `mcp.test.ts` that write `notes.note` through `callTool('notes','write')` switch to `ideas.write` (unguarded, one table, registers) and assert against `ideas.idea`.
+- [x] `e2e/seed.mts`: replace the notes seed with ideas rows for the classified entities and the two proposals with `ideas.write` payloads; keep agent names so Agent Log tests keep their rows.
+- [x] `e2e/screens.spec.ts`: delete the notes page test; retarget the palette, review approve, agent log and dashboard assertions to Ideas; fix the "3 notes" skill tree copy.
+- [x] Docs: ARCHITECTURE and SPEC point "copy this folder to start a module" at `modules/ideas`.
 
 Exit checks: `pnpm test` green (822 minus the deleted); `pnpm test:e2e` green; `pnpm setup:demo` on a fresh local database succeeds.
 Depends on: none. Out of scope: any other module.

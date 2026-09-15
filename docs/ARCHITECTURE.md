@@ -94,7 +94,7 @@ docs/                     SPEC, ARCHITECTURE, DECISIONS, plans/
 
 ## Module contract
 
-Every module is one folder with one manifest. Nothing else in the repo needs editing to add or remove a module. Deleting the folder removes the module.
+Every module is one folder with one manifest. Nothing else in the repo needs editing to add or remove a module. Deleting the folder removes the module. To start a new one, copy `modules/ideas`: one table, one unguarded write, a seed, a digest, no integration.
 
 ```ts
 export default defineModule({

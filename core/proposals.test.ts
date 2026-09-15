@@ -4,11 +4,11 @@ import { approve, countPending, dismiss, listProposals, propose, reopen } from '
 import { setSetting } from './settings'
 import { callTool } from './tools'
 
-// Against the real database and the real notes module, because the thing worth
-// proving is that a guarded agent call does not reach notes.note.
+// Against the real database and the real ideas module, because the thing worth
+// proving is that a guarded agent call does not reach ideas.idea.
 
-async function notesCount(): Promise<number> {
-  const { rows } = await db().query<{ n: string }>('select count(*)::text as n from notes.note')
+async function ideasCount(): Promise<number> {
+  const { rows } = await db().query<{ n: string }>('select count(*)::text as n from ideas.idea')
   return Number(rows[0].n)
 }
 
@@ -16,52 +16,51 @@ beforeEach(async () => {
   await db().query('delete from core.proposals')
   await db().query('delete from core.events')
   await db().query('delete from core.entities')
-  await db().query('delete from notes.note')
+  await db().query('delete from ideas.idea')
   await db().query('delete from core.settings')
 })
 
 describe('the guard', () => {
   it('holds a guarded agent write as a proposal and writes nothing', async () => {
-    // notes ships guarded: [], so guard `write` for this test the way a real
-    // module would.
-    const before = await notesCount()
+    // ideas does not guard write, so the default autonomy lets this one run.
+    const before = await ideasCount()
 
     const result = await callTool(
-      'notes',
+      'ideas',
       'write',
-      { title: 'Agent wrote this', body: '' },
+      { title: 'Agent wrote this' },
       { source: 'agent', agent: 'orchestrator', reason: 'Testing the guard.' },
     )
 
-    // Default autonomy is 'propose' and notes guards nothing, so this one runs.
+    // Default autonomy is 'propose' and ideas does not guard write, so this one runs.
     expect(result.status).toBe('done')
-    expect(await notesCount()).toBe(before + 1)
+    expect(await ideasCount()).toBe(before + 1)
   })
 
   it('holds every agent write when autonomy is observe', async () => {
     await setSetting('agent_autonomy', 'observe')
-    const before = await notesCount()
+    const before = await ideasCount()
 
     const result = await callTool(
-      'notes',
+      'ideas',
       'write',
-      { title: 'Held back', body: 'nothing should be written' },
+      { title: 'Held back', pitch: 'nothing should be written' },
       { source: 'agent', agent: 'orchestrator', reason: 'Observe mode.' },
     )
 
     expect(result.status).toBe('proposed')
-    expect(await notesCount()).toBe(before)
+    expect(await ideasCount()).toBe(before)
     expect(await countPending()).toBe(1)
   })
 
   it('lets the owner write through the UI even in observe mode', async () => {
     await setSetting('agent_autonomy', 'observe')
-    const before = await notesCount()
+    const before = await ideasCount()
 
-    const result = await callTool('notes', 'write', { title: 'Mine', body: '' }, { source: 'ui' })
+    const result = await callTool('ideas', 'write', { title: 'Mine' }, { source: 'ui' })
 
     expect(result.status).toBe('done')
-    expect(await notesCount()).toBe(before + 1)
+    expect(await ideasCount()).toBe(before + 1)
     expect(await countPending()).toBe(0)
   })
 
@@ -69,7 +68,7 @@ describe('the guard', () => {
     await setSetting('agent_autonomy', 'observe')
 
     await expect(
-      callTool('notes', 'write', { body: 'no title' }, { source: 'agent' }),
+      callTool('ideas', 'write', { title: '' }, { source: 'agent' }),
     ).rejects.toThrow()
 
     // Nothing stored, so the owner is never shown a proposal that cannot be
@@ -81,9 +80,9 @@ describe('the guard', () => {
 describe('deciding', () => {
   async function pending() {
     return propose({
-      module: 'notes',
+      module: 'ideas',
       tool: 'write',
-      payload: { title: 'Proposed note', body: 'from an agent' },
+      payload: { title: 'Proposed idea', pitch: 'from an agent' },
       agent: 'orchestrator',
       reason: 'Because the test said so.',
       guarded: true,
@@ -92,11 +91,11 @@ describe('deciding', () => {
 
   it('approve runs the tool and marks the row', async () => {
     const id = await pending()
-    const before = await notesCount()
+    const before = await ideasCount()
 
     await approve(id)
 
-    expect(await notesCount()).toBe(before + 1)
+    expect(await ideasCount()).toBe(before + 1)
     expect(await countPending()).toBe(0)
     expect((await listProposals('approved')).map((p) => p.id)).toEqual([id])
   })
@@ -105,17 +104,17 @@ describe('deciding', () => {
     const id = await pending()
     await approve(id, { title: 'Edited before approving' })
 
-    const { rows } = await db().query<{ title: string }>('select title from notes.note')
+    const { rows } = await db().query<{ title: string }>('select title from ideas.idea')
     expect(rows[0].title).toBe('Edited before approving')
   })
 
   it('approve refuses an edit the tool would reject, and writes nothing', async () => {
     const id = await pending()
-    const before = await notesCount()
+    const before = await ideasCount()
 
     await expect(approve(id, { title: '' })).rejects.toThrow()
 
-    expect(await notesCount()).toBe(before)
+    expect(await ideasCount()).toBe(before)
     // Still pending, so a failed approval is visible rather than swallowed.
     expect(await countPending()).toBe(1)
   })
@@ -128,11 +127,11 @@ describe('deciding', () => {
 
   it('dismiss takes it out of the inbox without writing anything', async () => {
     const id = await pending()
-    const before = await notesCount()
+    const before = await ideasCount()
 
     await dismiss(id)
 
-    expect(await notesCount()).toBe(before)
+    expect(await ideasCount()).toBe(before)
     expect(await countPending()).toBe(0)
     expect((await listProposals('dismissed')).map((p) => p.id)).toEqual([id])
   })
@@ -160,9 +159,9 @@ describe('deciding', () => {
 describe('the core query tool', () => {
   it('is available on a module that never defined one', async () => {
     const result = await callTool(
-      'notes',
+      'ideas',
       'query',
-      { sql: 'select count(*)::int as n from notes.note' },
+      { sql: 'select count(*)::int as n from ideas.idea' },
       { source: 'agent' },
     )
 
@@ -173,7 +172,7 @@ describe('the core query tool', () => {
   it('is never guarded, because there is nothing to approve about a select', async () => {
     await setSetting('agent_autonomy', 'observe')
 
-    const result = await callTool('notes', 'query', { sql: 'select 1 as n' }, { source: 'agent' })
+    const result = await callTool('ideas', 'query', { sql: 'select 1 as n' }, { source: 'agent' })
 
     expect(result.status).toBe('done')
     expect(await countPending()).toBe(0)
@@ -181,7 +180,7 @@ describe('the core query tool', () => {
 
   it('refuses a write dressed as a query', async () => {
     await expect(
-      callTool('notes', 'query', { sql: 'delete from notes.note' }, { source: 'agent' }),
+      callTool('ideas', 'query', { sql: 'delete from ideas.idea' }, { source: 'agent' }),
     ).rejects.toThrow(/delete/i)
   })
 })
