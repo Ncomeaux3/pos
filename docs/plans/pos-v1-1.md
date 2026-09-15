@@ -72,14 +72,14 @@ Complexity: medium
 Parallel-safe with: 1, 2, 8, 9, 10
 Files: `core/settings.ts`, `core/today.ts`, `core/modules.ts`, `core/review-registry.ts`, `core/db.ts`, `app/(app)/page.tsx`, `app/(app)/[module]/[[...path]]/page.tsx`, `vercel.json`, `docs/plans/pos-v1-1.md` (numbers).
 
-- [ ] Measure first and write the numbers into the plan: `curl -o /dev/null -w '%{time_starttransfer}\n' -H "cookie: $SESSION"` five times each for `/`, `/tasks`, `/goals`, `/fitness`, `/travel` on production; the same routes' durations from Vercel runtime logs; a local `pnpm build && pnpm start` run so compile time is out.
-- [ ] Region check: Vercel function region versus the Supabase project region. A page does 6 to 13 round trips across that gap. If they differ, set `regions` in `vercel.json` to the Supabase region (verify Hobby allows it) and re-measure.
-- [ ] Dedupe per request with React `cache()` (native, request scoped, no staleness): wrap `getSettings`, `getSetting`, `ownerToday`, `getSkillNames`. Layout and page both read settings; `getNav` and `getOffRailNav` each call `getSetting('modules_enabled')`; Goals calls `ownerToday` once per goal through Tasks' `linked`.
-- [ ] `page.tsx:120`: move `ownerToday()` into the `Promise.all`.
-- [ ] `core/review-registry.ts` `gather()`: `Promise.all` over modules with the try/catch inside the map.
-- [ ] Module catch-all: render `<Page />` immediately; the Not syncing banner becomes a small async server component under `<Suspense fallback={null}>` so `missingConnections()` streams in.
-- [ ] `core/db.ts:92` pool `max: 4` to `8`: the transaction pooler multiplexes and a dashboard render fires eight queries at once. Re-measure; revert if the pooler reports pressure.
-- [ ] Tasks `listSkillLinks` (`modules/tasks/data.ts:162`): join `tasks.task` with the same window `listTasks` uses. Skip if under 20 ms.
+- [ ] Measure first and write the numbers into the plan (local done, production pending): `curl -o /dev/null -w '%{time_starttransfer}\n' -H "cookie: $SESSION"` five times each for `/`, `/tasks`, `/goals`, `/fitness`, `/travel` on production; the same routes' durations from Vercel runtime logs; a local `pnpm build && pnpm start` run so compile time is out.
+- [x] Region check: Vercel function region versus the Supabase project region. A page does 6 to 13 round trips across that gap. If they differ, set `regions` in `vercel.json` to the Supabase region (verify Hobby allows it) and re-measure.
+- [x] Dedupe per request with React `cache()` (native, request scoped, no staleness): wrap `getSettings`, `getSetting`, `ownerToday`, `getSkillNames`. Layout and page both read settings; `getNav` and `getOffRailNav` each call `getSetting('modules_enabled')`; Goals calls `ownerToday` once per goal through Tasks' `linked`.
+- [x] `page.tsx:120`: move `ownerToday()` into the `Promise.all`.
+- [x] `core/review-registry.ts` `gather()`: `Promise.all` over modules with the try/catch inside the map.
+- [x] Module catch-all: render `<Page />` immediately; the Not syncing banner becomes a small async server component under `<Suspense fallback={null}>` so `missingConnections()` streams in.
+- [x] `core/db.ts:92` pool `max: 4` to `8`: the transaction pooler multiplexes and a dashboard render fires eight queries at once. Re-measure; revert if the pooler reports pressure.
+- [x] Tasks `listSkillLinks` (`modules/tasks/data.ts:162`): join `tasks.task` with the same window `listTasks` uses. Skip if under 20 ms. Skipped: 1 ms for 51 rows over 415 links locally (2026-09-15).
 
 Exit checks: before and after table in the plan doc, at least 30 percent off TTFB on `/` and `/tasks`; suites green; e2e unchanged.
 Depends on: none. Out of scope: TTL caches, `unstable_cache`, ISR.

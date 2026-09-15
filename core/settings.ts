@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { db } from './db'
 
 // The handful of knobs a fork needs without touching .env. Everything here is
@@ -81,21 +82,26 @@ export const DEFAULT_SETTINGS: Settings = {
   onboarding_completed_at: '',
 }
 
-export async function getSetting<K extends SettingKey>(key: K): Promise<Settings[K]> {
+// Both readers are memoised per request with React cache(): the layout and
+// the page each read settings, and getNav and getOffRailNav each read
+// modules_enabled, so one render was four round trips for one row. Outside a
+// render (jobs, tools, tests) cache() is a plain call, and a request that
+// writes a setting re-renders in a fresh pass, so nothing goes stale.
+export const getSetting = cache(async <K extends SettingKey>(key: K): Promise<Settings[K]> => {
   const { rows } = await db().query<{ value: Settings[K] }>(
     'select value from core.settings where key = $1',
     [key],
   )
   return rows.length > 0 ? rows[0].value : DEFAULT_SETTINGS[key]
-}
+})
 
-export async function getSettings(): Promise<Settings> {
+export const getSettings = cache(async (): Promise<Settings> => {
   const { rows } = await db().query<{ key: SettingKey; value: unknown }>(
     'select key, value from core.settings',
   )
   const stored = Object.fromEntries(rows.map((r) => [r.key, r.value]))
   return { ...DEFAULT_SETTINGS, ...stored }
-}
+})
 
 export async function setSetting<K extends SettingKey>(key: K, value: Settings[K]): Promise<void> {
   await db().query(
