@@ -43,6 +43,8 @@ function toTask(
     projectName: row.project_name,
     goalRef: row.goal_ref,
     goalTitle: row.goal_title,
+    ownGoalRef: row.own_goal_ref,
+    projectGoalRef: row.project_goal_ref,
     estimateMinutes: row.estimated_minutes,
     remindMinutes: row.remind_minutes,
     source: row.source,
@@ -96,7 +98,7 @@ export default async function TasksPage() {
 
       <Board
         tasks={tasks}
-        projects={projects.map((p) => ({ id: p.id, name: p.name }))}
+        projects={projects.map((p) => ({ id: p.id, name: p.name, goalRef: p.goal_ref }))}
         goals={goals}
         reminderChannels={channels}
         // Passed in rather than read in the browser, so the server and the

@@ -59,7 +59,12 @@ export function InlineEdit({
   }
 
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') setDraft(null)
+    if (e.key === 'Escape') {
+      // Consumed here: an Overlay around this listens on the document, and
+      // one Escape cancelling the edit and closing the drawer lost the drawer.
+      e.stopPropagation()
+      setDraft(null)
+    }
     if (e.key === 'Enter' && !multiline) {
       e.preventDefault()
       commit()

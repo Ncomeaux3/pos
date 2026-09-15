@@ -19,7 +19,14 @@ import { Segments } from '@/components/pos/Segments'
 import { useSwipe } from '@/components/pos/gestures'
 import { useIsPhone } from '@/components/pos/useIsPhone'
 import { useSearchState } from '@/components/pos/searchState'
-import { approveTask, completeTask, deleteTask, writeTask, type ActionResult } from './actions'
+import {
+  approveTask,
+  completeTask,
+  deleteTask,
+  writeTask,
+  type ActionResult,
+  type WriteInput,
+} from './actions'
 
 // Both mount only when asked for (month=1, an open drawer), so their
 // code loads then rather than with the board. `loading` gives each its own
@@ -27,6 +34,9 @@ import { approveTask, completeTask, deleteTask, writeTask, type ActionResult } f
 // loading.tsx and swaps the whole page for the skeleton while the chunk lands.
 const Calendar = dynamic(() => import('./Calendar').then((m) => m.Calendar), { loading: () => null })
 const TaskDrawer = dynamic(() => import('./TaskDrawer').then((m) => m.TaskDrawer), { loading: () => null })
+const ProjectsDrawer = dynamic(() => import('./ProjectsDrawer').then((m) => m.ProjectsDrawer), {
+  loading: () => null,
+})
 
 // The whole board: the quick add line, the view tabs, the columns, and the
 // drawer. One client component because the drag source, the drop target, the
@@ -89,7 +99,7 @@ export function Board({
   todayIso,
 }: {
   tasks: Task[]
-  projects: { id: string; name: string }[]
+  projects: { id: string; name: string; goalRef: string | null }[]
   goals: { id: string; title: string }[]
   reminderChannels: string[] | null
   todayIso: string
@@ -116,6 +126,10 @@ export function Board({
   const expanded = params.get('open')
   const setExpanded = (id: string | null) => setParams({ open: id }, { local: true })
   const [dragging, setDragging] = useState<string | null>(null)
+  // What a column's plus hands the new-task drawer. State, not the URL: a
+  // reload of ?task=new opens the plain form, as it always has.
+  const [columnPrefill, setColumnPrefill] = useState<Partial<WriteInput> | null>(null)
+  const [showProjects, setShowProjects] = useState(false)
   const [pending, start] = useTransition()
   const toast = useToast()
 
@@ -159,6 +173,14 @@ export function Board({
   }
 
   const openDrawer = (id: string) => setParams({ task: id }, { push: true })
+  const openNew = (prefill: Partial<WriteInput> | null = null) => {
+    setColumnPrefill(prefill)
+    setParams({ task: 'new' }, { push: true })
+  }
+  // The band's New task and the phone plus take the current view's first
+  // column: By goal starts on its first goal, This week on today.
+  const first = columns.find((c) => c.drop)
+  const prefill = columnPrefill ?? (first ? dropPatch(first.drop!) : {})
   const remove = (task: Task) => {
     if (!window.confirm(`Delete "${task.title}"?`)) return
     setParams({ open: null, task: null })
@@ -175,7 +197,7 @@ export function Board({
         projects={projects.map((p) => p.name)}
         today={today}
         onSave={run}
-        onNew={() => setParams({ task: 'new' }, { push: true })}
+        onNew={() => openNew()}
       />
 
       <Segments
@@ -230,6 +252,13 @@ export function Board({
         )}
 
       <div className="pt-4">
+        {view === 'project' && !showCalendar && (
+          <div className="flex justify-end pb-3">
+            <button type="button" onClick={() => setShowProjects(true)} className={mini}>
+              Projects
+            </button>
+          </div>
+        )}
         {showCalendar ? (
           <Calendar
             tasks={tasks.filter((t) => t.status === 'open' || t.status === 'review')}
@@ -285,7 +314,20 @@ export function Board({
                     >
                       {label}
                     </span>
-                    <span className="num shrink-0 text-[11px] text-ink-3">{column.meta}</span>
+                    <span className="flex shrink-0 items-center gap-1.5">
+                      <span className="num text-[11px] text-ink-3">{column.meta}</span>
+                      {column.drop && (
+                        <button
+                          type="button"
+                          aria-label={`New task in ${column.label}`}
+                          onClick={() => openNew(dropPatch(column.drop!))}
+                          // 24px target around a 13px glyph, per WCAG 2.5.8.
+                          className="-my-1.5 flex h-6 w-6 items-center justify-center text-ink-3 transition-colors duration-150 hover:text-ink"
+                        >
+                          <Plus size={13} aria-hidden />
+                        </button>
+                      )}
+                    </span>
                   </div>
 
                   <div className="flex min-h-[60px] flex-col gap-1.5 pt-2.5">
@@ -364,9 +406,24 @@ export function Board({
           goals={goals}
           today={today}
           reminderChannels={reminderChannels}
-          onClose={() => setParams({ task: null })}
+          onClose={() => {
+            // Cleared with the drawer, or the next plain New task would
+            // carry the last column's goal or project.
+            setColumnPrefill(null)
+            setParams({ task: null })
+          }}
           onSave={run}
           onDelete={selected ? () => remove(selected) : undefined}
+          prefill={selected ? undefined : prefill}
+        />
+      )}
+
+      {showProjects && (
+        <ProjectsDrawer
+          projects={projects}
+          goals={goals}
+          onClose={() => setShowProjects(false)}
+          onSave={run}
         />
       )}
     </div>
@@ -554,6 +611,7 @@ function Row({
             <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-ink-3">
               <span>
                 Goal: <span className="text-ink-2">{task.goalTitle ?? 'none'}</span>
+                {task.goalRef && !task.ownGoalRef && ' · via project'}
               </span>
               <span>
                 Skills:{' '}

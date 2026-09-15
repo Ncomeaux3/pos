@@ -39,6 +39,20 @@ one CI carries as well until the pair is added to the secrets.
 
 ## Done
 
+**v1.1 Phase 6, goals, projects, tasks** (2026-09-15, branch
+`phase-6-projects-goals`). `tasks.project.goal_ref` (migration
+20260915160000, backfilled where a project's open tasks all agreed). A task
+counts toward its own goal, else its project's: one expression,
+`coalesce(t.goal_ref, p.goal_ref)`, in the board SELECT and in `listByGoal`,
+which the `linked` seam reads, so the board and the Goals drawer cannot
+disagree. New `write_project` tool (name, goal_ref, archived) behind a
+`ProjectsDrawer` opened from a Projects button in By project. The task drawer
+binds its Goal select to the task's own goal and captions what it inherits;
+Due gains "Pick a date" with a native date input. Every droppable column
+header carries a plus that opens New task prefilled from the column's drop
+spec; the band's New task and the phone plus take the view's first column.
+Known: dragging an inheriting task onto "No goal" clears its own goal but it
+still inherits, so it stays put.
 **v1.1 Phase 5, dashboard** (2026-09-15, branch `phase-5-dashboard`, built
 in the worktree `../pos-phase-5` beside Phase 6). The bento's layout is one
 `dashboard_layout` setting (`{ order, hidden }`) in `core.settings`, saved

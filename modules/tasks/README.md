@@ -36,6 +36,7 @@ same function, so the page and the digest cannot disagree.
 |---|---|
 | `get_digest` | Open counts, planned minutes, what was completed, the next five due |
 | `write` | Create a task, or update one by passing its id |
+| `write_project` | Create a project, or rename, link to a goal, or archive one by id |
 | `complete` | Mark done or reopen. Completing emits `task_completed`, which is the XP |
 | `approve` | Accept an agent-proposed task out of review |
 
