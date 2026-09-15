@@ -45,19 +45,6 @@ export async function listGoals(): Promise<{ id: string; title: string }[]> {
   return rows
 }
 
-/** The skills each idea is linked to, by idea id. Read only here. */
-export async function listSkillLinks(): Promise<{ idea_id: string; skill_id: string }[]> {
-  const { rows } = await db().query<{ idea_id: string; skill_id: string }>(
-    `select en.entity_id as idea_id, sl.skill_id
-       from core.skill_links sl
-       join core.entities en on en.id = sl.entity_ref
-      where en.module = 'ideas' and en.entity_type = 'idea'
-        and sl.classified_by <> 'unclassified'
-      order by sl.confidence desc, sl.skill_id`,
-  )
-  return rows
-}
-
 export type SimilarPair = { a_id: string; b_id: string; similarity: number }
 
 /**

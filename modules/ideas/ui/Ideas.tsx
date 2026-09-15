@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { useToast } from '@/components/pos'
+import { useToast, type SkillLink } from '@/components/pos'
 import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
 import { boardScore, parseCapture, quadrant, type Level, type Quadrant } from '../quadrant'
@@ -37,7 +37,8 @@ export type Idea = {
   draftTitle: string | null
   daysInStage: number
   stale: boolean
-  skills: { id: string; name: string }[]
+  entityRef: string | null
+  skills: SkillLink[]
   related: { title: string; similarity: number }[]
 }
 
@@ -45,6 +46,7 @@ export type IdeasData = {
   research: Research[]
   ideas: Idea[]
   goals: { id: string; title: string }[]
+  skills: [string, string][]
   pair: { a_id: string; b_id: string; similarity: number } | null
 }
 
@@ -302,6 +304,7 @@ export function Ideas({ data }: { data: IdeasData }) {
           editing={params.get('edit') === '1'}
           draftTitle={params.get('title') ?? ''}
           goals={data.goals}
+          skills={data.skills}
           research={open ? (data.research.find((r) => r.ideaId === open.id) ?? null) : null}
           onClose={() => setParams({ idea: null, edit: null, title: null })}
           onEdit={(on) => setParams({ edit: on ? '1' : null })}

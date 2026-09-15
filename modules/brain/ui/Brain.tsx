@@ -33,13 +33,14 @@ export type BrainNote = {
   updatedAt: string
   backlinks: { id: string; title: string; slug: string }[]
   unresolved: string[]
+  entityRef: string | null
   skills: { id: string; name: string; confidence: number; by: 'rule' | 'model' | 'manual' }[]
   hubs: { id: string; name: string; by: 'rule' | 'model' | 'manual' }[]
 }
 
 export type BrainHub = { id: string; name: string; slug: string; keywords: string[] }
 
-export type BrainData = { notes: BrainNote[]; hubs: BrainHub[] }
+export type BrainData = { notes: BrainNote[]; hubs: BrainHub[]; skills: [string, string][] }
 
 export type SetParams = (next: Record<string, string | null>) => void
 
@@ -274,7 +275,7 @@ export function Brain({ data }: { data: BrainData }) {
 
         <section className="flex min-w-0 flex-[3_1_300px] flex-col">
           {open ? (
-            <NotePane key={open.id} note={open} hubs={data.hubs} setParams={setParams} run={run} />
+            <NotePane key={open.id} note={open} hubs={data.hubs} skills={data.skills} setParams={setParams} run={run} />
           ) : (
             <p className="flex flex-1 items-center justify-center py-16 text-[13px] text-ink-4">
               Select a note

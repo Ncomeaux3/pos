@@ -1,13 +1,12 @@
 import { Eyebrow, PageHeader } from '@/components/pos'
 import { ownerToday } from '@/core/today'
 import { getSkillNames } from '@/core/modules'
+import { listSkillLinks, type EntitySkills } from '@/core/skill-links'
 import {
   listGoals,
   listProjects,
-  listSkillLinks,
   listTasks,
   reminderChannels,
-  type SkillLinkRow,
   type TaskRow,
 } from '../data'
 import type { Task } from '../shape'
@@ -27,8 +26,7 @@ function daysFrom(today: Date, iso: string): number {
 function toTask(
   row: TaskRow,
   today: Date,
-  links: SkillLinkRow[],
-  names: Record<string, string>,
+  links: Map<string, EntitySkills>,
 ): Task {
   return {
     id: row.id,
@@ -48,13 +46,8 @@ function toTask(
     estimateMinutes: row.estimated_minutes,
     remindMinutes: row.remind_minutes,
     source: row.source,
-    skills: links
-      .filter((l) => l.task_id === row.id)
-      .map((l) => ({
-        name: names[l.skill_id] ?? l.skill_id,
-        confidence: Number(l.confidence),
-        by: l.is_manual ? 'manual' : l.classified_by === 'rule' ? 'rule' : 'model',
-      })),
+    entityRef: links.get(row.id)?.entityRef ?? null,
+    skills: links.get(row.id)?.skills ?? [],
     doneDaysAgo: row.done_days_ago === null ? null : Number(row.done_days_ago),
   }
 }
@@ -64,7 +57,7 @@ export default async function TasksPage() {
     listTasks(),
     listProjects(),
     listGoals(),
-    listSkillLinks(),
+    listSkillLinks('tasks', 'task'),
     getSkillNames(),
     reminderChannels(),
     // The owner's day, from the database, not this server's. Between 19:00 in
@@ -75,7 +68,7 @@ export default async function TasksPage() {
 
   const [y, m, d] = todayIso.split('-').map(Number)
   const today = new Date(y, m - 1, d)
-  const tasks = rows.map((r) => toTask(r, today, links, names))
+  const tasks = rows.map((r) => toTask(r, today, links))
 
   const open = tasks.filter((t) => t.status === 'open').length
   const doneToday = tasks.filter((t) => t.status === 'done' && t.doneDaysAgo === 0).length
@@ -100,6 +93,7 @@ export default async function TasksPage() {
         tasks={tasks}
         projects={projects.map((p) => ({ id: p.id, name: p.name, goalRef: p.goal_ref }))}
         goals={goals}
+        skills={Object.entries(names)}
         reminderChannels={channels}
         // Passed in rather than read in the browser, so the server and the
         // client agree about what day it is and the first paint does not

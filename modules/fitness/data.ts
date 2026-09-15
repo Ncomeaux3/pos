@@ -1,4 +1,5 @@
 import { db } from '@/core/db'
+import { listSkillLinks } from '@/core/skill-links'
 import { getDigest } from '@/core/digests'
 
 // Reads for the screen and the digest. The units and the derived numbers live
@@ -190,25 +191,6 @@ export async function workoutSpan(): Promise<{ count: number; firstYear: number 
   }
 }
 
-/**
- * The skills each workout is linked to, through the core registry. Read only:
- * the links are the classifier's, and the Skill Tree is where they are
- * corrected.
- */
-export async function skillsByWorkout(): Promise<Map<string, string[]>> {
-  const { rows } = await db().query<{ workout_id: string; skill_id: string }>(
-    `select en.entity_id as workout_id, sl.skill_id
-       from core.skill_links sl
-       join core.entities en on en.id = sl.entity_ref
-      where en.module = 'fitness' and en.entity_type = 'workout'
-        and sl.classified_by <> 'unclassified'
-      order by sl.confidence desc, sl.skill_id`,
-  )
-  const map = new Map<string, string[]>()
-  for (const r of rows) map.set(r.workout_id, [...(map.get(r.workout_id) ?? []), r.skill_id])
-  return map
-}
-
 export type FitnessGoal = {
   title: string
   status: string
@@ -233,21 +215,15 @@ export async function fitnessGoal(): Promise<FitnessGoal | null> {
   const attention = Array.isArray(digest?.attention) ? (digest.attention as FitnessGoal[]) : []
   if (attention.length === 0) return null
 
-  const ids = attention.map((g) => (g as FitnessGoal & { id: string }).id)
-  const { rows } = await db().query<{ id: string }>(
-    `select distinct en.entity_id as id
-       from core.entities en
-       join core.skill_links sl on sl.entity_ref = en.id
-      where en.module = 'goals' and en.entity_id = any($1)
-        and sl.skill_id <> 'unclassified'
-        and sl.skill_id in (
-          select sl2.skill_id from core.skill_links sl2
-            join core.entities en2 on en2.id = sl2.entity_ref
-           where en2.module = 'fitness' and en2.entity_type = 'workout')`,
-    [ids],
+  // Through core's one reader, which already leaves `unclassified` out.
+  const [goalLinks, workoutLinks] = await Promise.all([
+    listSkillLinks('goals', 'goal'),
+    listSkillLinks('fitness', 'workout'),
+  ])
+  const workoutSkills = new Set([...workoutLinks.values()].flatMap((e) => e.skills.map((s) => s.id)))
+  const goal = attention.find((g) =>
+    goalLinks.get((g as FitnessGoal & { id: string }).id)?.skills.some((s) => workoutSkills.has(s.id)),
   )
-  const linked = new Set(rows.map((r) => r.id))
-  const goal = attention.find((g) => linked.has((g as FitnessGoal & { id: string }).id))
   return goal
     ? { title: goal.title, status: goal.status, percent: goal.percent, current: goal.current, target: goal.target }
     : null

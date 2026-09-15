@@ -170,32 +170,6 @@ export async function patchProject(id: string, patch: ProjectPatch): Promise<voi
   ])
 }
 
-export type SkillLinkRow = {
-  task_id: string
-  skill_id: string
-  confidence: string
-  classified_by: string
-  is_manual: boolean
-}
-
-/**
- * The skills each task is linked to, through the core registry. Read only
- * here: the links are the classifier's, and the Skill Tree is where they are
- * corrected.
- */
-export async function listSkillLinks(): Promise<SkillLinkRow[]> {
-  const { rows } = await db().query<SkillLinkRow>(
-    `select en.entity_id as task_id, sl.skill_id, sl.confidence::text,
-            sl.classified_by, sl.is_manual
-       from core.skill_links sl
-       join core.entities en on en.id = sl.entity_ref
-      where en.module = 'tasks' and en.entity_type = 'task'
-        and sl.classified_by <> 'unclassified'
-      order by sl.confidence desc, sl.skill_id`,
-  )
-  return rows
-}
-
 /** The channels the task reminder rule fires on, or null when it is off. */
 export async function reminderChannels(): Promise<string[] | null> {
   const { rows } = await db().query<{ channels: string[]; muted: boolean }>(

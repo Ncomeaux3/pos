@@ -46,3 +46,17 @@ export async function resetTree(): Promise<void> {
   revalidatePath('/settings/skills')
   revalidatePath('/skills')
 }
+
+// The picker on every entity drawer. The whole layout is revalidated because
+// the drawer that called this lives on whichever screen the entity is from.
+export async function linkSkill(entityRef: string, skillId: string): Promise<void> {
+  await requireOwner()
+  await callTool('skills', 'link', { entityRef, skillId }, { source: 'ui' })
+  revalidatePath('/', 'layout')
+}
+
+export async function unlinkSkill(entityRef: string, skillId: string): Promise<void> {
+  await requireOwner()
+  await callTool('skills', 'unlink', { entityRef, skillId }, { source: 'ui' })
+  revalidatePath('/', 'layout')
+}
