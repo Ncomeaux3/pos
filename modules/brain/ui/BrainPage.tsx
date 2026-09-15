@@ -1,6 +1,7 @@
 import { db } from '@/core/db'
 import { getSkillNames } from '@/core/modules'
-import { listHubs, listNoteHubs, listNotes, listSkillLinks } from '../data'
+import { listSkillLinks } from '@/core/skill-links'
+import { listHubs, listNoteHubs, listNotes } from '../data'
 import { Brain, type BrainData } from './Brain'
 
 export default async function BrainPage() {
@@ -12,7 +13,7 @@ export default async function BrainPage() {
     db().query<{ from_note_id: string; to_note_id: string | null; to_slug: string }>(
       `select from_note_id, to_note_id, to_slug from brain.link`,
     ),
-    listSkillLinks(),
+    listSkillLinks('brain', 'note'),
     getSkillNames(),
     listHubs(),
     listNoteHubs(),
@@ -47,14 +48,8 @@ export default async function BrainPage() {
       unresolved: links.rows
         .filter((l) => l.from_note_id === n.id && l.to_note_id === null)
         .map((l) => l.to_slug),
-      skills: skillLinks
-        .filter((l) => l.note_id === n.id)
-        .map((l) => ({
-          id: l.skill_id,
-          name: skillNames[l.skill_id] ?? l.skill_id,
-          confidence: Number(l.confidence),
-          by: l.is_manual ? 'manual' : l.classified_by === 'rule' ? 'rule' : 'model',
-        })),
+      entityRef: skillLinks.get(n.id)?.entityRef ?? null,
+      skills: skillLinks.get(n.id)?.skills ?? [],
       hubs: noteHubs
         .filter((h) => h.note_id === n.id && hubById.has(h.hub_id))
         .map((h) => ({
@@ -64,6 +59,7 @@ export default async function BrainPage() {
         })),
     })),
     hubs: hubs.map((h) => ({ id: h.id, name: h.name, slug: h.slug, keywords: h.keywords })),
+    skills: Object.entries(skillNames),
   }
 
   return (

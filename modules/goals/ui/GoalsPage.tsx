@@ -1,8 +1,9 @@
 import { Eyebrow, PageHeader } from '@/components/pos'
 import { listMetrics } from '@/core/metrics'
 import { getLinked, getSkillNames } from '@/core/modules'
+import { listSkillLinks } from '@/core/skill-links'
 import { ownerToday } from '@/core/today'
-import { entityRefs, historyByGoal, listGoals, listSkillLinks, pendingProposals } from '../data'
+import { historyByGoal, listGoals, pendingProposals } from '../data'
 import { progress, rule, type Goal as Shape, type Status } from '../progress'
 import { GoalList, GoalsCrumb, NewGoalButton, type GoalCard } from './GoalList'
 
@@ -13,12 +14,11 @@ const days = (fromIso: string, toIso: string) =>
   )
 
 export default async function GoalsPage() {
-  const [rows, history, todayIso, refs, links, names, proposals] = await Promise.all([
+  const [rows, history, todayIso, links, names, proposals] = await Promise.all([
     listGoals(),
     historyByGoal(),
     ownerToday(),
-    entityRefs(),
-    listSkillLinks(),
+    listSkillLinks('goals', 'goal'),
     getSkillNames(),
     pendingProposals(),
   ])
@@ -28,7 +28,7 @@ export default async function GoalsPage() {
   const linked = new Map(
     await Promise.all(
       rows.map(async (row) => {
-        const ref = refs.get(row.id)
+        const ref = links.get(row.id)?.entityRef
         return [row.id, ref ? await getLinked(ref) : []] as const
       }),
     ),
@@ -65,9 +65,8 @@ export default async function GoalsPage() {
       progress: p,
       rule: rule(shape, p, row.unit),
       tasks: linked.get(row.id) ?? [],
-      skills: links
-        .filter((l) => l.goal_id === row.id)
-        .map((l) => ({ id: l.skill_id, name: names[l.skill_id] ?? l.skill_id })),
+      entityRef: links.get(row.id)?.entityRef ?? null,
+      skills: links.get(row.id)?.skills ?? [],
       proposals: proposals
         .filter((pr) => pr.goal_id === row.id)
         .map((pr) => ({ id: pr.id, from: `goals.${pr.tool}`, title: pr.title })),
@@ -102,6 +101,7 @@ export default async function GoalsPage() {
         // Enumerated from the manifests, so the picker offers exactly what some
         // module will actually compute and nothing else.
         metrics={listMetrics()}
+        skills={Object.entries(names)}
         todayIso={todayIso}
       />
     </div>

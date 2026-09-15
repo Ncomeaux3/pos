@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { db } from '@/core/db'
 import { defineModule, defineTool } from '@/core/module-contract'
 import SkillTreePage from './ui/SkillTreePage'
-import { classify } from './classify'
+import { classify, clearUnclassified } from './classify'
 import { loadTree } from './tree'
 import { nightlyDigest } from './jobs/nightly-digest'
 import { reclassify } from './jobs/reclassify'
@@ -14,6 +14,12 @@ import { SkillsTile } from './ui/Tile'
 //
 // Delete this folder and the app still runs. Entities still register, events
 // still emit, nothing classifies. That is the seam working.
+const skillId = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[a-z0-9_]+$/, 'Lowercase letters, digits and underscores.')
+
 export default defineModule({
   id: 'skills',
   nav: { label: 'Skill Tree', icon: 'sparkles', order: 20 },
@@ -35,11 +41,7 @@ export default defineModule({
       description: 'Add, rename or delete a skill. Edits sit on top of the committed tree.',
       input: z.object({
         kind: z.enum(['custom', 'rename', 'delete']),
-        skillId: z
-          .string()
-          .min(1)
-          .max(64)
-          .regex(/^[a-z0-9_]+$/, 'Lowercase letters, digits and underscores.'),
+        skillId,
         name: z.string().min(1).max(80).optional(),
         parent: z.string().max(64).optional(),
         // No default. Omitting keywords must leave the stored ones alone: the
@@ -77,8 +79,8 @@ export default defineModule({
       },
     }),
 
-    // Dragging an event onto another skill on the Skill Tree screen. This is
-    // the one write that sets is_manual, and nothing overwrites it afterwards:
+    // Dragging an event onto another skill on the Skill Tree screen. Sets
+    // is_manual, as link below does, and nothing overwrites it afterwards:
     // classify() only ever updates rows where is_manual = false.
     reassign: defineTool({
       description: 'Move an entity\'s skill link to a different skill, by hand.',
@@ -100,6 +102,37 @@ export default defineModule({
           [entityRef, toSkillId],
         )
         return { entityRef, toSkillId }
+      },
+    }),
+
+    // The picker on every entity drawer. Same row a reassign writes, so the
+    // same rule protects it: classify() never touches a manual row. A parked
+    // marker is not a skill and does not stay beside a real one.
+    link: defineTool({
+      description: 'Link an entity to a skill, by hand.',
+      input: z.object({ entityRef: z.string().uuid(), skillId }),
+      run: async ({ entityRef, skillId }) => {
+        await db().query(
+          `insert into core.skill_links (entity_ref, skill_id, confidence, classified_by, is_manual)
+           values ($1, $2, 1, 'human', true)
+           on conflict (entity_ref, skill_id) do update
+             set confidence = 1, classified_by = 'human', is_manual = true`,
+          [entityRef, skillId],
+        )
+        await clearUnclassified(entityRef)
+        return { entityRef, skillId }
+      },
+    }),
+
+    unlink: defineTool({
+      description: 'Remove one of an entity\'s skill links.',
+      input: z.object({ entityRef: z.string().uuid(), skillId }),
+      run: async ({ entityRef, skillId }) => {
+        await db().query(`delete from core.skill_links where entity_ref = $1 and skill_id = $2`, [
+          entityRef,
+          skillId,
+        ])
+        return { entityRef, skillId }
       },
     }),
   },

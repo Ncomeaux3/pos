@@ -13,7 +13,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-15. Branch `main`, production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-15 (Phase 7a). Branch `main`, production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -38,6 +38,22 @@ and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
 ## Done
+
+**v1.1 Phase 7a, skill picker, core and the four chip sites** (2026-09-15,
+branch `phase-7a-skill-picker`). Two tools on the tree module, `skills.link`
+and `skills.unlink`: a link by hand is the row a reassign writes (confidence
+1, `human`, `is_manual`), and it clears a parked `unclassified` marker. One
+reader, `core/skill-links.ts` `listSkillLinks(module, type)`, a map of every
+registered entity to its `entityRef` and named chips; the five copies in the
+tasks, goals, brain, ideas and fitness data files are gone, and `fitnessGoal`
+reads through it too, so `from core.skill_links` appears only under
+`modules/skills`. `components/pos/SkillPicker.tsx` renders on the task, goal,
+idea and note drawers: chips link to the tree, carry a MANUAL / RULES / MODEL
+badge, an x unlinks, a plus opens a native select of the unlinked skills,
+optimistic both ways. Unlinking an automatic link leaves no row, so a later
+classify() can put it back; only a manual row is protected. Phase 7b adds
+the same block to trips, policies, recipes, workouts, home assets and health
+records; the fitness page no longer needs `getSkillNames()` until then.
 
 **v1.1 Phase 8, skill tree gestures** (2026-09-15, PR #65, built in a
 Claude Code web session). On the phone a drag down the sky offered to refresh, a

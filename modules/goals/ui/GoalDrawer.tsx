@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { ActionButton, Eyebrow, Overlay } from '@/components/pos'
+import { ActionButton, Eyebrow, Overlay, SkillPicker } from '@/components/pos'
 import type { Metric } from '@/core/metrics'
 import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
@@ -35,6 +35,7 @@ export function GoalDrawer({
   editing,
   draft,
   metrics,
+  skills,
   todayIso,
   onClose,
   onEdit,
@@ -46,6 +47,7 @@ export function GoalDrawer({
   /** What the inline form had typed when More options was pressed. */
   draft: { title: string; target: string; deadline: string }
   metrics: Metric[]
+  skills: [string, string][]
   todayIso: string
   onClose: () => void
   onEdit: (on: boolean) => void
@@ -64,17 +66,19 @@ export function GoalDrawer({
     )
   }
   if (!goal) return null
-  return <View goal={goal} todayIso={todayIso} onClose={onClose} onEdit={() => onEdit(true)} onRun={onRun} />
+  return <View goal={goal} skills={skills} todayIso={todayIso} onClose={onClose} onEdit={() => onEdit(true)} onRun={onRun} />
 }
 
 function View({
   goal,
+  skills,
   todayIso,
   onClose,
   onEdit,
   onRun,
 }: {
   goal: GoalCard
+  skills: [string, string][]
   todayIso: string
   onClose: () => void
   onEdit: () => void
@@ -269,14 +273,11 @@ function View({
 
         <div>
           <Eyebrow>Linked skills</Eyebrow>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {goal.skills.length === 0 && <span className="text-[12px] text-ink-4">Nothing matched yet.</span>}
-            {goal.skills.map((s) => (
-              <Link key={s.id} href={`/skills?skill=${s.id}`} className="num border border-rule-2 px-2 py-[3px] text-[11px] tracking-[0.06em] text-ink-2 uppercase hover:border-ink hover:text-ink">
-                {s.name}
-              </Link>
-            ))}
-          </div>
+          {goal.entityRef ? (
+            <SkillPicker entityRef={goal.entityRef} links={goal.skills} skills={skills} className="mt-2" />
+          ) : (
+            <p className="mt-2 text-[12px] text-ink-4">Nothing matched yet.</p>
+          )}
         </div>
 
         {goal.proposals.length > 0 && (

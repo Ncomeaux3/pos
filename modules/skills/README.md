@@ -51,7 +51,9 @@ in the tree that no view can place and no XP can roll up.
 |---|---|---|
 | `skills.get_digest` | no | Attribute levels, character level, gaining, stagnant, under goal pressure |
 | `skills.write` | no | Add, rename or delete a skill |
-| `skills.reassign` | no | Move a link by hand. The one write that sets `is_manual` |
+| `skills.reassign` | no | Move a link by hand. Sets `is_manual` |
+| `skills.link` | no | Add a link by hand from any entity drawer's picker. Same row as a reassign; clears a parked `unclassified` |
+| `skills.unlink` | no | Remove one link. Leaves nothing in its place |
 | `skills.query` | no | Provided by core, scoped to `skills` and `core` |
 
 ## XP

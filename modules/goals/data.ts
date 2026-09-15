@@ -179,27 +179,6 @@ export async function measuredGoals(): Promise<MeasuredGoal[]> {
   })
 }
 
-/** Goal id to its registry row, which is what links, skills and events hang off. */
-export async function entityRefs(): Promise<Map<string, string>> {
-  const { rows } = await db().query<{ entity_id: string; id: string }>(
-    `select entity_id, id from core.entities where module = 'goals' and entity_type = 'goal'`,
-  )
-  return new Map(rows.map((r) => [r.entity_id, r.id]))
-}
-
-/** The skills each goal is linked to, by goal id. Read only here. */
-export async function listSkillLinks(): Promise<{ goal_id: string; skill_id: string }[]> {
-  const { rows } = await db().query<{ goal_id: string; skill_id: string }>(
-    `select en.entity_id as goal_id, sl.skill_id
-       from core.skill_links sl
-       join core.entities en on en.id = sl.entity_ref
-      where en.module = 'goals' and en.entity_type = 'goal'
-        and sl.classified_by <> 'unclassified'
-      order by sl.confidence desc, sl.skill_id`,
-  )
-  return rows
-}
-
 export type PendingProposal = { id: string; goal_id: string; tool: string; title: string }
 
 /**

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { ActionButton, Eyebrow, Overlay } from '@/components/pos'
+import { ActionButton, Eyebrow, Overlay, SkillPicker } from '@/components/pos'
 import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
 import type { Task } from '../shape'
@@ -46,6 +46,7 @@ export function TaskDrawer({
   task,
   projects,
   goals,
+  skills,
   today,
   reminderChannels,
   onClose,
@@ -57,6 +58,7 @@ export function TaskDrawer({
   task: Task | null
   projects: { id: string; name: string; goalRef: string | null }[]
   goals: { id: string; title: string }[]
+  skills: [string, string][]
   today: Date
   reminderChannels: string[] | null
   onClose: () => void
@@ -121,9 +123,6 @@ export function TaskDrawer({
     onSave(() => writeTask(input), task ? 'Saved' : `Added. ${title}`)
     onClose()
   }
-
-  const by = task?.skills[0]?.by
-  const byLabel = by === 'manual' ? 'MANUAL · is_manual = true' : by === 'model' ? 'MODEL FALLBACK' : 'RULES'
 
   return (
     <Overlay
@@ -281,46 +280,11 @@ export function TaskDrawer({
         </label>
 
         <div>
-          <div className="flex items-baseline justify-between">
-            <Eyebrow>Linked skills</Eyebrow>
-            {task && task.skills.length > 0 && (
-              <span
-                className={cn(
-                  'num text-[10px] tracking-[0.08em]',
-                  by === 'manual' ? 'text-warn' : by === 'model' ? 'text-ink-3' : 'text-ok',
-                )}
-              >
-                {byLabel}
-              </span>
-            )}
-          </div>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            {!task || task.skills.length === 0 ? (
-              <span className="text-[12px] text-ink-4">
-                {task ? 'Nothing matched yet.' : 'Classified when it is created.'}
-              </span>
-            ) : (
-              task.skills.map((s) => (
-                <span
-                  key={s.name}
-                  className="inline-flex items-center gap-1.5 border border-rule-2 px-2 py-[3px] text-[11px] text-ink"
-                >
-                  {s.name}
-                  <span className="num text-ink-3">
-                    {s.by === 'manual' ? 'manual' : `${Math.round(s.confidence * 100)}%`}
-                  </span>
-                </span>
-              ))
-            )}
-          </div>
-          {task && (
-            <p className="mt-2 text-[11px] leading-[1.5] text-ink-4">
-              {by === 'manual'
-                ? 'You set these. Jobs will never overwrite them.'
-                : by === 'model'
-                  ? 'No keyword matched, so the model decided. Correct it on the Skill Tree.'
-                  : 'Matched keywords from skills.yaml. Correct it on the Skill Tree.'}
-            </p>
+          <Eyebrow>Linked skills</Eyebrow>
+          {task?.entityRef ? (
+            <SkillPicker entityRef={task.entityRef} links={task.skills} skills={skills} className="mt-2" />
+          ) : (
+            <p className="mt-2 text-[12px] text-ink-4">Classified when it is created.</p>
           )}
         </div>
 

@@ -1,7 +1,8 @@
 import { Eyebrow, PageHeader } from '@/components/pos'
 import { db } from '@/core/db'
 import { getSkillNames } from '@/core/modules'
-import { listGoals, listIdeas, listSkillLinks, relatedNotes, similarPair } from '../data'
+import { listSkillLinks } from '@/core/skill-links'
+import { listGoals, listIdeas, relatedNotes, similarPair } from '../data'
 import { Ideas, IdeasCrumb, ViewSwitch, type IdeasData } from './Ideas'
 
 /** Sitting in Exploring this long and it is not really being explored. */
@@ -11,7 +12,7 @@ export default async function IdeasPage() {
   const [rows, goals, links, names, notes, pair] = await Promise.all([
     listIdeas(),
     listGoals(),
-    listSkillLinks(),
+    listSkillLinks('ideas', 'idea'),
     getSkillNames(),
     relatedNotes(),
     similarPair(),
@@ -41,6 +42,7 @@ export default async function IdeasPage() {
 
   const data: IdeasData = {
     goals,
+    skills: Object.entries(names),
     pair,
     research: research.map((r) => ({
       ideaId: r.idea_id,
@@ -70,9 +72,8 @@ export default async function IdeasPage() {
       draftTitle: r.draft_title,
       daysInStage: r.days_in_stage,
       stale: r.stage === 'exploring' && r.days_in_stage >= STALE_DAYS,
-      skills: links
-        .filter((l) => l.idea_id === r.id)
-        .map((l) => ({ id: l.skill_id, name: names[l.skill_id] ?? l.skill_id })),
+      entityRef: links.get(r.id)?.entityRef ?? null,
+      skills: links.get(r.id)?.skills ?? [],
       related: notes
         .filter((n) => n.idea_id === r.id)
         .map((n) => ({ title: n.title, similarity: n.similarity })),

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { ActionButton, Eyebrow, Overlay } from '@/components/pos'
+import { ActionButton, Eyebrow, Overlay, SkillPicker } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { quadrant, type Level } from '../quadrant'
 import { deleteIdea, draftTask, researchIdea, saveIdea, type ActionResult, type IdeaInput } from './actions'
@@ -32,6 +32,7 @@ export function IdeaDrawer({
   editing,
   draftTitle,
   goals,
+  skills,
   research,
   onClose,
   onEdit,
@@ -43,6 +44,7 @@ export function IdeaDrawer({
   /** What the capture line had when Full form was pressed. */
   draftTitle: string
   goals: { id: string; title: string }[]
+  skills: [string, string][]
   research: Research | null
   onClose: () => void
   onEdit: (on: boolean) => void
@@ -61,17 +63,19 @@ export function IdeaDrawer({
     )
   }
   if (!idea) return null
-  return <View idea={idea} research={research} onClose={onClose} onEdit={() => onEdit(true)} onRun={onRun} />
+  return <View idea={idea} skills={skills} research={research} onClose={onClose} onEdit={() => onEdit(true)} onRun={onRun} />
 }
 
 function View({
   idea,
+  skills,
   research,
   onClose,
   onEdit,
   onRun,
 }: {
   idea: Idea
+  skills: [string, string][]
   research: Research | null
   onClose: () => void
   onEdit: () => void
@@ -214,14 +218,11 @@ function View({
               Skill tree →
             </Link>
           </div>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {idea.skills.length === 0 && <span className="text-[12px] text-ink-4">Nothing matched yet.</span>}
-            {idea.skills.map((s) => (
-              <Link key={s.id} href={`/skills?skill=${s.id}`} className="num border border-rule-2 px-2 py-[3px] text-[11px] tracking-[0.06em] text-ink-2 uppercase hover:border-ink hover:text-ink">
-                {s.name}
-              </Link>
-            ))}
-          </div>
+          {idea.entityRef ? (
+            <SkillPicker entityRef={idea.entityRef} links={idea.skills} skills={skills} className="mt-2" />
+          ) : (
+            <p className="mt-2 text-[12px] text-ink-4">Nothing matched yet.</p>
+          )}
         </div>
 
         {idea.goalTitle && idea.goalRef && (
