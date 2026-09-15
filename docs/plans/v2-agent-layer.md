@@ -75,9 +75,10 @@ and can run in either order around it.
 
 ## What v1.1 leaves behind, and where v2 lands on it
 
-Written 2026-09-15 by reading docs/plans/pos-v1-1.md against this plan. v1.1
-phases 1, 2, 3 and 10 are merged; 4 to 9, 11 and 12 are not. Every seam below
-is a file or a table both plans touch.
+Written 2026-09-15 by reading docs/plans/pos-v1-1.md against this plan. The
+status table in that plan is the authority on what has shipped; at the time of
+writing phases 1, 2, 3, 4 and 10 were merged and 5 to 9, 11 and 12 were not.
+Every seam below is a file or a table both plans touch.
 
 **v1.1 phase 5 changes what a write means.** `callTool` will recompute the
 calling module's digest after every write tool, and the dashboard tiles will
