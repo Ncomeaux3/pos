@@ -13,7 +13,7 @@ Order: bugs first, then speed, then features, fitness, hardening. Phases marked 
 | 3 Speed, server | Server time per screen measured and waterfalls removed | medium | 1, 2, 8, 9, 10 | none | Done 2026-09-15: `/` 43 percent off, `/tasks` shell-bound at the 250 ms floor; pdx1 tried and reverted; PR open | |
 | 4 Speed, client | Task view switch is instant, no refetch | low | 8, 9, 10 | 3 | Done 2026-09-15: view and tab switches write the URL natively, 4 RSC requests to 0; Calendar and drawer load on demand with their own Suspense boundary; PR open | |
 | 5 Dashboard | Layout saved server-side, live tiles, drill-ins, smaller tiles | high | 8, 9, 10 | 3, 4 | Not started | |
-| 6 Goals, projects, tasks | Projects link to goals, tasks inherit, project UI, per-view plus, any due date | high | 8, 9, 10 | 4 | Not started | |
+| 6 Goals, projects, tasks | Projects link to goals, tasks inherit, project UI, per-view plus, any due date | high | 8, 9, 10 | 4 | Done 2026-09-15: one coalesce for the board and the linked seam, write_project and a Projects drawer, per-column plus, native date; PR open | #62 |
 | 7a Skill picker, core | link/unlink tools, one reader, one component; tasks, goals, ideas, brain | medium | 8, 9, 10 | 6 | Not started | |
 | 7b Skill picker, rest | Trip, policy, recipe, workout, home, health drawers | low | 8, 9, 10 | 7a | Not started | |
 | 8 Skill tree gestures | Phone drag and pinch behave like the globe | medium | 1 to 7, 9, 10 | none | Not started | |
@@ -173,6 +173,8 @@ Files: migration `20260915160000_tasks_project_goal.sql`, `modules/tasks/data.ts
 Exit checks: `shape.test.ts` green (bucketing unchanged); new data test green; suites green.
 Depends on: 4. Out of scope: goal hierarchy on the Goals screen, project archive views.
 Notes: inheritance is one SQL expression both the board and the `linked` seam read, so they cannot disagree.
+
+Done 2026-09-15, PR #62. The migration is `20260915160000` because `20260915150000` was taken by Phase 5's `core_notification_href` on the shared local database. For Phase 7a: `TaskDrawer` already takes `prefill?: Partial<WriteInput>` and `projects[].goalRef`; `InlineEdit` now consumes the Escape that cancels an edit, so an inline field inside any Overlay no longer closes it. Follow-ups found by the UI check, none fixed here: Overlay does not return focus to its trigger on close; no `color-scheme` on date and time inputs so the native picker opens light; a `write_project` rename to a taken name surfaces the raw unique violation. Archiving a project with open tasks moves them into the No project column.
 
 ## Phase 7a: skill picker, core and the four chip sites
 
