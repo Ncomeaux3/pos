@@ -109,8 +109,7 @@ export default async function DashboardPage() {
   // The owner's date, not the server's: on Vercel those differ all evening.
   // Two forms of it, and they are not interchangeable. `todayIso` is what
   // dates are compared against; `today` is the label in the band.
-  const settings = await getSettings()
-  const todayIso = await ownerToday()
+  const [settings, todayIso] = await Promise.all([getSettings(), ownerToday()])
   // "Fri Sep 11", the artboard's band date, in the owner's zone.
   const today = new Intl.DateTimeFormat('en-US', {
     timeZone: settings.timezone,

@@ -38,6 +38,7 @@ v1.1, all 2026-09-14, from the /adopt-repo interview; reasons in decisions/log.m
 - The digest email goes out every night, "Nothing needs you today" included.
 - Phone for the iOS splash image: iPhone 16 Pro Max (440 x 956 points at 3x).
 - Date inputs stay native `<input type="date">` everywhere; no picker library.
+- Vercel functions stay in iad1 beside the owner; pdx1 measured slower on the whole. The database region is the remaining lever and is an owner decision. (2026-09-15)
 
 ## Production readiness
 
@@ -54,8 +55,8 @@ From the prod-auditor report of 2026-09-14 (8 present, 5 partial, 0 absent, no c
 | 7. CI/CD and version control | Partial | 12 | CI runs but is not a merge gate; repo is public now so branch protection should be available |
 | 8. Security and data access | Partial | 12 | .env gitignored, CSP, dependabot; add `pnpm audit` to CI |
 | 9. Rate limiting | Present | | core/ratelimit.ts, 60 per minute per IP, 429 with retry-after |
-| 10. Caching and CDN | Partial | 3 | None today. Decided: request-scoped React cache() only, no TTL caches; single user and freshness wins |
-| 11. Load balancing and scaling | Present | 3 | Pooler in transaction mode; pool max 4 to 8 per instance, measured and revertable |
+| 10. Caching and CDN | Present | | Request-scoped React cache() on settings, today and skill names since Phase 3; no TTL caches by decision, single user and freshness wins |
+| 11. Load balancing and scaling | Present | | Pooler in transaction mode; pool max 8 per instance, measured against 4 on 2026-09-15 |
 | 12. Observability and logs | Partial | 12 | core.request_log, core.jobs, digest email on failure. Add error.tsx and global-error.tsx. Not needed: Sentry or another error tracker, by the cost cap and single user |
 | 13. Availability and recovery | Present | 12 | Nightly pg_dump to pos-backups, restore drilled 2026-09-08; add the storage bucket to the dump |
 | Cost ceiling | $0 to $10 a month, llm_soft_cap_cents 1000 enforced in core/llm.ts | 11 | Health Auto Export Premium adds $1.99 a month |

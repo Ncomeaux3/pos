@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { db } from './db'
 
 /**
@@ -7,11 +8,14 @@ import { db } from './db'
  * server's timezone, the second is the database's, and neither is necessarily
  * the owner's. core.today() reads core.settings.timezone, so every module and
  * every screen agree about what day it is even when the three clocks do not.
+ *
+ * Memoised per request: Goals asks once per goal through Tasks' linked seam,
+ * and the day does not change mid-render.
  */
-export async function ownerToday(): Promise<string> {
+export const ownerToday = cache(async (): Promise<string> => {
   const { rows } = await db().query<{ today: string }>(`select core.today()::text as today`)
   return rows[0].today
-}
+})
 
 /**
  * The wall clock in a timezone, as parts.

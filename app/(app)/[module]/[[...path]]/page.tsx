@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { Suspense } from 'react'
 import { Eyebrow } from '@/components/pos'
 import { getModule, missingConnections } from '@/core/modules'
 
@@ -30,29 +31,39 @@ export default async function ModulePage({ params }: PageProps<'/[module]/[[...p
   //
   // `requires` still earns its keep: Settings, Connections reads it to say
   // which modules a provider feeds.
-  const missing = await missingConnections(manifest.requires ?? [])
-
+  //
+  // The banner streams in under Suspense so the page itself is not held
+  // behind the connections query.
   return (
     <div className="space-y-5">
-      {missing.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-warn/40 bg-warn/5 px-4 py-3">
-          <div className="min-w-0 space-y-1">
-            <Eyebrow dot="warn">Not syncing</Eyebrow>
-            <p className="t-caption text-ink-2">
-              {missing.join(', ')} {missing.length === 1 ? 'is' : 'are'} not connected, so nothing
-              here updates on its own. Anything you enter by hand still works.
-            </p>
-          </div>
-          <Link
-            href="/settings/connections"
-            className="label shrink-0 rounded-md border border-rule-2 px-3 py-2 text-[10px] tracking-[0.1em] text-ink-2 hover:border-ink hover:text-ink"
-          >
-            Connect
-          </Link>
-        </div>
-      )}
+      <Suspense fallback={null}>
+        <NotSyncing ids={manifest.requires ?? []} />
+      </Suspense>
 
       <Page />
+    </div>
+  )
+}
+
+async function NotSyncing({ ids }: { ids: string[] }) {
+  const missing = await missingConnections(ids)
+  if (missing.length === 0) return null
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-warn/40 bg-warn/5 px-4 py-3">
+      <div className="min-w-0 space-y-1">
+        <Eyebrow dot="warn">Not syncing</Eyebrow>
+        <p className="t-caption text-ink-2">
+          {missing.join(', ')} {missing.length === 1 ? 'is' : 'are'} not connected, so nothing here
+          updates on its own. Anything you enter by hand still works.
+        </p>
+      </div>
+      <Link
+        href="/settings/connections"
+        className="label shrink-0 rounded-md border border-rule-2 px-3 py-2 text-[10px] tracking-[0.1em] text-ink-2 hover:border-ink hover:text-ink"
+      >
+        Connect
+      </Link>
     </div>
   )
 }

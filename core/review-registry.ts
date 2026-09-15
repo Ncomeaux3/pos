@@ -12,20 +12,23 @@ export type Contribution<T> = { module: string; label: string; items: T[] }
 async function gather<T>(
   pick: (r: NonNullable<ReturnType<typeof source>>) => (() => Promise<T[]>) | undefined,
 ): Promise<Contribution<T>[]> {
-  const out: Contribution<T>[] = []
+  // Every module is asked at once rather than in turn: the review page calls
+  // this four times and each module answers with its own queries.
+  const out = await Promise.all(
+    getModules().map(async (manifest): Promise<Contribution<T> | null> => {
+      const fn = manifest.review && pick(manifest.review)
+      if (!fn) return null
+      try {
+        return { module: manifest.id, label: manifest.nav.label, items: await fn() }
+      } catch {
+        // A module that cannot answer is left out rather than failing the whole
+        // review. Its absence is visible; a crashed page is not useful.
+        return null
+      }
+    }),
+  )
 
-  for (const manifest of getModules()) {
-    const fn = manifest.review && pick(manifest.review)
-    if (!fn) continue
-    try {
-      out.push({ module: manifest.id, label: manifest.nav.label, items: await fn() })
-    } catch {
-      // A module that cannot answer is left out rather than failing the whole
-      // review. Its absence is visible; a crashed page is not useful.
-    }
-  }
-
-  return out
+  return out.filter((c) => c !== null)
 }
 
 // Only used for the type of the argument above.
