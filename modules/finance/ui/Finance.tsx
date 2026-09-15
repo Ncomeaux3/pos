@@ -17,6 +17,7 @@ import {
   useToast,
 } from '@/components/pos'
 import { Segments } from '@/components/pos/Segments'
+import type { Day } from '../series'
 import { useSearchState } from '@/components/pos/searchState'
 import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
@@ -45,8 +46,12 @@ export type FinanceData = {
   changeCents: number
   assetsCents: number
   debtCents: number
-  series: number[]
-  seriesDates: string[]
+  /**
+   * The 30 day axis from spine(): one entry per day, nulls before the first
+   * balance was ever recorded. Not the raw rows, which carry no dates the
+   * chart can place and no way to tell a reading from a carried one.
+   */
+  series: Day[]
   accounts: {
     id: string
     name: string
@@ -172,6 +177,10 @@ function KpiStrip({
   upcomingTotal: number
   daysLeft: number
 }) {
+  // What the change is measured from: the oldest day an actual balance was
+  // recorded, not data.series[0], which is null until the first sync.
+  const firstKnown = data.series.find((d) => d.observed)?.cents ?? null
+
   return (
     <>
       <Kpi label="Net worth" value={balance(data.netWorthCents)}>
@@ -182,9 +191,9 @@ function KpiStrip({
         value={signedMoney(data.changeCents)}
         tone={data.changeCents > 0 ? 'ok' : data.changeCents < 0 ? 'bad' : undefined}
       >
-        {data.series.length > 1
-          ? `${data.changeCents >= 0 ? '+' : ''}${((data.changeCents / Math.max(1, Math.abs(data.series[0]))) * 100).toFixed(1)}% · from ${money(data.series[0])}`
-          : 'no history yet'}
+        {firstKnown === null
+          ? 'no history yet'
+          : `${data.changeCents >= 0 ? '+' : ''}${((data.changeCents / Math.max(1, Math.abs(firstKnown))) * 100).toFixed(1)}% · from ${money(firstKnown)}`}
       </Kpi>
       <Kpi label="Due in 14 days" value={money(upcomingTotal, true)}>
         {data.upcoming.length > 0
@@ -206,7 +215,9 @@ function KpiStrip({
 
 /** The chart or its empty state: the phone's sparkline card and the desktop's chart card share this. */
 function NetWorthCard({ data }: { data: FinanceData }) {
-  if (data.series.length < 2) {
+  // One reading draws nothing worth looking at, and none draws a flat line at
+  // zero that reads as a balance of zero. Both are the empty state.
+  if (data.series.filter((d) => d.observed).length < 1) {
     return (
       <>
         <CardHead label="Net worth · 30 days" meta="no history yet" />
@@ -217,7 +228,7 @@ function NetWorthCard({ data }: { data: FinanceData }) {
       </>
     )
   }
-  return <NetWorthChart values={data.series} dates={data.seriesDates} />
+  return <NetWorthChart days={data.series} />
 }
 
 export function Finance({ data }: { data: FinanceData }) {
@@ -795,41 +806,76 @@ function BudgetBar({
   )
 }
 
-/** The 31 point line. Hand rolled SVG: no chart library anywhere in this app. */
 /**
  * Thirty days of net worth, drawn the way the artboard draws it.
  *
- * Four gridlines, the value thirty days ago as a dashed baseline, the high and
- * the low marked, and a crosshair that says what a given day was and how far
- * from the start it had moved. The axis labels are outside the plot in their
- * own 64px column, so the line is never squeezed by the width of a number.
+ * The x axis is thirty days, not thirty rows. Before spine() this drew
+ * whatever rows the query returned, evenly spaced, so two nights of balances
+ * became a line across the full width under a caption reading "30 days".
+ *
+ * Gridlines, the first recorded balance as a dashed baseline, the average as a
+ * second one, the high and the low marked, and a crosshair that says what a
+ * given day was and how far from the start it had moved. The axis labels are
+ * outside the plot in their own 64px column, so the line is never squeezed by
+ * the width of a number.
  */
-function NetWorthChart({ values, dates }: { values: number[]; dates: string[] }) {
+function NetWorthChart({ days }: { days: Day[] }) {
   const [hover, setHover] = useState<number | null>(null)
 
   const width = 600
   const height = 160
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  const span = max - min || 1
 
-  const x = (i: number) => (i / Math.max(1, values.length - 1)) * width
-  const y = (v: number) => height - ((v - min) / span) * height
+  // Drawn values include the days carried across a missed sync; the stats
+  // below count only the days a balance was actually recorded. Averaging the
+  // carried days would weight one measurement once per day it was repeated.
+  const drawn = days.map((d) => d.cents)
+  const observed = days.filter((d) => d.observed).map((d) => d.cents as number)
+  const known = drawn.filter((v): v is number => v !== null)
 
-  const line = values.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')
-  const area = `${line} L${width},${height} L0,${height} Z`
+  const max = Math.max(...observed)
+  const min = Math.min(...observed)
+  const avg = Math.round(observed.reduce((sum, v) => sum + v, 0) / observed.length)
 
-  const hi = values.indexOf(max)
-  const lo = values.indexOf(min)
-  const start = values[0]
+  // Five percent of headroom each side so the high and the low are not drawn
+  // flush against the frame. A flat month has no span to pad, so it is given
+  // one and lands mid height rather than along the top edge.
+  const pad = (max - min) * 0.05 || Math.max(1, Math.abs(max) * 0.05)
+  const lo_ = min - pad
+  const hi_ = max + pad
+  const span = hi_ - lo_
 
-  // The biggest single day move in each direction, which is the one thing the
-  // shape of the line does not tell you at a glance.
-  const moves = values.slice(1).map((v, i) => v - values[i])
+  const x = (i: number) => (i / Math.max(1, days.length - 1)) * width
+  const y = (v: number) => height - ((v - lo_) / span) * height
+
+  // One move command per run of days that have a value, so the leading nulls
+  // before the first sync break the line instead of drawing from zero.
+  const line = drawn
+    .map((v, i) => (v === null ? null : `${drawn[i - 1] == null ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`))
+    .filter((seg): seg is string => seg !== null)
+    .join(' ')
+
+  // The filled area follows the drawn run only, so it does not reach back
+  // under days that were never recorded. One run is all there is to follow:
+  // spine() carries a value forward once it has one, so the only nulls are the
+  // leading ones before the first sync.
+  const first = drawn.findIndex((v) => v !== null)
+  const area =
+    first === -1 ? '' : `M${x(first).toFixed(1)},${height} ${line.slice(1)} L${width},${height} Z`
+
+  const hi = drawn.indexOf(max)
+  const lo = drawn.indexOf(min)
+  const start = observed[0]
+  const last = known[known.length - 1]
+
+  // The biggest single day move in each direction, over consecutive days that
+  // both have a value, which is the one thing the shape does not tell you.
+  const moves = drawn
+    .map((v, i) => (v === null || drawn[i - 1] == null ? null : v - (drawn[i - 1] as number)))
+    .filter((m): m is number => m !== null)
   const best = moves.length > 0 ? Math.max(...moves) : 0
   const worst = moves.length > 0 ? Math.min(...moves) : 0
 
-  const at = hover === null ? null : values[hover]
+  const at = hover === null ? null : drawn[hover]
 
   return (
     <div className="flex flex-1 flex-col">
@@ -843,10 +889,7 @@ function NetWorthChart({ values, dates }: { values: number[]; dates: string[] })
             Low <span className="num text-ink">{compactMoney(min)}</span>
           </span>
           <span>
-            Avg{' '}
-            <span className="num text-ink">
-              {compactMoney(Math.round(values.reduce((sum, v) => sum + v, 0) / values.length))}
-            </span>
+            Avg <span className="num text-ink">{compactMoney(avg)}</span>
           </span>
         </span>
       </div>
@@ -857,12 +900,12 @@ function NetWorthChart({ values, dates }: { values: number[]; dates: string[] })
             viewBox={`0 0 ${width} ${height}`}
             preserveAspectRatio="none"
             role="img"
-            aria-label={`Net worth over ${values.length} days, from ${compactMoney(values[0])} to ${compactMoney(values[values.length - 1])}`}
+            aria-label={`Net worth over ${days.length} days, ${observed.length} of them recorded, from ${compactMoney(start)} to ${compactMoney(last)}`}
             className="block h-full w-full cursor-crosshair overflow-visible"
             onMouseMove={(e) => {
               const box = e.currentTarget.getBoundingClientRect()
               const share = (e.clientX - box.left) / box.width
-              setHover(Math.max(0, Math.min(values.length - 1, Math.round(share * (values.length - 1)))))
+              setHover(Math.max(0, Math.min(days.length - 1, Math.round(share * (days.length - 1)))))
             }}
             onMouseLeave={() => setHover(null)}
           >
@@ -871,8 +914,9 @@ function NetWorthChart({ values, dates }: { values: number[]; dates: string[] })
             ))}
             <line x1="0" y1={height} x2={width} y2={height} stroke="var(--rule-2)" />
 
-            {/* Where it stood thirty days ago: everything above this line is
-              * the month's gain, and the eye reads that without arithmetic. */}
+            {/* Where it stood when the first balance was recorded: everything
+              * above this line is the gain since, and the eye reads that
+              * without arithmetic. */}
             <line
               x1="0"
               y1={y(start)}
@@ -883,7 +927,20 @@ function NetWorthChart({ values, dates }: { values: number[]; dates: string[] })
               vectorEffect="non-scaling-stroke"
             />
 
-            <path d={area} fill="var(--accent-soft)" />
+            {/* The average of the recorded days, so a month that ended high
+              * still shows where it mostly sat. */}
+            <line
+              x1="0"
+              y1={y(avg)}
+              x2={width}
+              y2={y(avg)}
+              stroke="var(--accent)"
+              strokeOpacity={0.45}
+              strokeDasharray="1 5"
+              vectorEffect="non-scaling-stroke"
+            />
+
+            {area && <path d={area} fill="var(--accent-soft)" />}
             <path
               d={line}
               fill="none"
@@ -894,9 +951,9 @@ function NetWorthChart({ values, dates }: { values: number[]; dates: string[] })
 
             <circle cx={x(hi)} cy={y(max)} r={2.5} fill="var(--bg-elev)" stroke="var(--ink-2)" vectorEffect="non-scaling-stroke" />
             <circle cx={x(lo)} cy={y(min)} r={2.5} fill="var(--bg-elev)" stroke="var(--ink-2)" vectorEffect="non-scaling-stroke" />
-            <circle cx={width} cy={y(values[values.length - 1])} r={3} fill="var(--accent)" />
+            <circle cx={width} cy={y(last)} r={3} fill="var(--accent)" />
 
-            {hover !== null && at !== undefined && at !== null && (
+            {hover !== null && at !== null && at !== undefined && (
               <g>
                 <line x1={x(hover)} y1="0" x2={x(hover)} y2={height} stroke="var(--ink-2)" vectorEffect="non-scaling-stroke" />
                 <circle cx={x(hover)} cy={y(at)} r={3.5} fill="var(--ink)" />
@@ -904,16 +961,17 @@ function NetWorthChart({ values, dates }: { values: number[]; dates: string[] })
             )}
           </svg>
 
-          {hover !== null && at !== undefined && at !== null && (
+          {hover !== null && at !== null && at !== undefined && (
             <div
               className="pointer-events-none absolute top-0 z-2 whitespace-nowrap border border-rule-2 bg-bg px-2.5 py-1.5 text-[11px]"
               style={{
-                left: `${(hover / Math.max(1, values.length - 1)) * 100}%`,
-                transform: hover > values.length / 2 ? 'translateX(-100%)' : 'none',
+                left: `${(hover / Math.max(1, days.length - 1)) * 100}%`,
+                transform: hover > days.length / 2 ? 'translateX(-100%)' : 'none',
               }}
             >
-              <span className="text-ink-3">{shortDate(dates[hover])}</span>{' '}
+              <span className="text-ink-3">{shortDate(days[hover].date)}</span>{' '}
               <span className="num ml-2 text-ink">{money(at)}</span>{' '}
+              {!days[hover].observed && <span className="text-ink-4">carried</span>}{' '}
               <span className={cn('num ml-2', at - start >= 0 ? 'text-ok' : 'text-bad')}>
                 {signedMoney(at - start)}
               </span>
@@ -922,7 +980,7 @@ function NetWorthChart({ values, dates }: { values: number[]; dates: string[] })
         </div>
 
         <div className="flex flex-col justify-between pl-3 text-[11px] text-ink-3">
-          {[max, min + (span * 2) / 3, min + span / 3, min].map((v, i) => (
+          {[hi_, lo_ + (span * 2) / 3, lo_ + span / 3, lo_].map((v, i) => (
             <span key={i} className="num leading-none">
               {compactMoney(Math.round(v))}
             </span>
@@ -932,11 +990,11 @@ function NetWorthChart({ values, dates }: { values: number[]; dates: string[] })
 
       <div className="mt-2.5 grid grid-cols-[1fr_64px]">
         <div className="flex justify-between text-[11px] text-ink-3">
-          {dates
-            .filter((unused, i) => i % Math.max(1, Math.round(dates.length / 6)) === 0)
+          {days
+            .filter((unused, i) => i % Math.max(1, Math.round(days.length / 6)) === 0)
             .map((d) => (
-              <span key={d} className="num">
-                {shortDate(d)}
+              <span key={d.date} className="num">
+                {shortDate(d.date)}
               </span>
             ))}
         </div>
@@ -950,7 +1008,7 @@ function NetWorthChart({ values, dates }: { values: number[]; dates: string[] })
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-3 border-t border-dashed border-ink-3" aria-hidden />
-          30d ago {compactMoney(start)}
+          First reading {compactMoney(start)}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="size-1.5 rounded-full border border-ink-2" aria-hidden />

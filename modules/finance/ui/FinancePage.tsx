@@ -10,6 +10,7 @@ import {
   upcomingCharges,
 } from '../data'
 import { monthPace } from '../money'
+import { spine } from '../series'
 import { Finance, type FinanceData } from './Finance'
 import { syncFinance } from './sync'
 
@@ -39,10 +40,14 @@ export default async function FinancePage() {
     .filter((a) => Number(a.balance_cents) > 0)
     .reduce((sum, a) => sum + Number(a.balance_cents), 0)
 
-  // From the series, not from per account deltas: an account opened inside the
-  // window has no thirty day balance, and counting its whole balance as growth
-  // would put a number on the screen that never happened.
-  const change = series.length > 1 ? netWorth - series[0].cents : 0
+  // One entry per day of the window, so two days of history draw as two days
+  // and not as a month.
+  const days = spine(series, 30, todayIso)
+  // Measured from the series, not from per account deltas: an account opened
+  // inside the window has no thirty day balance, and counting its whole
+  // balance as growth would put a number on the screen that never happened.
+  const firstKnown = days.find((d) => d.observed)?.cents ?? null
+  const change = firstKnown === null ? 0 : netWorth - firstKnown
 
   const data: FinanceData = {
     todayIso,
@@ -53,8 +58,7 @@ export default async function FinancePage() {
     changeCents: change,
     assetsCents: assets,
     debtCents: assets - netWorth,
-    series: series.map((s) => s.cents),
-    seriesDates: series.map((s) => s.on_date),
+    series: days,
 
     accounts: accounts.map((a) => ({
       id: a.id,
