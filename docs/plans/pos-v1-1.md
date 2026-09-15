@@ -16,7 +16,7 @@ Order: bugs first, then speed, then features, fitness, hardening. Phases marked 
 | 6 Goals, projects, tasks | Projects link to goals, tasks inherit, project UI, per-view plus, any due date | high | 8, 9, 10 | 4 | Done 2026-09-15: one coalesce for the board and the linked seam, write_project and a Projects drawer, per-column plus, native date; PR open | #62 |
 | 7a Skill picker, core | link/unlink tools, one reader, one component; tasks, goals, ideas, brain | medium | 8, 9, 10 | 6 | Not started | |
 | 7b Skill picker, rest | Trip, policy, recipe, workout, home, health drawers | low | 8, 9, 10 | 7a | Not started | |
-| 8 Skill tree gestures | Phone drag and pinch behave like the globe | medium | 1 to 7, 9, 10 | none | Not started | |
+| 8 Skill tree gestures | Phone drag and pinch behave like the globe | medium | 1 to 7, 9, 10 | none | Done 2026-09-15: `data-gesture-surface` opts both canvases out of pull-to-refresh and edge-back, the globe's pointers Map ported, pinch() unit tested; owner still to confirm pinch on the phone | #65 |
 | 9 Travel destinations | Multi-destination trips, all pinned, merge into | high | 1 to 8, 10 | none | Not started | |
 | 10 Finance chart | Net worth on a 30-day date axis with the average | low | 1 to 9 | none | Done 2026-09-15: spine() on a date axis, nulls break the line, padded y, stats over recorded days. The LineChart extraction and the two-day e2e were not done and moved to Phase 11, which is the phase that needs them | |
 | 11 Fitness | Trends, history filters, plan form, Apple arrival on Sync | high | none | 10, 7b | Not started | |
@@ -217,14 +217,16 @@ Complexity: medium
 Parallel-safe with: 1 to 7, 9, 10
 Files: `modules/skills/ui/Constellation.tsx`, `modules/skills/view.ts` and `view.test.ts`, `components/pos/PullToRefresh.tsx`, `components/pos/gestures.ts` (`useEdgeBack`), `modules/travel/ui/Globe.tsx` (attribute only), `e2e/screens.spec.ts`.
 
-- [ ] Diagnosis first at 402 with `hasTouch`: drag down on the sky at `scrollY` 0 and watch for "Release to refresh"; drag right from the left 20 px and watch for a back navigation; second finger mid-pan and watch the jump. Three candidates the globe does not suffer: `PullToRefresh` listens on `document` (`PullToRefresh.tsx:49`) and fires on a downward drag from the top (the sky sits at the top on a phone, the globe does not); `useEdgeBack` listens on `window`; `Constellation` keeps one `drag.current`, so a second pointer overwrites the start and there is no pinch.
-- [ ] Test first in `view.test.ts`: pure `pinch(view, before, after, midpoint)` scales zoom by `after / before` about the midpoint, clamped.
-- [ ] Port the globe's pointer model (`Globe.tsx:72-143`) into `Constellation.tsx`: `pointers` Map by `pointerId`, one pointer pans, two pinch about the midpoint, `onPointerLeave` lifts, 4 px slop, no capture (the `panned` ref already guards clicks). Keep the wheel listener and the fly.
-- [ ] Mark the sky `data-gesture-surface`; `PullToRefresh` `down()` and `useEdgeBack` `down()` ignore a target inside it, the same `closest()` clause `PullToRefresh` already uses for `[role="dialog"]`. The globe gets the attribute too.
-- [ ] e2e mobile: a touch drag on the sky changes the group transform, no "Release to refresh", URL unchanged; a drag from x 8 to x 120 stays on `/skills`.
+- [x] Diagnosis first at 402 with `hasTouch`: drag down on the sky at `scrollY` 0 and watch for "Release to refresh"; drag right from the left 20 px and watch for a back navigation; second finger mid-pan and watch the jump. Three candidates the globe does not suffer: `PullToRefresh` listens on `document` (`PullToRefresh.tsx:49`) and fires on a downward drag from the top (the sky sits at the top on a phone, the globe does not); `useEdgeBack` listens on `window`; `Constellation` keeps one `drag.current`, so a second pointer overwrites the start and there is no pinch.
+- [x] Test first in `view.test.ts`: pure `pinch(view, before, after, midpoint)` scales zoom by `after / before` about the midpoint, clamped.
+- [x] Port the globe's pointer model (`Globe.tsx:72-143`) into `Constellation.tsx`: `pointers` Map by `pointerId`, one pointer pans, two pinch about the midpoint, `onPointerLeave` lifts, 4 px slop, no capture (the `panned` ref already guards clicks). Keep the wheel listener and the fly.
+- [x] Mark the sky `data-gesture-surface`; `PullToRefresh` `down()` and `useEdgeBack` `down()` ignore a target inside it, the same `closest()` clause `PullToRefresh` already uses for `[role="dialog"]`. The globe gets the attribute too.
+- [x] e2e mobile: a touch drag on the sky changes the group transform, no "Release to refresh", URL unchanged; a drag from x 8 to x 120 stays on `/skills`.
 
 Exit checks: `view.test.ts` green; owner confirms pinch on the phone (Playwright cannot dispatch two touches; say so in the PR).
 Depends on: none. Out of scope: momentum, double-tap zoom.
+
+Done 2026-09-15 in PR #65. Not run there: the ui-verifier pass at 402 and 1440 (no Docker in that container; the `screens` CI job ran the e2e) and the two-finger pinch, which needs the owner's phone. Later phases: any new canvas that handles its own pointers takes `data-gesture-surface` and gets the same opt-out for free.
 
 ## Phase 9: travel destinations and merge
 
