@@ -18,7 +18,7 @@ Order: bugs first, then speed, then features, fitness, hardening. Phases marked 
 | 7b Skill picker, rest | Trip, policy, recipe, workout, home, health drawers | low | 8, 9, 10 | 7a | Not started | |
 | 8 Skill tree gestures | Phone drag and pinch behave like the globe | medium | 1 to 7, 9, 10 | none | Not started | |
 | 9 Travel destinations | Multi-destination trips, all pinned, merge into | high | 1 to 8, 10 | none | Not started | |
-| 10 Finance chart | Net worth on a 30-day date axis with the average | low | 1 to 9 | none | Not started | |
+| 10 Finance chart | Net worth on a 30-day date axis with the average | low | 1 to 9 | none | Done 2026-09-15: spine() on a date axis, nulls break the line, padded y, stats over recorded days; LineChart extraction and the two-day e2e not done, see notes | |
 | 11 Fitness | Trends, history filters, plan form, Apple arrival on Sync | high | none | 10, 7b | Not started | |
 | 12 Hardening | error pages, audit step, branch protection, route limits, rotation doc | low | none | all | Not started | |
 
