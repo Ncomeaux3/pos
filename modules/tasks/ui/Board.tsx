@@ -1,6 +1,7 @@
 'use client'
 
 import { Filter, Plus } from 'lucide-react'
+import dynamic from 'next/dynamic'
 import { useMemo, useOptimistic, useState, useTransition } from 'react'
 import { ActionButton, EmptyState, PillGroup, useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
@@ -19,8 +20,13 @@ import { useSwipe } from '@/components/pos/gestures'
 import { useIsPhone } from '@/components/pos/useIsPhone'
 import { useSearchState } from '@/components/pos/searchState'
 import { approveTask, completeTask, deleteTask, writeTask, type ActionResult } from './actions'
-import { Calendar } from './Calendar'
-import { TaskDrawer } from './TaskDrawer'
+
+// Both mount only when asked for (month=1, an open drawer), so their
+// code loads then rather than with the board. `loading` gives each its own
+// Suspense boundary; without one the first load suspends up to the route's
+// loading.tsx and swaps the whole page for the skeleton while the chunk lands.
+const Calendar = dynamic(() => import('./Calendar').then((m) => m.Calendar), { loading: () => null })
+const TaskDrawer = dynamic(() => import('./TaskDrawer').then((m) => m.TaskDrawer), { loading: () => null })
 
 // The whole board: the quick add line, the view tabs, the columns, and the
 // drawer. One client component because the drag source, the drop target, the
@@ -108,7 +114,7 @@ export function Board({
   // The expanded row rides in the URL with the view and the drawer, for the
   // same reason: a screenshot of an open row has to survive a reload.
   const expanded = params.get('open')
-  const setExpanded = (id: string | null) => setParams({ open: id })
+  const setExpanded = (id: string | null) => setParams({ open: id }, { local: true })
   const [dragging, setDragging] = useState<string | null>(null)
   const [pending, start] = useTransition()
   const toast = useToast()
@@ -183,6 +189,7 @@ export function Board({
             next === 'calendar'
               ? { month: '1', open: null }
               : { month: null, open: null, view: next === 'today' ? null : next },
+            { local: true },
           )
         }
         tabs={(isPhone ? PHONE_TABS : TABS).map((t) => ({
@@ -211,7 +218,7 @@ export function Board({
             className="pt-3.5 md:hidden"
             value={view}
             onChange={(next) => {
-              setParams({ month: null, open: null, view: next === 'today' ? null : next })
+              setParams({ month: null, open: null, view: next === 'today' ? null : next }, { local: true })
               setShowFilter(false)
             }}
             options={FILTER_VIEWS.map((v) => ({

@@ -39,6 +39,23 @@ one CI carries as well until the pair is added to the secrets.
 
 ## Done
 
+**v1.1 Phase 4, speed, client** (2026-09-15, branch `phase-4-speed-client`).
+`useSearchState.set` takes `local: true`: the URL is written through
+`window.history.replaceState` and the router is not asked. Tasks view tabs,
+the phone filter pills and the expanded row, Finance segments and the three
+Overview rows, and Fitness tabs use it; drawers keep `push` and the router so
+a close after a write still refetches. The four view clicks in "tasks, the
+six views" went from 4 RSC requests to 0 and the e2e now asserts zero. Tasks
+`Calendar` and `TaskDrawer` load through `next/dynamic` (dev tasks chunk 236
+to 136 KB; the Calendar chunk, 30 KB, loads on the first click). Paint time
+was already instant before this phase (the override store rendered the view
+ahead of the fetch); the numbers are in docs/plans/pos-v1-1.md. Side finding
+for a later pass: `/tasks` on the dev server loads every module's client
+chunk because the catch-all imports all modules through `modules/_index`.
+Also later: Goals, Meals, Home, Ideas and Travel segments still switch
+through the router; Goals and Meals clear a drawer key on switch, so each
+needs the same no-write-behind-it check before going `local`.
+
 **v1.1 Phase 2, delete the notes stub** (2026-09-15, branch
 `phase-2-delete-notes-stub`). `modules/notes/` is gone and migration
 `20260915060000_notes_drop.sql` clears its `core.entities`, `core.digests` and

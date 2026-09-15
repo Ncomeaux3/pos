@@ -35,8 +35,14 @@ export function useSearchState() {
    * Use it for sheets and drawers; tabs, views and modes inside a drawer
    * replace, so Back leaves the page rather than walking through every
    * segment visited.
+   *
+   * `local` writes the URL through `window.history.replaceState` and asks
+   * the router for nothing. Use it for a switch that only re-buckets rows
+   * already on the page (a task view, a tab); a change that follows a
+   * server write keeps the router so the data it brings is fresh. Next 16's
+   * app router syncs `useSearchParams` from a native `replaceState` call.
    */
-  const set = (next: Record<string, string | null>, options: { push?: boolean } = {}) => {
+  const set = (next: Record<string, string | null>, options: { push?: boolean; local?: boolean } = {}) => {
     const search = new URLSearchParams(current.toString())
     for (const [key, value] of Object.entries(next)) {
       if (value === null) search.delete(key)
@@ -51,7 +57,8 @@ export function useSearchState() {
     // raced a server action about once in thirty runs under a slow network and
     // showed a deleted row again. Revisit if Next gives a history write that
     // does not restore.
-    if (options.push) router.push(url, { scroll: false })
+    if (options.local) window.history.replaceState(null, '', url)
+    else if (options.push) router.push(url, { scroll: false })
     else router.replace(url, { scroll: false })
   }
 
