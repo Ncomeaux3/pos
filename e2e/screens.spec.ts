@@ -152,18 +152,17 @@ test('dashboard shell', async ({ page }) => {
     const eyebrows = await bento
       .locator(':scope > div')
       .evaluateAll((tiles) => tiles.map((t) => t.querySelector('.eyebrow')?.textContent?.trim()))
-    expect(eyebrows.slice(0, 9)).toEqual([
+    expect(eyebrows.slice(0, 8)).toEqual([
       'Warnings',
       'Finance',
       'Tasks · today',
       'Review · agent proposals',
       'Goals',
       'Skill Tree',
-      'System',
       'Model spend · month',
       'Next 7 days',
     ])
-    expect(eyebrows.slice(9)).toEqual([
+    expect(eyebrows.slice(8)).toEqual([
       'Second Brain',
       'Insurance',
       'Ideas',
@@ -263,7 +262,10 @@ test('dashboard, the week ahead and arranging the tiles', async ({ page }) => {
   await expect(page.getByText('Next 7 days')).toBeVisible()
   // Dated by the module that owns it, not by core. The strip's entry is a
   // link named by its day; the Tasks tile lists the same title as a button.
-  await expect(page.getByRole('link', { name: /Pay the Amex statement$/ })).toBeVisible()
+  const amex = page.getByRole('link', { name: /Pay the Amex statement$/ })
+  await expect(amex).toBeVisible()
+  // The row opens the task's own drawer, not the module root (v1.1 Phase 1).
+  await expect(amex).toHaveAttribute('href', /\?task=/)
 
   // Arrange is desktop only (2026-09-13 decision): the toggle lives in the
   // desktop band and stays hidden below md.
@@ -966,15 +968,37 @@ test('dashboard renders the nightly run', async ({ page }) => {
   // Tile labels are uppercased by CSS, so the DOM still says "Warnings".
   const main = page.getByRole('main')
   await expect(main.getByText('Warnings')).toBeVisible()
+  // The System tile is gone (v1.1 Phase 1): the run line at the top of the
+  // page is the health corner and links to the Agent Log.
+  await expect(main.getByRole('link', { name: /Agent Log$/ })).toHaveAttribute('href', '/agent-log')
   if (!mobile) {
-    // System, Model spend and Notes are desktop only tiles on the phone
+    // Model spend and Notes are desktop only tiles on the phone
     // (2026-09-13 decision): Home is warnings, finance, tasks, review, timeline.
-    await expect(main.getByText('System')).toBeVisible()
     await expect(main.getByText('Model spend')).toBeVisible()
     // One tile per module that wrote a digest, so the page needs no knowledge of
     // any module to show its numbers. The tile's head is the link in, as drawn.
     await expect(main.getByRole('link', { name: /open notes/i })).toBeVisible()
   }
+
+  // Snooze holds the notification row itself, not its rule, so the row is gone
+  // now and still gone after a reload (v1.1 Phase 1; before this the button
+  // wrote to a rule id that did not exist and the row came straight back).
+  const snoozeButton = main.getByRole('button', { name: 'Snooze' }).first()
+  await expect(snoozeButton).toBeVisible()
+  const snoozedTitle = (await snoozeButton.locator('../..').locator('span.text-ink').first().textContent()) ?? ''
+  expect(snoozedTitle).not.toBe('')
+  await snoozeButton.click()
+  // The row goes optimistically; wait for the server action itself before
+  // reloading, or the reload can race the write it is meant to prove.
+  const acted = page.waitForResponse(
+    (r) => r.request().method() === 'POST' && 'next-action' in r.request().headers(),
+  )
+  await main.getByRole('button', { name: '1d' }).first().click()
+  await expect(main.getByText(snoozedTitle, { exact: true })).toHaveCount(0)
+  await acted
+  await page.reload()
+  await expect(main.getByText('Warnings')).toBeVisible()
+  await expect(main.getByText(snoozedTitle, { exact: true })).toHaveCount(0)
 
   await shoot(page, 'dashboard-live')
 })

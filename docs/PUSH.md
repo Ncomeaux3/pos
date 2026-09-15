@@ -50,6 +50,25 @@ next send rather than retried forever. Any other failure is counted and left
 alone, because a push service having a bad minute is not a reason to lose a
 device.
 
+## Why enabling failed
+
+Diagnosed 2026-09-14 (v1.1 Phase 1), in the plan's order.
+
+(a) Uncookied, `GET /sw.js` on production answers `307 -> /login`, text/plain:
+the auth proxy matcher excluded `icons/` and `manifest.webmanifest` but not
+`sw.js`. A worker script fetched through a redirect is rejected by the browser,
+so any registration whose fetch lands without a valid session cookie fails
+before `pushManager.subscribe` runs. The logged-in fetch is the decision point
+and is recorded below when the owner has pressed the button with the Network
+tab open.
+
+(b) Vercel Production has `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and
+`VAPID_SUBJECT` set (names read with `vercel env ls production`; values not
+pulled). The public key's length is checked in the page during (a), since the
+client needs it to subscribe.
+
+(c) and (d) not reached.
+
 ## On an iPhone
 
 Safari only offers push to an installed PWA, so the app has to be added to the

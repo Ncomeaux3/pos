@@ -170,6 +170,8 @@ export type ReviewItem = {
    * contributes to the review's backlog, which has no dates in it.
    */
   at?: string | null
+  /** Where the dashboard's week ahead sends you: the item's own drawer, not the module root. */
+  href?: string
 }
 
 /**

@@ -1,9 +1,8 @@
 import Link from 'next/link'
-import { nightlyRunAt, zoneAbbrIn } from '@/core/today'
 import { cn } from '@/lib/utils'
 
-// Two dashboard tiles that read core and nothing else. Both are plain server
-// components: what they draw is a fact from a table, and nothing on them is
+// The dashboard tile that reads core and nothing else. A plain server
+// component: what it draws is a fact from a table, and nothing on it is
 // clicked except a link.
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -18,7 +17,7 @@ const TONE: Record<string, string> = {
   health: 'bg-warn',
 }
 
-type Item = { id: string; title: string; meta: string; at: string; module: string }
+type Item = { id: string; title: string; meta: string; at: string; module: string; href?: string }
 
 /**
  * The week ahead as a line with marks on it, then the same items as rows.
@@ -71,7 +70,7 @@ export function SevenDays({ items, today }: { items: Item[]; today: string }) {
           return (
             <Link
               key={item.id}
-              href={`/${item.module}`}
+              href={item.href ?? `/${item.module}`}
               title={item.title}
               className={cn('absolute size-2', TONE[item.module] ?? 'bg-ink-3')}
               style={{ left: `calc(${(offset(item.at) / 7) * 100}% - 4px)`, top: 6 + sameDay * 10 }}
@@ -89,7 +88,7 @@ export function SevenDays({ items, today }: { items: Item[]; today: string }) {
           {items.map((item) => (
             <Link
               key={item.id}
-              href={`/${item.module}`}
+              href={item.href ?? `/${item.module}`}
               className="flex items-center gap-2.5 border-b border-rule px-1 py-1.5 hover:bg-brand-soft"
             >
               <span className="num w-14 shrink-0 text-[11px] text-ink-3">{when(item.at)}</span>
@@ -100,66 +99,6 @@ export function SevenDays({ items, today }: { items: Item[]; today: string }) {
           ))}
         </div>
       )}
-    </div>
-  )
-}
-
-/**
- * The job list under the heat strip: what ran, how long it took, how it went.
- *
- * The strip says whether the night was clean at a glance; these rows say which
- * job it was, which is what you need the moment it was not. Measured off the
- * artboard: 1fr auto auto, 7px rows, 11px name and duration, 10px status; the
- * next run pinned to the foot. The artboard's backup line is not drawn, since
- * the app has no record of the backup workflow.
- */
-export function JobRows({
-  jobs,
-  timezone,
-}: {
-  jobs: { name: string; status: string | null; at: string | null; tookMs: number | null }[]
-  timezone: string
-}) {
-  const failed = jobs.filter((j) => j.status === 'failed')
-  // Failures first and always shown; otherwise the four most recent runs, so
-  // the tile says something on a clean night rather than going blank.
-  const shown = (failed.length > 0 ? failed : [...jobs].filter((j) => j.at).slice(0, 4)).slice(0, 4)
-
-  const took = (ms: number | null) =>
-    ms === null ? '' : ms < 1000 ? '<1s' : ms < 60_000 ? `${Math.round(ms / 1000)}s` : `${Math.round(ms / 60_000)}m`
-
-  return (
-    <div className="flex flex-1 flex-col">
-      <div className="mt-1 flex flex-col">
-        {shown.map((job) => (
-          <div
-            key={job.name}
-            className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-b border-rule py-[7px] text-[12px]"
-          >
-            <span className="num truncate text-[11px] text-ink">{job.name}</span>
-            <span className="num text-[11px] text-ink-3">{took(job.tookMs)}</span>
-            <span
-              className={cn(
-                'label text-[10px] tracking-[0.06em]',
-                job.status === 'failed'
-                  ? 'text-bad'
-                  : job.status === 'ok'
-                    ? 'text-brand'
-                    : 'text-ink-3',
-              )}
-            >
-              {job.status ?? 'idle'}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <p className="mt-auto flex justify-between pt-2.5 text-[11px] text-ink-3">
-        <span>
-          Next run {nightlyRunAt(timezone)} {zoneAbbrIn(timezone)}
-        </span>
-        {failed.length > 0 && <span>{failed.length} failed, see the Agent Log</span>}
-      </p>
     </div>
   )
 }

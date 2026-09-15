@@ -238,6 +238,30 @@ export async function listAlerts(limit = 60): Promise<Alert[]> {
   return rows
 }
 
+/**
+ * The dashboard's warnings tile: unread, not snoozed, worst first. Snoozed is
+ * neither read nor sent, so the row is back the day the snooze ends.
+ */
+export async function unreadWarnings(limit = 4) {
+  const { rows } = await db().query<{ id: string; title: string; body: string; urgency: string }>(
+    `select id, title, body, urgency from core.notifications
+      where read_at is null and (snooze_until is null or snooze_until < now())
+      order by (urgency = 'urgent') desc, due_at desc limit $1`,
+    [limit],
+  )
+  return rows
+}
+
+/** Zero days clears the snooze. */
+export async function snoozeNotification(id: string, days: number): Promise<void> {
+  await db().query(
+    `update core.notifications
+        set snooze_until = case when $2 = 0 then null else now() + make_interval(days => $2) end
+      where id = $1`,
+    [id, days],
+  )
+}
+
 export async function markRead(id: string): Promise<void> {
   await db().query(`update core.notifications set read_at = now() where id = $1`, [id])
 }

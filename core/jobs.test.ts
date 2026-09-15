@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
 import { pruneRequestLog, runJob } from './jobs'
-import { pending, queue, renderEmail } from './notify'
+import { pending, queue, renderEmail, snoozeNotification, unreadWarnings } from './notify'
 import { buildSummary } from './orchestrator'
 
 beforeEach(async () => {
@@ -174,12 +174,18 @@ describe('buildSummary', () => {
 })
 
 describe('assembleSummary', () => {
-  it('queues nothing on a night with nothing wrong', async () => {
+  // Decided 2026-09-14: the email goes out every night. A quiet night says so
+  // rather than saying nothing, because silence and a broken cron look the
+  // same from the inbox.
+  it('queues one digest on a night with nothing wrong', async () => {
     const { assembleSummary } = await import('./orchestrator')
     const result = await assembleSummary()
 
-    expect(result.queued).toBe(false)
-    expect(await pending()).toHaveLength(0)
+    expect(result.queued).toBe(true)
+    const items = await pending()
+    expect(items).toHaveLength(1)
+    expect(items[0].title).toBe('Nothing needs you today')
+    expect(items[0].urgency).toBe('normal')
   })
 
   it('queues exactly one notification however many alerts there are', async () => {
@@ -205,6 +211,21 @@ describe('assembleSummary', () => {
     expect(items[0].urgency).toBe('urgent')
     expect(items[0].body).toContain('a.one failed')
     expect(items[0].body).toContain('b.two failed')
+  })
+})
+
+describe('snoozeNotification', () => {
+  it('hides the row from the dashboard and the sender until the day comes', async () => {
+    await queue({ title: 'Statement due', body: '' })
+    const [{ id }] = await unreadWarnings()
+
+    await snoozeNotification(id, 1)
+    // Snoozed is neither read nor sent: it comes back tomorrow, on both paths.
+    expect(await unreadWarnings()).toHaveLength(0)
+    expect(await pending()).toHaveLength(0)
+
+    await snoozeNotification(id, 0)
+    expect(await unreadWarnings()).toHaveLength(1)
   })
 })
 

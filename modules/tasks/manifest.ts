@@ -295,6 +295,7 @@ export default defineModule({
         meta: r.project ?? 'No project',
         estimateMinutes: r.est,
         at: r.due_on,
+        href: `/tasks?task=${r.id}`,
       }))
     },
 

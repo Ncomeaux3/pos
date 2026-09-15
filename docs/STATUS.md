@@ -39,6 +39,26 @@ one CI carries as well until the pair is added to the secrets.
 
 ## Done
 
+**v1.1 Phase 1, diagnose and small fixes** (2026-09-14, branch
+`phase-1-diagnose-fixes`). The nightly email finding, from production
+`core.dashboard_summary` and `core.jobs`: the Vercel cron fired at 09:02 UTC
+every night from 2026-09-10 to 2026-09-14, all five core jobs `ok`. Four of
+those nights had zero alerts, so `orchestrate` logged `queued: false` and
+`notify` sent nothing, by the old design. The one night with alerts
+(2026-09-13, two of them) queued one digest and `core.notifications` shows it
+sent at 09:02:37. Nothing is unsent, so the Resend list was not needed. The
+cron is attached to production and the sender works; silence was the rule,
+and the rule is now changed: a quiet night queues "Nothing needs you today".
+Also in this phase: Snooze on the dashboard held a rule id that did not exist
+(it now snoozes the notification row), Next 7 days rows open their own drawer,
+the System tile is the run line at the top linking to the Agent Log, a time on
+a task can be cleared, the iPhone 16 Pro Max startup image is set, and
+`/splash/` joins `/icons/` outside the auth proxy. Goal deadline in Chrome 153:
+typed dates work once the page is hydrated; a two-digit year gives year 0026,
+which is under `min` and blocks the submit with the browser's own message, and
+keys typed before hydration are dropped. No handler swallows keys. For Phase 6.
+Push: see docs/PUSH.md, "Why enabling failed".
+
 **Second Brain is capture first.** docs/plans/brain-capture.md, PRs #48, #49
 and #50, all merged 2026-09-14. POS is the primary store for notes now and the
 vault a pulled archive. One box above the list takes text (first line is the
