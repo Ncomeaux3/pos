@@ -3,7 +3,7 @@ import { db } from '@/core/db'
 import { encrypt } from '@/core/crypto'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
-import { nightlyDigest } from './jobs/nightly-digest'
+import { nightlyDigest, remind } from './jobs/nightly-digest'
 import InsurancePage from './ui/InsurancePage'
 import { annualCents, type Cadence } from './premium'
 import { attachDocument, deletePolicy, listPolicies } from './data'
@@ -259,6 +259,6 @@ export default defineModule({
   /** See ModuleManifest.tile: the module says how its own numbers read. */
   tile: InsuranceTile,
 
-  jobs: [{ name: 'nightly_digest', run: nightlyDigest }],
+  jobs: [{ name: 'nightly_digest', run: remind }],
   entityTypes: ['policy'],
 })

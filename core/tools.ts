@@ -1,4 +1,5 @@
 import type { Autonomy } from './autonomy'
+import { writeDigest } from './digests'
 import { getModule, getModules, type ToolContext } from './modules'
 import { propose } from './proposals'
 import { runQuery } from './query'
@@ -137,6 +138,19 @@ export async function callTool(
   }
 
   const result = await tool.run(input, { source: ctx.source })
+
+  // Every tool but get_digest is a write by contract (query returned above),
+  // and a write changes the module's numbers, so the digest is recomputed here
+  // and the dashboard tile reads it on the next render. Synchronous because
+  // this also runs from the cron and MCP, where there is no request to defer
+  // into. A digest that fails to compute is logged, never a failed write.
+  if (toolName !== 'get_digest') {
+    try {
+      await writeDigest(manifest)
+    } catch (err) {
+      console.error(`${moduleId}.get_digest failed after ${toolName}:`, err)
+    }
+  }
 
   // An agent write is logged with what it would take to reverse it, which is
   // what makes Undo on the Agent Log real. A UI write is not: undo for one of

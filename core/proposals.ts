@@ -1,4 +1,5 @@
 import { db } from './db'
+import { writeDigest } from './digests'
 import { getModule } from './modules'
 
 // What an agent wants to do, held until the owner decides. Nothing here touches
@@ -138,6 +139,14 @@ export async function approve(
 
   const input = tool.input.parse({ ...proposal.payload, ...patch })
   const result = await tool.run(input, { source: 'agent' })
+
+  // The same recompute callTool does after a write, so the dashboard tile
+  // reads the approved change straight away. Logged, never a failed approval.
+  try {
+    await writeDigest(manifest)
+  } catch (err) {
+    console.error(`${proposal.module}.get_digest failed after approve:`, err)
+  }
 
   // An approved proposal is still an agent write: the owner said yes to it,
   // not that they made it. It belongs in the Agent Log with everything else,

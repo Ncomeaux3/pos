@@ -13,11 +13,20 @@ export async function queue(args: {
   channel?: string
   urgency?: Urgency
   dueAt?: Date
+  /** Where the dashboard row goes. Empty opens the alert centre. */
+  href?: string
 }): Promise<void> {
   await db().query(
-    `insert into core.notifications (channel, title, body, due_at, urgency)
-     values ($1, $2, $3, coalesce($4, now()), $5)`,
-    [args.channel ?? 'email', args.title, args.body, args.dueAt ?? null, args.urgency ?? 'normal'],
+    `insert into core.notifications (channel, title, body, due_at, urgency, href)
+     values ($1, $2, $3, coalesce($4, now()), $5, $6)`,
+    [
+      args.channel ?? 'email',
+      args.title,
+      args.body,
+      args.dueAt ?? null,
+      args.urgency ?? 'normal',
+      args.href ?? null,
+    ],
   )
 }
 
@@ -249,8 +258,14 @@ export async function listAlerts(limit = 60): Promise<Alert[]> {
  * neither read nor sent, so the row is back the day the snooze ends.
  */
 export async function unreadWarnings(limit = 4) {
-  const { rows } = await db().query<{ id: string; title: string; body: string; urgency: string }>(
-    `select id, title, body, urgency from core.notifications
+  const { rows } = await db().query<{
+    id: string
+    title: string
+    body: string
+    urgency: string
+    href: string | null
+  }>(
+    `select id, title, body, urgency, href from core.notifications
       where read_at is null and (snooze_until is null or snooze_until < now())
       order by (urgency = 'urgent') desc, due_at desc limit $1`,
     [limit],

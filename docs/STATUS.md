@@ -39,6 +39,24 @@ one CI carries as well until the pair is added to the secrets.
 
 ## Done
 
+**v1.1 Phase 5, dashboard** (2026-09-15, branch `phase-5-dashboard`, built
+in the worktree `../pos-phase-5` beside Phase 6). The bento's layout is one
+`dashboard_layout` setting (`{ order, hidden }`) in `core.settings`, saved
+through `saveDashboardLayout` in `app/(app)/shell-actions.ts`; the localStorage
+store is gone. Arrange mode adds Hide beside the arrows and a Hidden row under
+the grid with Show buttons; Reset saves null. Grid rows are `auto` and tiles
+no longer stretch, so a tile is as tall as its content. `callTool` recomputes
+the calling module's digest after every tool but `get_digest`
+(`writeDigest` in `core/digests.ts`, try/catch, never fails the write), and
+the page's module tiles map over `latestDigests()` filtered to enabled
+modules instead of `summary.modules`; headline, alerts and Last run stay on
+the nightly summary. Nightly `prune_digests` keeps every row from the last two
+days and the newest per module per day past that. `core.notifications.href`
+(migration `20260915150100_core_notification_href.sql`): insurance reminders
+open `/insurance`, the digest row opens `/notifications`, and every warning
+title on the dashboard is a link. After `supabase db push`, the Notes tile
+from Phase 2 is gone at once: the tiles no longer wait for a run.
+
 **v1.1 Phase 4, speed, client** (2026-09-15, branch `phase-4-speed-client`).
 `useSearchState.set` takes `local: true`: the URL is written through
 `window.history.replaceState` and the router is not asked. Tasks view tabs,
@@ -65,8 +83,8 @@ and proposals suites and the e2e seed lean on `ideas.write` (one table,
 unguarded) instead; the e2e Agent Log fixture writes its ideas row before the
 skills row so the sidebar-order assertion still proves something. Start a new
 module by copying `modules/ideas`. After `supabase db push` and the deploy,
-press Run now once: the dashboard tiles still read `core.dashboard_summary`
-until Phase 5, so the Notes tile lingers until the next run rewrites it.
+press Run now once: the dashboard tiles read `core.dashboard_summary` until
+Phase 5 (done the same day), after which the Notes tile is gone at once.
 
 **v1.1 Phase 1, diagnose and small fixes** (2026-09-14, branch
 `phase-1-diagnose-fixes`). The nightly email finding, from production
