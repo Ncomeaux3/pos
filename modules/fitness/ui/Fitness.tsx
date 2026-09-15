@@ -134,7 +134,7 @@ export function Fitness({ data }: { data: FitnessData }) {
   const { params, set: setParams } = useSearchState()
   const tab = params.get('tab') ?? 'workouts'
 
-  const setTab = (next: string) => setParams({ tab: next === 'workouts' ? null : next })
+  const setTab = (next: string) => setParams({ tab: next === 'workouts' ? null : next }, { local: true })
 
   return (
     <div className="space-y-5">

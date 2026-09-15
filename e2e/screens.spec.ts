@@ -1289,6 +1289,13 @@ test('tasks, a row expands in place and EDIT opens the form drawer', async ({ pa
 test('tasks, the six views and the month grid', async ({ page }) => {
   await page.goto('/tasks')
   const mobile = (page.viewportSize()?.width ?? 0) < 768
+  // A view switch is client bucketing of rows already on the page: it writes
+  // the URL through the History API and asks the server for nothing. The
+  // reloads shoot() does are document requests, so they do not count here.
+  let rsc = 0
+  page.on('request', (req) => {
+    if (req.url().includes('_rsc')) rsc += 1
+  })
   // Review and By goal moved off the segment row on the phone; the filter
   // toggle behind the row reaches them instead.
   const openView = async (name: string | RegExp) => {
@@ -1327,6 +1334,7 @@ test('tasks, the six views and the month grid', async ({ page }) => {
   await expect(page).toHaveURL(/month=1/)
   await shoot(page, 'tasks-calendar')
   await expect(page.getByRole('button', { name: 'Previous month' })).toBeVisible()
+  expect(rsc, 'RSC requests across the view switches').toBe(0)
 
   if (mobile) {
     // The grid fits the pane: no sideways scroll, and a day's task is a dot

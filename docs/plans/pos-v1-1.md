@@ -11,7 +11,7 @@ Order: bugs first, then speed, then features, fitness, hardening. Phases marked 
 | 1 Diagnose and small fixes | Push and email diagnosed with evidence; snooze, deep links, health corner, time clear, splash, nightly email fixed | medium | 3, 8, 9, 10 | none | Done 2026-09-14: push was a malformed VAPID key, email was the quiet-night skip; PR open | #53 |
 | 2 Delete notes stub | modules/notes and every test and seed that leans on it gone | medium | 3, 8, 9, 10 | none | Done 2026-09-15: folder, schema and fixtures gone; tests and seed lean on ideas; PR open | |
 | 3 Speed, server | Server time per screen measured and waterfalls removed | medium | 1, 2, 8, 9, 10 | none | Done 2026-09-15: `/` 43 percent off, `/tasks` shell-bound at the 250 ms floor; pdx1 tried and reverted; PR open | |
-| 4 Speed, client | Task view switch is instant, no refetch | low | 8, 9, 10 | 3 | Not started | |
+| 4 Speed, client | Task view switch is instant, no refetch | low | 8, 9, 10 | 3 | Done 2026-09-15: view and tab switches write the URL natively, 4 RSC requests to 0; Calendar and drawer load on demand with their own Suspense boundary; PR open | |
 | 5 Dashboard | Layout saved server-side, live tiles, drill-ins, smaller tiles | high | 8, 9, 10 | 3, 4 | Not started | |
 | 6 Goals, projects, tasks | Projects link to goals, tasks inherit, project UI, per-view plus, any due date | high | 8, 9, 10 | 4 | Not started | |
 | 7a Skill picker, core | link/unlink tools, one reader, one component; tasks, goals, ideas, brain | medium | 8, 9, 10 | 6 | Not started | |
@@ -109,13 +109,26 @@ Complexity: low
 Parallel-safe with: 8, 9, 10
 Files: `components/pos/searchState.ts`, `modules/tasks/ui/Board.tsx`, `modules/fitness/ui/Fitness.tsx`, `modules/finance/ui/Finance.tsx`, `e2e/screens.spec.ts`.
 
-- [ ] `searchState.ts` `set()` gains `{ local?: boolean }`: when set, `window.history.replaceState(null, '', url)` instead of `router.replace`. Next's app router syncs `useSearchParams` from native `replaceState` (verify on Next 16 with context7 before building). The file's ponytail note is about drawers racing a server action; a view switch has no action.
-- [ ] `Board.tsx:185` Segments `onChange`, the filter pills, and `setExpanded` pass `local: true`. Drawers keep `push`. `columnsFor` is already pure client bucketing.
-- [ ] Fitness tabs and Finance segments pass `local: true` too.
-- [ ] `next/dynamic` for `Calendar` and `TaskDrawer` in `Board.tsx` (rendered only when `month=1` or a drawer is open). Leave `Constellation` static: it is the skills page's content.
-- [ ] Measure: Playwright, click each of the six view tabs, count requests whose URL contains `_rsc` (before one per click, after zero) and time from click to column heading change; `pnpm build` route size table before and after.
+- [x] `searchState.ts` `set()` gains `{ local?: boolean }`: when set, `window.history.replaceState(null, '', url)` instead of `router.replace`. Next's app router syncs `useSearchParams` from native `replaceState` (verify on Next 16 with context7 before building). The file's ponytail note is about drawers racing a server action; a view switch has no action.
+- [x] `Board.tsx:185` Segments `onChange`, the filter pills, and `setExpanded` pass `local: true`. Drawers keep `push`. `columnsFor` is already pure client bucketing.
+- [x] Fitness tabs and Finance segments pass `local: true` too.
+- [x] `next/dynamic` for `Calendar` and `TaskDrawer` in `Board.tsx` (rendered only when `month=1` or a drawer is open). Leave `Constellation` static: it is the skills page's content.
+- [x] Measure: Playwright, click each of the six view tabs, count requests whose URL contains `_rsc` (before one per click, after zero) and time from click to column heading change; `pnpm build` route size table before and after.
 
 Exit checks: e2e "tasks, the six views" asserts zero `_rsc` requests; the finance segments swipe test still sees the URL follow.
+
+Measured 2026-09-15 on the local dev server (Next 16.3.4). RSC requests are the `_rsc` fetches Playwright sees across the four view clicks in "tasks, the six views" on desktop. Chunk sizes are the dev server's per-module script for `/tasks` at 1440 px, from a Playwright script listing every script response; `next build` on Next 16 no longer prints a route size table, so the dev chunk is the before and after.
+
+| Measure | Before | After |
+|---|---|---|
+| `_rsc` requests over four view clicks | 4 | 0 |
+| `modules_tasks` dev chunk on `/tasks` | 236 KB | 136 KB |
+| Scripts fetched on the Calendar click | none | `Calendar.tsx` chunk, 30 KB |
+| Click to column change, six views, median (ms) | 10 | 17 |
+
+The click-to-column time was already instant before this phase: `useSearchState`'s override store renders the new view in the same frame and the router fetch ran behind it. What this phase removes is that fetch and the re-render when it landed, hence the request count is the exit check and the paint time is noise (both runs under 35 ms per click).
+
+Side finding, not this phase: `/tasks` on the dev server loads every module's client chunk (28 scripts, 7.1 MB in dev) because the catch-all page imports all modules through `modules/_index`. Production bundles differ; worth a measurement in Phase 12 or a later speed pass.
 Depends on: 3. Out of scope: prefetching, optimistic drawers.
 
 ## Phase 5: dashboard
