@@ -2251,17 +2251,102 @@ test('travel, typing a destination suggests places and fills the coordinates', a
   await page.waitForLoadState('networkidle')
   await page.getByRole('button', { name: /New trip/ }).click()
 
-  const destination = page.getByRole('dialog').getByLabel('Destination', { exact: true })
+  // One row per destination since v1.1 Phase 9, each with its own datalist, so
+  // the suggestions are the row's rather than the form's.
+  const row = page.getByTestId('destination-row').first()
+  const destination = row.getByLabel('Destination', { exact: true })
   await destination.fill('Austin')
-  const option = page.locator('#destination-hits option[value*="Austin"]').first()
+  const option = row.locator('datalist option[value*="Austin"]').first()
   await expect(option).toHaveCount(1, { timeout: 10_000 })
   const label = (await option.getAttribute('value')) ?? ''
 
   await destination.fill(label)
-  await expect(page.getByRole('dialog').getByLabel('Lat', { exact: true })).not.toHaveValue('')
-  await expect(page.getByRole('dialog').getByLabel('Lon', { exact: true })).not.toHaveValue('')
-  await expect(page.getByRole('dialog').getByLabel('Lat', { exact: true })).toHaveValue(/^-?\d+(\.\d+)?$/)
-  await expect(page.getByRole('dialog').getByLabel('Lon', { exact: true })).toHaveValue(/^-?\d+(\.\d+)?$/)
+  await expect(row.getByLabel('Lat', { exact: true })).toHaveValue(/^-?\d+(\.\d+)?$/)
+  await expect(row.getByLabel('Lon', { exact: true })).toHaveValue(/^-?\d+(\.\d+)?$/)
+})
+
+// v1.1 Phase 9. A trip held one destination, so four trips to the same country
+// were four trips. This is the scenario from docs/plans/pos-v1-1.md: a trip
+// with two destinations, a pin for each, and one taken away again. It builds
+// its own trip and deletes it at the end, because the travel tests that follow
+// read the seeded fixture and a stray trip would change what they count.
+test('travel, a trip holds a list of destinations', async ({ page }) => {
+  // Both confirms in this test are the drawer's: removing a trip asks first.
+  page.on('dialog', (d) => d.accept())
+
+  await page.goto('/travel')
+  const globe = page.getByRole('group', { name: /Globe showing \d+ places/ })
+  // The label counts every pin, not the ones on the near side, so it is a
+  // number this test can hold still while the globe turns.
+  const pinned = async () => {
+    const label = (await globe.getAttribute('aria-label')) ?? ''
+    return Number(/(\d+)/.exec(label)?.[1] ?? -1)
+  }
+  const before = await pinned()
+
+  await page.getByRole('button', { name: /New trip/ }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByLabel('Trip', { exact: true }).fill('Iberia, spring')
+
+  // Coordinates are typed rather than picked from the suggestions: the
+  // suggestion list comes from the geocoder and CI has no network.
+  const rows = page.getByTestId('destination-row')
+  const fill = async (i: number, name: string, lat: string, lon: string, start: string, end: string) => {
+    const row = rows.nth(i)
+    await row.getByLabel(/^Destination/).fill(name)
+    await row.getByLabel('Lat', { exact: true }).fill(lat)
+    await row.getByLabel('Lon', { exact: true }).fill(lon)
+    await row.getByLabel('Arrive', { exact: true }).fill(start)
+    await row.getByLabel('Leave', { exact: true }).fill(end)
+  }
+
+  // A new trip opens on one empty row. Never zero: a form with nowhere to type
+  // has nowhere to start.
+  await expect(rows).toHaveCount(1)
+  await fill(0, 'Lisbon', '38.72', '-9.14', '2027-04-02', '2027-04-06')
+
+  await dialog.getByRole('button', { name: '+ Add destination' }).click()
+  await expect(rows).toHaveCount(2)
+  await fill(1, 'Porto', '41.15', '-8.61', '2027-04-06', '2027-04-11')
+
+  await dialog.getByRole('button', { name: /^Create/ }).click()
+  await expect(page.getByText('Trip created')).toBeVisible()
+
+  // Both destinations are pinned, not just the trip.
+  await expect.poll(pinned).toBe(before + 2)
+
+  const card = page.getByTestId('travel-sections').getByRole('button', { name: /Iberia, spring/ }).first()
+  await card.click()
+  await expect(page).toHaveURL(/trip=/)
+
+  // The trip's own place and dates are a summary of its destinations now: the
+  // first row's city, and the span across both rows rather than either one.
+  const heading = page.getByRole('dialog')
+  await expect(heading).toContainText('Lisbon')
+  await expect(heading).toContainText(/Apr 2.+Apr 11/)
+
+  // Reopening the form shows what was saved, in order.
+  await page.getByRole('button', { name: 'Edit details' }).click()
+  await expect(rows).toHaveCount(2)
+  await expect(rows.nth(0).getByLabel(/^Destination/)).toHaveValue('Lisbon')
+  await expect(rows.nth(1).getByLabel(/^Destination/)).toHaveValue('Porto')
+  await expect(rows.nth(1).getByLabel('Lat', { exact: true })).toHaveValue('41.15')
+  // No shot of the open form: shoot() reloads to swap the theme, and whether
+  // the form is open is React state rather than the URL, so it would come back
+  // showing the drawer behind it.
+
+  // Taking one away takes its pin with it, and the span shrinks back.
+  await rows.nth(1).getByRole('button', { name: 'Remove Porto' }).click()
+  await expect(rows).toHaveCount(1)
+  await page.getByRole('dialog').getByRole('button', { name: /^Save/ }).click()
+  await expect(page.getByText('Saved')).toBeVisible()
+  await expect.poll(pinned).toBe(before + 1)
+
+  // Put the fixture back for the travel tests after this one.
+  await page.getByTestId('travel-sections').getByRole('button', { name: /Iberia, spring/ }).first().click()
+  await page.getByRole('button', { name: 'Delete trip' }).click()
+  await expect(page.getByText('Trip deleted')).toBeVisible()
+  await expect.poll(pinned).toBe(before)
 })
 
 test('fitness, workouts with pace derived rather than stored', async ({ page }) => {

@@ -715,7 +715,7 @@ function DestinationFields({
   }
 
   return (
-    <div className="flex flex-col gap-3 border-l border-rule pl-3">
+    <div data-testid="destination-row" className="flex flex-col gap-3 border-l border-rule pl-3">
       <div className="grid grid-cols-[1fr_96px_96px] gap-3">
         <label className="flex flex-col gap-1.5">
           <Eyebrow>{index === 0 ? 'Destination' : `Destination ${index + 1}`}</Eyebrow>
