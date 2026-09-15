@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react'
 import { ActionButton, useToast } from '@/components/pos'
-import { forgetPasskey } from './passkeys'
+import { forgetPasskey } from './passkey-actions'
 
 export function ForgetPasskey({ id }: { id: string }) {
   const [, start] = useTransition()

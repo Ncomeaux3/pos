@@ -9,6 +9,7 @@ Owner: Nick. Solo, nights and weekends. Finish one module before starting the ne
 - The v1.1 build plan: docs/plans/pos-v1-1.md (one phase per session, /build-phase)
 - How it is built: docs/ARCHITECTURE.md (read before touching core, a manifest, or a migration)
 - Full module spec: @docs/SPEC.md (use /module <name> to load one module's section)
+- The next version: docs/SPEC-v2.md and docs/plans/v2-agent-layer.md (the agent layer, specified 2026-09-14, not started)
 - Unresolved choices: @docs/DECISIONS.md (ask before scaffolding anything they affect)
 - About the owner and how he works: context/owner.md
 - What was decided and why: decisions/log.md (append only)
@@ -31,7 +32,7 @@ Owner: Nick. Solo, nights and weekends. Finish one module before starting the ne
 - Show evidence of verification (test output, command result), not a claim that it works.
 - Commit after each completed step with a descriptive message. Log any decision to decisions/log.md.
 - When compacting, preserve the list of modified files, open questions, and the test command.
-- A red CI check is a merge gate. Branch protection is unavailable on this private free repo, so the rule is manual: never merge a PR while any check is red, and say so if asked to.
+- A red CI check is a merge gate: never merge a PR while any check is red, and say so if asked to. The repo is public, so branch protection is available on the free plan and v1.1 phase 12 turns it on requiring `check` and `screens`. Until it does, the rule is manual.
 - A PR that adds a migration goes red until its description carries a line reading `db push: done`, or `db push: not needed` when the schema should not move yet. Merging deploys the code; `supabase db push` is manual and does not follow. Twice now the code has arrived in production ahead of its schema and the nightly came back partial naming a table that did not exist.
 
 ## Tools for this project

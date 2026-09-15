@@ -18,7 +18,7 @@ Order: bugs first, then speed, then features, fitness, hardening. Phases marked 
 | 7b Skill picker, rest | Trip, policy, recipe, workout, home, health drawers | low | 8, 9, 10 | 7a | Not started | |
 | 8 Skill tree gestures | Phone drag and pinch behave like the globe | medium | 1 to 7, 9, 10 | none | Not started | |
 | 9 Travel destinations | Multi-destination trips, all pinned, merge into | high | 1 to 8, 10 | none | Not started | |
-| 10 Finance chart | Net worth on a 30-day date axis with the average | low | 1 to 9 | none | Done 2026-09-15: spine() on a date axis, nulls break the line, padded y, stats over recorded days; LineChart extraction and the two-day e2e not done, see notes | |
+| 10 Finance chart | Net worth on a 30-day date axis with the average | low | 1 to 9 | none | Done 2026-09-15: spine() on a date axis, nulls break the line, padded y, stats over recorded days. The LineChart extraction and the two-day e2e were not done and moved to Phase 11, which is the phase that needs them | |
 | 11 Fitness | Trends, history filters, plan form, Apple arrival on Sync | high | none | 10, 7b | Not started | |
 | 12 Hardening | error pages, audit step, branch protection, route limits, rotation doc | low | none | all | Not started | |
 
@@ -45,7 +45,7 @@ Files: `proxy.ts`, `next.config.ts`, `core/notify.ts`, `core/orchestrator.ts`, `
 Exit checks: suites green; push cause in `docs/PUSH.md`; email finding in `docs/STATUS.md`.
 Depends on: none. Out of scope: any push or email code change beyond what the diagnosis names.
 Notes: the proxy candidate explains both devices failing at once, which a browser-specific cause would not. Bugs with an unknown cause get a method and a decision point, not a guessed fix.
-Done 2026-09-14. The proxy was not it: signed in, `/sw.js` is 200. The shared cause was the `VAPID_PUBLIC_KEY` value in Vercel failing `atob`; regenerated and set again, the desktop subscribed. The email was the quiet-night skip, now removed. For later phases: Phase 2 leaves the bento at 16 tiles in 3 columns (one trailing empty cell at 1440, already one at 17), Phase 5 owns that layout. Phase 6: Chrome's date input takes typed dates once hydrated; a two-digit year gives year 0026 and `min` blocks the submit with the browser's message, and keys typed before hydration are dropped. The dashboard Warnings tile now shows the quiet-night digest row until read. Local typecheck and build fail on macOS from the tracked `Passkeys.tsx`/`passkeys.ts` and `Session.tsx`/`session.ts` casing pairs (since #41); CI on Linux passes; a rename belongs in Phase 12 or a small fix PR.
+Done 2026-09-14. The proxy was not it: signed in, `/sw.js` is 200. The shared cause was the `VAPID_PUBLIC_KEY` value in Vercel failing `atob`; regenerated and set again, the desktop subscribed. The email was the quiet-night skip, now removed. For later phases: Phase 2 leaves the bento at 16 tiles in 3 columns (one trailing empty cell at 1440, already one at 17), Phase 5 owns that layout. Phase 6: Chrome's date input takes typed dates once hydrated; a two-digit year gives year 0026 and `min` blocks the submit with the browser's message, and keys typed before hydration are dropped. The dashboard Warnings tile now shows the quiet-night digest row until read. Local typecheck and build failed on macOS from the tracked `Passkeys.tsx`/`passkeys.ts` and `Session.tsx`/`session.ts` casing pairs (since #41); CI on Linux passed, which is why it survived. Fixed 2026-09-15 in a small fix PR: the two server action files are now `passkey-actions.ts` and `session-actions.ts`, matching `shell-actions.ts`.
 
 ## Phase 2: delete the notes stub
 
@@ -254,7 +254,7 @@ Files: new `modules/finance/series.ts` and `series.test.ts`, `modules/finance/da
 - [ ] Test first: `spine(points, days, todayIso)` returns `days` entries back from today, known values in place, earlier days null, gaps after the first point filled forward; average over known points only.
 - [ ] `netWorthSeries` stays the raw read; `FinancePage` and the digest call `spine()`; the digest's `netWorthSeries` becomes the spined dollars (nulls kept); `changeCents` compares against the first known point.
 - [ ] `NetWorthChart`: x by day index over 30; nulls break the line; y padded 5 percent each side, a flat series drawn mid-height; `EmptyState` only under 1 known point; High, Low, Avg from known points; an average line.
-- [ ] Extract axis and line into `LineChart` in `components/pos/charts.tsx` (dates, values with nulls, unit formatter, height) so Phase 11 reuses it; `NetWorthChart` becomes a thin wrapper.
+- [~] Extract axis and line into `LineChart` in `components/pos/charts.tsx` (dates, values with nulls, unit formatter, height) so Phase 11 reuses it; `NetWorthChart` becomes a thin wrapper. Not done here, moved to Phase 11: `NetWorthChart` is the only caller until Trends exists, and extracting a shared component against one caller guesses at what the second one needs.
 - [ ] `Tile.tsx`: `Sparkline` takes the spined series with nulls skipped; hidden only with no known point.
 - [ ] e2e: seed two `balance_daily` days; the polyline has two points at x 28/29 and 29/29 of the width.
 
@@ -265,11 +265,12 @@ Depends on: none. Out of scope: account-level lines.
 Goal: Fitness shows trends per metric, a filterable history, a plan form, and Sync now says when Apple data last arrived.
 Complexity: high
 Parallel-safe with: none
-Files: `integrations/health_auto_export/client.ts` and test, `modules/fitness/data.ts`, `modules/fitness/manifest.ts`, `modules/fitness/ui/FitnessPage.tsx`, `modules/fitness/ui/Fitness.tsx`, new `modules/fitness/ui/PlanDrawer.tsx`, `modules/fitness/ui/sync.ts`, `modules/fitness/ui/actions.ts`, `modules/health/ui/HealthPage.tsx` (assert only), `e2e/seed.mts`, `e2e/screens.spec.ts`.
+Files: `components/pos/charts.tsx`, `modules/finance/ui/Finance.tsx`, `integrations/health_auto_export/client.ts` and test, `modules/fitness/data.ts`, `modules/fitness/manifest.ts`, `modules/fitness/ui/FitnessPage.tsx`, `modules/fitness/ui/Fitness.tsx`, new `modules/fitness/ui/PlanDrawer.tsx`, `modules/fitness/ui/sync.ts`, `modules/fitness/ui/actions.ts`, `modules/health/ui/HealthPage.tsx` (assert only), `e2e/seed.mts`, `e2e/screens.spec.ts`.
 
 - [ ] Owner step (OWNER-TODO 15): Health Auto Export Premium, one export to the webhook. Read the body from `core.request_log` through the integration's Test view; save it as the fixture for `client.test.ts` (written before the field-name fixes); correct the names marked verify in `client.ts`.
 - [ ] `data.ts`: `metricSeries(kind, days)` over `fitness.body_metric`; `listWorkouts` gains `{ kind?, source?, from?, to?, limit }`; `lastArrived()` = max `created_at` over `body_metric` and `workout` where `source = 'health_auto_export'`.
-- [ ] Trends tab: select of kinds present, `PillGroup` 30 / 90 / 365, `LineChart` from Phase 10 with the unit formatter from `units.ts`. 30 days rendered server side; 90 and 365 through a `readMetricSeries` server action.
+- [ ] Extract axis and line into `LineChart` in `components/pos/charts.tsx` (dates, values with nulls, unit formatter, height), carried over from Phase 10, which left it undone. Do this first, with `NetWorthChart` becoming a thin wrapper over it and the finance e2e still green, so Trends is built on a component with two real callers rather than one.
+- [ ] Trends tab: select of kinds present, `PillGroup` 30 / 90 / 365, the extracted `LineChart` with the unit formatter from `units.ts`. 30 days rendered server side; 90 and 365 through a `readMetricSeries` server action.
 - [ ] Workouts tab: filter row (kind, source, two native date inputs), state in the URL through `useSearchState` with `local: true`.
 - [ ] Plan: `PlanDrawer.tsx` creating or editing `fitness.plan` and items (day label, exercise, sets, reps, target weight) through `callTool('fitness','write_plan')` (UI source is never guarded); read the tool's input shape at `manifest.ts:127` first.
 - [ ] Sync now: `SyncBand` `at` becomes the later of the Strava job and `lastArrived()`, with a second line "Apple data last arrived <when>".
@@ -289,7 +290,7 @@ Files: new `app/error.tsx`, `app/global-error.tsx`, `.github/workflows/ci.yml`, 
 - [ ] `app/error.tsx` and `app/global-error.tsx`: client components, headline, the digest, retry; imports from `components/pos` only.
 - [ ] `ci.yml` check job: `pnpm audit --prod --audit-level=high` after install.
 - [ ] Backup: `docs/RESTORE.md` adds the storage bucket to the backup and restore steps (verify the `supabase storage` CLI subcommands).
-- [ ] Branch protection: repo is public, so free allows it. `gh api -X PUT repos/<owner>/pos/branches/main/protection` requiring `check` and `screens`; update the CLAUDE.md sentence.
+- [ ] Branch protection: repo is public, so free allows it. `gh api -X PUT repos/<owner>/pos/branches/main/protection` requiring `check` and `screens`. The CLAUDE.md sentence was corrected on 2026-09-15; this phase makes it true in the repo settings.
 - [ ] `export const maxDuration`: MCP 60, webhook 30, OAuth start and callback 30.
 - [ ] Secret rotation paragraph in `docs/SETUP-SUPABASE.md`: each secret, where it is set, what rotating breaks (VAPID invalidates every device; `ENCRYPTION_KEY` orphans every `core.connections` row; `CRON_SECRET` and `MCP_TOKEN` are free).
 

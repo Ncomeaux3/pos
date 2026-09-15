@@ -2,7 +2,7 @@
 
 Claude Code must ask about every unresolved item here before scaffolding. Record the answer, date, and reason in decisions/log.md, then mark it resolved.
 
-(none open)
+(none open, for v1.1 or for v2)
 
 ## Resolved
 All eleven original items plus the architecture, platform, and template decisions were resolved on 2026-09-05. See decisions/log.md for each choice, its reason, and what was rejected. See docs/ARCHITECTURE.md for how they fit together.
@@ -39,6 +39,11 @@ v1.1, all 2026-09-14, from the /adopt-repo interview; reasons in decisions/log.m
 - Phone for the iOS splash image: iPhone 16 Pro Max (440 x 956 points at 3x).
 - Date inputs stay native `<input type="date">` everywhere; no picker library.
 - Vercel functions stay in iad1 beside the owner; pdx1 measured slower on the whole. The database region is the remaining lever and is an owner decision. (2026-09-15)
+
+v2, all 2026-09-14, from the spec review; the sixteen entries are in decisions/log.md, the spec in docs/SPEC-v2.md and the plan in docs/plans/v2-agent-layer.md:
+
+- Runner topology, ledger shape, integration extension, cost cap, plan location, no in-app chat, first integrations, voice out, secret store and queue, the default permission level, sync scope, start order, Gmail's scope and OAuth posture, and an empty auto-approve table. Fourteen answers from the owner.
+- Two corrections made after them: phase 0's three outbound clients are SimpleFIN, the vault and Strava (Apple Health is inbound), and phase 1 adds `integrations/fixture/` so the ledger has a write verb to prove itself against.
 
 ## Production readiness
 

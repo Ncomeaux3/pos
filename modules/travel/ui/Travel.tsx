@@ -6,8 +6,9 @@ import { BackControl } from '@/components/pos/BackControl'
 import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
 import { deleteTrip, setTripStatus, type ActionResult } from './actions'
-import { Globe, type Pin } from './Globe'
+import { Globe } from './Globe'
 import { LoyaltyDrawer } from './LoyaltyDrawer'
+import { pinsFor, pinTarget } from './pins'
 import { PlaceDrawer } from './PlaceDrawer'
 import { TripDrawer } from './TripDrawer'
 
@@ -142,38 +143,9 @@ export function Travel({ data }: { data: TravelData }) {
   const nightsAway = upcoming.reduce((sum, t) => sum + nights(t), 0)
   const pastSpend = past.reduce((sum, t) => sum + t.spentCents, 0)
 
-  // Pins: upcoming trips in the accent with a label, places visited in grey,
-  // wishes as dashed rings.
-  //
-  // One pin per destination, because a trip through four cities is four places
-  // on the globe and drawing only the first was the whole reason destinations
-  // exist. A trip with no destination rows falls back to its own coordinates,
-  // which is every trip written through write_trip without a set. A trip with
-  // neither draws nothing.
-  const tripPins = (trips: TravelData['trips'], kind: Pin['kind'], prefix: string): Pin[] =>
-    trips.flatMap((t) => {
-      const placed = data.destinations.filter(
-        (d) => d.tripId === t.id && d.lat !== null && d.lon !== null,
-      )
-      if (placed.length > 0) {
-        return placed.map((d) => ({
-          id: `${prefix}-${d.id}`,
-          name: d.name || t.name,
-          country: '',
-          lat: d.lat!,
-          lon: d.lon!,
-          kind,
-        }))
-      }
-      if (t.lat === null || t.lon === null) return []
-      return [{ id: `${prefix}-${t.id}`, name: t.destination || t.name, country: '', lat: t.lat, lon: t.lon, kind }]
-    })
-
-  const pins: Pin[] = [
-    ...tripPins(upcoming, 'upcoming', 'trip'),
-    ...data.places.map((p) => ({ id: `place-${p.id}`, name: p.name, country: p.country, lat: p.lat, lon: p.lon, kind: 'past' as const })),
-    ...tripPins(wishlist, 'wishlist', 'wish'),
-  ]
+  // Upcoming trips in the accent, places visited and past trips in grey, wishes
+  // as dashed rings. Which trip becomes which pin is in ./pins.ts, tested.
+  const pins = pinsFor({ upcoming, past, wishlist, destinations: data.destinations, places: data.places })
 
   const openTrip = data.trips.find((t) => t.id === params.get('trip')) ?? null
   const openPlace = data.places.find((p) => p.id === params.get('place')) ?? null
@@ -261,12 +233,9 @@ export function Travel({ data }: { data: TravelData }) {
         <Globe
           pins={pins}
           onPick={(id) => {
-            // A visited place opens the trip it was part of; one with no
-            // trip, or whose trip is gone, opens as itself.
-            const place = id.startsWith('place-') ? data.places.find((p) => p.id === id.slice(6)) : undefined
-            const trip = place ? place.tripId : id.startsWith('trip-') || id.startsWith('wish-') ? id.slice(5) : null
-            if (trip && data.trips.some((t) => t.id === trip)) setParams({ trip, new: null, place: null }, { push: true })
-            else if (place) setParams({ place: place.id, trip: null, new: null }, { push: true })
+            const target = pinTarget(id, data.places, (t) => data.trips.some((trip) => trip.id === t))
+            if (target && 'trip' in target) setParams({ trip: target.trip, new: null, place: null }, { push: true })
+            else if (target) setParams({ place: target.place, trip: null, new: null }, { push: true })
           }}
           alert={
             data.alert && (
