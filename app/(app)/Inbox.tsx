@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
-import { readAlert, snooze } from './notifications/actions'
+import { readAlert, snoozeAlert } from './notifications/actions'
 import { approveProposal, dismissProposal } from './review/actions'
 
 // The two tiles you act on without leaving the dashboard.
@@ -81,7 +81,7 @@ export function WarningList({
                   type="button"
                   className={MINI}
                   disabled={pending}
-                  onClick={() => act(w.id, () => snooze(w.id, 1))}
+                  onClick={() => act(w.id, () => snoozeAlert(w.id, 1))}
                 >
                   1d
                 </button>
@@ -89,7 +89,7 @@ export function WarningList({
                   type="button"
                   className={MINI}
                   disabled={pending}
-                  onClick={() => act(w.id, () => snooze(w.id, 7))}
+                  onClick={() => act(w.id, () => snoozeAlert(w.id, 7))}
                 >
                   7d
                 </button>

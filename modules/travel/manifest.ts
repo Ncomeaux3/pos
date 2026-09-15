@@ -337,6 +337,7 @@ export default defineModule({
         title: `${r.name} begins`,
         meta: r.destination || 'No destination yet',
         at: r.starts_on,
+        href: `/travel?trip=${r.id}`,
       }))
     },
   },

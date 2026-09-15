@@ -191,6 +191,7 @@ export default defineModule({
         title: r.merchant,
         meta: `$${(Number(r.amount_cents) / 100).toFixed(2)}, ${r.cadence}`,
         at: r.next_charge_on,
+        href: '/finance?tab=subscriptions',
       }))
     },
   },

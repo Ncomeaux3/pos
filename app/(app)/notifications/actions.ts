@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireOwner } from '@/core/auth'
 import type { RulePatch } from '@/core/notification-rules'
-import { markAllRead, markRead, patchRule, snoozeRule } from '@/core/notify'
+import { markAllRead, markRead, patchRule, snoozeNotification, snoozeRule } from '@/core/notify'
 import { setSetting, type SettingKey, type Settings } from '@/core/settings'
 
 // Server actions are standalone POST endpoints addressed by id, so the (app)
@@ -37,6 +37,17 @@ export async function snooze(id: string, days: number): Promise<ActionResult> {
   try {
     if (days === 0) await patchRule(id, { snooze_until: null })
     else await snoozeRule(id, days)
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+/** One alert, not its rule: the dashboard's Snooze holds this row only. */
+export async function snoozeAlert(id: string, days: number): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    await snoozeNotification(id, days)
     return done()
   } catch (error) {
     return failed(error)
