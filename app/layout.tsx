@@ -15,6 +15,20 @@ const manrope = Manrope({
 export const metadata: Metadata = {
   title: 'POS',
   description: 'Personal operating system',
+  // iOS reads the startup image at install and only for an exact size match,
+  // so this is the owner's phone (iPhone 16 Pro Max, 440 x 956 at 3x) and no
+  // other. Android takes its splash from the manifest.
+  appleWebApp: {
+    capable: true,
+    title: 'POS',
+    statusBarStyle: 'black-translucent',
+    startupImage: [
+      {
+        url: '/splash/iphone-16-pro-max.png',
+        media: '(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3)',
+      },
+    ],
+  },
 }
 
 // The address bar matches the page ground in whichever theme is active.

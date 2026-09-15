@@ -201,7 +201,18 @@ export function TaskDrawer({
           </label>
           <label className="flex flex-col gap-1.5">
             <Eyebrow>Time · optional</Eyebrow>
-            <input type="time" value={draft.time} onChange={set('time')} className={cn(field, 'num py-2')} />
+            <div className="flex items-center gap-2">
+              <input type="time" value={draft.time} onChange={set('time')} className={cn(field, 'num py-2')} />
+              {draft.time && (
+                <button
+                  type="button"
+                  onClick={() => setDraft((d) => ({ ...d, time: '' }))}
+                  className="text-[12px] text-ink-3 transition-colors duration-150 hover:text-ink"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </label>
           <label className="flex flex-col gap-1.5">
             <Eyebrow>Remind me</Eyebrow>

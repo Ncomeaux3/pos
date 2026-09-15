@@ -41,41 +41,6 @@ export function Sparkline({
   )
 }
 
-/** One cell per job, coloured by its last status. The system tile. */
-export function HeatStrip({
-  cells,
-  className,
-  cellClassName,
-}: {
-  cells: { label: string; status: string | null }[]
-  className?: string
-  /** The dashboard draws the strip as an 11 column grid of wide cells. */
-  cellClassName?: string
-}) {
-  const colour = (status: string | null) =>
-    status === 'ok'
-      ? 'bg-ok'
-      : status === 'failed'
-        ? 'bg-bad'
-        : status === 'running'
-          ? 'bg-warn'
-          : 'bg-ink-4'
-
-  return (
-    <div className={cn('flex flex-wrap gap-1', className)}>
-      {cells.map((cell) => (
-        // Colour is never the only carrier: the title says which job and how it
-        // went, and the tile lists the failures in words underneath.
-        <span
-          key={cell.label}
-          title={`${cell.label}: ${cell.status ?? 'never run'}`}
-          className={cn(cellClassName ?? 'h-2.5 w-2.5 rounded-[2px]', colour(cell.status))}
-        />
-      ))}
-    </div>
-  )
-}
-
 /** A bar with an optional pace mark, for budgets and spend against a cap. */
 export function PaceBar({
   value,

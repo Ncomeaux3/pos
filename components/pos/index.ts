@@ -7,7 +7,6 @@ export { BandSearch, SearchButton } from './BandSearch'
 export { Eyebrow, StatusDot, type DotTone } from './text'
 export { ComeauxverseMark, ComeauxverseLockup } from './Logo'
 export {
-  HeatStrip,
   PaceBar,
   Radar,
   Sparkline,

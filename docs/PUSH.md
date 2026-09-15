@@ -50,6 +50,42 @@ next send rather than retried forever. Any other failure is counted and left
 alone, because a push service having a bad minute is not a reason to lose a
 device.
 
+## Why enabling failed
+
+Diagnosed 2026-09-14 (v1.1 Phase 1), in the plan's order, on the owner's Mac
+against production.
+
+(a) Uncookied, `GET /sw.js` answers `307 -> /login` (curl, 02:32 UTC): the
+auth proxy matcher excludes `icons/` and the manifest but not `sw.js`. This is
+not what broke enabling. Signed in, the same fetch is `200` then `304`
+(Vercel runtime log, 03:06 UTC), so the worker registers and the matcher is
+left alone. A browser fetching the script for an update with an expired
+session gets the 307 and keeps the worker it has, which is the right outcome.
+
+Before that, the first press on the desktop toasted "The browser refused.
+Notifications are blocked for this site.": `Notification.requestPermission()`
+returned `denied` because Chrome held a Block for the site from an earlier
+dismissed prompt. Site settings > Notifications > Allow cleared it. That is a
+per-browser setting, not something the app can change.
+
+(b) The second press toasted `Failed to execute 'atob' on 'Window': The
+string to be decoded is not correctly encoded.` That is
+`urlBase64ToUint8Array(vapidPublicKey)` in `Devices.tsx`, so the value of
+`VAPID_PUBLIC_KEY` in Vercel Production is not base64url. A key from
+`web-push` is 87 characters of `A-Z a-z 0-9 - _` and nothing else; a pasted
+quote, a trailing newline or a space breaks `atob`. This is the cause on both
+devices at once: every browser reads the same key.
+
+Fix, done 2026-09-14: Vercel does not reveal a sensitive variable once saved,
+so the pair was generated again with `web-push`, both values set again in
+Production with `vercel env rm` and `vercel env add` (no quotes, the public key
+87 characters, the private 43), and the site redeployed. The next press
+toasted "This device will get push now." Rotating the pair invalidates any
+device that had subscribed, which was none. Do the phone next: it needs the
+app installed to the home screen first (below).
+
+(c) and (d) were not needed.
+
 ## On an iPhone
 
 Safari only offers push to an installed PWA, so the app has to be added to the
