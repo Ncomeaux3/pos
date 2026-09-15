@@ -365,19 +365,23 @@ export default async function DashboardPage() {
       />
 
       <section className="mt-[26px]">
-        {/* items-start with the dot nudged down: at 402 the line wraps, and a
-          * centred dot would float in the gap between the two lines. */}
-        <Link href="/agent-log" className="eyebrow items-start text-ink-3 hover:text-ink">
+        {/* One line at every width: the "Nightly summary" prefix is desktop
+          * only, since with "Agent Log" on the end it wraps at 402 and the
+          * phone Home has a height budget. */}
+        <Link href="/agent-log" className="eyebrow text-ink-3 hover:text-ink">
           <span
-            className="status-dot mt-[5px]"
+            className="status-dot"
             data-tone={failed.length > 0 ? 'bad' : latest ? 'ok' : 'idle'}
             aria-hidden="true"
           />
           {/* The run's own clock, in the owner's zone, as the artboard writes
             * it: "Last run 04:02 CDT · ok". */}
-          {latest
-            ? `Nightly summary · Last run ${clockIn(new Date(latest.runAt), settings.timezone)} ${zoneAbbrIn(settings.timezone)} · ${failed.length > 0 ? `${failed.length} failed` : 'ok'} · Agent Log`
-            : 'No run yet · Agent Log'}
+          <span>
+            <span className="max-md:hidden">Nightly summary · </span>
+            {latest
+              ? `Last run ${clockIn(new Date(latest.runAt), settings.timezone)} ${zoneAbbrIn(settings.timezone)} · ${failed.length > 0 ? `${failed.length} failed` : 'ok'} · Agent Log`
+              : 'No run yet · Agent Log'}
+          </span>
         </Link>
         {/* The opening statement, at the size the design gives it. It is the
           * first thing on the page and reads as a sentence, not a heading, and
