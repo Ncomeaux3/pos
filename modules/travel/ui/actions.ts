@@ -109,12 +109,29 @@ export async function saveTrip(input: {
   travellers?: number
   status?: 'idea' | 'planned' | 'booked' | 'done'
   notes?: string
+  /** The whole set, in order. Left out entirely to leave the destinations alone. */
+  destinations?: {
+    name: string
+    lat?: number | null
+    lon?: number | null
+    starts_on?: string | null
+    ends_on?: string | null
+  }[]
 }): Promise<ActionResult> {
   return through('write_trip', input)
 }
 
 export async function deleteTrip(id: string): Promise<ActionResult> {
   return through('delete_trip', { id })
+}
+
+/**
+ * Fold one trip into another. Guarded, like every other write to a trip, so it
+ * lands in the review inbox when an agent asks for it and goes straight
+ * through when the owner presses the button.
+ */
+export async function mergeTrip(id: string, into: string): Promise<ActionResult> {
+  return through('merge_trip', { id, into })
 }
 
 export async function saveItem(input: {

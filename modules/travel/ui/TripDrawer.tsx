@@ -12,6 +12,7 @@ import {
   deleteBudgetLine,
   deleteItem,
   deleteTrip,
+  mergeTrip,
   saveBudgetLine,
   saveItem,
   savePacking,
@@ -87,6 +88,10 @@ export function TripDrawer({
   const tab: Tab = tabParam === 'budget' || tabParam === 'packing' || tabParam === 'inbox' ? tabParam : 'itin'
   const setTab = onTab
   const [editing, setEditing] = useState(false)
+  // Held rather than read off the event so the select can be put back when the
+  // confirm is declined; leaving it showing a trip that was not merged reads
+  // as though it had been.
+  const [mergeInto, setMergeInto] = useState('')
   const [, start] = useTransition()
   const toast = useToast()
   const run = (action: () => Promise<ActionResult>, ok?: string, then?: () => void) =>
@@ -113,6 +118,11 @@ export function TripDrawer({
 
   const items = data.itinerary.filter((i) => i.tripId === trip.id)
   const confirmed = items.filter((i) => i.status === 'confirmed')
+  // Everything but this trip, by name, because the select is read rather than
+  // scanned for a date.
+  const others = data.trips
+    .filter((t) => t.id !== trip.id)
+    .sort((a, b) => a.name.localeCompare(b.name))
   const pending = items.filter((i) => i.status === 'pending')
   const packing = data.packing.filter((p) => p.tripId === trip.id)
   const lines = data.budgetLines.filter((l) => l.tripId === trip.id)
@@ -163,6 +173,39 @@ export function TripDrawer({
               'Check-in reminders are off in Notifications.'
             )}
           </span>
+          {/* Four trips to the same country were four trips because a trip
+            * held one destination. Merging folds one into another as a
+            * destination rather than deleting it, so nothing that was planned
+            * under it is lost. */}
+          {others.length > 0 && (
+            <select
+              value={mergeInto}
+              aria-label="Merge into"
+              onChange={(e) => {
+                const into = e.target.value
+                if (!into) return
+                const target = others.find((t) => t.id === into)
+                if (
+                  target &&
+                  window.confirm(
+                    `Merge ${trip.name} into ${target.name}? Its destinations, itinerary, packing and budget move across, and ${trip.name} is deleted.`,
+                  )
+                ) {
+                  run(() => mergeTrip(trip.id, into), 'Trips merged', onClose)
+                  return
+                }
+                setMergeInto('')
+              }}
+              className="border border-rule-2 bg-transparent px-1.5 py-0.5 text-[12px] text-ink-3"
+            >
+              <option value="">Merge into…</option>
+              {others.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          )}
           <button
             type="button"
             onClick={() => {
