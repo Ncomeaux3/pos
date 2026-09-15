@@ -26,8 +26,11 @@ export type Task = {
   status: 'open' | 'review' | 'done'
   projectId: string | null
   projectName: string | null
+  /** The goal it counts toward: its own, else its project's. */
   goalRef: string | null
   goalTitle: string | null
+  ownGoalRef: string | null
+  projectGoalRef: string | null
   estimateMinutes: number | null
   remindMinutes: number | null
   source: string
@@ -211,7 +214,9 @@ export function columnsFor(
         tone: 'ink-3',
         drop: { projectId: null },
         empty: 'Everything is filed',
-        filter: (t) => isOpen(t) && !t.projectId,
+        // Also a task whose project was archived: it has no column of its
+        // own, and a task that vanishes from a view is not a view.
+        filter: (t) => isOpen(t) && !context.projects.some((p) => p.id === t.projectId),
       }),
     ]
   }

@@ -3,7 +3,7 @@ import { db } from '@/core/db'
 import { ownerToday } from '@/core/today'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
-import { deleteTask, findOrCreateProject, listByGoal, patchTask } from './data'
+import { deleteTask, findOrCreateProject, listByGoal, patchProject, patchTask } from './data'
 import { nightlyDigest, rollCounts, rollForward } from './jobs/nightly-digest'
 import { dueLabel, loadLabel, slipMeta } from './shape'
 import TasksPage from './ui/TasksPage'
@@ -107,6 +107,31 @@ export default defineModule({
         })
 
         return { id: rows[0].id, status }
+      },
+    }),
+
+    write_project: defineTool({
+      description:
+        'Create a project, or update one by passing its id: rename it, point it at a goal, or archive it. Its tasks count toward the goal unless they name their own.',
+      input: z.object({
+        id: z.uuid().optional(),
+        name: z.string().min(1).max(80).optional(),
+        goal_ref: z.uuid().nullable().optional(),
+        archived: z.boolean().optional(),
+      }),
+      run: async (input) => {
+        if (!input.id && !input.name) throw new Error('A new project needs a name')
+        const id = input.id ?? (await findOrCreateProject(input.name!))
+        await patchProject(id, {
+          ...(input.id && input.name !== undefined && { name: input.name }),
+          ...(input.goal_ref !== undefined && { goal_ref: input.goal_ref }),
+          // A new project by an archived name comes back rather than staying
+          // hidden behind the upsert.
+          ...(input.archived !== undefined
+            ? { archived: input.archived }
+            : !input.id && { archived: false }),
+        })
+        return { id }
       },
     }),
 

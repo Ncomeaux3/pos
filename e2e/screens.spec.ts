@@ -1404,6 +1404,46 @@ test('tasks, Delete asks and then removes the row', async ({ page }) => {
   await expect(page.locator('article').filter({ hasText: 'Throw away this row' })).toHaveCount(0)
 })
 
+test('tasks, a project lends its goal to its tasks, and the plus knows its column', async ({ page }) => {
+  await page.goto('/tasks?view=project')
+
+  // Projects is a drawer over the By project view. A project made here takes a
+  // goal, and from then on a task filed under it counts toward that goal.
+  await page.getByRole('button', { name: 'Projects', exact: true }).click()
+  const projects = page.getByRole('dialog')
+  await projects.getByLabel('New project').fill('Phase6')
+  await projects.getByRole('button', { name: 'Add' }).click()
+  await expect(page.getByText('Added. Phase6')).toBeVisible()
+  await projects.getByLabel('Phase6 goal').selectOption({ label: 'Net worth $300k' })
+  await expect(page.getByText('Saved')).toBeVisible()
+  await page.keyboard.press('Escape')
+
+  const line = page.getByLabel('Add a task')
+  await line.fill('Fund the brokerage #Phase6')
+  await line.press('Enter')
+  await expect(page.getByText('Added. Fund the brokerage')).toBeVisible()
+
+  // The goal drawer lists it through the linked seam, which reads the same
+  // coalesce as the board: the task has no goal of its own.
+  await page.goto('/goals')
+  await page.getByRole('button', { name: /Net worth \$300k/ }).click()
+  const goal = page.getByRole('dialog')
+  await expect(goal.getByText('Linked tasks')).toBeVisible()
+  await expect(goal.getByText('Fund the brokerage').first()).toBeVisible()
+
+  // The plus on a By goal column opens New task with that goal chosen, and
+  // Pick a date reveals a native date input that takes any day.
+  await page.goto('/tasks?view=goal')
+  await page.getByRole('button', { name: 'New task in Net worth $300k' }).click()
+  const drawer = page.getByRole('dialog')
+  await expect(drawer.getByText('Tasks / New task')).toBeVisible()
+  await expect(drawer.getByLabel(/^Goal/).locator('option:checked')).toHaveText('Net worth $300k')
+  await drawer.getByLabel('Due', { exact: true }).selectOption('date')
+  const date = drawer.getByLabel('Due date')
+  await date.fill('2026-12-24')
+  await expect(date).toHaveValue('2026-12-24')
+})
+
 test('goals, progress by area with the rule behind each status', async ({ page }) => {
   await page.goto('/goals')
   await expect(page.getByRole('heading', { name: 'Goals' })).toBeVisible()

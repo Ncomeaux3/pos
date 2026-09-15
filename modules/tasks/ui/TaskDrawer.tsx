@@ -12,13 +12,10 @@ import { writeTask, type ActionResult, type WriteInput } from './actions'
 // until Save, with Delete in the footer for an existing task. The same form
 // with Create at the bottom is New task.
 
-const DOWS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
 const field =
   'w-full border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand'
 
-/** The artboard's due options, with the task's own date first when it has one. */
+/** The artboard's due options. `date` reveals a native date input beside the select. */
 const DUE_DAYS: Record<string, number | null> = {
   today: 0,
   tomorrow: 1,
@@ -40,6 +37,11 @@ function isoFrom(today: Date, days: number): string {
   return d.toISOString().slice(0, 10)
 }
 
+function daysFrom(today: Date, iso: string): number {
+  const [y, m, d] = iso.split('-').map(Number)
+  return Math.round((new Date(y, m - 1, d).getTime() - today.getTime()) / 86_400_000)
+}
+
 export function TaskDrawer({
   task,
   projects,
@@ -49,47 +51,50 @@ export function TaskDrawer({
   onClose,
   onSave,
   onDelete,
+  prefill,
 }: {
   /** Null is New task. */
   task: Task | null
-  projects: { id: string; name: string }[]
+  projects: { id: string; name: string; goalRef: string | null }[]
   goals: { id: string; title: string }[]
   today: Date
   reminderChannels: string[] | null
   onClose: () => void
   onSave: (action: () => Promise<ActionResult>, ok?: string) => void
   onDelete?: () => void
+  /** What the view that opened New task already implies: a due date, goal or project. */
+  prefill?: Partial<WriteInput>
 }) {
-  // The task's date as a select value: one of the named options when it is
-  // one, the date itself otherwise, which the select lists first.
+  // The date as a select value: a named option when it is one, else `date`
+  // with the day itself in the input beside it. A new task is due today unless
+  // the column it was added from says otherwise.
+  const dueInDays = task
+    ? task.dueInDays
+    : prefill?.due_on === undefined
+      ? 0
+      : prefill.due_on === null
+        ? null
+        : daysFrom(today, prefill.due_on)
   const dateKey =
-    task?.dueInDays === null || task === null
-      ? 'none'
-      : task.dueInDays === 0
-        ? 'today'
-        : task.dueInDays === 1
-          ? 'tomorrow'
-          : isoFrom(today, task.dueInDays)
-  const dateLabel =
-    task && task.dueInDays !== null && dateKey.includes('-')
-      ? (() => {
-          const d = new Date(today)
-          d.setDate(d.getDate() + task.dueInDays)
-          return `${DOWS[d.getDay()]} ${MONTHS[d.getMonth()]} ${d.getDate()}`
-        })()
-      : null
+    dueInDays === null ? 'none' : dueInDays === 0 ? 'today' : dueInDays === 1 ? 'tomorrow' : 'date'
 
   const [draft, setDraft] = useState({
     title: task?.title ?? '',
-    due: task ? dateKey : 'today',
+    due: dateKey,
+    dueDate: dueInDays === null ? '' : isoFrom(today, dueInDays),
     priority: task?.priority ?? 'P2',
-    project: task?.projectName ?? '',
+    project: task?.projectName ?? prefill?.project ?? '',
     time: task?.dueAt ?? '',
     remind: task?.remindMinutes === null || !task ? '' : String(task.remindMinutes),
     estimate: task?.estimateMinutes === null || !task ? '' : String(task.estimateMinutes),
-    goal: task?.goalRef ?? '',
+    // The task's own goal. What it inherits from the project is a caption, not
+    // a value, so saving never copies the project's goal onto the task.
+    goal: task?.ownGoalRef ?? prefill?.goal_ref ?? '',
     notes: task?.notes ?? '',
   })
+  const inherited = draft.goal
+    ? null
+    : goals.find((g) => g.id === projects.find((p) => p.name === draft.project)?.goalRef)
   const set = (key: keyof typeof draft) => (e: { target: { value: string } }) =>
     setDraft((d) => ({ ...d, [key]: e.target.value }))
 
@@ -100,9 +105,12 @@ export function TaskDrawer({
       ...(task && { id: task.id }),
       title,
       notes: draft.notes,
-      due_on: draft.due in DUE_DAYS
-        ? (DUE_DAYS[draft.due] === null ? null : isoFrom(today, DUE_DAYS[draft.due]!))
-        : draft.due,
+      due_on:
+        draft.due === 'date'
+          ? draft.dueDate || null
+          : DUE_DAYS[draft.due] === null
+            ? null
+            : isoFrom(today, DUE_DAYS[draft.due]!),
       due_at: draft.time || null,
       priority: draft.priority,
       project: draft.project || null,
@@ -169,17 +177,28 @@ export function TaskDrawer({
         </label>
 
         <div className="grid grid-cols-2 gap-3">
-          <label className="flex flex-col gap-1.5">
+          <div className={cn('flex flex-col gap-1.5', draft.due === 'date' && 'col-span-2')}>
             <Eyebrow>Due</Eyebrow>
-            <select value={draft.due} onChange={set('due')} className={field}>
-              {dateLabel && <option value={dateKey}>{dateLabel}</option>}
-              <option value="today">Today</option>
-              <option value="tomorrow">Tomorrow</option>
-              <option value="week">This week</option>
-              <option value="later">Later</option>
-              <option value="none">No date</option>
-            </select>
-          </label>
+            <div className="flex items-center gap-2">
+              <select aria-label="Due" value={draft.due} onChange={set('due')} className={field}>
+                <option value="today">Today</option>
+                <option value="tomorrow">Tomorrow</option>
+                <option value="week">This week</option>
+                <option value="later">Later</option>
+                <option value="date">Pick a date</option>
+                <option value="none">No date</option>
+              </select>
+              {draft.due === 'date' && (
+                <input
+                  type="date"
+                  aria-label="Due date"
+                  value={draft.dueDate}
+                  onChange={set('dueDate')}
+                  className={cn(field, 'num')}
+                />
+              )}
+            </div>
+          </div>
           <label className="flex flex-col gap-1.5">
             <Eyebrow>Priority</Eyebrow>
             <select value={draft.priority} onChange={set('priority')} className={cn(field, 'num')}>
@@ -238,13 +257,16 @@ export function TaskDrawer({
         <label className="flex flex-col gap-1.5">
           <Eyebrow>Goal</Eyebrow>
           <select value={draft.goal} onChange={set('goal')} className={field}>
-            <option value="">None</option>
+            <option value="">{inherited ? 'From the project' : 'None'}</option>
             {goals.map((g) => (
               <option key={g.id} value={g.id}>
                 {g.title}
               </option>
             ))}
           </select>
+          {inherited && (
+            <span className="text-[11px] text-ink-2">Inherits {inherited.title} from the project</span>
+          )}
         </label>
 
         <label className="flex flex-col gap-1.5">

@@ -13,6 +13,8 @@ const task = (over: Partial<Task> = {}): Task => ({
   projectName: null,
   goalRef: null,
   goalTitle: null,
+  ownGoalRef: null,
+  projectGoalRef: null,
   estimateMinutes: null,
   remindMinutes: null,
   skills: [],

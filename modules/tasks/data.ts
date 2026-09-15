@@ -17,8 +17,11 @@ export type TaskRow = {
   status: TaskStatus
   project_id: string | null
   project_name: string | null
+  /** The goal it counts toward: its own, else its project's. */
   goal_ref: string | null
   goal_title: string | null
+  own_goal_ref: string | null
+  project_goal_ref: string | null
   estimated_minutes: number | null
   remind_minutes: number | null
   source: string
@@ -30,7 +33,11 @@ export type TaskRow = {
 const SELECT = `
   select t.id, t.title, t.notes, t.due_on::text, t.due_at::text, t.priority, t.status,
          t.project_id, p.name as project_name,
-         t.goal_ref, g.title as goal_title,
+         -- A task counts toward its own goal, else its project's. One
+         -- expression here and in listByGoal, so the board and the Goals
+         -- drawer cannot disagree.
+         coalesce(t.goal_ref, p.goal_ref) as goal_ref, g.title as goal_title,
+         t.goal_ref as own_goal_ref, p.goal_ref as project_goal_ref,
          t.estimated_minutes, t.remind_minutes, t.source, t.completed_at,
          -- On the owner's calendar, in the database, because a completion at
          -- 20:00 in Chicago is tomorrow in UTC and was showing as yesterday's.
@@ -42,7 +49,7 @@ const SELECT = `
     left join tasks.project p on p.id = t.project_id
     -- The goal's title comes from the core registry, so this join works before
     -- the goals module exists and needs no change when it lands.
-    left join core.entities g on g.id = t.goal_ref`
+    left join core.entities g on g.id = coalesce(t.goal_ref, p.goal_ref)`
 
 /**
  * Everything open or in review, plus what was completed in the last week. The
@@ -63,11 +70,11 @@ export async function getTask(id: string): Promise<TaskRow | null> {
   return rows[0] ?? null
 }
 
-export type Project = { id: string; name: string; position: number }
+export type Project = { id: string; name: string; position: number; goal_ref: string | null }
 
 export async function listProjects(): Promise<Project[]> {
   const { rows } = await db().query<Project>(
-    `select id, name, position from tasks.project
+    `select id, name, position, goal_ref from tasks.project
       where archived = false order by position, name`,
   )
   return rows
@@ -92,10 +99,11 @@ export async function listByGoal(
   goalRef: string,
 ): Promise<{ title: string; due_in_days: number | null; done: boolean }[]> {
   const { rows } = await db().query<{ title: string; due_in_days: number | null; done: boolean }>(
-    `select title, (due_on - core.today())::int as due_in_days, status = 'done' as done
-       from tasks.task
-      where goal_ref = $1
-      order by status = 'done', due_on nulls last, priority`,
+    `select t.title, (t.due_on - core.today())::int as due_in_days, t.status = 'done' as done
+       from tasks.task t
+       left join tasks.project p on p.id = t.project_id
+      where coalesce(t.goal_ref, p.goal_ref) = $1
+      order by t.status = 'done', t.due_on nulls last, t.priority`,
     [goalRef],
   )
   return rows
@@ -141,6 +149,22 @@ export async function patchTask(id: string, patch: TaskPatch): Promise<void> {
 
   const set = fields.map((f, i) => `${f} = $${i + 2}`).join(', ')
   await db().query(`update tasks.task set ${set} where id = $1`, [
+    id,
+    ...fields.map((f) => patch[f]),
+  ])
+}
+
+/** Same guard as PATCHABLE, for the project table. */
+const PROJECT_PATCHABLE = ['name', 'goal_ref', 'archived'] as const
+
+export type ProjectPatch = Partial<Record<(typeof PROJECT_PATCHABLE)[number], unknown>>
+
+export async function patchProject(id: string, patch: ProjectPatch): Promise<void> {
+  const fields = PROJECT_PATCHABLE.filter((f) => f in patch)
+  if (fields.length === 0) return
+
+  const set = fields.map((f, i) => `${f} = $${i + 2}`).join(', ')
+  await db().query(`update tasks.project set ${set} where id = $1`, [
     id,
     ...fields.map((f) => patch[f]),
   ])

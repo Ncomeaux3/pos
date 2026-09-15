@@ -49,6 +49,24 @@ export async function writeTask(input: WriteInput): Promise<ActionResult> {
   }
 }
 
+export type ProjectInput = {
+  id?: string
+  name?: string
+  goal_ref?: string | null
+  archived?: boolean
+}
+
+export async function writeProject(input: ProjectInput): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    const result = await callTool('tasks', 'write_project', input, { source: 'ui' })
+    const id = (result.status === 'done' ? (result.result as { id?: string }) : null)?.id
+    return done(id)
+  } catch (error) {
+    return failed(error)
+  }
+}
+
 export async function completeTask(id: string, done_ = true): Promise<ActionResult> {
   await requireOwner()
   try {
