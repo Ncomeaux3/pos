@@ -105,9 +105,12 @@ Two sources are built and live in production (PRs #17, #18, #19, all
       its webhook is already built and tested. Copy the URL and secret from
       its Connections card into the app's REST automation as the
       `x-pos-secret` header, enable Workouts (export version 2), run once,
-      cancel the subscription after if you like. Or say the word and I plan a
-      native iOS companion app (exact, but a new codebase and a $99 a year
-      developer account).
+      cancel the subscription after if you like. Also export the same payload
+      to a file (the app's share sheet) and drop it in the chat: the request
+      log keeps no body, and that JSON is the fixture Phase 11 left open for
+      `integrations/health_auto_export/client.test.ts`. Or say the word and I
+      plan a native iOS companion app (exact, but a new codebase and a $99 a
+      year developer account).
 
 ## Left over from the first run
 

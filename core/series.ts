@@ -1,4 +1,5 @@
-// The net worth chart draws a date axis, not a list of rows.
+// A chart draws a date axis, not a list of rows. Shared by the net worth
+// chart and the fitness trends; the comment below is the case that found it.
 //
 // netWorthSeries returns one row per day that has a balance, which on a fresh
 // install is two rows. Drawn evenly spaced those two rows became a line across

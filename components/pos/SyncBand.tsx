@@ -19,6 +19,7 @@ export function SyncBand({
   at,
   status,
   connected = true,
+  arrived,
   onSync,
 }: {
   /** The integration's label, or null when the module imports from nothing. */
@@ -28,6 +29,8 @@ export function SyncBand({
   status: string | null
   /** False when the provider has no credentials. */
   connected?: boolean
+  /** ISO timestamp of the last inbound payload from a phone, where a module takes one. */
+  arrived?: string | null
   onSync: () => Promise<{ ran: number; failed: string[] }>
 }) {
   const [pending, start] = useTransition()
@@ -63,6 +66,14 @@ export function SyncBand({
               ? `synced ${clock(at)}`
               : 'never synced'}
       </Eyebrow>
+      {/* Inbound data has no job row to read, so it gets its own line rather
+        * than moving the provider's clock: "Strava · synced 07:02" for an
+        * Apple payload would name the wrong source. */}
+      {arrived !== undefined && (
+        <span className="num hidden text-[11px] text-ink-3 md:inline">
+          Apple data last arrived {arrived ? clock(arrived) : 'never'}
+        </span>
+      )}
       {/* The DS button at 51px on the desktop band, the 44px control on a phone. */}
       <ActionButton
         variant="solid"

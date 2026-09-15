@@ -13,7 +13,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-15 (Phase 7b). Branch `main`, production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-15 (Phase 11). Branch `main`, production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -38,6 +38,26 @@ and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
 ## Done
+
+**v1.1 Phase 11, fitness** (2026-09-15, branch `phase-11-fitness`). The
+net worth chart's drawing is now `components/pos/LineChart.tsx` (its own
+client file, the crosshair needs state) over `spine()` in `core/series.ts`,
+with `NetWorthChart` a wrapper that passes the money formatters. Fitness gains
+a Trends tab (metric select, 30/90/365, weight's thirty days rendered with the
+page and the rest through `readMetricSeries`), a filter row on Workouts
+(kind, source, from, to; the URL written locally, the rows from
+`readWorkouts` over the same `screenWorkouts()` the page renders from), a
+`PlanDrawer` over `write_plan` through `callTool` (New plan on the empty
+state, Edit on the card head; item notes carried, not edited), and the band's
+"Apple data last arrived <when>" from `core.request_log` on its own line
+beside Strava's clock. The demo seed writes 14 weight readings over 40 days.
+Four e2e tests: Trends counts 10 of 30 and 14 of 90 recorded, the filter
+narrows and survives a reload, the plan drawer adds a day and removes it, and
+a weight posted to the Health Auto Export webhook (secret read from the
+Connections card) shows on `/health` and moves the band's Apple line. Still
+open: the owner step, one real Health Auto Export export as the
+`client.test.ts` fixture; `core.request_log` holds no body, so it will come
+from the app's share sheet. Phase 12 (hardening) is the last v1.1 phase.
 
 **v1.1 Phase 7b, skill picker, remaining drawers** (2026-09-15, branch
 `phase-7b-skill-picker-rest`). The same `SkillPicker` block on the trip,
