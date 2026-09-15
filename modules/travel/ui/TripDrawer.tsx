@@ -20,6 +20,7 @@ import {
   suggestPlaces,
   type ActionResult,
 } from './actions'
+import { blankRow, rowsFor, toDestinations, type Row } from './rows'
 import { dateRange, money, nights, type Trip, type TravelData } from './Travel'
 
 // The trip drawer, as POS Travel.dc.html draws it: the trip's name and line,
@@ -109,6 +110,9 @@ export function TripDrawer({
     return (
       <TripForm
         trip={editing ? trip : null}
+        destinations={
+          editing && trip ? data.destinations.filter((d) => d.tripId === trip.id) : []
+        }
         mode={formMode}
         onClose={editing ? () => setEditing(false) : onClose}
         run={run}
@@ -659,46 +663,47 @@ function Inbox({ pending, run }: { pending: TravelData['itinerary']; run: Run })
   )
 }
 
-function TripForm({
-  trip,
-  mode,
-  onClose,
-  run,
+/**
+ * One destination: where, its coordinates, and when you are there.
+ *
+ * A component per row rather than one bag of state in the form, because the
+ * suggestion list is per field: it is debounced, it arrives late, and a slow
+ * answer for row one must not land in row three's datalist. Owning it here
+ * makes each row exactly the single-destination form this used to be.
+ */
+function DestinationFields({
+  row,
+  index,
+  canRemove,
+  showDates,
+  onChange,
+  onRemove,
 }: {
-  trip: Trip | null
-  mode: 'trip' | 'wish'
-  onClose: () => void
-  run: Run
+  row: Row
+  index: number
+  canRemove: boolean
+  showDates: boolean
+  /** A patch, not a whole row: see the handler in TripForm. */
+  onChange: (patch: Partial<Row>) => void
+  onRemove: () => void
 }) {
-  const [f, setF] = useState({
-    name: trip?.name ?? '',
-    destination: trip?.destination ?? '',
-    lat: trip?.lat === null || trip?.lat === undefined ? '' : String(trip.lat),
-    lon: trip?.lon === null || trip?.lon === undefined ? '' : String(trip.lon),
-    start: trip?.startsOn ?? '',
-    end: trip?.endsOn ?? '',
-    budget: trip ? String(Math.round(trip.budgetCents / 100)) : '',
-    travellers: trip ? String(trip.travellers) : '2',
-    notes: trip?.notes ?? '',
-  })
-  const set = (key: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF((v) => ({ ...v, [key]: e.target.value }))
-  const title = trip ? 'Edit details' : mode === 'wish' ? 'Add to wishlist' : 'New trip'
-
-  // Destination suggestions: debounced so typing does not fire a request per
-  // keystroke; picking a suggestion exactly fills lat/lon too, but a typed
-  // number still wins because Lat and Lon stay plain inputs.
   const [hits, setHits] = useState<Hit[]>([])
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latestQuery = useRef('')
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current) }, [])
-  const onDestination = (e: React.ChangeEvent<HTMLInputElement>) => {
+
+  const listId = `destination-hits-${row.key}`
+  const field = cn(fieldClass, 'w-full')
+
+  // Picking a suggestion exactly fills lat and lon too, but a typed number
+  // still wins, because Lat and Lon stay plain inputs.
+  const onName = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     const picked = hits.find((h) => h.label === value)
-    setF((v) => ({
-      ...v,
-      destination: picked ? picked.label.split(',')[0] : value,
+    onChange({
+      name: picked ? picked.label.split(',')[0] : value,
       ...(picked ? { lat: String(picked.lat), lon: String(picked.lon) } : {}),
-    }))
+    })
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
       // A slow answer to an earlier query must not replace a newer list.
@@ -708,22 +713,136 @@ function TripForm({
     }, 300)
     latestQuery.current = value
   }
+
+  return (
+    <div data-testid="destination-row" className="flex flex-col gap-3 border-l border-rule pl-3">
+      <div className="grid grid-cols-[1fr_96px_96px] gap-3">
+        <label className="flex flex-col gap-1.5">
+          <Eyebrow>{index === 0 ? 'Destination' : `Destination ${index + 1}`}</Eyebrow>
+          <input
+            value={row.name}
+            onChange={onName}
+            placeholder="City, country"
+            list={listId}
+            className={field}
+          />
+          <datalist id={listId}>
+            {hits.map((h) => (
+              <option key={`${h.label} ${h.lat} ${h.lon}`} value={h.label} />
+            ))}
+          </datalist>
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <Eyebrow>Lat</Eyebrow>
+          <input
+            value={row.lat}
+            onChange={(e) => onChange({ lat: e.target.value })}
+            placeholder="35.69"
+            className={cn(field, 'num')}
+          />
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <Eyebrow>Lon</Eyebrow>
+          <input
+            value={row.lon}
+            onChange={(e) => onChange({ lon: e.target.value })}
+            placeholder="139.69"
+            className={cn(field, 'num')}
+          />
+        </label>
+      </div>
+      {showDates && (
+        <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-3">
+          <label className="flex flex-col gap-1.5">
+            <Eyebrow>Arrive</Eyebrow>
+            <input
+              type="date"
+              value={row.start}
+              onChange={(e) => onChange({ start: e.target.value })}
+              className={cn(field, 'num')}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <Eyebrow>Leave</Eyebrow>
+            <input
+              type="date"
+              value={row.end}
+              onChange={(e) => onChange({ end: e.target.value })}
+              className={cn(field, 'num')}
+            />
+          </label>
+          {canRemove && (
+            <button
+              type="button"
+              onClick={onRemove}
+              aria-label={`Remove ${row.name || `destination ${index + 1}`}`}
+              className="h-[38px] px-2 text-[13px] text-ink-3 transition-colors duration-150 hover:text-bad"
+            >
+              Remove
+            </button>
+          )}
+        </div>
+      )}
+      {!showDates && canRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={`Remove ${row.name || `destination ${index + 1}`}`}
+          className="self-start text-[13px] text-ink-3 transition-colors duration-150 hover:text-bad"
+        >
+          Remove
+        </button>
+      )}
+    </div>
+  )
+}
+
+function TripForm({
+  trip,
+  destinations,
+  mode,
+  onClose,
+  run,
+}: {
+  trip: Trip | null
+  /** This trip's destinations, so the form opens on what it already has. */
+  destinations: TravelData['destinations']
+  mode: 'trip' | 'wish'
+  onClose: () => void
+  run: Run
+}) {
+  const [f, setF] = useState({
+    name: trip?.name ?? '',
+    budget: trip ? String(Math.round(trip.budgetCents / 100)) : '',
+    travellers: trip ? String(trip.travellers) : '2',
+    notes: trip?.notes ?? '',
+  })
+  const set = (key: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF((v) => ({ ...v, [key]: e.target.value }))
+
+  // The destination list. Initialised once, from the trip's rows or, for a
+  // trip that predates them, from its own place; never from nothing, or the
+  // first save would wipe what the trip already said.
+  const [rows, setRows] = useState<Row[]>(() => rowsFor(trip, destinations))
+  const title = trip ? 'Edit details' : mode === 'wish' ? 'Add to wishlist' : 'New trip'
+
+  // The wishlist is one place you would like to go, not an itinerary, so it
+  // keeps a single row and no dates.
+  const many = mode === 'trip'
+
   const save = () => {
     if (!f.name.trim()) return
-    const num = (v: string) => (v.trim() === '' ? null : Number(v))
     run(
       () =>
         saveTrip({
           id: trip?.id,
           name: f.name.trim(),
-          destination: f.destination.trim(),
-          lat: num(f.lat),
-          lon: num(f.lon),
           notes: f.notes,
-          ...(mode === 'trip'
+          // The trip's own destination, lat, lon and dates are not sent:
+          // write_trip derives them from this set, and sending both would put
+          // two answers in one call.
+          destinations: toDestinations(rows),
+          ...(many
             ? {
-                starts_on: f.start || null,
-                ends_on: f.end || null,
                 budget_cents: Math.round((Number(f.budget) || 0) * 100),
                 travellers: Math.max(1, Number(f.travellers) || 1),
                 status: trip ? undefined : ('planned' as const),
@@ -762,35 +881,34 @@ function TripForm({
           <Eyebrow>{mode === 'wish' ? 'Place' : 'Trip'}</Eyebrow>
           <input value={f.name} onChange={set('name')} placeholder="e.g. Tokyo · November" className={cn(field, 'text-[15px]')} />
         </label>
-        <div className="grid grid-cols-[1fr_96px_96px] gap-3">
-          <label className="flex flex-col gap-1.5">
-            <Eyebrow>Destination</Eyebrow>
-            <input value={f.destination} onChange={onDestination} placeholder="City, country" list="destination-hits" className={field} />
-            <datalist id="destination-hits">
-              {hits.map((h) => (
-                <option key={`${h.label} ${h.lat} ${h.lon}`} value={h.label} />
-              ))}
-            </datalist>
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <Eyebrow>Lat</Eyebrow>
-            <input value={f.lat} onChange={set('lat')} placeholder="35.69" className={cn(field, 'num')} />
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <Eyebrow>Lon</Eyebrow>
-            <input value={f.lon} onChange={set('lon')} placeholder="139.69" className={cn(field, 'num')} />
-          </label>
-        </div>
-        {mode === 'trip' ? (
+
+        {rows.map((row, i) => (
+          <DestinationFields
+            key={row.key}
+            row={row}
+            index={i}
+            canRemove={rows.length > 1}
+            showDates={many}
+            // The patch is merged into the row as it stands in state, not into
+            // the one this render closed over. Two fields changed faster than a
+            // re-render would otherwise have the second revert the first.
+            onChange={(patch) => setRows((all) => all.map((r) => (r.key === row.key ? { ...r, ...patch } : r)))}
+            onRemove={() => setRows((all) => all.filter((r) => r.key !== row.key))}
+          />
+        ))}
+
+        {many && (
+          <button
+            type="button"
+            onClick={() => setRows((all) => [...all, blankRow()])}
+            className="self-start text-[13px] text-ink-3 transition-colors duration-150 hover:text-ink"
+          >
+            + Add destination
+          </button>
+        )}
+
+        {many ? (
           <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1.5">
-              <Eyebrow>Depart</Eyebrow>
-              <input type="date" value={f.start} onChange={set('start')} className={cn(field, 'num')} />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <Eyebrow>Return</Eyebrow>
-              <input type="date" value={f.end} onChange={set('end')} className={cn(field, 'num')} />
-            </label>
             <label className="flex flex-col gap-1.5">
               <Eyebrow>Budget</Eyebrow>
               <input value={f.budget} onChange={set('budget')} placeholder="$" className={cn(field, 'num')} />
@@ -806,7 +924,10 @@ function TripForm({
             <input value={f.notes} onChange={set('notes')} placeholder="Cherry blossoms, late March" className={field} />
           </label>
         )}
-        <p className="text-[11px] text-ink-4">Coordinates place the pin on the globe; without them the trip is listed and not drawn.</p>
+        <p className="text-[11px] text-ink-4">
+          The trip&apos;s dates are the span of its destinations. Coordinates place each pin on the globe;
+          without them a destination is listed and not drawn.
+        </p>
       </div>
     </Overlay>
   )
