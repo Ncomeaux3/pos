@@ -683,7 +683,8 @@ function DestinationFields({
   index: number
   canRemove: boolean
   showDates: boolean
-  onChange: (next: Row) => void
+  /** A patch, not a whole row: see the handler in TripForm. */
+  onChange: (patch: Partial<Row>) => void
   onRemove: () => void
 }) {
   const [hits, setHits] = useState<Hit[]>([])
@@ -700,7 +701,6 @@ function DestinationFields({
     const value = e.target.value
     const picked = hits.find((h) => h.label === value)
     onChange({
-      ...row,
       name: picked ? picked.label.split(',')[0] : value,
       ...(picked ? { lat: String(picked.lat), lon: String(picked.lon) } : {}),
     })
@@ -736,7 +736,7 @@ function DestinationFields({
           <Eyebrow>Lat</Eyebrow>
           <input
             value={row.lat}
-            onChange={(e) => onChange({ ...row, lat: e.target.value })}
+            onChange={(e) => onChange({ lat: e.target.value })}
             placeholder="35.69"
             className={cn(field, 'num')}
           />
@@ -745,7 +745,7 @@ function DestinationFields({
           <Eyebrow>Lon</Eyebrow>
           <input
             value={row.lon}
-            onChange={(e) => onChange({ ...row, lon: e.target.value })}
+            onChange={(e) => onChange({ lon: e.target.value })}
             placeholder="139.69"
             className={cn(field, 'num')}
           />
@@ -758,7 +758,7 @@ function DestinationFields({
             <input
               type="date"
               value={row.start}
-              onChange={(e) => onChange({ ...row, start: e.target.value })}
+              onChange={(e) => onChange({ start: e.target.value })}
               className={cn(field, 'num')}
             />
           </label>
@@ -767,7 +767,7 @@ function DestinationFields({
             <input
               type="date"
               value={row.end}
-              onChange={(e) => onChange({ ...row, end: e.target.value })}
+              onChange={(e) => onChange({ end: e.target.value })}
               className={cn(field, 'num')}
             />
           </label>
@@ -889,7 +889,10 @@ function TripForm({
             index={i}
             canRemove={rows.length > 1}
             showDates={many}
-            onChange={(next) => setRows((all) => all.map((r) => (r.key === row.key ? next : r)))}
+            // The patch is merged into the row as it stands in state, not into
+            // the one this render closed over. Two fields changed faster than a
+            // re-render would otherwise have the second revert the first.
+            onChange={(patch) => setRows((all) => all.map((r) => (r.key === row.key ? { ...r, ...patch } : r)))}
             onRemove={() => setRows((all) => all.filter((r) => r.key !== row.key))}
           />
         ))}

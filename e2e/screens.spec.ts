@@ -2291,13 +2291,23 @@ test('travel, a trip holds a list of destinations', async ({ page }) => {
   // Coordinates are typed rather than picked from the suggestions: the
   // suggestion list comes from the geocoder and CI has no network.
   const rows = page.getByTestId('destination-row')
+  // Every field is read back after it is filled. The row's onChange builds the
+  // next row from the prop it was rendered with, so a fill that lands before
+  // React has re-rendered would quietly revert the field before it, and the
+  // failure would otherwise surface three steps later as a wrong date span.
   const fill = async (i: number, name: string, lat: string, lon: string, start: string, end: string) => {
     const row = rows.nth(i)
-    await row.getByLabel(/^Destination/).fill(name)
-    await row.getByLabel('Lat', { exact: true }).fill(lat)
-    await row.getByLabel('Lon', { exact: true }).fill(lon)
-    await row.getByLabel('Arrive', { exact: true }).fill(start)
-    await row.getByLabel('Leave', { exact: true }).fill(end)
+    for (const [label, value] of [
+      [/^Destination/, name],
+      ['Lat', lat],
+      ['Lon', lon],
+      ['Arrive', start],
+      ['Leave', end],
+    ] as const) {
+      const input = typeof label === 'string' ? row.getByLabel(label, { exact: true }) : row.getByLabel(label)
+      await input.fill(value)
+      await expect(input).toHaveValue(value)
+    }
   }
 
   // A new trip opens on one empty row. Never zero: a form with nowhere to type
@@ -2315,35 +2325,42 @@ test('travel, a trip holds a list of destinations', async ({ page }) => {
   // Both destinations are pinned, not just the trip.
   await expect.poll(pinned).toBe(before + 2)
 
-  const card = page.getByTestId('travel-sections').getByRole('button', { name: /Iberia, spring/ }).first()
-  await card.click()
+  await page.getByTestId('travel-sections').getByRole('button', { name: /Iberia, spring/ }).first().click()
   await expect(page).toHaveURL(/trip=/)
 
-  // The trip's own place and dates are a summary of its destinations now: the
-  // first row's city, and the span across both rows rather than either one.
-  const heading = page.getByRole('dialog')
-  await expect(heading).toContainText('Lisbon')
-  await expect(heading).toContainText(/Apr 2.+Apr 11/)
-
-  // Reopening the form shows what was saved, in order.
+  // What was saved, read back off the form. This is the direct evidence and it
+  // comes first: the trip's own dates below are derived from these rows, so a
+  // row that lost a date should fail here, naming the field, rather than there.
   await page.getByRole('button', { name: 'Edit details' }).click()
   await expect(rows).toHaveCount(2)
   await expect(rows.nth(0).getByLabel(/^Destination/)).toHaveValue('Lisbon')
   await expect(rows.nth(1).getByLabel(/^Destination/)).toHaveValue('Porto')
   await expect(rows.nth(1).getByLabel('Lat', { exact: true })).toHaveValue('41.15')
+  await expect(rows.nth(1).getByLabel('Arrive', { exact: true })).toHaveValue('2027-04-06')
+  await expect(rows.nth(1).getByLabel('Leave', { exact: true })).toHaveValue('2027-04-11')
   // No shot of the open form: shoot() reloads to swap the theme, and whether
   // the form is open is React state rather than the URL, so it would come back
   // showing the drawer behind it.
 
+  // Cancel goes back to the trip, where its own place and dates are a summary
+  // of those rows: the first row's city, and the span across both rather than
+  // either one.
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+  await expect(dialog).toContainText('Lisbon')
+  await expect(dialog).toContainText(/Apr 2.+Apr 11/)
+
   // Taking one away takes its pin with it, and the span shrinks back.
+  await page.getByRole('button', { name: 'Edit details' }).click()
   await rows.nth(1).getByRole('button', { name: 'Remove Porto' }).click()
   await expect(rows).toHaveCount(1)
-  await page.getByRole('dialog').getByRole('button', { name: /^Save/ }).click()
+  await dialog.getByRole('button', { name: /^Save/ }).click()
   await expect(page.getByText('Saved')).toBeVisible()
   await expect.poll(pinned).toBe(before + 1)
+  await expect(dialog).toContainText(/Apr 2.+Apr 6/)
 
-  // Put the fixture back for the travel tests after this one.
-  await page.getByTestId('travel-sections').getByRole('button', { name: /Iberia, spring/ }).first().click()
+  // Put the fixture back for the travel tests after this one. Saving returns to
+  // the trip rather than closing, so Delete is right here; reaching for the
+  // card behind the drawer would be clicking through an overlay.
   await page.getByRole('button', { name: 'Delete trip' }).click()
   await expect(page.getByText('Trip deleted')).toBeVisible()
   await expect.poll(pinned).toBe(before)
