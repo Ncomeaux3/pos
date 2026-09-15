@@ -1624,7 +1624,15 @@ test('finance, net worth and the budget pace marks', async ({ page }) => {
   // Three on the page: the lede, the KPI tile and the chart card. The chart's
   // accessible name is the unambiguous one, and it is also the assertion worth
   // making, because it names the range the line actually covers.
-  await expect(page.getByRole('img', { name: /Net worth over \d+ days/ })).toBeVisible()
+  //
+  // Both numbers, not just the first. The axis is thirty days whatever came
+  // back from the query, and the second number is how many of those days a
+  // balance was actually recorded on. The seed writes 31 days and the window
+  // holds 30 of them, so a chart that has gone back to drawing one point per
+  // row rather than one per day fails here rather than looking plausible.
+  await expect(
+    page.getByRole('img', { name: /Net worth over 30 days, 30 of them recorded/ }),
+  ).toBeVisible()
 
   const mobile = (page.viewportSize()?.width ?? 0) < 768
   if (!mobile) {

@@ -18,7 +18,9 @@ export function FinanceTile({ payload }: { payload: Record<string, unknown> }) {
   const netWorth = d.netWorthCents ?? 0
   const change = d.changeCents ?? 0
   const upcoming = d.upcomingCents ?? 0
-  const series = d.netWorthSeries ?? []
+  // The digest keeps the nulls so the shape of the month is honest; the
+  // sparkline has no way to break a line, so it draws the days there are.
+  const series = (d.netWorthSeries ?? []).filter((v): v is number => v !== null)
   const next = d.nextCharge ?? null
 
   return (
