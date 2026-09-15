@@ -5,7 +5,8 @@ in a fresh session; the paragraph below names the plan that comes next.
 
 Last updated: 2026-09-14. Branch `main`, production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
-steps 1 to 9). Three plans finished this week: docs/plans/phone-shell.md
+steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
+#48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
 (five phases: speed and gestures, the shell, then Dashboard, Finance, Tasks
 and Goals phone passes, PRs #21, #27, #33, #34, #36), docs/plans/travel-globe.md
 (filled continents, pin taps, destination geocoding, #26, #28, #29), and the
@@ -27,6 +28,25 @@ and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
 ## Done
+
+**Second Brain is capture first.** docs/plans/brain-capture.md, PRs #48, #49
+and #50, all merged 2026-09-14. POS is the primary store for notes now and the
+vault a pulled archive. One box above the list takes text (first line is the
+title), a bare URL (ingested as before), a "worked on" entry (kind `daily`)
+and a file. Hubs (`brain.hub`, `brain.note_hub`) are owner-named keyword
+groupings shown as a second chip group in the band: rules file a note at
+capture, one batched Haiku call a night files the misses (50 notes, under a
+cent), a manual tick wins. Related notes by embedding show under the box while
+typing and in a cell on each note; that is the one resurfacing mechanism. A
+file (PDF, JPEG, PNG, GIF or WebP, 10 MB) is a note with `file_path` set in
+the private `brain` bucket and one Haiku `summary` call for the body; proven
+locally with a PDF at 0.18 cents and a PNG at 0.08. A cap leaves the body as
+"Transcription pending" and the nightly job retries one file. Not built by
+decision: per-note summaries, hub summaries, weekly email, vault write back,
+XP for daily entries, graph view, MCP tools for hubs. Follow-ups nobody
+scheduled: attaching the same file twice makes a second note and a second
+call; no progress text during the roughly 7 s transcription; a saved note
+opens below the fold at 402.
 
 **Login works on the phone, and by passkey.** docs/plans/mobile-login.md, PRs
 #41, #42, #43 and #45, all merged 2026-09-14. Proven on the live project
