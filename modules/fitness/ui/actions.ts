@@ -58,12 +58,24 @@ export async function writePlan(input: PlanInput): Promise<ActionResult> {
 /** The Trends tab's 90 and 365 day ranges; 30 days comes with the page. */
 export async function readMetricSeries(kind: string, days: number): Promise<Day[]> {
   await requireOwner()
-  const [rows, today] = await Promise.all([metricSeries(kind, days), ownerToday()])
-  return spine(rows, days, today)
+  const span = Math.max(1, Math.min(365, Math.round(days) || 30))
+  const [rows, today] = await Promise.all([metricSeries(kind, span), ownerToday()])
+  return spine(rows, span, today)
 }
 
-/** The Workouts tab's filter row. The URL holds the filter; this holds the rows. */
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * The Workouts tab's filter row. The URL holds the filter; this holds the
+ * rows. The dates come off the URL, so a hand-edited one is dropped rather
+ * than handed to Postgres as a cast that throws.
+ */
 export async function readWorkouts(filter: WorkoutFilter): Promise<ScreenWorkout[]> {
   await requireOwner()
-  return screenWorkouts(filter)
+  return screenWorkouts({
+    kind: filter.kind,
+    source: filter.source,
+    from: filter.from && ISO_DAY.test(filter.from) ? filter.from : undefined,
+    to: filter.to && ISO_DAY.test(filter.to) ? filter.to : undefined,
+  })
 }

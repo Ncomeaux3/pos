@@ -56,8 +56,12 @@ export async function listWorkouts(filter: WorkoutFilter = {}): Promise<WorkoutR
        ) b on true
       where ($2::text is null or w.kind = $2)
         and ($3::text is null or w.source = $3)
-        and ($4::date is null or w.started_at >= $4::date)
-        and ($5::date is null or w.started_at < $5::date + 1)
+        -- On the owner's calendar: a 21:00 Central run is tomorrow in UTC,
+        -- and the row's date is drawn in the owner's zone.
+        and ($4::date is null or (w.started_at at time zone coalesce(
+              (select value #>> '{}' from core.settings where key = 'timezone'), 'UTC'))::date >= $4::date)
+        and ($5::date is null or (w.started_at at time zone coalesce(
+              (select value #>> '{}' from core.settings where key = 'timezone'), 'UTC'))::date <= $5::date)
       order by w.started_at desc
       limit $1`,
     [filter.limit ?? 40, filter.kind ?? null, filter.source ?? null, filter.from ?? null, filter.to ?? null],
