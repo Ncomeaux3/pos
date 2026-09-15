@@ -224,7 +224,9 @@ export type FitnessGoal = {
  * reads Insurance through. Which goals count as fitness is answered by the
  * registry too, with no skill id hard coded: a goal is a fitness goal when it
  * shares a skill link with a workout. The digest lists goals worst first, so
- * the first match is the one to show.
+ * the first match is the one to show. `unclassified` is not a shared skill:
+ * every unmatched entity carries it, and through it a tasks goal was the
+ * fitness goal once digests went live (v1.1 Phase 5).
  */
 export async function fitnessGoal(): Promise<FitnessGoal | null> {
   const digest = await getDigest('goals')
@@ -237,6 +239,7 @@ export async function fitnessGoal(): Promise<FitnessGoal | null> {
        from core.entities en
        join core.skill_links sl on sl.entity_ref = en.id
       where en.module = 'goals' and en.entity_id = any($1)
+        and sl.skill_id <> 'unclassified'
         and sl.skill_id in (
           select sl2.skill_id from core.skill_links sl2
             join core.entities en2 on en2.id = sl2.entity_ref

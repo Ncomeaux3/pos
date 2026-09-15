@@ -284,6 +284,7 @@ export async function assembleSummary(): Promise<{ headline: string | null; queu
       ? (headline ?? '')
       : summary.alerts.map((a) => `${a.title}${a.detail ? `. ${a.detail}` : ''}`).join('\n'),
     urgency: summary.alerts.some((a) => a.tone === 'bad') ? 'urgent' : 'normal',
+    href: '/notifications',
   })
 
   return { headline, queued: true }

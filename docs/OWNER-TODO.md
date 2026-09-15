@@ -162,6 +162,31 @@ Two sources are built and live in production (PRs #17, #18, #19, all
       Settings > General, and add a new one. The emailed code is the way in
       meanwhile.
 
+## v2 phase 5: Gmail
+
+Not needed until v2 phase 5, which starts after v1.1 ships and after items 12
+to 16. Listed now because the research that produced it is fresh and one setting
+in it is easy to get wrong in a way that looks like a bug six days later.
+
+- [ ] **22. Google Cloud project for Gmail**, free, about 15 minutes. Create a
+      project at console.cloud.google.com, enable the Gmail API, create an
+      OAuth client of type Web application with the POS callback as its
+      redirect URI, and add the scope `https://www.googleapis.com/auth/gmail.readonly`.
+      Then the setting that matters: set the OAuth consent screen's publishing
+      status to **In production**. Do not submit for verification. Leaving it
+      at Testing expires every refresh token after 7 days, so the nightly sync
+      would work for a week and then fail, looking like a credential problem
+      rather than a dropdown. You will see an "unverified app" warning when you
+      connect; click through it. That is the documented path for an app under
+      100 users, and it is why POS never needs the CASA security assessment a
+      restricted scope otherwise carries (a few hundred to a few thousand
+      dollars a year). Also create a Gmail label and file into it whatever you
+      want POS to read: the connector queries that label alone.
+
+      Every claim here is marked verify. Google's documentation domains were
+      blocked by the proxy when this was researched, so it rests on secondary
+      sources. Check the console before trusting the 7-day figure.
+
 ## Decisions I would like from you
 
 - [ ] **Confirm one deviation from "no monospace anywhere".** Literal secrets

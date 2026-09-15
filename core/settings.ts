@@ -59,6 +59,13 @@ export type Settings = {
    * empty module is new or abandoned.
    */
   onboarding_completed_at: string
+  /**
+   * The dashboard's tile order and which tiles are hidden. One layout for the
+   * phone and the desktop (2026-09-14 decision), stored here rather than in
+   * localStorage so every device shows the same bento. null is the default
+   * order with nothing hidden.
+   */
+  dashboard_layout: { order: string[]; hidden: string[] } | null
 }
 export type SettingKey = keyof Settings
 
@@ -80,6 +87,7 @@ export const DEFAULT_SETTINGS: Settings = {
   quiet_urgent_override: true,
   notifications_paused: false,
   onboarding_completed_at: '',
+  dashboard_layout: null,
 }
 
 // Both readers are memoised per request with React cache(): the layout and

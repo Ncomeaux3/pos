@@ -60,3 +60,10 @@ decision behind two approvals. A trip is a commitment with a budget attached.
 `place_visited` is its own table, and `complete_trips` writes one when a booked
 trip's end date passes. The map is a record of where you have been, and it
 should not empty out because a trip was archived.
+
+A past trip with no place of its own still pins, in grey, from its own
+destinations or its own coordinates. Only a `booked` trip reaches
+`complete_trips`, so a trip marked done by hand and one left `planned` past its
+end date have no `place_visited` row and used to be in the Past list and nowhere
+on the globe. A trip a place already points at is left to that place, so a
+completed trip pins once. See `ui/pins.ts`.

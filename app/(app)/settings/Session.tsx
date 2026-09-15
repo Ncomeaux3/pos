@@ -1,5 +1,5 @@
 import { ActionButton, Card, CardHead } from '@/components/pos'
-import { signOut } from './session'
+import { signOut } from './session-actions'
 
 /**
  * The way out. The app had none: there was no sign out anywhere in it until

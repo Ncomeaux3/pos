@@ -53,6 +53,23 @@ header carries a plus that opens New task prefilled from the column's drop
 spec; the band's New task and the phone plus take the view's first column.
 Known: dragging an inheriting task onto "No goal" clears its own goal but it
 still inherits, so it stays put.
+**v1.1 Phase 5, dashboard** (2026-09-15, branch `phase-5-dashboard`, built
+in the worktree `../pos-phase-5` beside Phase 6). The bento's layout is one
+`dashboard_layout` setting (`{ order, hidden }`) in `core.settings`, saved
+through `saveDashboardLayout` in `app/(app)/shell-actions.ts`; the localStorage
+store is gone. Arrange mode adds Hide beside the arrows and a Hidden row under
+the grid with Show buttons; Reset saves null. Grid rows are `auto` and tiles
+no longer stretch, so a tile is as tall as its content. `callTool` recomputes
+the calling module's digest after every tool but `get_digest`
+(`writeDigest` in `core/digests.ts`, try/catch, never fails the write), and
+the page's module tiles map over `latestDigests()` filtered to enabled
+modules instead of `summary.modules`; headline, alerts and Last run stay on
+the nightly summary. Nightly `prune_digests` keeps every row from the last two
+days and the newest per module per day past that. `core.notifications.href`
+(migration `20260915150100_core_notification_href.sql`): insurance reminders
+open `/insurance`, the digest row opens `/notifications`, and every warning
+title on the dashboard is a link. After `supabase db push`, the Notes tile
+from Phase 2 is gone at once: the tiles no longer wait for a run.
 
 **v1.1 Phase 4, speed, client** (2026-09-15, branch `phase-4-speed-client`).
 `useSearchState.set` takes `local: true`: the URL is written through
@@ -80,8 +97,8 @@ and proposals suites and the e2e seed lean on `ideas.write` (one table,
 unguarded) instead; the e2e Agent Log fixture writes its ideas row before the
 skills row so the sidebar-order assertion still proves something. Start a new
 module by copying `modules/ideas`. After `supabase db push` and the deploy,
-press Run now once: the dashboard tiles still read `core.dashboard_summary`
-until Phase 5, so the Notes tile lingers until the next run rewrites it.
+press Run now once: the dashboard tiles read `core.dashboard_summary` until
+Phase 5 (done the same day), after which the Notes tile is gone at once.
 
 **v1.1 Phase 1, diagnose and small fixes** (2026-09-14, branch
 `phase-1-diagnose-fixes`). The nightly email finding, from production
@@ -713,6 +730,32 @@ See docs/plans/design-build.md.
 The registry cycle that blocked steps 12 and 13 is fixed: both registries load
 in a plain Node process, which is what lets `pnpm setup` and the cron job work
 outside Next.
+
+## v2, specified 2026-09-14, not started
+
+docs/SPEC-v2.md and docs/plans/v2-agent-layer.md. The agent layer: per-verb
+permission on integrations, an action state machine over core.proposals, run
+budgets, a Postgres queue, a memory tier, a nightly suggestion pass, and plans
+in the goals schema. Sixteen v2 entries were written to decisions/log.md on
+2026-09-14, fourteen of them answers from the owner and two corrections made
+after; none stay open.
+
+The draft spec proposed six things that already ship under other names (the
+credential vault, the connector registry, the approval gate, the audit trail,
+the runs table, the push channel), so v2 extends rather than adds. It stays on
+Vercel Hobby with the $10 cap, which is what fixes its shape: no long-lived
+process, no external queue, and a run that advances only when something drains
+the queue. Phases 0 to 4 are the product.
+
+It starts after v1.1 and after OWNER-TODO steps 12 to 16. v1.1
+(docs/plans/pos-v1-1.md) is the in-flight plan and its phase 12 hardens exactly
+what v2 then builds on, so v2 waits rather than hardening the same routes
+twice. Phase 0 covers the integrations that currently skip every night, so it
+is worth more with real data behind them, and phase 4's approval push needs the
+VAPID pair. Strava does not gate it: item 11 is deferred and v1.1 moved workouts
+to Apple Health, so phase 0 wires the Strava client onto the executor without
+depending on a live connection. The phone polish pass is independent and can run
+either side of it.
 
 ## Open questions for the owner
 

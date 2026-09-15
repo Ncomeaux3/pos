@@ -2,79 +2,40 @@
 
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState, useSyncExternalStore, type ReactNode } from 'react'
+import { useState, useTransition, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { useLongPress } from '@/components/pos/gestures'
+import type { Settings } from '@/core/settings'
+import { saveDashboardLayout } from './shell-actions'
 
-// The dashboard grid, in the order this device likes it.
+// The dashboard grid, in the order the owner likes it.
 //
 // The tiles themselves are server rendered and handed over as nodes: this
-// component only decides what order they go in, which is the whole of what
-// arranging is. Nothing about a tile's contents reaches the client because of
-// it.
-
-const KEY = 'pos.dashboard.order'
+// component only decides what order they go in and which are hidden, which is
+// the whole of what arranging is. Nothing about a tile's contents reaches the
+// client because of it. The layout is one setting for every device (v1.1
+// Phase 5); it arrives as a prop and goes back through a server action.
 
 /** `phone: false` hides both the tile and its grid cell below md, so a tile
  * the phone does not carry leaves no blank row behind it. */
 export type Tile = { id: string; node: ReactNode; phone?: boolean }
 
-// The stored order is external state, so it is read through the hook meant for
-// external state: the server snapshot is null, the browser's is whatever the
-// string in localStorage is, and the first client render therefore matches the
-// server's before swapping to the saved order.
-const listeners = new Set<() => void>()
-
-function subscribe(notify: () => void) {
-  listeners.add(notify)
-  window.addEventListener('storage', notify)
-  return () => {
-    listeners.delete(notify)
-    window.removeEventListener('storage', notify)
-  }
-}
-
-function raw(): string | null {
-  try {
-    return localStorage.getItem(KEY)
-  } catch {
-    // A private window, or a browser with site data off. The default order is
-    // a working dashboard, so this is not worth telling anyone about.
-    return null
-  }
-}
-
-function write(value: string | null) {
-  try {
-    if (value === null) localStorage.removeItem(KEY)
-    else localStorage.setItem(KEY, value)
-  } catch {
-    // Same as reading: the order is a convenience, not the dashboard.
-  }
-  for (const notify of listeners) notify()
-}
-
-function parse(value: string | null): string[] | null {
-  try {
-    const parsed = value ? JSON.parse(value) : null
-    return Array.isArray(parsed) && parsed.every((x) => typeof x === 'string') ? parsed : null
-  } catch {
-    return null
-  }
-}
+export type Layout = Settings['dashboard_layout']
 
 /**
  * The bento.
  *
- * `grid-auto-rows: minmax(200px, auto)` and auto-fit at 300px are the
- * artboard's: three columns at 1440, two at 1024, one on a phone, with every
- * tile in a row the height of the tallest.
+ * Auto-fit at 300px is the artboard's: three columns at 1440, two at 1024,
+ * one on a phone. Rows are `auto` rather than the artboard's 200px minimum so
+ * a row is as tall as its tallest tile (v1.1 Phase 5); the tiles in a row
+ * still fill it, because a ragged bottom edge read worse than a short tile
+ * (ui-verifier, 2026-09-15). `content-start` keeps the rows packed at the top.
  *
  * Arrange mode is `?arrange=1` rather than component state, so the button that
  * turns it on can live up in the header where the design puts it without a
  * context to carry the flag across the page.
  */
-export function Bento({ tiles }: { tiles: Tile[] }) {
+export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout }) {
   const arranging = useSearchParams().get('arrange') === '1'
   const router = useRouter()
   // PosPhone's way in: hold a tile and the page enters the same arrange mode
@@ -85,10 +46,18 @@ export function Bento({ tiles }: { tiles: Tile[] }) {
     router.push('/?arrange=1')
   })
 
-  const order = parse(useSyncExternalStore(subscribe, raw, () => null))
+  // The saved layout is the initial state; each change applies here at once
+  // and is written back in a transition, so a move never waits on the server.
+  const [layout, setLayout] = useState<Layout>(saved)
+  const [, start] = useTransition()
   const [dragging, setDragging] = useState<string | null>(null)
 
-  const save = (next: string[]) => write(JSON.stringify(next))
+  const save = (next: Layout) => {
+    setLayout(next)
+    start(() => saveDashboardLayout(next))
+  }
+  const order = layout?.order ?? null
+  const hidden = layout?.hidden ?? []
 
   // The stored order names tiles that may no longer exist, and cannot know
   // about a module installed since. Known ids first in their saved order, then
@@ -97,23 +66,32 @@ export function Bento({ tiles }: { tiles: Tile[] }) {
   const sorted = order
     ? [...order.filter((id) => ids.includes(id)), ...ids.filter((id) => !order.includes(id))]
     : ids
+  const shown = sorted.filter((id) => !hidden.includes(id))
+  const hiddenTiles = sorted.filter((id) => hidden.includes(id))
+
+  // Moves are over the visible tiles, so ‹ on the tile after a hidden one
+  // swaps with what the owner sees, not with the hidden one.
+  const reorder = (next: string[]) => save({ order: [...next, ...hiddenTiles], hidden })
 
   const move = (id: string, by: number) => {
-    const from = sorted.indexOf(id)
-    const to = Math.max(0, Math.min(sorted.length - 1, from + by))
+    const from = shown.indexOf(id)
+    const to = Math.max(0, Math.min(shown.length - 1, from + by))
     if (from === to) return
-    const next = [...sorted]
+    const next = [...shown]
     next.splice(to, 0, ...next.splice(from, 1))
-    save(next)
+    reorder(next)
   }
 
   const drop = (onto: string) => {
     if (!dragging || dragging === onto) return
-    const next = sorted.filter((id) => id !== dragging)
-    next.splice(sorted.indexOf(onto), 0, dragging)
-    save(next)
+    const next = shown.filter((id) => id !== dragging)
+    next.splice(shown.indexOf(onto), 0, dragging)
+    reorder(next)
     setDragging(null)
   }
+
+  const hide = (id: string) => save({ order: sorted, hidden: [...hidden, id] })
+  const show = (id: string) => save({ order: sorted, hidden: hidden.filter((h) => h !== id) })
 
   return (
     // The artboard: the grid sits 22px under the headline block, and in
@@ -122,12 +100,12 @@ export function Bento({ tiles }: { tiles: Tile[] }) {
       {arranging && (
         <div className="-mt-1 mb-[22px] flex flex-wrap items-center justify-between gap-3 border border-dashed border-brand px-3.5 py-2.5 text-[12px] text-ink-2">
           <span>
-            Arrange mode: <span className="max-md:hidden">drag tiles, or </span>use ‹ › on each. Order
-            is saved on this device.
+            Arrange mode: <span className="max-md:hidden">drag tiles, or </span>use ‹ › and Hide on
+            each. The layout is saved for every device.
           </span>
           <button
             type="button"
-            onClick={() => write(null)}
+            onClick={() => save(null)}
             className="text-[12px] text-ink-3 hover:text-ink"
           >
             Reset to default
@@ -137,9 +115,9 @@ export function Bento({ tiles }: { tiles: Tile[] }) {
 
       <div
         data-testid="dashboard-bento"
-        className="grid grid-cols-1 content-start gap-3 [grid-auto-rows:minmax(200px,auto)] md:grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] md:gap-3.5"
+        className="grid grid-cols-1 content-start gap-3 md:grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] md:gap-3.5"
       >
-        {sorted.map((id) => {
+        {shown.map((id) => {
           const tile = tiles.find((t) => t.id === id)
           if (!tile) return null
 
@@ -169,14 +147,24 @@ export function Bento({ tiles }: { tiles: Tile[] }) {
                     ‹
                   </button>
                   <span className="label text-[10px] tracking-[0.08em] text-ink-3">Drag</span>
-                  <button
-                    type="button"
-                    aria-label={`Move ${id} later`}
-                    onClick={() => move(id, 1)}
-                    className="px-1 text-ink-2 hover:text-ink"
-                  >
-                    ›
-                  </button>
+                  <span className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      aria-label={`Hide ${id}`}
+                      onClick={() => hide(id)}
+                      className="px-1 text-[11px] text-ink-2 hover:text-ink"
+                    >
+                      Hide
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Move ${id} later`}
+                      onClick={() => move(id, 1)}
+                      className="px-1 text-ink-2 hover:text-ink"
+                    >
+                      ›
+                    </button>
+                  </span>
                 </div>
               )}
               {tile.node}
@@ -184,6 +172,28 @@ export function Bento({ tiles }: { tiles: Tile[] }) {
           )
         })}
       </div>
+
+      {/* Hidden tiles exist only here, in arrange mode, so a hidden tile is
+        * always one press from coming back and never quietly lost. */}
+      {arranging && hiddenTiles.length > 0 && (
+        <div
+          data-testid="dashboard-hidden"
+          className="mt-[22px] flex flex-wrap items-center gap-2 text-[12px] text-ink-3"
+        >
+          <span className="label text-[10px] tracking-[0.08em]">Hidden</span>
+          {hiddenTiles.map((id) => (
+            <button
+              key={id}
+              type="button"
+              aria-label={`Show ${id}`}
+              onClick={() => show(id)}
+              className="border border-rule-2 px-2 py-1 text-ink-2 hover:border-ink hover:text-ink"
+            >
+              {id} · Show
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

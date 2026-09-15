@@ -12,6 +12,12 @@ export type InsuranceDigest = {
   remindersSent: number
 }
 
+/**
+ * The numbers, and nothing else. `get_digest` runs this after every insurance
+ * write (core/tools.ts) and the goal metrics read it, so it must not queue:
+ * a reminder per policy edit was one email row per edit. The queueing is
+ * `remind` below, the nightly job.
+ */
 export async function nightlyDigest(): Promise<InsuranceDigest> {
   const [policies, today] = await Promise.all([listPolicies(), ownerToday()])
   const active = policies.filter((p) => p.status === 'active')
@@ -20,20 +26,6 @@ export async function nightlyDigest(): Promise<InsuranceDigest> {
     const status = policyStatus(p.expires_on, today)
     return status === 'expired' || status === 'renew-now' || status === 'expiring'
   })
-
-  // One notification per lead that lands today. Queued, not sent: the sender
-  // bundles the day's rows into one email.
-  let remindersSent = 0
-  for (const policy of active) {
-    for (const lead of remindersDueToday(policy.expires_on, policy.reminder_leads, today)) {
-      await queue({
-        title: `${policy.name} expires in ${lead} days`,
-        body: `${policy.carrier} / ${policy.expires_on}. Renewing keeps the same row, so the history stays in one place.`,
-        urgency: lead <= 7 ? 'urgent' : 'normal',
-      })
-      remindersSent++
-    }
-  }
 
   return {
     expiring: expiring.map((p) => ({
@@ -47,6 +39,27 @@ export async function nightlyDigest(): Promise<InsuranceDigest> {
       0,
     ),
     active: active.length,
-    remindersSent,
+    remindersSent: 0,
   }
+}
+
+/** The nightly job: one notification per lead that lands today, then the digest. */
+export async function remind(): Promise<InsuranceDigest> {
+  const [policies, today] = await Promise.all([listPolicies(), ownerToday()])
+
+  // Queued, not sent: the sender bundles the day's rows into one email.
+  let remindersSent = 0
+  for (const policy of policies.filter((p) => p.status === 'active')) {
+    for (const lead of remindersDueToday(policy.expires_on, policy.reminder_leads, today)) {
+      await queue({
+        title: `${policy.name} expires in ${lead} days`,
+        body: `${policy.carrier} / ${policy.expires_on}. Renewing keeps the same row, so the history stays in one place.`,
+        urgency: lead <= 7 ? 'urgent' : 'normal',
+        href: '/insurance',
+      })
+      remindersSent++
+    }
+  }
+
+  return { ...(await nightlyDigest()), remindersSent }
 }

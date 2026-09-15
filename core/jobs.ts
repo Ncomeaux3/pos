@@ -98,8 +98,8 @@ export type NightlyOptions = {
 
 /**
  * The order is the one in ARCHITECTURE: refresh credentials, module jobs,
- * embed, digests, orchestrate, notify, prune. Each stage is a job like any
- * other, so a failure in any of them is recorded rather than fatal.
+ * embed, digests, orchestrate, notify, prune, prune_digests. Each stage is a
+ * job like any other, so a failure in any of them is recorded rather than fatal.
  */
 export async function runNightly(opts: NightlyOptions = {}): Promise<RunSummary> {
   const started = Date.now()
@@ -113,7 +113,7 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<RunSummary>
   // Imported here rather than at the top so a module job that never touches
   // search or mail does not pull those in when this file is loaded.
   const { embedChanged } = await import('./search')
-  const { writeDigests } = await import('./digests')
+  const { pruneDigests, writeDigests } = await import('./digests')
   const { assembleSummary } = await import('./orchestrator')
   const { sendPending } = await import('./notify')
 
@@ -136,6 +136,7 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<RunSummary>
       jobs.push(await runJob('core', 'notify', () => sendPending()))
     }
     jobs.push(await runJob('core', 'prune', pruneRequestLog))
+    jobs.push(await runJob('core', 'prune_digests', pruneDigests))
   }
 
   const failures = jobs.filter((j) => j.status === 'failed').length

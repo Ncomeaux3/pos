@@ -15,6 +15,7 @@ import { db } from '@/core/db'
 import { Bento, ArrangeToggle, type Tile } from './Bento'
 import { SevenDays } from './DashboardTiles'
 import { ProposalList, WarningList } from './Inbox'
+import { latestDigests } from '@/core/digests'
 import { getModules } from '@/core/modules'
 import { getNav, getOffRailNav } from '@/core/nav'
 import { unreadWarnings } from '@/core/notify'
@@ -90,8 +91,8 @@ const money = (cents: number) => `$${(cents / 100).toFixed(2)}`
 
 /**
  * The artboard's default order, POS Dashboard.dc.html line 194. Everything
- * else that wrote a digest follows in rail order; a device's own arrangement
- * still wins over both once it has one.
+ * else that wrote a digest follows in rail order; the owner's saved layout
+ * still wins over both once there is one.
  */
 const ORDER = ['warnings', 'finance', 'tasks', 'review', 'goals', 'skills', 'llm', 'timeline']
 
@@ -102,7 +103,12 @@ const ORDER = ['warnings', 'finance', 'tasks', 'review', 'goals', 'skills', 'llm
  */
 const PHONE_TILES = new Set(['warnings', 'finance', 'tasks', 'review', 'timeline'])
 
-/** The tile's border is the quiet rule, not rule-2; module tiles lift on hover. */
+/**
+ * The tile's border is the quiet rule, not rule-2; module tiles lift on hover.
+ * `h-full` fills the grid cell so the bottoms of a row align and an empty
+ * state has room to centre; the row itself is as tall as its tallest tile,
+ * with no minimum (Bento).
+ */
 const tileClass = 'flex h-full flex-col gap-3 border-rule'
 
 export default async function DashboardPage() {
@@ -120,8 +126,9 @@ export default async function DashboardPage() {
     .format(new Date())
     .replace(',', '')
 
-  const [latest, jobs, diary, warnings, proposals, spend, nav, offRail] = await Promise.all([
+  const [latest, digests, jobs, diary, warnings, proposals, spend, nav, offRail] = await Promise.all([
     latestSummary(),
+    latestDigests(),
     jobStates(),
     nextSevenDays(todayIso),
     unreadWarnings(),
@@ -138,6 +145,16 @@ export default async function DashboardPage() {
   const spendCents = summary?.spendCents ?? 0
   const capCents = summary?.capCents ?? settings.llm_soft_cap_cents
 
+  // The tiles read the latest digest per module, not the nightly summary's
+  // copy: every write tool recomputes its digest (core/tools.ts), so this is
+  // this minute's numbers. The headline, alerts and Last run stay nightly. A
+  // module that is off in Settings, or gone from the folder, has no tile.
+  const enabled = settings.modules_enabled
+  const moduleDigests = digests.flatMap((d) => {
+    const manifest = getModules().find((m) => m.id === d.module)
+    if (!manifest || (enabled !== null && !enabled.includes(d.module))) return []
+    return [{ module: d.module, payload: d.payload, manifest }]
+  })
 
   const unsorted: Tile[] = [
     {
@@ -164,6 +181,7 @@ export default async function DashboardPage() {
                 title: w.title,
                 sub: w.body,
                 urgent: w.urgency === 'urgent',
+                href: w.href,
               }))}
             />
           )}
@@ -228,11 +246,11 @@ export default async function DashboardPage() {
 
     // One tile per module that wrote a digest. A module is responsible for its
     // own numbers; this page only lays them out.
-    ...(summary?.modules ?? []).map((m) => {
-      const manifest = getModules().find((x) => x.id === m.module)
-      const name = manifest?.nav.label ?? m.module
-      const ModuleTile = manifest?.tile
-      const head = manifest?.tileHead?.(m.payload) ?? {}
+    ...moduleDigests.map((m) => {
+      const { manifest } = m
+      const name = manifest.nav.label
+      const ModuleTile = manifest.tile
+      const head = manifest.tileHead?.(m.payload) ?? {}
       const href = `/${m.module}`
 
       return {
@@ -412,7 +430,7 @@ export default async function DashboardPage() {
         </p>
       </section>
 
-      <Bento tiles={tiles} />
+      <Bento tiles={tiles} layout={settings.dashboard_layout} />
 
       {!latest && (
         <EmptyState headline="No run yet" className="mt-7">

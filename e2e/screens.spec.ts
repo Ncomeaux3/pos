@@ -276,6 +276,24 @@ test('dashboard, the week ahead and arranging the tiles', async ({ page }) => {
     await expect(page).toHaveURL(/arrange=1/)
     await expect(page.getByText(/Arrange mode/)).toBeVisible()
 
+    // The layout is one setting on the server (v1.1 Phase 5), so a hidden
+    // tile stays hidden across a reload and comes back from the Hidden row.
+    const main = page.getByRole('main')
+    const saved = () =>
+      page.waitForResponse(
+        (r) => r.request().method() === 'POST' && 'next-action' in r.request().headers(),
+      )
+    let acted = saved()
+    await page.getByRole('button', { name: 'Hide llm' }).click()
+    await expect(main.getByText('Model spend · month')).toBeHidden()
+    await acted
+    await page.reload()
+    await expect(main.getByText('Model spend · month')).toBeHidden()
+    acted = saved()
+    await page.getByTestId('dashboard-hidden').getByRole('button', { name: 'Show llm' }).click()
+    await expect(main.getByText('Model spend · month')).toBeVisible()
+    await acted
+
     await page.getByRole('link', { name: 'Done', exact: true }).click()
     await expect(page.getByText(/Arrange mode/)).toBeHidden()
   } else {
@@ -974,8 +992,14 @@ test('dashboard renders the nightly run', async ({ page }) => {
   // wrote to a rule id that did not exist and the row came straight back).
   const snoozeButton = main.getByRole('button', { name: 'Snooze' }).first()
   await expect(snoozeButton).toBeVisible()
-  const snoozedTitle = (await snoozeButton.locator('../..').locator('span.text-ink').first().textContent()) ?? ''
+  const snoozedTitle = (await snoozeButton.locator('../..').locator('a.text-ink').first().textContent()) ?? ''
   expect(snoozedTitle).not.toBe('')
+  // Every warning row goes somewhere (v1.1 Phase 5): the nightly digest's row
+  // opens the alert centre.
+  await expect(main.getByRole('link', { name: snoozedTitle, exact: true })).toHaveAttribute(
+    'href',
+    /^\//,
+  )
   await snoozeButton.click()
   // The row goes optimistically; wait for the server action itself before
   // reloading, or the reload can race the write it is meant to prove.
@@ -1350,11 +1374,22 @@ test('tasks, the six views and the month grid', async ({ page }) => {
 })
 
 test('tasks, completing one emits the event that earns XP', async ({ page }) => {
+  // The dashboard's Tasks tile reads the latest digest, and every write tool
+  // recomputes it (v1.1 Phase 5), so the count moves without Run now.
+  await page.goto('/')
+  const tasksMeta = page.getByRole('main').getByRole('link', { name: /of \d+ done/ })
+  const before = await tasksMeta.textContent()
+
   await page.goto('/tasks')
   const mobile = (page.viewportSize()?.width ?? 0) < 768
 
   await page.getByRole('button', { name: 'Complete Read DDIA ch. 5, Replication' }).click()
   await expect(page.getByText('Done. Read DDIA ch. 5, Replication')).toBeVisible()
+
+  await page.goto('/')
+  await expect(tasksMeta).toBeVisible()
+  expect(await tasksMeta.textContent()).not.toBe(before)
+  await page.goto('/tasks')
 
   if (mobile) {
     await page.getByRole('button', { name: 'Filter task views' }).click()
@@ -2299,17 +2334,119 @@ test('travel, typing a destination suggests places and fills the coordinates', a
   await page.waitForLoadState('networkidle')
   await page.getByRole('button', { name: /New trip/ }).click()
 
-  const destination = page.getByRole('dialog').getByLabel('Destination', { exact: true })
+  // One row per destination since v1.1 Phase 9, each with its own datalist, so
+  // the suggestions are the row's rather than the form's.
+  const row = page.getByTestId('destination-row').first()
+  const destination = row.getByLabel('Destination', { exact: true })
   await destination.fill('Austin')
-  const option = page.locator('#destination-hits option[value*="Austin"]').first()
+  const option = row.locator('datalist option[value*="Austin"]').first()
   await expect(option).toHaveCount(1, { timeout: 10_000 })
   const label = (await option.getAttribute('value')) ?? ''
 
   await destination.fill(label)
-  await expect(page.getByRole('dialog').getByLabel('Lat', { exact: true })).not.toHaveValue('')
-  await expect(page.getByRole('dialog').getByLabel('Lon', { exact: true })).not.toHaveValue('')
-  await expect(page.getByRole('dialog').getByLabel('Lat', { exact: true })).toHaveValue(/^-?\d+(\.\d+)?$/)
-  await expect(page.getByRole('dialog').getByLabel('Lon', { exact: true })).toHaveValue(/^-?\d+(\.\d+)?$/)
+  await expect(row.getByLabel('Lat', { exact: true })).toHaveValue(/^-?\d+(\.\d+)?$/)
+  await expect(row.getByLabel('Lon', { exact: true })).toHaveValue(/^-?\d+(\.\d+)?$/)
+})
+
+// v1.1 Phase 9. A trip held one destination, so four trips to the same country
+// were four trips. This is the scenario from docs/plans/pos-v1-1.md: a trip
+// with two destinations, a pin for each, and one taken away again. It builds
+// its own trip and deletes it at the end, because the travel tests that follow
+// read the seeded fixture and a stray trip would change what they count.
+test('travel, a trip holds a list of destinations', async ({ page }) => {
+  // Both confirms in this test are the drawer's: removing a trip asks first.
+  page.on('dialog', (d) => d.accept())
+
+  await page.goto('/travel')
+  const globe = page.getByRole('group', { name: /Globe showing \d+ places/ })
+  // The label counts every pin, not the ones on the near side, so it is a
+  // number this test can hold still while the globe turns.
+  const pinned = async () => {
+    const label = (await globe.getAttribute('aria-label')) ?? ''
+    return Number(/(\d+)/.exec(label)?.[1] ?? -1)
+  }
+  const before = await pinned()
+
+  await page.getByRole('button', { name: /New trip/ }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByLabel('Trip', { exact: true }).fill('Iberia, spring')
+
+  // Coordinates are typed rather than picked from the suggestions: the
+  // suggestion list comes from the geocoder and CI has no network.
+  const rows = page.getByTestId('destination-row')
+  // Every field is read back after it is filled. The row's onChange builds the
+  // next row from the prop it was rendered with, so a fill that lands before
+  // React has re-rendered would quietly revert the field before it, and the
+  // failure would otherwise surface three steps later as a wrong date span.
+  const fill = async (i: number, name: string, lat: string, lon: string, start: string, end: string) => {
+    const row = rows.nth(i)
+    for (const [label, value] of [
+      [/^Destination/, name],
+      ['Lat', lat],
+      ['Lon', lon],
+      ['Arrive', start],
+      ['Leave', end],
+    ] as const) {
+      const input = typeof label === 'string' ? row.getByLabel(label, { exact: true }) : row.getByLabel(label)
+      await input.fill(value)
+      await expect(input).toHaveValue(value)
+    }
+  }
+
+  // A new trip opens on one empty row. Never zero: a form with nowhere to type
+  // has nowhere to start.
+  await expect(rows).toHaveCount(1)
+  await fill(0, 'Lisbon', '38.72', '-9.14', '2027-04-02', '2027-04-06')
+
+  await dialog.getByRole('button', { name: '+ Add destination' }).click()
+  await expect(rows).toHaveCount(2)
+  await fill(1, 'Porto', '41.15', '-8.61', '2027-04-06', '2027-04-11')
+
+  await dialog.getByRole('button', { name: /^Create/ }).click()
+  await expect(page.getByText('Trip created')).toBeVisible()
+
+  // Both destinations are pinned, not just the trip.
+  await expect.poll(pinned).toBe(before + 2)
+
+  await page.getByTestId('travel-sections').getByRole('button', { name: /Iberia, spring/ }).first().click()
+  await expect(page).toHaveURL(/trip=/)
+
+  // What was saved, read back off the form. This is the direct evidence and it
+  // comes first: the trip's own dates below are derived from these rows, so a
+  // row that lost a date should fail here, naming the field, rather than there.
+  await page.getByRole('button', { name: 'Edit details' }).click()
+  await expect(rows).toHaveCount(2)
+  await expect(rows.nth(0).getByLabel(/^Destination/)).toHaveValue('Lisbon')
+  await expect(rows.nth(1).getByLabel(/^Destination/)).toHaveValue('Porto')
+  await expect(rows.nth(1).getByLabel('Lat', { exact: true })).toHaveValue('41.15')
+  await expect(rows.nth(1).getByLabel('Arrive', { exact: true })).toHaveValue('2027-04-06')
+  await expect(rows.nth(1).getByLabel('Leave', { exact: true })).toHaveValue('2027-04-11')
+  // No shot of the open form: shoot() reloads to swap the theme, and whether
+  // the form is open is React state rather than the URL, so it would come back
+  // showing the drawer behind it.
+
+  // Cancel goes back to the trip, where its own place and dates are a summary
+  // of those rows: the first row's city, and the span across both rather than
+  // either one.
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+  await expect(dialog).toContainText('Lisbon')
+  await expect(dialog).toContainText(/Apr 2.+Apr 11/)
+
+  // Taking one away takes its pin with it, and the span shrinks back.
+  await page.getByRole('button', { name: 'Edit details' }).click()
+  await rows.nth(1).getByRole('button', { name: 'Remove Porto' }).click()
+  await expect(rows).toHaveCount(1)
+  await dialog.getByRole('button', { name: /^Save/ }).click()
+  await expect(page.getByText('Saved')).toBeVisible()
+  await expect.poll(pinned).toBe(before + 1)
+  await expect(dialog).toContainText(/Apr 2.+Apr 6/)
+
+  // Put the fixture back for the travel tests after this one. Saving returns to
+  // the trip rather than closing, so Delete is right here; reaching for the
+  // card behind the drawer would be clicking through an overlay.
+  await page.getByRole('button', { name: 'Delete trip' }).click()
+  await expect(page.getByText('Trip deleted')).toBeVisible()
+  await expect.poll(pinned).toBe(before)
 })
 
 test('fitness, workouts with pace derived rather than stored', async ({ page }) => {
@@ -2334,8 +2471,10 @@ test('fitness, workouts with pace derived rather than stored', async ({ page }) 
     await expect(page.getByText('Leg press · best set')).toBeVisible()
     await expect(page.getByText(/360 ×10/)).toBeVisible()
     await expect(page.getByText(/YESTERDAY · LOWER/i)).toBeVisible()
-    await expect(page.getByText(/340 \/ 405/)).toBeVisible()
-    await expect(page.getByText(/STALLED · \d+%/i)).toBeVisible()
+    // Digests are live (v1.1 Phase 5): the goals check-in test earlier in the
+    // run moves Deadlift from 340 stalled to 355 at risk, and the tile follows.
+    await expect(page.getByText(/3(40|55) \/ 405/)).toBeVisible()
+    await expect(page.getByText(/(STALLED|AT RISK) · \d+%/i)).toBeVisible()
     // Load lives in the This week sub-line now, not a tile of its own, and
     // XP is not drawn: the weight lives in the skills schema.
     await expect(page.getByText('duration by kind')).toHaveCount(0)
