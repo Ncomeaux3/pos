@@ -10,6 +10,12 @@ export type TravelDigest = {
   overBudget: { name: string; spentCents: number; budgetCents: number }[]
   placesVisited: number
   countries: number
+  /**
+   * Destinations across the upcoming trips. A trip holding four cities used to
+   * be indistinguishable from one holding a single city, and the count is the
+   * cheapest place to say otherwise.
+   */
+  destinations: number
 }
 
 export async function nightlyDigest(): Promise<TravelDigest> {
@@ -31,6 +37,7 @@ export async function nightlyDigest(): Promise<TravelDigest> {
     pending: string
     places: string
     countries: string
+    destinations: string
   }>(
     `select
        (select count(*)::text from travel.trip
@@ -39,7 +46,11 @@ export async function nightlyDigest(): Promise<TravelDigest> {
        (select count(*)::text from travel.itinerary_item where status = 'pending') as pending,
        (select count(*)::text from travel.place_visited) as places,
        (select count(distinct country)::text from travel.place_visited
-         where country <> '') as countries`,
+         where country <> '') as countries,
+       (select count(*)::text from travel.destination d
+          join travel.trip t on t.id = d.trip_id
+         where t.status in ('planned', 'booked')
+           and (t.starts_on is null or t.starts_on >= core.today())) as destinations`,
   )
 
   // Only confirmed spend counts against a budget. A pending booking is a guess
@@ -76,6 +87,7 @@ export async function nightlyDigest(): Promise<TravelDigest> {
     })),
     placesVisited: Number(counts[0].places),
     countries: Number(counts[0].countries),
+    destinations: Number(counts[0].destinations),
   }
 }
 
@@ -102,10 +114,32 @@ export async function completeFinishedTrips(): Promise<{ completed: number }> {
 
   const { register } = await import('@/core/entities')
 
+  const { listDestinations } = await import('../data')
+
   for (const trip of rows) {
     await db().query(`update travel.trip set status = 'done' where id = $1`, [trip.id])
 
-    if (trip.lat !== null && trip.lon !== null) {
+    // One place per destination: a trip through four cities visited four
+    // places, and a map that shows only the first is wrong about where you
+    // have been. Each keeps its own end date, because that is when it was.
+    const destinations = (await listDestinations(trip.id)).filter(
+      (d) => d.lat !== null && d.lon !== null,
+    )
+
+    for (const d of destinations) {
+      await db().query(
+        `insert into travel.place_visited
+           (trip_id, name, lat, lon, visited_on, source, external_id)
+         values ($1, $2, $3, $4, $5, 'agent', $6)
+         on conflict (source, external_id) do update set visited_on = excluded.visited_on`,
+        [trip.id, d.name || trip.name, d.lat, d.lon, d.ends_on ?? trip.ends_on, `dest-${d.id}`],
+      )
+    }
+
+    // A trip with no destination rows still has its own place, and the
+    // trip-<id> external_id it was already filed under stays so a second run
+    // corrects rather than duplicates.
+    if (destinations.length === 0 && trip.lat !== null && trip.lon !== null) {
       await db().query(
         `insert into travel.place_visited
            (trip_id, name, lat, lon, visited_on, source, external_id)

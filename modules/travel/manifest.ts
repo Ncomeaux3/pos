@@ -3,11 +3,63 @@ import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
 import { completeFinishedTrips, nightlyDigest } from './jobs/nightly-digest'
+import { summarise, type Destination } from './span'
 import TravelPage from './ui/TravelPage'
 import { TravelTile } from './ui/Tile'
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD')
 const time = z.string().regex(/^\d{2}:\d{2}$/, 'Expected HH:MM')
+
+/**
+ * Swap a trip's destinations for this set and bring the trip's own columns
+ * back in line with them.
+ *
+ * Delete and insert rather than diff: the set is small, position is the array
+ * order, and a row the owner removed from the middle has no identity left to
+ * match on. Cascade is not involved; nothing references a destination.
+ */
+async function replaceDestinations(
+  tripId: string,
+  destinations: {
+    name: string
+    lat?: number | null
+    lon?: number | null
+    starts_on?: string | null
+    ends_on?: string | null
+  }[],
+): Promise<void> {
+  await db().query(`delete from travel.destination where trip_id = $1`, [tripId])
+
+  for (const [position, d] of destinations.entries()) {
+    await db().query(
+      `insert into travel.destination (trip_id, name, lat, lon, starts_on, ends_on, position)
+       values ($1, $2, $3, $4, $5, $6, $7)`,
+      [tripId, d.name, d.lat ?? null, d.lon ?? null, d.starts_on ?? null, d.ends_on ?? null, position],
+    )
+  }
+
+  const rows: Destination[] = destinations.map((d) => ({
+    name: d.name,
+    lat: d.lat ?? null,
+    lon: d.lon ?? null,
+    starts_on: d.starts_on ?? null,
+    ends_on: d.ends_on ?? null,
+  }))
+  const summary = summarise(rows)
+
+  // An empty set leaves the trip where it was rather than blanking it: a trip
+  // whose last destination was removed is still the trip the owner named, and
+  // erasing its dates would drop it out of the upcoming list without being
+  // asked to.
+  if (rows.length === 0) return
+
+  await db().query(
+    `update travel.trip
+        set destination = $2, lat = $3, lon = $4, starts_on = $5, ends_on = $6
+      where id = $1`,
+    [tripId, summary.destination, summary.lat, summary.lon, summary.starts_on, summary.ends_on],
+  )
+}
 
 export default defineModule({
   id: 'travel',
@@ -35,19 +87,41 @@ export default defineModule({
         travellers: z.number().int().min(1).max(50).optional(),
         status: z.enum(['idea', 'planned', 'booked', 'done']).optional(),
         notes: z.string().max(5000).optional(),
+
+        // The whole set, in order, or left out entirely. Replaced rather than
+        // merged: the form edits a list and sends back the list it has, and
+        // there is no stable identity to merge against once a row can be
+        // dragged, removed or added in the middle. Omitting the key leaves the
+        // destinations alone, which is what every caller that only wants to
+        // change a name or a budget does.
+        destinations: z
+          .array(
+            z.object({
+              name: z.string().min(1).max(200),
+              lat: z.number().min(-90).max(90).nullable().optional(),
+              lon: z.number().min(-180).max(180).nullable().optional(),
+              starts_on: date.nullable().optional(),
+              ends_on: date.nullable().optional(),
+            }),
+          )
+          .max(40)
+          .optional(),
       }),
-      run: async (input) => {
-        if (input.id) {
+      run: async ({ destinations, ...input }) => {
+        let id = input.id
+
+        if (id) {
           const fields = Object.entries(input).filter(([key]) => key !== 'id')
           if (fields.length > 0) {
             // Every key is a literal from the zod schema above, a closed set.
             const set = fields.map(([key], i) => `${key} = $${i + 2}`).join(', ')
             await db().query(`update travel.trip set ${set} where id = $1`, [
-              input.id,
+              id,
               ...fields.map(([, value]) => value),
             ])
           }
-          return { id: input.id }
+          if (destinations) await replaceDestinations(id, destinations)
+          return { id }
         }
 
         if (!input.name) throw new Error('A trip needs a name')
@@ -72,15 +146,113 @@ export default defineModule({
           ],
         )
 
+        id = rows[0].id
+
+        // After the insert, so the summary the destinations imply wins over
+        // whatever destination, lat, lon or dates the same call also passed.
+        if (destinations) await replaceDestinations(id, destinations)
+
         await register({
           module: 'travel',
           entityType: 'trip',
-          entityId: rows[0].id,
+          entityId: id,
           title: input.name,
           text: input.destination,
         })
 
-        return { id: rows[0].id }
+        return { id }
+      },
+    }),
+
+    merge_trip: defineTool({
+      description:
+        'Fold one trip into another. The first becomes a destination of the second and is deleted.',
+      input: z.object({ id: z.uuid(), into: z.uuid() }),
+      run: async ({ id, into }) => {
+        if (id === into) throw new Error('A trip cannot be merged into itself')
+
+        const { rows: found } = await db().query<{
+          id: string
+          destination: string
+          lat: string | null
+          lon: string | null
+          starts_on: string | null
+          ends_on: string | null
+          destinations: string
+        }>(
+          `select t.id, t.destination, t.lat::text, t.lon::text,
+                  t.starts_on::text, t.ends_on::text,
+                  (select count(*)::text from travel.destination d where d.trip_id = t.id)
+                    as destinations
+             from travel.trip t where t.id = any($1)`,
+          [[id, into]],
+        )
+        const from = found.find((t) => t.id === id)
+        if (!from) throw new Error('No such trip')
+        if (!found.some((t) => t.id === into)) throw new Error('No such trip to merge into')
+
+        // Appended after what the target already has, so the order the owner
+        // built up on each trip survives the merge.
+        const { rows: end } = await db().query<{ next: string }>(
+          `select coalesce(max(position) + 1, 0)::text as next
+             from travel.destination where trip_id = $1`,
+          [into],
+        )
+        const next = Number(end[0].next)
+
+        await db().query(
+          `update travel.destination set trip_id = $2, position = position + $3 where trip_id = $1`,
+          [id, into, next],
+        )
+
+        // A trip written before destinations existed, or through write_trip
+        // without them, carries its place on its own columns and has no row to
+        // re-point. Its place would be lost otherwise.
+        if (Number(from.destinations) === 0 && (from.destination !== '' || from.lat !== null)) {
+          await db().query(
+            `insert into travel.destination (trip_id, name, lat, lon, starts_on, ends_on, position)
+             values ($1, $2, $3, $4, $5, $6, $7)`,
+            [into, from.destination, from.lat, from.lon, from.starts_on, from.ends_on, next],
+          )
+        }
+
+        await db().query(`update travel.itinerary_item set trip_id = $2 where trip_id = $1`, [id, into])
+        await db().query(`update travel.packing_item set trip_id = $2 where trip_id = $1`, [id, into])
+        await db().query(`update travel.place_visited set trip_id = $2 where trip_id = $1`, [id, into])
+
+        // budget_line is unique on (trip_id, category). Nothing is summed, so
+        // where both trips budgeted for the same category the target's figure
+        // stands and the source's is dropped rather than silently doubling it.
+        await db().query(
+          `delete from travel.budget_line a
+            where a.trip_id = $1
+              and exists (select 1 from travel.budget_line b
+                           where b.trip_id = $2 and b.category = a.category)`,
+          [id, into],
+        )
+        await db().query(`update travel.budget_line set trip_id = $2 where trip_id = $1`, [id, into])
+
+        const { listDestinations } = await import('./data')
+        const summary = summarise(await listDestinations(into))
+        if (summary.destination !== '') {
+          await db().query(
+            `update travel.trip
+                set destination = $2, lat = $3, lon = $4, starts_on = $5, ends_on = $6
+              where id = $1`,
+            [into, summary.destination, summary.lat, summary.lon, summary.starts_on, summary.ends_on],
+          )
+        }
+
+        // The entities row goes with it, or search and the skill links keep
+        // answering with a trip that is not there any more.
+        await db().query(
+          `delete from core.entities
+            where module = 'travel' and entity_type = 'trip' and entity_id = $1`,
+          [id],
+        )
+        await db().query(`delete from travel.trip where id = $1`, [id])
+
+        return { id: into, merged: id }
       },
     }),
 
@@ -289,7 +461,7 @@ export default defineModule({
    * `accept_item` is the owner acting on that, and `set_loyalty` is a number
    * they typed.
    */
-  guarded: ['write_trip', 'delete_trip'],
+  guarded: ['write_trip', 'delete_trip', 'merge_trip'],
   requires: [],
 
   metrics: {

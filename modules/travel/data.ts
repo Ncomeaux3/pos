@@ -162,3 +162,40 @@ export async function listBudgetLines(tripId?: string): Promise<BudgetLineRow[]>
   )
   return rows
 }
+
+export type DestinationRow = {
+  id: string
+  trip_id: string
+  name: string
+  lat: number | null
+  lon: number | null
+  starts_on: string | null
+  ends_on: string | null
+  position: number
+}
+
+/**
+ * A trip's cities, in the owner's order.
+ *
+ * Numeric, not text, because the globe projects these and the trip columns
+ * they summarise are read the same way. pg returns numeric as a string, so the
+ * cast happens once here rather than at every pin.
+ */
+export async function listDestinations(tripId?: string): Promise<DestinationRow[]> {
+  const { rows } = await db().query<Omit<DestinationRow, 'lat' | 'lon'> & {
+    lat: string | null
+    lon: string | null
+  }>(
+    `select id, trip_id, name, lat::text, lon::text,
+            starts_on::text, ends_on::text, position
+       from travel.destination
+      ${tripId ? 'where trip_id = $1' : ''}
+      order by trip_id, position`,
+    tripId ? [tripId] : [],
+  )
+  return rows.map((r) => ({
+    ...r,
+    lat: r.lat === null ? null : Number(r.lat),
+    lon: r.lon === null ? null : Number(r.lon),
+  }))
+}
