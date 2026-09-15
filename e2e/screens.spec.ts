@@ -276,6 +276,24 @@ test('dashboard, the week ahead and arranging the tiles', async ({ page }) => {
     await expect(page).toHaveURL(/arrange=1/)
     await expect(page.getByText(/Arrange mode/)).toBeVisible()
 
+    // The layout is one setting on the server (v1.1 Phase 5), so a hidden
+    // tile stays hidden across a reload and comes back from the Hidden row.
+    const main = page.getByRole('main')
+    const saved = () =>
+      page.waitForResponse(
+        (r) => r.request().method() === 'POST' && 'next-action' in r.request().headers(),
+      )
+    let acted = saved()
+    await page.getByRole('button', { name: 'Hide llm' }).click()
+    await expect(main.getByText('Model spend · month')).toBeHidden()
+    await acted
+    await page.reload()
+    await expect(main.getByText('Model spend · month')).toBeHidden()
+    acted = saved()
+    await page.getByTestId('dashboard-hidden').getByRole('button', { name: 'Show llm' }).click()
+    await expect(main.getByText('Model spend · month')).toBeVisible()
+    await acted
+
     await page.getByRole('link', { name: 'Done', exact: true }).click()
     await expect(page.getByText(/Arrange mode/)).toBeHidden()
   } else {
@@ -974,8 +992,14 @@ test('dashboard renders the nightly run', async ({ page }) => {
   // wrote to a rule id that did not exist and the row came straight back).
   const snoozeButton = main.getByRole('button', { name: 'Snooze' }).first()
   await expect(snoozeButton).toBeVisible()
-  const snoozedTitle = (await snoozeButton.locator('../..').locator('span.text-ink').first().textContent()) ?? ''
+  const snoozedTitle = (await snoozeButton.locator('../..').locator('a.text-ink').first().textContent()) ?? ''
   expect(snoozedTitle).not.toBe('')
+  // Every warning row goes somewhere (v1.1 Phase 5): the nightly digest's row
+  // opens the alert centre.
+  await expect(main.getByRole('link', { name: snoozedTitle, exact: true })).toHaveAttribute(
+    'href',
+    /^\//,
+  )
   await snoozeButton.click()
   // The row goes optimistically; wait for the server action itself before
   // reloading, or the reload can race the write it is meant to prove.
@@ -1350,11 +1374,22 @@ test('tasks, the six views and the month grid', async ({ page }) => {
 })
 
 test('tasks, completing one emits the event that earns XP', async ({ page }) => {
+  // The dashboard's Tasks tile reads the latest digest, and every write tool
+  // recomputes it (v1.1 Phase 5), so the count moves without Run now.
+  await page.goto('/')
+  const tasksMeta = page.getByRole('main').getByRole('link', { name: /of \d+ done/ })
+  const before = await tasksMeta.textContent()
+
   await page.goto('/tasks')
   const mobile = (page.viewportSize()?.width ?? 0) < 768
 
   await page.getByRole('button', { name: 'Complete Read DDIA ch. 5, Replication' }).click()
   await expect(page.getByText('Done. Read DDIA ch. 5, Replication')).toBeVisible()
+
+  await page.goto('/')
+  await expect(tasksMeta).toBeVisible()
+  expect(await tasksMeta.textContent()).not.toBe(before)
+  await page.goto('/tasks')
 
   if (mobile) {
     await page.getByRole('button', { name: 'Filter task views' }).click()

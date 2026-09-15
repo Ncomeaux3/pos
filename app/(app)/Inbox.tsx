@@ -21,7 +21,7 @@ export function WarningList({
   warnings,
   phoneLimit,
 }: {
-  warnings: { id: string; title: string; sub: string; urgent: boolean }[]
+  warnings: { id: string; title: string; sub: string; urgent: boolean; href: string | null }[]
   /** Rows shown below md; the rest sit behind a link, so Home fits in two swipes. */
   phoneLimit?: number
 }) {
@@ -69,7 +69,14 @@ export function WarningList({
               aria-hidden
             />
             <span className="min-w-0">
-              <span className="block text-[13px] leading-[1.35] text-ink">{w.title}</span>
+              {/* Every row goes somewhere (v1.1 Phase 5): the module that
+                * queued it named the screen, or the alert centre has it. */}
+              <Link
+                href={w.href ?? '/notifications'}
+                className="block text-[13px] leading-[1.35] text-ink"
+              >
+                {w.title}
+              </Link>
               {w.sub && <span className="mt-0.5 block truncate text-[11px] text-ink-3">{w.sub}</span>}
             </span>
           </span>
