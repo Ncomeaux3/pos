@@ -1,15 +1,18 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { cn } from '@/lib/utils'
 import type { SkillStat } from '../data'
 import type { SkillNode } from '../tree'
 import { layout, nodeRadius, ROOT_ID, VIEW_H, VIEW_W, type Placed } from './layout'
-import { FLY_MS, flyAt, labelScale, viewPoint, zoomBy, zoomStep, ZOOM_MAX, type View } from './view'
+import { FLY_MS, flyAt, labelScale, pinch, viewPoint, zoomBy, zoomStep, ZOOM_MAX, type View } from './view'
 
 // Obsidian style, but placed rather than simulated: see ./layout.ts.
 
 const HOME: View = { zoom: 1, pan: { x: 0, y: 0 } }
+
+/** How far a pointer travels before a press becomes a pan. The globe's slop. */
+const DRAG_PX = 4
 
 export type Tone = 'gaining' | 'active' | 'stagnant'
 
@@ -182,16 +185,20 @@ export function Constellation({
   }, [])
   const [hover, setHover] = useState<{ node: Placed; x: number; y: number; width: number; height: number } | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
-  // A drag only becomes a pan once the pointer has actually moved. Until then
-  // the press is a click on whatever is under it, which is what makes clicking
-  // a node work at all: capturing the pointer on pointerdown retargets the
-  // click to the svg, and the node's own handler never runs.
-  const drag = useRef<{ x: number; y: number; panX: number; panY: number; panning: boolean } | null>(
-    null,
-  )
+  // Every pointer that is down, where it last was. One pans, two pinch. The
+  // globe has kept this shape since it was built; the tree kept a single drag
+  // origin, so a second finger overwrote the first and there was no pinch to
+  // be had (v1.1 Phase 8).
+  const pointers = useRef(new Map<number, { x: number; y: number }>())
+  // Where the first pointer went down, and whether it has moved far enough to
+  // count as a drag. A finger that wobbles on a star is a tap.
+  const start = useRef<{ x: number; y: number } | null>(null)
+  const dragged = useRef(false)
   /** True from the moment a pan starts until the click it would produce is
    * swallowed, so letting go after dragging does not also select a node. */
   const panned = useRef(false)
+
+  const lift = (e: ReactPointerEvent) => pointers.current.delete(e.pointerId)
 
   const svg = useRef<SVGSVGElement>(null)
 
@@ -316,44 +323,66 @@ export function Constellation({
         ref={svg}
         role="img"
         aria-label="Skill constellation"
+        // This canvas handles its own pointers: PullToRefresh and useEdgeBack
+        // both step aside for a drag that starts in here.
+        data-gesture-surface=""
         viewBox={`${-VIEW_W / 2} ${-VIEW_H / 2} ${VIEW_W} ${VIEW_H}`}
         className="absolute inset-0 h-full w-full cursor-grab touch-none select-none active:cursor-grabbing"
+        // No pointer capture: with it a tap on a star lands on the svg rather
+        // than the star, so a star could never be picked. `panned` is what
+        // keeps a pan from also selecting, and it does not need capture.
         onPointerDown={(e) => {
           settle()
-          const { pan } = view.current
-          drag.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y, panning: false }
-          panned.current = false
+          if (e.isPrimary) {
+            start.current = { x: e.clientX, y: e.clientY }
+            dragged.current = false
+            panned.current = false
+          }
+          pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
         }}
         onPointerMove={(e) => {
-          if (!drag.current) return
+          const prev = pointers.current.get(e.pointerId)
+          if (!prev) return
 
-          const dx = e.clientX - drag.current.x
-          const dy = e.clientY - drag.current.y
-          // Three pixels of slop, so a press that wobbles is still a click.
-          if (!drag.current.panning && Math.hypot(dx, dy) < 3) return
-
-          if (!drag.current.panning) {
-            drag.current.panning = true
+          if (!dragged.current) {
+            const from = start.current ?? prev
+            if (Math.hypot(e.clientX - from.x, e.clientY - from.y) < DRAG_PX) return
+            dragged.current = true
             panned.current = true
-            e.currentTarget.setPointerCapture(e.pointerId)
           }
 
-          // Screen pixels to translate units: through the fitted scale, then
-          // through the zoom the group applies after the translate.
-          const units = 1 / (viewPoint(e.currentTarget, 0, 0).scale * view.current.zoom)
-          view.current = {
-            zoom: view.current.zoom,
-            pan: { x: drag.current.panX + dx * units, y: drag.current.panY + dy * units },
+          const el = e.currentTarget
+          const other = [...pointers.current.entries()].find(([id]) => id !== e.pointerId)?.[1]
+          if (other) {
+            // A pinch: zoom by how much the two fingers spread, about their
+            // midpoint, so the tree grows where the hand is.
+            const before = Math.hypot(prev.x - other.x, prev.y - other.y)
+            const after = Math.hypot(e.clientX - other.x, e.clientY - other.y)
+            view.current = pinch(
+              view.current,
+              before,
+              after,
+              viewPoint(el, (e.clientX + other.x) / 2, (e.clientY + other.y) / 2),
+            )
+          } else {
+            // Screen pixels to translate units: through the fitted scale, then
+            // through the zoom the group applies after the translate.
+            const units = 1 / (viewPoint(el, 0, 0).scale * view.current.zoom)
+            view.current = {
+              zoom: view.current.zoom,
+              pan: {
+                x: view.current.pan.x + (e.clientX - prev.x) * units,
+                y: view.current.pan.y + (e.clientY - prev.y) * units,
+              },
+            }
           }
+
+          pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
           apply()
         }}
-        onPointerUp={(e) => {
-          if (drag.current?.panning) e.currentTarget.releasePointerCapture(e.pointerId)
-          drag.current = null
-        }}
-        onPointerCancel={() => {
-          drag.current = null
-        }}
+        onPointerUp={lift}
+        onPointerCancel={lift}
+        onPointerLeave={lift}
         // Clicking the space between stars clears the selection, the way
         // clicking off a row does everywhere else.
         onClick={() => {

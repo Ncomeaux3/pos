@@ -3163,6 +3163,61 @@ test('gestures, pulling down from the top refreshes the screen', async ({ page }
   await expect(page.getByRole('heading', { name: 'Finance', level: 1 })).toBeVisible()
 })
 
+// v1.1 Phase 8. The sky sits at the top of the phone screen, so every drag on
+// it reached the two listeners that watch the whole document: a pull down
+// armed a refresh and a drag from the left edge went back. The globe never
+// sat high enough to find this out. Both now step aside for a canvas marked
+// data-gesture-surface.
+test('gestures, dragging the constellation pans it and does not refresh or go back', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Touch gestures are a phone thing')
+
+  // A page to go back to, so an edge swipe that fires has somewhere to land
+  // and this test can tell the difference.
+  await page.goto('/')
+  await page.goto('/skills')
+  await page.waitForLoadState('networkidle')
+
+  const sky = page.getByRole('img', { name: 'Skill constellation' })
+  const box = (await sky.boundingBox())!
+  const transform = () => sky.locator('g[transform]').first().getAttribute('transform')
+  const before = await transform()
+
+  // Down the screen from near the top, which is the gesture that used to arm
+  // the refresh. pointerId and isPrimary are what React reads to decide this
+  // is the first finger.
+  const touch = (clientX: number, clientY: number) => ({
+    pointerType: 'touch',
+    pointerId: 1,
+    isPrimary: true,
+    clientX,
+    clientY,
+  })
+  const x = box.x + box.width / 2
+  const top = box.y + 24
+  await sky.dispatchEvent('pointerdown', touch(x, top))
+  await sky.dispatchEvent('pointermove', touch(x, top + 40))
+  await sky.dispatchEvent('pointermove', touch(x, top + 90))
+
+  await expect(page.getByText('Release to refresh')).toHaveCount(0)
+  await sky.dispatchEvent('pointerup', touch(x, top + 90))
+
+  // The sky moved with the finger, and the drag selected nothing.
+  await expect.poll(transform).not.toBe(before)
+  await expect(page).toHaveURL(/\/skills$/)
+
+  // From the left edge rightwards: a pan, not a back navigation.
+  const panned = await transform()
+  const y = box.y + box.height / 2
+  await sky.dispatchEvent('pointerdown', touch(box.x + 8, y))
+  await sky.dispatchEvent('pointermove', touch(box.x + 60, y))
+  await sky.dispatchEvent('pointerup', touch(box.x + 120, y))
+
+  await expect(page).toHaveURL(/\/skills$/)
+  await expect.poll(transform).not.toBe(panned)
+})
+
 test('gestures, holding a dashboard tile enters arrange mode', async ({ page }, testInfo) => {
   // Arrange is desktop only (2026-09-13 decision): a phone hold is a no-op.
   test.skip(testInfo.project.name === 'mobile', 'Arrange is desktop only')
