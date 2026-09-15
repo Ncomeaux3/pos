@@ -6,6 +6,7 @@ Owner: Nick. Solo, nights and weekends. Finish one module before starting the ne
 
 ## Read on demand, not every session
 - Where the build is right now: docs/STATUS.md (read this first in a fresh session)
+- The v1.1 build plan: docs/plans/pos-v1-1.md (one phase per session, /build-phase)
 - How it is built: docs/ARCHITECTURE.md (read before touching core, a manifest, or a migration)
 - Full module spec: @docs/SPEC.md (use /module <name> to load one module's section)
 - Unresolved choices: @docs/DECISIONS.md (ask before scaffolding anything they affect)
@@ -35,7 +36,7 @@ Owner: Nick. Solo, nights and weekends. Finish one module before starting the ne
 ## Tools for this project
 - Agents: `quick-builder` for Complexity low phases and small specified edits; `test-runner` for the full suites, lint, typecheck and build; `ui-verifier` after any change to a screen, at 402 and 1440 px, against the artboard in the design bundle; `spec-reviewer` before each PR; `prod-auditor` on the last phase of a plan; `researcher` and `reviewer` (in `.claude/agents/`) for docs lookups and a fresh-context diff review.
 - Skills: `/module <name>` to load one module's spec; `/integration` before touching a provider; `/research` before adding a dependency; `code-review` before a PR; `brainstorming` before a new screen or a schema change.
-- MCP: the Vercel connector for deployments, build logs and runtime errors of project `pos` (production `pos-gilt-rho.vercel.app`); the Supabase connector for the hosted project once the owner's account is linked (it does not see the project yet); context7 for Next 16, Supabase and Playwright docs; the Playwright plugin for `ui-verifier`; `pos` (`http://localhost:3000/api/mcp`, bearer `MCP_TOKEN`) is the app's own server and only answers while `pnpm dev` runs. Prefer `gh`, `supabase` and `vercel` CLIs when both can do the job.
+- MCP: the Vercel connector for deployments, build logs and runtime errors of project `pos` (production `pos-gilt-rho.vercel.app`); the Supabase connector for the hosted project once the owner's account is linked (it does not see the project yet); context7 for Next 16, Supabase and Playwright docs; the Playwright plugin for `ui-verifier`; `pos` (`http://localhost:3000/api/mcp`, bearer `MCP_TOKEN`) is the app's own server and only answers while `pnpm dev` runs. Prefer `gh`, `supabase` and `vercel` CLIs when both can do the job. For v1.1 diagnosis: the Vercel connector's runtime logs and Crons tab (push, cron email, TTFB), Claude in Chrome for the push Network-tab check, context7 for the Next 16 native history API before Phase 4.
 
 ## Commands
 - `pnpm dev` dev server. `pnpm test` vitest. `pnpm test:e2e` Playwright screens. `pnpm lint`. `pnpm typecheck`.
