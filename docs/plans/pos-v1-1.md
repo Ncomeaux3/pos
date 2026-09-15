@@ -19,7 +19,7 @@ Order: bugs first, then speed, then features, fitness, hardening. Phases marked 
 | 8 Skill tree gestures | Phone drag and pinch behave like the globe | medium | 1 to 7, 9, 10 | none | Done 2026-09-15: `data-gesture-surface` opts both canvases out of pull-to-refresh and edge-back, the globe's pointers Map ported, pinch() unit tested; owner still to confirm pinch on the phone | #65 |
 | 9 Travel destinations | Multi-destination trips, all pinned, merge into | high | 1 to 8, 10 | none | Done 2026-09-15 in three PRs, migration pushed: destinations table, write_trip, pins, places, digest, merge_trip tool with the Merge into select, multi-row TripForm, and the e2e through a merge | #59, #60, #69 |
 | 10 Finance chart | Net worth on a 30-day date axis with the average | low | 1 to 9 | none | Done 2026-09-15: spine() on a date axis, nulls break the line, padded y, stats over recorded days. The LineChart extraction and the two-day e2e were not done and moved to Phase 11, which is the phase that needs them | #57 |
-| 11 Fitness | Trends, history filters, plan form, Apple arrival on Sync | high | none | 10, 7b | Not started | |
+| 11 Fitness | Trends, history filters, plan form, Apple arrival on Sync | high | none | 10, 7b | Done 2026-09-15: LineChart extracted with spine() in core, Trends over 30/90/365, the filter row, PlanDrawer over write_plan, Apple arrival on the band from the request log. Owner step (the HAE fixture) still open | |
 | 12 Hardening | error pages, audit step, branch protection, route limits, rotation doc | low | none | all | Not started | |
 
 Every UI phase's exit checks include: `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build` pass; an e2e in `e2e/screens.spec.ts` for the flow (workers 1, never overridden); ui-verifier at 402 and 1440 px with no Must fix; spec-reviewer before the PR. Not repeated per phase.
@@ -276,15 +276,15 @@ Complexity: high
 Parallel-safe with: none
 Files: `components/pos/charts.tsx`, `modules/finance/ui/Finance.tsx`, `integrations/health_auto_export/client.ts` and test, `modules/fitness/data.ts`, `modules/fitness/manifest.ts`, `modules/fitness/ui/FitnessPage.tsx`, `modules/fitness/ui/Fitness.tsx`, new `modules/fitness/ui/PlanDrawer.tsx`, `modules/fitness/ui/sync.ts`, `modules/fitness/ui/actions.ts`, `modules/health/ui/HealthPage.tsx` (assert only), `e2e/seed.mts`, `e2e/screens.spec.ts`.
 
-- [ ] Owner step (OWNER-TODO 15): Health Auto Export Premium, one export to the webhook. Read the body from `core.request_log` through the integration's Test view; save it as the fixture for `client.test.ts` (written before the field-name fixes); correct the names marked verify in `client.ts`.
-- [ ] `data.ts`: `metricSeries(kind, days)` over `fitness.body_metric`; `listWorkouts` gains `{ kind?, source?, from?, to?, limit }`; `lastArrived()` = max `created_at` over `body_metric` and `workout` where `source = 'health_auto_export'`.
-- [ ] Extract axis and line into `LineChart` in `components/pos/charts.tsx` (dates, values with nulls, unit formatter, height), carried over from Phase 10, which left it undone. Do this first, with `NetWorthChart` becoming a thin wrapper over it and the finance e2e still green, so Trends is built on a component with two real callers rather than one.
-- [ ] Trends tab: select of kinds present, `PillGroup` 30 / 90 / 365, the extracted `LineChart` with the unit formatter from `units.ts`. 30 days rendered server side; 90 and 365 through a `readMetricSeries` server action.
-- [ ] Workouts tab: filter row (kind, source, two native date inputs), state in the URL through `useSearchState` with `local: true`.
-- [ ] Plan: `PlanDrawer.tsx` creating or editing `fitness.plan` and items (day label, exercise, sets, reps, target weight) through `callTool('fitness','write_plan')` (UI source is never guarded); read the tool's input shape at `manifest.ts:127` first.
-- [ ] Sync now: `SyncBand` `at` becomes the later of the Strava job and `lastArrived()`, with a second line "Apple data last arrived <when>".
-- [ ] Health: `HealthPage.tsx:41` reads `readMetric('fitness.body_weight')` live; add the e2e assertion that a new weight shows on `/health` after a webhook post; no code change expected.
-- [ ] e2e: seed 40 days of weight, Trends draws it; the filter narrows the list; the plan drawer saves a two-day plan.
+- [ ] Owner step (OWNER-TODO 15): Health Auto Export Premium, one export to the webhook. Not done on 2026-09-15 (no export yet). Note for when it is: `core.request_log` stores route, status and error only, no body, so the fixture has to come from the app's own share sheet or a request bin, not from the Test view. Save it as the fixture for `client.test.ts`; correct the names marked verify in `client.ts`.
+- [x] `data.ts`: `metricSeries(kind, days)` over `fitness.body_metric`; `listWorkouts` gains `{ kind?, source?, from?, to?, limit }`; `lastArrived()` reads `core.request_log` (200s on the two Apple webhook routes) rather than the rows' `created_at`, which the inbound upsert keeps.
+- [x] `LineChart` extracted into `components/pos/LineChart.tsx` (its own client file: the crosshair needs state and `charts.tsx` renders on the server), `NetWorthChart` a thin wrapper, `spine()` moved to `core/series.ts` so both modules read it.
+- [x] Trends tab: select of kinds present, `PillGroup` 30 / 90 / 365, `LineChart` with `metricValue()`. 30 days of weight rendered server side; the rest through `readMetricSeries`.
+- [x] Workouts tab: filter row (kind, source, two native date inputs), state in the URL through `useSearchState` with `local: true`; the rows come from a `readWorkouts` action, fetched once on mount when a load carries a filter.
+- [x] Plan: `PlanDrawer.tsx` creating or editing `fitness.plan` and items through `writePlan` over `callTool('fitness','write_plan')`; item notes are carried, not edited.
+- [x] Sync now: `SyncBand` gains `arrived`, a second line "Apple data last arrived <when>". `at` stays Strava's own run, so the band never names Strava for an Apple payload.
+- [x] Health: no code change; the e2e reads the webhook secret from the Connections card, posts a weight, and asserts it on `/health`.
+- [x] e2e: the seed writes 14 weight readings over 40 days; Trends draws 10 of 30 and 14 of 90; the filter narrows and survives a reload; the plan drawer adds a day and removes it again.
 
 Exit checks: `client.test.ts` against the real fixture green; suites green.
 Depends on: 10, 7b. Out of scope: Strava changes, coach rule changes.
