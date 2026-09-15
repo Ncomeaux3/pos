@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
-import { ActionButton, Eyebrow, useToast } from '@/components/pos'
+import { ActionButton, Eyebrow, useToast, type SkillLink } from '@/components/pos'
 import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
 import { dueOn, screeningStatus, type ScreeningStatus } from '../screening'
@@ -28,6 +28,8 @@ export type Appointment = {
   provider: string | null
   providerRole: string | null
   providerAddress: string | null
+  entityRef: string | null
+  skills: SkillLink[]
 }
 
 export type HealthRecord = {
@@ -38,6 +40,8 @@ export type HealthRecord = {
   summary: string
   fields: Record<string, string>
   file: 'PDF' | 'IMAGE' | null
+  entityRef: string | null
+  skills: SkillLink[]
 }
 
 export type HealthData = {
@@ -75,6 +79,8 @@ export type HealthData = {
   providers: { id: string; name: string; role: string; phone: string; address: string; notes: string }[]
   /** From the Insurance module's digest, or empty when it wrote none. */
   coverage: { label: string; value: string }[]
+  /** Every skill in the tree, id and name. From getSkillNames() on the page. */
+  skills: [string, string][]
 }
 
 export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -473,6 +479,7 @@ export function Health({ data }: { data: HealthData }) {
           isNew={params.get('new') === '1'}
           providers={data.providers}
           todayIso={data.todayIso}
+          skills={data.skills}
           onClose={() => setParams({ appt: null, record: null, new: null })}
           onRun={run}
         />

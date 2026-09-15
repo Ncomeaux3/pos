@@ -1,6 +1,8 @@
 import { Eyebrow, PageHeader } from '@/components/pos'
 import { getDigest } from '@/core/digests'
 import { readMetric } from '@/core/metrics'
+import { getSkillNames } from '@/core/modules'
+import { listSkillLinks } from '@/core/skill-links'
 import { ownerToday } from '@/core/today'
 import {
   latestVitals,
@@ -26,6 +28,9 @@ export default async function HealthPage() {
     todayIso,
     bodyWeight,
     insurance,
+    recordLinks,
+    apptLinks,
+    names,
   ] =
     await Promise.all([
       listAppointments(),
@@ -44,6 +49,9 @@ export default async function HealthPage() {
       // other module's tables, and an Insurance that has not run tonight
       // contributes no line rather than an error.
       getDigest('insurance'),
+      listSkillLinks('health', 'record'),
+      listSkillLinks('health', 'appointment'),
+      getSkillNames(),
     ])
 
   const money = (cents: number) =>
@@ -75,6 +83,8 @@ export default async function HealthPage() {
       provider: a.provider_name,
       providerRole: a.provider_role,
       providerAddress: a.provider_address,
+      entityRef: apptLinks.get(a.id)?.entityRef ?? null,
+      skills: apptLinks.get(a.id)?.skills ?? [],
     })),
     medications: medications.map((m) => ({
       id: m.id,
@@ -103,6 +113,8 @@ export default async function HealthPage() {
       summary: r.summary,
       fields: r.fields,
       file: r.file_path === null ? null : /\.(png|jpe?g|webp|heic|gif)$/i.test(r.file_path) ? 'IMAGE' : 'PDF',
+      entityRef: recordLinks.get(r.id)?.entityRef ?? null,
+      skills: recordLinks.get(r.id)?.skills ?? [],
     })),
     screenings: screenings.map((s) => ({
       id: s.id,
@@ -119,6 +131,7 @@ export default async function HealthPage() {
       address: p.address,
       notes: p.notes,
     })),
+    skills: Object.entries(names),
   }
 
   const now = new Date()

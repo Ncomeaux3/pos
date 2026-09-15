@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useRef, useState, useTransition } from 'react'
-import { ActionButton, Eyebrow, Overlay, fieldClass, useToast } from '@/components/pos'
+import { ActionButton, Eyebrow, Overlay, SkillPicker, fieldClass, useToast } from '@/components/pos'
 import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
 import { actualFor, budgetTotals, parseCategory } from '../budget'
@@ -245,6 +245,15 @@ export function TripDrawer({
         {tab === 'budget' && <Budget trip={trip} items={items} lines={lines} run={run} />}
         {tab === 'packing' && <Packing trip={trip} packing={packing} run={run} />}
         {tab === 'inbox' && <Inbox pending={pending} run={run} />}
+      </div>
+
+      <div className="mt-5">
+        <Eyebrow>Linked skills</Eyebrow>
+        {trip.entityRef ? (
+          <SkillPicker entityRef={trip.entityRef} links={trip.skills} skills={data.skills} className="mt-2" />
+        ) : (
+          <p className="mt-2 text-[12px] text-ink-4">Nothing matched yet.</p>
+        )}
       </div>
     </Overlay>
   )
