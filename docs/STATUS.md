@@ -57,7 +57,7 @@ a task can be cleared, the iPhone 16 Pro Max startup image is set, and
 typed dates work once the page is hydrated; a two-digit year gives year 0026,
 which is under `min` and blocks the submit with the browser's own message, and
 keys typed before hydration are dropped. No handler swallows keys. For Phase 6.
-Push: see docs/PUSH.md, "Why enabling failed".
+Push, from the owner pressing the button on production: signed in, `/sw.js` is 200, so the proxy is cleared; the failure is `VAPID_PUBLIC_KEY` in Vercel not decoding as base64url (`atob` throws before subscribe). The pair was regenerated and set again, redeployed, and the desktop subscribed; see docs/PUSH.md, "Why enabling failed".
 
 **Second Brain is capture first.** docs/plans/brain-capture.md, PRs #48, #49
 and #50, all merged 2026-09-14. POS is the primary store for notes now and the

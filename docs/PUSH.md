@@ -52,22 +52,39 @@ device.
 
 ## Why enabling failed
 
-Diagnosed 2026-09-14 (v1.1 Phase 1), in the plan's order.
+Diagnosed 2026-09-14 (v1.1 Phase 1), in the plan's order, on the owner's Mac
+against production.
 
-(a) Uncookied, `GET /sw.js` on production answers `307 -> /login`, text/plain:
-the auth proxy matcher excluded `icons/` and `manifest.webmanifest` but not
-`sw.js`. A worker script fetched through a redirect is rejected by the browser,
-so any registration whose fetch lands without a valid session cookie fails
-before `pushManager.subscribe` runs. The logged-in fetch is the decision point
-and is recorded below when the owner has pressed the button with the Network
-tab open.
+(a) Uncookied, `GET /sw.js` answers `307 -> /login` (curl, 02:32 UTC): the
+auth proxy matcher excludes `icons/` and the manifest but not `sw.js`. This is
+not what broke enabling. Signed in, the same fetch is `200` then `304`
+(Vercel runtime log, 03:06 UTC), so the worker registers and the matcher is
+left alone. A browser fetching the script for an update with an expired
+session gets the 307 and keeps the worker it has, which is the right outcome.
 
-(b) Vercel Production has `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and
-`VAPID_SUBJECT` set (names read with `vercel env ls production`; values not
-pulled). The public key's length is checked in the page during (a), since the
-client needs it to subscribe.
+Before that, the first press on the desktop toasted "The browser refused.
+Notifications are blocked for this site.": `Notification.requestPermission()`
+returned `denied` because Chrome held a Block for the site from an earlier
+dismissed prompt. Site settings > Notifications > Allow cleared it. That is a
+per-browser setting, not something the app can change.
 
-(c) and (d) not reached.
+(b) The second press toasted `Failed to execute 'atob' on 'Window': The
+string to be decoded is not correctly encoded.` That is
+`urlBase64ToUint8Array(vapidPublicKey)` in `Devices.tsx`, so the value of
+`VAPID_PUBLIC_KEY` in Vercel Production is not base64url. A key from
+`web-push` is 87 characters of `A-Z a-z 0-9 - _` and nothing else; a pasted
+quote, a trailing newline or a space breaks `atob`. This is the cause on both
+devices at once: every browser reads the same key.
+
+Fix, done 2026-09-14: Vercel does not reveal a sensitive variable once saved,
+so the pair was generated again with `web-push`, both values set again in
+Production with `vercel env rm` and `vercel env add` (no quotes, the public key
+87 characters, the private 43), and the site redeployed. The next press
+toasted "This device will get push now." Rotating the pair invalidates any
+device that had subscribed, which was none. Do the phone next: it needs the
+app installed to the home screen first (below).
+
+(c) and (d) were not needed.
 
 ## On an iPhone
 
