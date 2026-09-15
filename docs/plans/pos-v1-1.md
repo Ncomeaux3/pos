@@ -15,7 +15,7 @@ Order: bugs first, then speed, then features, fitness, hardening. Phases marked 
 | 5 Dashboard | Layout saved server-side, live tiles, drill-ins, smaller tiles | high | 8, 9, 10 | 3, 4 | Done 2026-09-15: layout in core.settings with hide/show, tiles read core.digests recomputed after every write, warning rows link, auto-height tiles; migration pushed | #64 |
 | 6 Goals, projects, tasks | Projects link to goals, tasks inherit, project UI, per-view plus, any due date | high | 8, 9, 10 | 4 | Done 2026-09-15: one coalesce for the board and the linked seam, write_project and a Projects drawer, per-column plus, native date; migration pushed | #62 |
 | 7a Skill picker, core | link/unlink tools, one reader, one component; tasks, goals, ideas, brain | medium | 8, 9, 10 | 6 | Done 2026-09-15: `skills.link` and `skills.unlink`, `core/skill-links.ts` as the one reader (fitness's `fitnessGoal` reads through it too), `SkillPicker` on the four drawers with per-chip badges | #68 |
-| 7b Skill picker, rest | Trip, policy, recipe, workout, home, health drawers | low | 8, 9, 10 | 7a | Not started | |
+| 7b Skill picker, rest | Trip, policy, recipe, workout, home, health drawers | low | 8, 9, 10 | 7a | Done 2026-09-15: the block on six drawers and under an expanding workout row, no data file touched | #70 |
 | 8 Skill tree gestures | Phone drag and pinch behave like the globe | medium | 1 to 7, 9, 10 | none | Done 2026-09-15: `data-gesture-surface` opts both canvases out of pull-to-refresh and edge-back, the globe's pointers Map ported, pinch() unit tested; owner still to confirm pinch on the phone | #65 |
 | 9 Travel destinations | Multi-destination trips, all pinned, merge into | high | 1 to 8, 10 | none | Done 2026-09-15 in three PRs, migration pushed: destinations table, write_trip, pins, places, digest, merge_trip tool with the Merge into select, multi-row TripForm, and the e2e through a merge | #59, #60, #69 |
 | 10 Finance chart | Net worth on a 30-day date axis with the average | low | 1 to 9 | none | Done 2026-09-15: spine() on a date axis, nulls break the line, padded y, stats over recorded days. The LineChart extraction and the two-day e2e were not done and moved to Phase 11, which is the phase that needs them | #57 |
@@ -205,11 +205,12 @@ Complexity: low
 Parallel-safe with: 8, 9, 10
 Files: `modules/travel/ui/TripDrawer.tsx`, `modules/insurance/ui/PolicyDrawer.tsx`, `modules/meals/ui/*Drawer.tsx`, `modules/fitness/ui/Fitness.tsx`, `modules/home/ui/Drawers.tsx`, `modules/health/ui/HealthDrawer.tsx`, their `data.ts` and page files.
 
-- [ ] Each: page calls `listSkillLinks(module, type)` and `getSkillNames()`, the row query exposes `entity_ref`, the drawer renders `<SkillPicker />` in a "Linked skills" block.
-- [ ] Fitness: the workout row expands to hold the picker; the table column keeps the first name.
-- [ ] e2e: one drawer per module shows the block; one link added on a trip.
+- [x] Each: page calls `listSkillLinks(module, type)` and `getSkillNames()`, the row query exposes `entity_ref`, the drawer renders `<SkillPicker />` in a "Linked skills" block.
+- [x] Fitness: the workout row expands to hold the picker; the table column keeps the first name.
+- [x] e2e: one drawer per module shows the block; one link added on a trip.
 
 Exit checks: suites green. Depends on: 7a. Out of scope: entity types with no drawer (list them in STATUS).
+Done 2026-09-15. Health appointments got the block too, since they share the drawer file. No drawer, so no picker: fitness `plan`, home `service_log`, health `screening` (listed in STATUS). The demo seed inserted health records without `register()`, so their block showed the fallback text; the seed now registers them like the write tool does. For Phase 11: `FitnessData.workouts[]` now carries `entityRef` and `links` beside the `skills` names, and `getSkillNames()` is back on the fitness page.
 
 ## Phase 8: skill tree gestures
 

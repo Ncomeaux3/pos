@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, type ReactNode } from 'react'
-import { Eyebrow, Overlay } from '@/components/pos'
+import { Eyebrow, Overlay, SkillPicker } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { markEaten, planMeal, setFavourite, type ActionResult } from './actions'
 import {
@@ -177,6 +177,7 @@ export function RecipeDrawer({
   entry,
   fromDate,
   plan,
+  skills,
   run,
   setParams,
 }: {
@@ -185,6 +186,7 @@ export function RecipeDrawer({
   /** The first day "Next open" looks at: today this week, Monday on a week paged to. */
   fromDate: string
   plan: Entry[]
+  skills: [string, string][]
   run: Run
   setParams: (next: Record<string, string | null>) => void
 }) {
@@ -331,6 +333,15 @@ export function RecipeDrawer({
               <li key={`${i}-${s}`}>{s}</li>
             ))}
           </ol>
+        </div>
+
+        <div>
+          <Eyebrow>Linked skills</Eyebrow>
+          {recipe.entityRef ? (
+            <SkillPicker entityRef={recipe.entityRef} links={recipe.skills} skills={skills} className="mt-2" />
+          ) : (
+            <p className="mt-2 text-[12px] text-ink-4">Nothing matched yet.</p>
+          )}
         </div>
 
         {recipe.notes && (

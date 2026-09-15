@@ -10,6 +10,7 @@ import {
   PageHeader,
   PillGroup,
   useToast,
+  type SkillLink,
 } from '@/components/pos'
 import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
@@ -44,6 +45,8 @@ export type HomeData = {
     valueAsOf: string | null
     notes: string
     facts: Fact[]
+    entityRef: string | null
+    skills: SkillLink[]
   }[]
   services: {
     id: string
@@ -85,6 +88,8 @@ export type HomeData = {
     lastUsedOn: string | null
     lastCostCents: number | null
   }[]
+  /** Every skill in the tree, id and name. From getSkillNames() on the page. */
+  skills: [string, string][]
 }
 
 export type Service = HomeData['services'][number]
@@ -561,6 +566,7 @@ export function Home({ data }: { data: HomeData }) {
       <AssetDrawer
         asset={openAsset}
         log={openAsset ? data.log.filter((l) => l.assetId === openAsset.id) : []}
+        skills={data.skills}
         onClose={() => setParams({ asset: null })}
       />
       <WarrantyDrawer warranty={openWarranty} onClose={() => setParams({ warranty: null })} />

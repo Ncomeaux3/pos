@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { Fragment, useState } from 'react'
 import {
   Card,
   CardHead,
@@ -10,7 +11,9 @@ import {
   Eyebrow,
   Row,
   RowList,
+  SkillPicker,
   TabBar,
+  type SkillLink,
 } from '@/components/pos'
 import { useSearchState } from '@/components/pos/searchState'
 import { distance, duration, mass, pace, sourcesLabel } from '../units'
@@ -27,6 +30,8 @@ export type FitnessData = {
     source: string
     /** Skill names from the classifier's links, most confident first. The row shows the first. */
     skills: string[]
+    entityRef: string | null
+    links: SkillLink[]
     startedAt: string
     durationS: number
     distanceM: number
@@ -58,6 +63,8 @@ export type FitnessData = {
   } | null
   /** Coach suggestions waiting in the Review inbox, by headline. */
   waiting: string[]
+  /** Every skill in the tree, id and name. From getSkillNames() on the page. */
+  skills: [string, string][]
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -133,6 +140,7 @@ const order = (kind: string) => {
 export function Fitness({ data }: { data: FitnessData }) {
   const { params, set: setParams } = useSearchState()
   const tab = params.get('tab') ?? 'workouts'
+  const [expanded, setExpanded] = useState<string | null>(null)
 
   const setTab = (next: string) => setParams({ tab: next === 'workouts' ? null : next }, { local: true })
 
@@ -164,16 +172,32 @@ export function Fitness({ data }: { data: FitnessData }) {
               cols="72px minmax(0,1fr) auto auto"
             >
               {data.workouts.map((w) => (
-                <DataRow key={w.id} className="py-[9px] text-[13px]">
-                  <span className="num text-[12px] text-ink-3">{shortDate(w.startedAt)}</span>
-                  <span className="min-w-0 text-ink">
-                    {w.name} <span className="text-[12px] text-ink-3">{detailOf(w)}</span>
-                  </span>
-                  <span className="num text-right text-ink">{duration(w.durationS)}</span>
-                  <span className="text-right text-[12px] text-ink-2">
-                    {w.skills[0] ?? <span className="text-ink-4">unlinked</span>}
-                  </span>
-                </DataRow>
+                <Fragment key={w.id}>
+                  <DataRow
+                    className="py-[9px] text-[13px]"
+                    selected={expanded === w.id}
+                    onClick={() => setExpanded(expanded === w.id ? null : w.id)}
+                  >
+                    <span className="num text-[12px] text-ink-3">{shortDate(w.startedAt)}</span>
+                    <span className="min-w-0 text-ink">
+                      {w.name} <span className="text-[12px] text-ink-3">{detailOf(w)}</span>
+                    </span>
+                    <span className="num text-right text-ink">{duration(w.durationS)}</span>
+                    <span className="text-right text-[12px] text-ink-2">
+                      {w.skills[0] ?? <span className="text-ink-4">unlinked</span>}
+                    </span>
+                  </DataRow>
+                  {expanded === w.id && (
+                    <div className="border-b border-rule px-0 py-3">
+                      <Eyebrow>Linked skills</Eyebrow>
+                      {w.entityRef ? (
+                        <SkillPicker entityRef={w.entityRef} links={w.links} skills={data.skills} className="mt-2" />
+                      ) : (
+                        <p className="mt-2 text-[12px] text-ink-4">Nothing matched yet.</p>
+                      )}
+                    </div>
+                  )}
+                </Fragment>
               ))}
             </DataTable>
           </Card>

@@ -124,22 +124,24 @@ export async function seed(): Promise<number> {
     )
   }
 
-  await db().query(
-    `insert into health.record (title, kind, taken_on, summary, fields, source, external_id)
-     values ('Annual lab panel', 'lab', core.today() - 48,
-             'Lipids, metabolic panel, thyroid. Filed as received.',
-             '{"Ordered by": "Dr Alvarez", "LDL": "96 mg/dL", "HDL": "58 mg/dL", "A1c": "5.2%"}'::jsonb,
-             'demo', 'record-labs')
-     on conflict (source, external_id) do update set taken_on = excluded.taken_on, fields = excluded.fields`,
-  )
-  await db().query(
-    `insert into health.record (title, kind, taken_on, summary, fields, source, external_id)
-     values ('Eye exam prescription', 'vision', core.today() - 48,
-             'Unchanged from last year.',
-             '{"Provider": "Clearview Optical", "Valid until": "two years from the exam"}'::jsonb,
-             'demo', 'record-eyes')
-     on conflict (source, external_id) do update set taken_on = excluded.taken_on, fields = excluded.fields`,
-  )
+  // Registered like the write tool does, so a demo record has the registry
+  // row the skill picker links against.
+  const RECORDS = [
+    ['Annual lab panel', 'lab', 'Lipids, metabolic panel, thyroid. Filed as received.',
+      '{"Ordered by": "Dr Alvarez", "LDL": "96 mg/dL", "HDL": "58 mg/dL", "A1c": "5.2%"}', 'record-labs'],
+    ['Eye exam prescription', 'vision', 'Unchanged from last year.',
+      '{"Provider": "Clearview Optical", "Valid until": "two years from the exam"}', 'record-eyes'],
+  ]
+  for (const [title, kind, summary, fields, externalId] of RECORDS) {
+    const { rows } = await db().query<{ id: string }>(
+      `insert into health.record (title, kind, taken_on, summary, fields, source, external_id)
+       values ($1, $2, core.today() - 48, $3, $4::jsonb, 'demo', $5)
+       on conflict (source, external_id) do update set taken_on = excluded.taken_on, fields = excluded.fields
+       returning id`,
+      [title, kind, summary, fields, externalId],
+    )
+    await register({ module: 'health', entityType: 'record', entityId: rows[0].id, title, text: summary })
+  }
 
   for (const s of SCREENINGS) {
     await db().query(

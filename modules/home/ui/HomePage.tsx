@@ -1,4 +1,6 @@
 import { readMetric } from '@/core/metrics'
+import { getSkillNames } from '@/core/modules'
+import { listSkillLinks } from '@/core/skill-links'
 import {
   listAssets,
   listServiceLog,
@@ -12,7 +14,7 @@ import { dueStatus, nextDue } from '../schedule'
 import { Home, type HomeData } from './Home'
 
 export default async function HomePage() {
-  const [assets, services, log, warranties, vendors, todayIso, propertyPremium] = await Promise.all([
+  const [assets, services, log, warranties, vendors, todayIso, propertyPremium, links, names] = await Promise.all([
     listAssets(),
     listServices(),
     listServiceLog(),
@@ -23,6 +25,8 @@ export default async function HomePage() {
     // registry rather than kept here twice, so there is one number and it is
     // simply absent when Insurance is not installed.
     readMetric('insurance.property_premium'),
+    listSkillLinks('home', 'asset'),
+    getSkillNames(),
   ])
 
   const data: HomeData = {
@@ -38,6 +42,8 @@ export default async function HomePage() {
       valueAsOf: a.value_as_of,
       notes: a.notes,
       facts: a.facts,
+      entityRef: links.get(a.id)?.entityRef ?? null,
+      skills: links.get(a.id)?.skills ?? [],
     })),
     services: services.map((s) => ({
       id: s.id,
@@ -81,6 +87,7 @@ export default async function HomePage() {
       lastUsedOn: v.last_used_on,
       lastCostCents: v.last_cost_cents,
     })),
+    skills: Object.entries(names),
   }
 
   return <Home data={data} />

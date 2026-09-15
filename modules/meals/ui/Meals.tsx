@@ -10,6 +10,7 @@ import {
   SearchButton,
   StatusDot,
   useToast,
+  type SkillLink,
 } from '@/components/pos'
 import { BackControl } from '@/components/pos/BackControl'
 import { useSearchState } from '@/components/pos/searchState'
@@ -38,6 +39,8 @@ export type MealsData = {
     status: string
     ingredients: { item: string; quantity: string }[]
     steps: string[]
+    entityRef: string | null
+    skills: SkillLink[]
   }[]
   plan: {
     id: string
@@ -49,6 +52,8 @@ export type MealsData = {
     eaten: boolean
     macros: Macros | null
   }[]
+  /** Every skill in the tree, id and name. From getSkillNames() on the page. */
+  skills: [string, string][]
 }
 
 export type Recipe = MealsData['recipes'][number]
@@ -588,6 +593,7 @@ export function Meals({ data }: { data: MealsData }) {
         entry={inWeek.find((e) => e.id === params.get('slot')) ?? data.plan.find((e) => e.id === params.get('slot'))}
         fromDate={thisWeek ? data.todayIso : week[0]}
         plan={data.plan}
+        skills={data.skills}
         run={run}
         setParams={setParams}
       />

@@ -13,7 +13,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-15 (Phase 7a). Branch `main`, production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-15 (Phase 7b). Branch `main`, production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -38,6 +38,19 @@ and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
 ## Done
+
+**v1.1 Phase 7b, skill picker, remaining drawers** (2026-09-15, branch
+`phase-7b-skill-picker-rest`). The same `SkillPicker` block on the trip,
+policy, recipe, home asset, health appointment and health record drawers,
+and under a workout row on the Fitness table, which expands when pressed
+while its Skill column keeps the first name. Each page adds
+`listSkillLinks(module, type)` and `getSkillNames()` to its `Promise.all`;
+no data file changed, because the 7a reader already returns the entity ref
+by the module's own id. Entity types with a registry row but no drawer, so
+no picker: fitness `plan`, home `service_log`, health `screening`. The demo seed now registers
+its two health records, as the write tool does, so they take a link too.
+Inherited and left for the token pass: the fallback paragraph's `ink-4` at
+12px fails AA, the same class 7a shipped on four drawers.
 
 **v1.1 Phase 7a, skill picker, core and the four chip sites** (2026-09-15,
 branch `phase-7a-skill-picker`). Two tools on the tree module, `skills.link`

@@ -1450,6 +1450,79 @@ test('tasks, a skill linked by hand shows MANUAL, survives a reload and reaches 
   await removed
 })
 
+test('travel, a skill linked by hand on a trip shows MANUAL and survives a reload', async ({ page }) => {
+  await page.goto('/travel')
+  await page.waitForLoadState('networkidle')
+  await page.getByTestId('travel-sections').getByRole('button', { name: /Tokyo/ }).first().click()
+  const drawer = page.getByRole('dialog')
+  await expect(page).toHaveURL(/trip=/)
+  await expect(drawer.getByText('Linked skills')).toBeVisible()
+
+  // The seed upserts the trip and its registry row, so a link from the other
+  // Playwright project is still there. Start clean.
+  const unlink = drawer.getByRole('button', { name: 'Unlink Negotiation' })
+  if (await unlink.isVisible()) {
+    const cleared = page.waitForResponse((r) => r.request().method() === 'POST' && r.ok())
+    await unlink.click()
+    await cleared
+  }
+
+  await drawer.getByRole('button', { name: 'Link a skill' }).click()
+  // The chip is optimistic, so wait for the action's POST before reloading.
+  const saved = page.waitForResponse((r) => r.request().method() === 'POST' && r.ok())
+  await drawer.getByRole('combobox', { name: 'Skill' }).selectOption('negotiation')
+  const chip = drawer.locator('span').filter({ hasText: /^NegotiationMANUAL×$/ })
+  await expect(chip).toBeVisible()
+  await saved
+
+  await page.reload()
+  await expect(chip).toBeVisible()
+
+  const removed = page.waitForResponse((r) => r.request().method() === 'POST' && r.ok())
+  await drawer.getByRole('button', { name: 'Unlink Negotiation' }).click()
+  await expect(drawer.getByRole('link', { name: 'Negotiation' })).toBeHidden()
+  await removed
+})
+
+test('every remaining entity drawer carries the Linked skills block', async ({ page }) => {
+  const drawer = page.getByRole('dialog')
+
+  await page.goto('/insurance')
+  await page.getByRole('button', { name: /Apartment, renters/ }).click()
+  await expect(drawer.getByText('Linked skills')).toBeVisible()
+  await expect(drawer.getByRole('button', { name: 'Link a skill' })).toBeVisible()
+
+  await page.goto('/meals?tab=recipes')
+  await page.getByRole('button', { name: /Turkey chili/ }).first().click()
+  await expect(drawer.getByText('Linked skills')).toBeVisible()
+  await expect(drawer.getByRole('button', { name: 'Link a skill' })).toBeVisible()
+
+  await page.goto('/home')
+  await page.getByRole('button', { name: /HVAC, four ton/ }).click()
+  await expect(drawer.getByText('Linked skills')).toBeVisible()
+  await expect(drawer.getByRole('button', { name: 'Link a skill' })).toBeVisible()
+
+  // Both health views share the drawer file, so both carry the block.
+  await page.goto('/health')
+  await page.getByRole('button', { name: /Annual physical/ }).first().click()
+  await expect(drawer.getByText('Linked skills')).toBeVisible()
+  await expect(drawer.getByRole('button', { name: 'Link a skill' })).toBeVisible()
+  await page.goto('/health')
+  await page.getByRole('button', { name: /Annual lab panel/ }).first().click()
+  await expect(drawer.getByText('Linked skills')).toBeVisible()
+  await expect(drawer.getByRole('button', { name: 'Link a skill' })).toBeVisible()
+
+  // A workout has no drawer: the row expands under itself and the Skill
+  // column keeps the first name.
+  await page.goto('/fitness')
+  const row = page.getByRole('button', { name: /Easy run/ }).first()
+  await row.click()
+  await expect(page.getByText('Linked skills')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Link a skill' })).toBeVisible()
+  await row.click()
+  await expect(page.getByText('Linked skills')).toHaveCount(0)
+})
+
 test('phone Tasks shows three segments', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile', 'The collapsed segment row is a phone thing')
 

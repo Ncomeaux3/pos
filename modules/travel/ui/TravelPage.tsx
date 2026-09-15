@@ -1,4 +1,6 @@
 import { db } from '@/core/db'
+import { getSkillNames } from '@/core/modules'
+import { listSkillLinks } from '@/core/skill-links'
 import { ownerToday } from '@/core/today'
 import {
   listBudgetLines,
@@ -35,7 +37,7 @@ async function checkinRule(): Promise<{ trigger: string } | null> {
 }
 
 export default async function TravelPage() {
-  const [trips, destinations, itinerary, packing, places, loyalty, lines, alerts, checkin, todayIso] =
+  const [trips, destinations, itinerary, packing, places, loyalty, lines, alerts, checkin, todayIso, links, names] =
     await Promise.all([
       listTrips(),
       listDestinations(),
@@ -47,6 +49,8 @@ export default async function TravelPage() {
       travelAlerts(),
       checkinRule(),
       ownerToday(),
+      listSkillLinks('travel', 'trip'),
+      getSkillNames(),
     ])
 
   const data: TravelData = {
@@ -68,6 +72,8 @@ export default async function TravelPage() {
       pendingCount: Number(t.pending_count),
       packed: Number(t.packed),
       toPack: Number(t.to_pack),
+      entityRef: links.get(t.id)?.entityRef ?? null,
+      skills: links.get(t.id)?.skills ?? [],
     })),
     destinations: destinations.map((d) => ({
       id: d.id,
@@ -120,6 +126,7 @@ export default async function TravelPage() {
     })),
     alert: alerts[0] ?? null,
     checkinTrigger: checkin?.trigger ?? null,
+    skills: Object.entries(names),
   }
 
   return <Travel data={data} />

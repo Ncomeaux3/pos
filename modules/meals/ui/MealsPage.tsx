@@ -1,4 +1,6 @@
 import { readMetric } from '@/core/metrics'
+import { getSkillNames } from '@/core/modules'
+import { listSkillLinks } from '@/core/skill-links'
 import { ownerToday } from '@/core/today'
 import { listPlan, listRecipes, recipeDetail } from '../data'
 import { Meals, type MealsData } from './Meals'
@@ -11,7 +13,7 @@ export default async function MealsPage() {
   const dow = (new Date(`${todayIso}T12:00:00Z`).getUTCDay() + 6) % 7
   const monday = addDays(todayIso, -dow)
 
-  const [recipes, plan, bodyWeight] = await Promise.all([
+  const [recipes, plan, bodyWeight, links, names] = await Promise.all([
     listRecipes(),
     // Four weeks either side of this one. The stepper pages further, into an
     // empty grid that "+" still plans into.
@@ -22,6 +24,8 @@ export default async function MealsPage() {
     // there is one source of truth, and absent rather than invented when that
     // module is not installed.
     readMetric('fitness.body_weight'),
+    listSkillLinks('meals', 'recipe'),
+    getSkillNames(),
   ])
 
   const detail = await recipeDetail(recipes.map((r) => r.id))
@@ -45,6 +49,8 @@ export default async function MealsPage() {
       status: r.status,
       ingredients: detail.get(r.id)?.ingredients ?? [],
       steps: detail.get(r.id)?.steps ?? [],
+      entityRef: links.get(r.id)?.entityRef ?? null,
+      skills: links.get(r.id)?.skills ?? [],
     })),
     plan: plan.map((p) => ({
       id: p.id,
@@ -64,6 +70,7 @@ export default async function MealsPage() {
               fat: p.fat_g ?? 0,
             },
     })),
+    skills: Object.entries(names),
   }
 
   return <Meals data={data} />

@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, useTransition } from 'react'
-import { ActionButton, Eyebrow, Overlay, StatusChip, Switch, useToast } from '@/components/pos'
+import { ActionButton, Eyebrow, Overlay, SkillPicker, StatusChip, Switch, useToast, type SkillLink } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import {
   CADENCE_LABELS,
@@ -55,6 +55,8 @@ export type Policy = {
   status: string
   notes: string
   documentCount: number
+  entityRef: string | null
+  skills: SkillLink[]
 }
 
 export type InsuranceData = {
@@ -63,6 +65,8 @@ export type InsuranceData = {
   documents: { id: string; policyId: string; name: string; meta: string; hasFile: boolean }[]
   /** The policy renewal rule's channels, or null when it is muted. */
   renewalChannels: string[] | null
+  /** Every skill in the tree, id and name. From getSkillNames() on the page. */
+  skills: [string, string][]
 }
 
 /** The expiry colour: red inside thirty days or past, amber inside sixty, green otherwise. */
@@ -373,6 +377,15 @@ function PolicyView({
             </>
           ) : (
             <div className="mt-1.5 text-[12px] text-ink-4">No agent on file</div>
+          )}
+        </div>
+
+        <div className={card}>
+          <Eyebrow>Linked skills</Eyebrow>
+          {policy.entityRef ? (
+            <SkillPicker entityRef={policy.entityRef} links={policy.skills} skills={data.skills} className="mt-2" />
+          ) : (
+            <p className="mt-2 text-[12px] text-ink-4">Nothing matched yet.</p>
           )}
         </div>
       </div>

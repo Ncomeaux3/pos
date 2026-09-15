@@ -1,7 +1,7 @@
 'use client'
 
 import { useTransition } from 'react'
-import { ActionButton, BandSearch, SearchButton, useToast } from '@/components/pos'
+import { ActionButton, BandSearch, SearchButton, useToast, type SkillLink } from '@/components/pos'
 import { BackControl } from '@/components/pos/BackControl'
 import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
@@ -36,6 +36,8 @@ export type TravelData = {
     pendingCount: number
     packed: number
     toPack: number
+    entityRef: string | null
+    skills: SkillLink[]
   }[]
   /** Every trip's cities, in the owner's order. Flat, joined by tripId. */
   destinations: {
@@ -83,6 +85,8 @@ export type TravelData = {
   alert: { id: string; title: string; body: string } | null
   /** The live flight check-in rule's trigger text, for the drawer's footer. */
   checkinTrigger: string | null
+  /** Every skill in the tree, id and name. From getSkillNames() on the page. */
+  skills: [string, string][]
 }
 
 export type Trip = TravelData['trips'][number]

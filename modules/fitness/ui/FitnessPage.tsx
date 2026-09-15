@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { MetricStrip, MetricTile, PageHeader, SyncBand } from '@/components/pos'
 import { getConnectionStatuses } from '@/core/integrations'
+import { getSkillNames } from '@/core/modules'
 import { listSkillLinks } from '@/core/skill-links'
 import { listProposals } from '@/core/proposals'
 import { syncState } from '@/core/sync'
@@ -47,7 +48,7 @@ const Sub = ({ children }: { children: string }) => (
 )
 
 export default async function FitnessPage() {
-  const [workouts, week, metrics, exercises, plan, pending, sync, span, skills, goal, todayIso, connections] =
+  const [workouts, week, metrics, exercises, plan, pending, sync, span, skills, goal, todayIso, connections, names] =
     await Promise.all([
       listWorkouts(),
       thisWeek(),
@@ -61,6 +62,7 @@ export default async function FitnessPage() {
       fitnessGoal(),
       ownerToday(),
       getConnectionStatuses(),
+      getSkillNames(),
     ])
 
   const items = plan ? await listPlanItems(plan.id) : []
@@ -75,6 +77,8 @@ export default async function FitnessPage() {
       source: w.source,
       // Names through the tree module's seam; an id with no name stays an id.
       skills: (skills.get(w.id)?.skills ?? []).map((s) => s.name),
+      entityRef: skills.get(w.id)?.entityRef ?? null,
+      links: skills.get(w.id)?.skills ?? [],
       durationS: w.duration_s,
       distanceM: w.distance_m,
       avgHr: w.avg_hr,
@@ -122,6 +126,7 @@ export default async function FitnessPage() {
     waiting: pending
       .filter((p) => p.module === 'fitness')
       .map((p) => p.title ?? 'A suggestion is waiting'),
+    skills: Object.entries(names),
   }
 
   // The heaviest set on file, by weight then reps, with the workout it was in.

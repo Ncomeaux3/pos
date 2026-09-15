@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ActionButton, Overlay, PillGroup, fieldClass } from '@/components/pos'
+import { ActionButton, Eyebrow, Overlay, PillGroup, SkillPicker, fieldClass } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { addMonths, logDate, money, monthKey, monthLabelLong } from '../schedule'
 import { logService, type ActionResult } from './actions'
@@ -39,10 +39,12 @@ const closeFooter = (onClose: () => void) => (
 export function AssetDrawer({
   asset,
   log,
+  skills,
   onClose,
 }: {
   asset: HomeData['assets'][number] | null
   log: HomeData['log']
+  skills: [string, string][]
   onClose: () => void
 }) {
   return (
@@ -79,6 +81,14 @@ export function AssetDrawer({
               ))}
             </div>
           )}
+          <div>
+            <Eyebrow>Linked skills</Eyebrow>
+            {asset.entityRef ? (
+              <SkillPicker entityRef={asset.entityRef} links={asset.skills} skills={skills} className="mt-2" />
+            ) : (
+              <p className="mt-2 text-[12px] text-ink-4">Nothing matched yet.</p>
+            )}
+          </div>
         </div>
       )}
     </Overlay>

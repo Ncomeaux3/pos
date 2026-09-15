@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ActionButton, Overlay } from '@/components/pos'
+import { ActionButton, Eyebrow, Overlay, SkillPicker } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { logVisit, recordUrl, setAppointmentStatus, type ActionResult } from './actions'
 import {
@@ -28,6 +28,7 @@ export function HealthDrawer({
   isNew,
   providers,
   todayIso,
+  skills,
   onClose,
   onRun,
 }: {
@@ -36,12 +37,13 @@ export function HealthDrawer({
   isNew: boolean
   providers: { id: string; name: string; role: string }[]
   todayIso: string
+  skills: [string, string][]
   onClose: () => void
   onRun: (action: () => Promise<ActionResult>, ok?: string) => void
 }) {
   if (isNew) return <Form providers={providers} todayIso={todayIso} onClose={onClose} onRun={onRun} />
-  if (appointment) return <AppointmentView appointment={appointment} onClose={onClose} onRun={onRun} />
-  if (record) return <RecordView record={record} onClose={onClose} />
+  if (appointment) return <AppointmentView appointment={appointment} skills={skills} onClose={onClose} onRun={onRun} />
+  if (record) return <RecordView record={record} skills={skills} onClose={onClose} />
   return null
 }
 
@@ -71,10 +73,12 @@ function Head({ title, sub }: { title: string; sub: string }) {
 
 function AppointmentView({
   appointment: a,
+  skills,
   onClose,
   onRun,
 }: {
   appointment: Appointment
+  skills: [string, string][]
   onClose: () => void
   onRun: (action: () => Promise<ActionResult>, ok?: string) => void
 }) {
@@ -98,6 +102,14 @@ function AppointmentView({
           <p className="mt-2.5 text-[13px] leading-[1.6] text-ink-2">{a.notes}</p>
         </div>
       )}
+      <div className="mt-5">
+        <Eyebrow>Linked skills</Eyebrow>
+        {a.entityRef ? (
+          <SkillPicker entityRef={a.entityRef} links={a.skills} skills={skills} className="mt-2" />
+        ) : (
+          <p className="mt-2 text-[12px] text-ink-4">Nothing matched yet.</p>
+        )}
+      </div>
       {!past && (
         <div className="mt-[26px] flex flex-wrap gap-2.5">
           <ActionButton
@@ -116,12 +128,20 @@ function AppointmentView({
   )
 }
 
-function RecordView({ record: r, onClose }: { record: HealthRecord; onClose: () => void }) {
+function RecordView({ record: r, skills, onClose }: { record: HealthRecord; skills: [string, string][]; onClose: () => void }) {
   const [opening, setOpening] = useState(false)
   return (
     <Overlay open narrow onClose={onClose} eyebrow={`Record · ${r.kind}`}>
       <Head title={r.title} sub={[recordDate(r.takenOn), r.file ?? 'NO FILE', r.summary].filter(Boolean).join(' · ')} />
       <Rows rows={[...Object.entries(r.fields), ...(r.summary ? ([['Summary', r.summary]] as [string, string][]) : [])]} />
+      <div className="mt-5">
+        <Eyebrow>Linked skills</Eyebrow>
+        {r.entityRef ? (
+          <SkillPicker entityRef={r.entityRef} links={r.skills} skills={skills} className="mt-2" />
+        ) : (
+          <p className="mt-2 text-[12px] text-ink-4">Nothing matched yet.</p>
+        )}
+      </div>
       {r.file && (
         <div className="mt-[26px] flex flex-wrap gap-2.5">
           <button

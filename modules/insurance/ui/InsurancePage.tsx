@@ -1,13 +1,17 @@
+import { getSkillNames } from '@/core/modules'
+import { listSkillLinks } from '@/core/skill-links'
 import { listDocuments, listPolicies, ownerToday, renewalChannels } from '../data'
 import { type Cadence } from '../premium'
 import { Insurance, type InsuranceData } from './Insurance'
 
 export default async function InsurancePage() {
-  const [policies, documents, todayIso, channels] = await Promise.all([
+  const [policies, documents, todayIso, channels, links, names] = await Promise.all([
     listPolicies(),
     listDocuments(),
     ownerToday(),
     renewalChannels(),
+    listSkillLinks('insurance', 'policy'),
+    getSkillNames(),
   ])
 
   const data: InsuranceData = {
@@ -32,6 +36,8 @@ export default async function InsurancePage() {
       status: p.status,
       notes: p.notes,
       documentCount: p.document_count,
+      entityRef: links.get(p.id)?.entityRef ?? null,
+      skills: links.get(p.id)?.skills ?? [],
     })),
     documents: documents.map((d) => ({
       id: d.id,
@@ -41,6 +47,7 @@ export default async function InsurancePage() {
       hasFile: d.file_path !== null,
     })),
     renewalChannels: channels,
+    skills: Object.entries(names),
   }
 
   return <Insurance data={data} />
