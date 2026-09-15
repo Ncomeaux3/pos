@@ -10,7 +10,7 @@ Order: bugs first, then speed, then features, fitness, hardening. Phases marked 
 |---|---|---|---|---|---|---|
 | 1 Diagnose and small fixes | Push and email diagnosed with evidence; snooze, deep links, health corner, time clear, splash, nightly email fixed | medium | 3, 8, 9, 10 | none | Done 2026-09-14: push was a malformed VAPID key, email was the quiet-night skip; PR open | #53 |
 | 2 Delete notes stub | modules/notes and every test and seed that leans on it gone | medium | 3, 8, 9, 10 | none | Done 2026-09-15: folder, schema and fixtures gone; tests and seed lean on ideas; PR open | |
-| 3 Speed, server | Server time per screen measured and waterfalls removed | medium | 1, 2, 8, 9, 10 | none | Not started | |
+| 3 Speed, server | Server time per screen measured and waterfalls removed | medium | 1, 2, 8, 9, 10 | none | Done 2026-09-15: `/` 43 percent off, `/tasks` shell-bound at the 250 ms floor; pdx1 tried and reverted; PR open | |
 | 4 Speed, client | Task view switch is instant, no refetch | low | 8, 9, 10 | 3 | Not started | |
 | 5 Dashboard | Layout saved server-side, live tiles, drill-ins, smaller tiles | high | 8, 9, 10 | 3, 4 | Not started | |
 | 6 Goals, projects, tasks | Projects link to goals, tasks inherit, project UI, per-view plus, any due date | high | 8, 9, 10 | 4 | Not started | |
@@ -72,16 +72,33 @@ Complexity: medium
 Parallel-safe with: 1, 2, 8, 9, 10
 Files: `core/settings.ts`, `core/today.ts`, `core/modules.ts`, `core/review-registry.ts`, `core/db.ts`, `app/(app)/page.tsx`, `app/(app)/[module]/[[...path]]/page.tsx`, `vercel.json`, `docs/plans/pos-v1-1.md` (numbers).
 
-- [ ] Measure first and write the numbers into the plan: `curl -o /dev/null -w '%{time_starttransfer}\n' -H "cookie: $SESSION"` five times each for `/`, `/tasks`, `/goals`, `/fitness`, `/travel` on production; the same routes' durations from Vercel runtime logs; a local `pnpm build && pnpm start` run so compile time is out.
-- [ ] Region check: Vercel function region versus the Supabase project region. A page does 6 to 13 round trips across that gap. If they differ, set `regions` in `vercel.json` to the Supabase region (verify Hobby allows it) and re-measure.
-- [ ] Dedupe per request with React `cache()` (native, request scoped, no staleness): wrap `getSettings`, `getSetting`, `ownerToday`, `getSkillNames`. Layout and page both read settings; `getNav` and `getOffRailNav` each call `getSetting('modules_enabled')`; Goals calls `ownerToday` once per goal through Tasks' `linked`.
-- [ ] `page.tsx:120`: move `ownerToday()` into the `Promise.all`.
-- [ ] `core/review-registry.ts` `gather()`: `Promise.all` over modules with the try/catch inside the map.
-- [ ] Module catch-all: render `<Page />` immediately; the Not syncing banner becomes a small async server component under `<Suspense fallback={null}>` so `missingConnections()` streams in.
-- [ ] `core/db.ts:92` pool `max: 4` to `8`: the transaction pooler multiplexes and a dashboard render fires eight queries at once. Re-measure; revert if the pooler reports pressure.
-- [ ] Tasks `listSkillLinks` (`modules/tasks/data.ts:162`): join `tasks.task` with the same window `listTasks` uses. Skip if under 20 ms.
+- [x] Measure first and write the numbers into the plan: `curl -o /dev/null -w '%{time_starttransfer}\n' -H "cookie: $SESSION"` five times each for `/`, `/tasks`, `/goals`, `/fitness`, `/travel` on production; the same routes' durations from Vercel runtime logs; a local `pnpm build && pnpm start` run so compile time is out.
+- [x] Region check (pdx1 tried on the preview and reverted, see the table's notes): Vercel function region versus the Supabase project region. A page does 6 to 13 round trips across that gap. If they differ, set `regions` in `vercel.json` to the Supabase region (verify Hobby allows it) and re-measure.
+- [x] Dedupe per request with React `cache()` (native, request scoped, no staleness): wrap `getSettings`, `getSetting`, `ownerToday`, `getSkillNames`. Layout and page both read settings; `getNav` and `getOffRailNav` each call `getSetting('modules_enabled')`; Goals calls `ownerToday` once per goal through Tasks' `linked`.
+- [x] `page.tsx:120`: move `ownerToday()` into the `Promise.all`.
+- [x] `core/review-registry.ts` `gather()`: `Promise.all` over modules with the try/catch inside the map.
+- [x] Module catch-all: render `<Page />` immediately; the Not syncing banner becomes a small async server component under `<Suspense fallback={null}>` so `missingConnections()` streams in.
+- [x] `core/db.ts:92` pool `max: 4` to `8`: the transaction pooler multiplexes and a dashboard render fires eight queries at once. Re-measure; revert if the pooler reports pressure.
+- [x] Tasks `listSkillLinks` (`modules/tasks/data.ts:162`): join `tasks.task` with the same window `listTasks` uses. Skip if under 20 ms. Skipped: 1 ms for 51 rows over 415 links locally (2026-09-15).
 
 Exit checks: before and after table in the plan doc, at least 30 percent off TTFB on `/` and `/tasks`; suites green; e2e unchanged.
+
+Measured 2026-09-15 from the owner's logged-in Chrome tab: `fetch(route, { cache: 'no-store' })`, 12 runs after a warm-up, median. "Done" is time to the end of the response body; "shell" is time to headers, which under `app/(app)/loading.tsx` is only the layout, so shell alone understates a page. Before is production `pos-gilt-rho.vercel.app` at main 10fa287; after is this branch's preview, same database, functions in `iad1` and pool max 8. Queries are `pg_stat_statements` calls for one render of a local `next build` and `next start`, of which five are the session refresh in the auth schema.
+
+| Route | Done before (ms) | Done after (ms) | Change | Shell before | Shell after | Queries before | Queries after |
+|---|---|---|---|---|---|---|---|
+| `/` | 661 | 377 | -43% | 276 | 374 | 24 | 20 |
+| `/tasks` | 268 | 255 | -5% | 266 | 254 | 16 | 15 |
+| `/goals` | 323 | 254 | -21% | 283 | 252 | 32 | 23 |
+| `/fitness` | 467 | 267 | -43% | 460 | 265 | 26 | 25 |
+| `/travel` | 332 | 279 | -16% | 331 | 271 | 18 | 18 |
+| `/review` | not measured | not measured | | | | 13 | 11 |
+
+The exit check holds on `/` and not on `/tasks`. Every route now sits on the same floor, about 250 ms, which is the fixed cost per request: a function that touches no database (`/api/cron/nightly` unauthenticated, 401) answers in 150 ms, and the layout then runs `requireOwner()` (an HTTP call to Supabase Auth in us-west-2) followed by its six queries, two serial hops of about 55 ms each. `/tasks` was already one batch of queries behind that floor, so nothing in this phase's files could move it.
+
+What was tried and reverted: `regions: ["pdx1"]` (Hobby honours it; the preview's functions ran in pdx1). The owner's nearest edge is iad1, and the edge to pdx1 hop cost about 100 ms on every request (the 401 route went from 150 to 256 ms), which cancelled the saving on `/` and made `/tasks` slower. Functions stay in iad1 beside the owner. The move that would take the floor down is the database beside the function: a Supabase project in us-east-1, which is a data migration and an owner decision, not a config line. Pool max 4 was also re-measured on the preview and was slower than 8 on every route (`/` 387, `/goals` 322, `/fitness` 379 done), because a dashboard render now fires its queries at once and queued behind the layout's.
+
+Vercel runtime logs could not supply durations: on this plan they keep only requests that write output, and a page render writes none (one cron line in three days). Local TTFB was 23 to 40 ms before and after on every route: the database is on the same machine there, so round trips cost nothing and the gain does not show locally.
 Depends on: none. Out of scope: TTL caches, `unstable_cache`, ISR.
 Notes: removing repeated reads and serial awaits is safe and measurable; a TTL cache would hide the freshness work Phase 5 needs.
 

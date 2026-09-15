@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { modules } from '../modules/_index'
 import { db } from './db'
 import type { LinkedItem, ModuleManifest } from './module-contract'
@@ -48,11 +49,11 @@ export async function getLinked(entityRef: string): Promise<LinkedItem[]> {
   return lists.flat()
 }
 
-/** The skill names the tree module provides, or nothing when there is no tree. */
-export async function getSkillNames(): Promise<Record<string, string>> {
+/** The skill names the tree module provides, or nothing when there is no tree. Once per request. */
+export const getSkillNames = cache(async (): Promise<Record<string, string>> => {
   const found = modules.find((m) => m.skillNames)
   return found?.skillNames ? found.skillNames() : {}
-}
+})
 
 /**
  * Which of these integrations have no connected row yet. Drives the
