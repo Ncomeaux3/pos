@@ -286,6 +286,8 @@ Files: `components/pos/charts.tsx`, `modules/finance/ui/Finance.tsx`, `integrati
 - [x] Health: no code change; the e2e reads the webhook secret from the Connections card, posts a weight, and asserts it on `/health`.
 - [x] e2e: the seed writes 14 weight readings over 40 days; Trends draws 10 of 30 and 14 of 90; the filter narrows and survives a reload; the plan drawer adds a day and removes it again.
 
+Done 2026-09-15 apart from the owner step. The full unit run found core/tools.test.ts leaving an idea's event behind, which failed core/events.test.ts whenever the cached file order put it later; the test now cleans up. The ui-verifier's one Must fix was the plan drawer's six-cell row clipping "AMRAP" at 1440 and the exercise name at 402; rows are two lines now, and the target reads in whole pounds like the card. Inherited and left for the token pass: ink-3 at 11 and 12px is under 4.5:1 across the chart axes, legend, Clear and the Apple line, as it is across every CardHead meta; the LineChart's x labels stop one tick short of the series end (the finance chart does the same); the crosshair is mouse only. While the mobile e2e ran, another session switched this checkout to a new branch, so the dev server served pre-phase code and three fitness tests failed against it; the PR was finished from a worktree and CI's `screens` job is the mobile evidence. A phase session should start in its own worktree (as Phase 5 already found).
+
 Exit checks: `client.test.ts` against the real fixture green; suites green.
 Depends on: 10, 7b. Out of scope: Strava changes, coach rule changes.
 
