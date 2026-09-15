@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { MetricStrip, MetricTile, PageHeader, SyncBand } from '@/components/pos'
 import { getConnectionStatuses } from '@/core/integrations'
-import { getSkillNames } from '@/core/modules'
+import { listSkillLinks } from '@/core/skill-links'
 import { listProposals } from '@/core/proposals'
 import { syncState } from '@/core/sync'
 import { ownerToday } from '@/core/today'
@@ -12,7 +12,6 @@ import {
   listExercises,
   listPlanItems,
   listWorkouts,
-  skillsByWorkout,
   thisWeek,
   workoutSpan,
 } from '../data'
@@ -48,7 +47,7 @@ const Sub = ({ children }: { children: string }) => (
 )
 
 export default async function FitnessPage() {
-  const [workouts, week, metrics, exercises, plan, pending, sync, span, skills, names, goal, todayIso, connections] =
+  const [workouts, week, metrics, exercises, plan, pending, sync, span, skills, goal, todayIso, connections] =
     await Promise.all([
       listWorkouts(),
       thisWeek(),
@@ -58,8 +57,7 @@ export default async function FitnessPage() {
       listProposals('pending'),
       syncState('fitness'),
       workoutSpan(),
-      skillsByWorkout(),
-      getSkillNames(),
+      listSkillLinks('fitness', 'workout'),
       fitnessGoal(),
       ownerToday(),
       getConnectionStatuses(),
@@ -76,7 +74,7 @@ export default async function FitnessPage() {
       startedAt: new Date(w.started_at).toISOString(),
       source: w.source,
       // Names through the tree module's seam; an id with no name stays an id.
-      skills: (skills.get(w.id) ?? []).map((id) => names[id] ?? id),
+      skills: (skills.get(w.id)?.skills ?? []).map((s) => s.name),
       durationS: w.duration_s,
       distanceM: w.distance_m,
       avgHr: w.avg_hr,

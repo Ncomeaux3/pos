@@ -95,12 +95,14 @@ export function Board({
   tasks: serverTasks,
   projects,
   goals,
+  skills,
   reminderChannels,
   todayIso,
 }: {
   tasks: Task[]
   projects: { id: string; name: string; goalRef: string | null }[]
   goals: { id: string; title: string }[]
+  skills: [string, string][]
   reminderChannels: string[] | null
   todayIso: string
 }) {
@@ -404,6 +406,7 @@ export function Board({
           task={selected}
           projects={projects}
           goals={goals}
+          skills={skills}
           today={today}
           reminderChannels={reminderChannels}
           onClose={() => {

@@ -160,7 +160,7 @@ Schema `core`. RLS on every table. `authenticated` role reads and writes. `servi
 | Table | Purpose |
 |---|---|
 | entities | registry: module, entity_type, entity_id, title. Any row anywhere can be linked. |
-| skill_links | entity_ref, skill_id, weight, confidence, classified_by, is_manual. Written by whichever module supplies the classifier, read by any of them |
+| skill_links | entity_ref, skill_id, weight, confidence, classified_by, is_manual. Written by whichever module supplies the classifier and by its `link` and `unlink` tools; read through `core/skill-links.ts` `listSkillLinks(module, type)`, never joined from a module's own data file (v1.1 Phase 7a) |
 | events | append only: module, entity_ref, event_type, payload, occurred_at, title_snapshot |
 | notifications | channel, title, body, due_at, sent_at |
 | jobs | module, name, last_run, last_status, log (includes cursors for chunked work) |

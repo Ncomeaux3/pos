@@ -14,7 +14,7 @@ Order: bugs first, then speed, then features, fitness, hardening. Phases marked 
 | 4 Speed, client | Task view switch is instant, no refetch | low | 8, 9, 10 | 3 | Done 2026-09-15: view and tab switches write the URL natively, 4 RSC requests to 0; Calendar and drawer load on demand with their own Suspense boundary; PR open | |
 | 5 Dashboard | Layout saved server-side, live tiles, drill-ins, smaller tiles | high | 8, 9, 10 | 3, 4 | Done 2026-09-15: layout in core.settings with hide/show, tiles read core.digests recomputed after every write, warning rows link, auto-height tiles; PR open | |
 | 6 Goals, projects, tasks | Projects link to goals, tasks inherit, project UI, per-view plus, any due date | high | 8, 9, 10 | 4 | Done 2026-09-15: one coalesce for the board and the linked seam, write_project and a Projects drawer, per-column plus, native date; PR open | #62 |
-| 7a Skill picker, core | link/unlink tools, one reader, one component; tasks, goals, ideas, brain | medium | 8, 9, 10 | 6 | Not started | |
+| 7a Skill picker, core | link/unlink tools, one reader, one component; tasks, goals, ideas, brain | medium | 8, 9, 10 | 6 | Done 2026-09-15: `skills.link` and `skills.unlink`, `core/skill-links.ts` as the one reader (fitness's `fitnessGoal` reads through it too), `SkillPicker` on the four drawers with per-chip badges; PR open | |
 | 7b Skill picker, rest | Trip, policy, recipe, workout, home, health drawers | low | 8, 9, 10 | 7a | Not started | |
 | 8 Skill tree gestures | Phone drag and pinch behave like the globe | medium | 1 to 7, 9, 10 | none | Not started | |
 | 9 Travel destinations | Multi-destination trips, all pinned, merge into | high | 1 to 8, 10 | none | Not started | |
@@ -184,18 +184,19 @@ Complexity: medium
 Parallel-safe with: 8, 9, 10
 Files: new `core/skill-links.ts`, `modules/skills/manifest.ts`, `modules/skills/classify.test.ts`, `app/(app)/settings/skills/actions.ts`, new `components/pos/SkillPicker.tsx`, `components/pos/index.ts`, `modules/{tasks,goals,ideas,brain}/data.ts` and their page and drawer files.
 
-- [ ] Test first in `classify.test.ts`: after `link` runs, `classify()` on the same entity leaves the manual row; `unlink` removes it.
-- [ ] Tools in `modules/skills/manifest.ts`: `link { entityRef, skillId }` upserts `confidence 1, classified_by 'human', is_manual true` (the statement `reassign` uses at line 96); `unlink` deletes the row. `guarded` stays `[]`.
-- [ ] `core/skill-links.ts`: `listSkillLinks(module, entityType)` (core's own table, allowed). Delete the five copies in `modules/{tasks,goals,brain,ideas,fitness}/data.ts`.
-- [ ] Server actions `linkSkill`, `unlinkSkill` in `app/(app)/settings/skills/actions.ts` (already calls `callTool('skills', ...)`), zod uuid and the skill id regex from `write`; `revalidatePath('/', 'layout')`.
-- [ ] `components/pos/SkillPicker.tsx` (client): props `{ entityRef, links: { id, name, by, confidence }[], skills: { id, name }[] }`. Chips with TaskDrawer's MANUAL / RULES / MODEL badge, each a link to `/skills?skill=<id>` with an x calling `unlinkSkill`, and a plus revealing a native select of unlinked skills calling `linkSkill`. `useOptimistic`. Imports only the action file and `components/pos`.
-- [ ] Skill list source: pages already call `getSkillNames()` (`core/modules.ts:52`); pass `Object.entries(names)` down as a prop. The client never imports the registry.
-- [ ] Entity refs: tasks SELECT joins `core.entities` for `entity_ref`; goals already has `entityRefs()`; ideas and brain the same way.
-- [ ] Replace chip markup in `TaskDrawer.tsx:250`, `GoalDrawer.tsx:270`, `IdeaDrawer.tsx:211`, `NotePane.tsx:296` with `<SkillPicker />`.
-- [ ] e2e: press plus on a task, pick a skill, the chip shows MANUAL; reload, still there; the Skill Tree lists the entity under it.
+- [x] Test first in `classify.test.ts`: after `link` runs, `classify()` on the same entity leaves the manual row; `unlink` removes it.
+- [x] Tools in `modules/skills/manifest.ts`: `link { entityRef, skillId }` upserts `confidence 1, classified_by 'human', is_manual true` (the statement `reassign` uses at line 96); `unlink` deletes the row. `guarded` stays `[]`.
+- [x] `core/skill-links.ts`: `listSkillLinks(module, entityType)` (core's own table, allowed). Delete the five copies in `modules/{tasks,goals,brain,ideas,fitness}/data.ts`.
+- [x] Server actions `linkSkill`, `unlinkSkill` in `app/(app)/settings/skills/actions.ts` (already calls `callTool('skills', ...)`), zod uuid and the skill id regex from `write`; `revalidatePath('/', 'layout')`.
+- [x] `components/pos/SkillPicker.tsx` (client): props `{ entityRef, links: { id, name, by, confidence }[], skills: { id, name }[] }`. Chips with TaskDrawer's MANUAL / RULES / MODEL badge, each a link to `/skills?skill=<id>` with an x calling `unlinkSkill`, and a plus revealing a native select of unlinked skills calling `linkSkill`. `useOptimistic`. Imports only the action file and `components/pos`.
+- [x] Skill list source: pages already call `getSkillNames()` (`core/modules.ts:52`); pass `Object.entries(names)` down as a prop. The client never imports the registry.
+- [x] Entity refs: tasks SELECT joins `core.entities` for `entity_ref`; goals already has `entityRefs()`; ideas and brain the same way.
+- [x] Replace chip markup in `TaskDrawer.tsx:250`, `GoalDrawer.tsx:270`, `IdeaDrawer.tsx:211`, `NotePane.tsx:296` with `<SkillPicker />`.
+- [x] e2e: press plus on a task, pick a skill, the chip shows MANUAL; reload, still there; the Skill Tree lists the entity under it.
 
 Exit checks: suites green; `grep -rn "from core.skill_links" modules` shows only `modules/skills`.
 Depends on: 6. Out of scope: editing confidence, reassign UI changes.
+Found while building, for 7b: `listSkillLinks` returns the picker's chip shape and the entity ref in one map, so a 7b page needs only `listSkillLinks(module, type)` and `Object.entries(await getSkillNames())`; the fitness page dropped `getSkillNames()` and 7b puts it back. The e2e must wait for the action's POST (`page.waitForResponse`) before reloading, the chip is optimistic. Two app-wide contrast tokens (`ink-4` at 12px, amber and green on the light theme) fail AA and are already on STATUS's follow-up list.
 
 ## Phase 7b: skill picker, remaining drawers
 

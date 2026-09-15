@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
-import { ActionButton, Eyebrow, useToast } from '@/components/pos'
+import { ActionButton, Eyebrow, useToast, type SkillLink } from '@/components/pos'
 import { Segments } from '@/components/pos/Segments'
 import { useIsPhone } from '@/components/pos/useIsPhone'
 import { useSearchState } from '@/components/pos/searchState'
@@ -31,7 +31,8 @@ export type GoalCard = {
   progress: Progress
   rule: string
   tasks: LinkedItem[]
-  skills: { id: string; name: string }[]
+  entityRef: string | null
+  skills: SkillLink[]
   proposals: { id: string; from: string; title: string }[]
 }
 
@@ -143,10 +144,12 @@ export function NewGoalButton() {
 export function GoalList({
   goals,
   metrics,
+  skills,
   todayIso,
 }: {
   goals: GoalCard[]
   metrics: Metric[]
+  skills: [string, string][]
   todayIso: string
 }) {
   // Tab, open goal and its mode live in the URL, so a goal can be linked to
@@ -257,6 +260,7 @@ export function GoalList({
             deadline: params.get('deadline') ?? '',
           }}
           metrics={metrics}
+          skills={skills}
           todayIso={todayIso}
           onClose={() =>
             setParams({ goal: null, edit: null, title: null, target: null, deadline: null })

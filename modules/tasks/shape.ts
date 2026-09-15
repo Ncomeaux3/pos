@@ -34,8 +34,10 @@ export type Task = {
   estimateMinutes: number | null
   remindMinutes: number | null
   source: string
-  /** What the classifier linked, named by the tree. Empty when nothing matched. */
-  skills: { name: string; confidence: number; by: 'rule' | 'model' | 'manual' }[]
+  /** The registry row the skill links hang off. Null for a task registered before the registry. */
+  entityRef: string | null
+  /** What the classifier or the owner linked, named by the tree. Empty when nothing matched. */
+  skills: { id: string; name: string; confidence: number; by: 'rule' | 'model' | 'manual' }[]
   /** Days ago it was completed. Null while it is open. */
   doneDaysAgo: number | null
 }

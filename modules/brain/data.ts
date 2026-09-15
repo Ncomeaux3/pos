@@ -130,28 +130,6 @@ export async function uniqueSlug(title: string, excludeId?: string): Promise<str
   return `${base}-${Date.now()}`
 }
 
-export type SkillLinkRow = {
-  note_id: string
-  skill_id: string
-  confidence: string
-  classified_by: string | null
-  is_manual: boolean
-}
-
-/** Every skill link on a note, for the chips under a draft and beside a note. */
-export async function listSkillLinks(): Promise<SkillLinkRow[]> {
-  const { rows } = await db().query<SkillLinkRow>(
-    `select en.entity_id as note_id, sl.skill_id, sl.confidence::text,
-            sl.classified_by, sl.is_manual
-       from core.skill_links sl
-       join core.entities en on en.id = sl.entity_ref
-      where en.module = 'brain' and en.entity_type = 'note'
-        and sl.classified_by <> 'unclassified'
-      order by sl.confidence desc, sl.skill_id`,
-  )
-  return rows
-}
-
 export async function deleteNote(id: string): Promise<void> {
   await db().query(`delete from brain.note where id = $1`, [id])
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ActionButton, Eyebrow, useToast } from '@/components/pos'
+import { ActionButton, Eyebrow, SkillPicker, useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { ago, byLine, finishedOn, folderLabel, sourceMeta, subLine, wordCount } from '../shape'
 import { blocks } from '../wikilinks'
@@ -24,11 +24,13 @@ type Run = (action: () => Promise<ActionResult>, ok?: string) => void
 export function NotePane({
   note,
   hubs,
+  skills: tree,
   setParams,
   run,
 }: {
   note: BrainNote
   hubs: BrainHub[]
+  skills: [string, string][]
   setParams: SetParams
   run: Run
 }) {
@@ -58,15 +60,10 @@ export function NotePane({
   }
   const editLabel = editing ? 'Cancel edit' : 'Edit'
 
-  const skills = (
-    <>
-      {note.skills.length === 0 && <span className="text-[11px] text-ink-4">Nothing matched yet.</span>}
-      {note.skills.map((s) => (
-        <a key={s.id} href={`/skills?skill=${encodeURIComponent(s.id)}`} className={CHIP}>
-          {s.name} <span className="num text-ink-3">{Math.round(s.confidence * 100)}%</span>
-        </a>
-      ))}
-    </>
+  const skills = note.entityRef ? (
+    <SkillPicker entityRef={note.entityRef} links={note.skills} skills={tree} />
+  ) : (
+    <span className="text-[11px] text-ink-4">Nothing matched yet.</span>
   )
 
   if (note.status === 'draft') {
@@ -151,7 +148,6 @@ export function NotePane({
             <div className="flex flex-wrap items-center gap-1.5 border-t border-rule px-3.5 py-2.5">
               <Eyebrow className="mr-1">Skills</Eyebrow>
               {skills}
-              <span className="label ml-auto text-[9px] tracking-[0.08em] text-ink-4">{byLine(note.skills)}</span>
             </div>
           </div>
         </div>
@@ -310,10 +306,7 @@ export function NotePane({
       <div className="grid max-w-[720px] grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))] gap-3.5">
         <div className={CELL}>
           <Eyebrow>Linked skills</Eyebrow>
-          <div className="mt-2 flex flex-wrap gap-1.5">{skills}</div>
-          {note.skills.length > 0 && (
-            <p className="label mt-2 text-[9px] tracking-[0.06em] text-ink-4">{byLine(note.skills)}</p>
-          )}
+          <div className="mt-2">{skills}</div>
         </div>
         <div className={CELL}>
           <Eyebrow>Backlinks</Eyebrow>

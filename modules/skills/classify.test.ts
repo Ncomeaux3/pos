@@ -8,6 +8,12 @@ vi.mock('@/core/llm', () => ({ complete: (...args: unknown[]) => complete(...arg
 const { db } = await import('@/core/db')
 const { classify, matchByRules } = await import('./classify')
 const { loadYaml } = await import('./tree')
+const { default: manifest } = await import('./manifest')
+
+const link = (entityRef: string, skillId: string) =>
+  manifest.tools.link.run({ entityRef, skillId }, { source: 'ui' })
+const unlink = (entityRef: string, skillId: string) =>
+  manifest.tools.unlink.run({ entityRef, skillId }, { source: 'ui' })
 
 // matchByRules takes the tree explicitly now that overrides can change it, so
 // the rule tests pass the committed default.
@@ -181,5 +187,40 @@ describe('the unclassified marker', () => {
       [ref],
     )
     expect(rows).toHaveLength(1)
+  })
+})
+
+// The picker on every entity drawer. A link made by hand is a manual row, so
+// the same rule that protects a Skill Tree reassign protects it here.
+describe('skills.link and skills.unlink', () => {
+  it('a hand-made link survives classify() disagreeing with it', async () => {
+    const ref = await anEntity('Deadlift form check')
+    await link(ref, 'negotiation')
+
+    await classify(ref, 'Deadlift form check')
+
+    const links = await linksFor(ref)
+    expect(links.map((l) => l.skill_id)).toEqual(['negotiation', 'strength'])
+    expect(links[0]).toMatchObject({ classified_by: 'human', is_manual: true })
+    expect(Number(links[0].confidence)).toBe(1)
+  })
+
+  it('linking a parked entity clears the unclassified marker', async () => {
+    const ref = await anEntity('The quiet afternoon passed')
+    await classify(ref, 'The quiet afternoon passed')
+
+    await link(ref, 'writing')
+
+    expect((await linksFor(ref)).map((l) => l.skill_id)).toEqual(['writing'])
+  })
+
+  it('unlink removes the row', async () => {
+    const ref = await anEntity('Deadlift form check')
+    await classify(ref, 'Deadlift form check')
+    await link(ref, 'negotiation')
+
+    await unlink(ref, 'negotiation')
+
+    expect((await linksFor(ref)).map((l) => l.skill_id)).toEqual(['strength'])
   })
 })

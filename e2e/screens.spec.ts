@@ -1402,6 +1402,54 @@ test('tasks, completing one emits the event that earns XP', async ({ page }) => 
   await expect(page.getByText('Read DDIA ch. 5, Replication', { exact: true })).toBeVisible()
 })
 
+test('tasks, a skill linked by hand shows MANUAL, survives a reload and reaches the tree', async ({ page }) => {
+  // On the phone the row itself opens the drawer; on the desktop it expands
+  // and EDIT opens it.
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
+  const open = async () => {
+    await page.goto('/tasks')
+    await page.getByRole('button', { name: /^Recurring detection tests/ }).click()
+    if (!mobile) await page.getByRole('button', { name: 'Edit Recurring detection tests' }).click()
+  }
+  await open()
+  const drawer = page.getByRole('dialog')
+  await expect(drawer.getByText('Linked skills')).toBeVisible()
+
+  // The seed upserts the task and its registry row, so a link from the other
+  // Playwright project is still there. Start clean.
+  const unlink = drawer.getByRole('button', { name: 'Unlink Negotiation' })
+  if (await unlink.isVisible()) {
+    const cleared = page.waitForResponse((r) => r.request().method() === 'POST' && r.ok())
+    await unlink.click()
+    await cleared
+  }
+
+  await drawer.getByRole('button', { name: 'Link a skill' }).click()
+  // The chip is optimistic, so wait for the action's POST before reloading.
+  const saved = page.waitForResponse((r) => r.request().method() === 'POST' && r.ok())
+  await drawer.getByRole('combobox', { name: 'Skill' }).selectOption('negotiation')
+  const chip = drawer.locator('span').filter({ hasText: /^NegotiationMANUAL×$/ })
+  await expect(chip).toBeVisible()
+  await saved
+
+  // The row is the server's, not the optimistic guess: it is still there after
+  // a reload, and the drawer reopens because its state is the URL.
+  await page.reload()
+  await expect(drawer.getByRole('link', { name: 'Negotiation' })).toBeVisible()
+  await expect(chip).toBeVisible()
+
+  // The Skill Tree reads the same row: the task's creation event now sits
+  // under Negotiation.
+  await page.goto('/skills?skill=negotiation')
+  await expect(page.getByText('Recurring detection tests').first()).toBeVisible()
+
+  await open()
+  const removed = page.waitForResponse((r) => r.request().method() === 'POST' && r.ok())
+  await drawer.getByRole('button', { name: 'Unlink Negotiation' }).click()
+  await expect(drawer.getByRole('link', { name: 'Negotiation' })).toBeHidden()
+  await removed
+})
+
 test('phone Tasks shows three segments', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile', 'The collapsed segment row is a phone thing')
 
