@@ -89,9 +89,7 @@ export function db(): Pool {
     )
   }
 
-  // 8 rather than 4: the transaction pooler multiplexes, and a dashboard
-  // render fires eight queries at once, so 4 queued half of them.
-  pool ??= new Pool({ connectionString, max: 8 })
+  pool ??= new Pool({ connectionString, max: 4 })
   return pool
 }
 

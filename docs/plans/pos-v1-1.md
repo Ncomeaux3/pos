@@ -72,7 +72,7 @@ Complexity: medium
 Parallel-safe with: 1, 2, 8, 9, 10
 Files: `core/settings.ts`, `core/today.ts`, `core/modules.ts`, `core/review-registry.ts`, `core/db.ts`, `app/(app)/page.tsx`, `app/(app)/[module]/[[...path]]/page.tsx`, `vercel.json`, `docs/plans/pos-v1-1.md` (numbers).
 
-- [ ] Measure first and write the numbers into the plan (local done, production pending): `curl -o /dev/null -w '%{time_starttransfer}\n' -H "cookie: $SESSION"` five times each for `/`, `/tasks`, `/goals`, `/fitness`, `/travel` on production; the same routes' durations from Vercel runtime logs; a local `pnpm build && pnpm start` run so compile time is out.
+- [x] Measure first and write the numbers into the plan (production after pending the preview sign-in): `curl -o /dev/null -w '%{time_starttransfer}\n' -H "cookie: $SESSION"` five times each for `/`, `/tasks`, `/goals`, `/fitness`, `/travel` on production; the same routes' durations from Vercel runtime logs; a local `pnpm build && pnpm start` run so compile time is out.
 - [x] Region check: Vercel function region versus the Supabase project region. A page does 6 to 13 round trips across that gap. If they differ, set `regions` in `vercel.json` to the Supabase region (verify Hobby allows it) and re-measure.
 - [x] Dedupe per request with React `cache()` (native, request scoped, no staleness): wrap `getSettings`, `getSetting`, `ownerToday`, `getSkillNames`. Layout and page both read settings; `getNav` and `getOffRailNav` each call `getSetting('modules_enabled')`; Goals calls `ownerToday` once per goal through Tasks' `linked`.
 - [x] `page.tsx:120`: move `ownerToday()` into the `Promise.all`.
@@ -82,6 +82,19 @@ Files: `core/settings.ts`, `core/today.ts`, `core/modules.ts`, `core/review-regi
 - [x] Tasks `listSkillLinks` (`modules/tasks/data.ts:162`): join `tasks.task` with the same window `listTasks` uses. Skip if under 20 ms. Skipped: 1 ms for 51 rows over 415 links locally (2026-09-15).
 
 Exit checks: before and after table in the plan doc, at least 30 percent off TTFB on `/` and `/tasks`; suites green; e2e unchanged.
+
+Measured 2026-09-15. Production is `pos-gilt-rho.vercel.app` at main 10fa287, functions in `iad1`, database in `us-west-2`; "after" is the branch preview, functions in `pdx1`, same database. TTFB is `fetch(route, { cache: 'no-store' })` time to headers from a logged-in Chrome tab, five runs, median. Queries are `pg_stat_statements` calls for one render of a local `next build` and `next start` against local Postgres, and five of each are the session refresh in the auth schema. Local TTFB was 23 to 40 ms before and after on every route: the database is on the same machine there, so round trips cost nothing and the gain does not show locally.
+
+| Route | Prod TTFB before (ms) | Prod TTFB after (ms) | Queries before | Queries after |
+|---|---|---|---|---|
+| `/` | 443 (273 to 718) | pending | 24 | 20 |
+| `/tasks` | 302 (301 to 554) | pending | 16 | 15 |
+| `/goals` | 272 (269 to 406) | pending | 32 | 23 |
+| `/fitness` | 472 (450 to 594) | pending | 26 | 25 |
+| `/travel` | 339 (337 to 434) | pending | 18 | 18 |
+| `/review` | not measured | not measured | 13 | 11 |
+
+Vercel runtime logs could not supply durations: on this plan they keep only requests that write output, and a page render writes none (one cron line in three days).
 Depends on: none. Out of scope: TTL caches, `unstable_cache`, ISR.
 Notes: removing repeated reads and serial awaits is safe and measurable; a TTL cache would hide the freshness work Phase 5 needs.
 
