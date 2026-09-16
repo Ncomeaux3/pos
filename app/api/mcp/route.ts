@@ -2,6 +2,9 @@ import { createMcpHandler, withMcpAuth } from 'mcp-handler'
 import { withLog } from '@/core/log'
 import { registerTools, tokenMatches } from '@/core/mcp'
 
+// A tool call is one query or one model call; a minute is generous.
+export const maxDuration = 60
+
 // The one MCP server. Claude Code and the Claude app connect here; the
 // orchestrator uses the same registry in process. There is no in-app chat.
 //

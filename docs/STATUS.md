@@ -39,6 +39,21 @@ one CI carries as well until the pair is added to the secrets.
 
 ## Done
 
+**v1.1 Phase 12, hardening** (2026-09-15, branch `phase-12-hardening`). The
+last v1.1 phase; the plan is complete once its PR merges. `app/error.tsx` and
+`app/global-error.tsx` show the headline, Next's digest and a Try again over
+`retry()`. The `check` CI job runs `pnpm audit --prod --audit-level=high`
+after install. Main is protected: `check`, `screens` and `migrations` must be
+green, admins included, so GitHub refuses a red merge where the rule was
+manual before. `maxDuration` is 60 on the MCP route and 30 on the webhook and
+both OAuth routes. `backup.yml` mirrors every storage bucket into
+`storage/` of pos-backups beside the dumps, which needs two repo secrets the
+owner adds, `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF`; the first
+04:10 UTC run after that proves it. docs/RESTORE.md carries the restore
+command (drilled against the local stack) and docs/SETUP-SUPABASE.md a
+Rotating a secret table. After this: OWNER-TODO steps 12 to 16, then
+docs/plans/skills-v2.md.
+
 **v1.1 Phase 11, fitness** (2026-09-15, branch `phase-11-fitness`). The
 net worth chart's drawing is now `components/pos/LineChart.tsx` (its own
 client file, the crosshair needs state) over `spine()` in `core/series.ts`,

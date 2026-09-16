@@ -1,0 +1,36 @@
+'use client'
+
+import { ActionButton } from '@/components/pos'
+import './globals.css'
+
+// Replaces the root layout when the layout itself throws, so it renders its
+// own html and body and imports globals.css directly; the root layout's
+// markup never runs. No theme attribute: getTheme() is server only and there
+// is no server to ask here.
+export default function GlobalError({
+  error,
+  retry,
+}: {
+  error: Error & { digest?: string }
+  retry: () => void
+}) {
+  return (
+    <html lang="en" className="h-full">
+      <body className="min-h-full flex flex-col">
+        <main className="flex min-h-dvh items-center justify-center p-6">
+          <div className="max-w-sm space-y-3 text-center">
+            <h1 className="text-2xl font-semibold tracking-tight">Something broke</h1>
+            <p className="t-caption text-ink-3">
+              This page failed to render. When a digest is shown below, use it to find
+              the matching error in the Vercel logs.
+            </p>
+            {error.digest && <p className="t-caption text-ink-3">Digest {error.digest}</p>}
+            <ActionButton variant="outline" size="md" onClick={() => retry()}>
+              Try again
+            </ActionButton>
+          </div>
+        </main>
+      </body>
+    </html>
+  )
+}
