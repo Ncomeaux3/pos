@@ -20,7 +20,7 @@ Order: bugs first, then speed, then features, fitness, hardening. Phases marked 
 | 9 Travel destinations | Multi-destination trips, all pinned, merge into | high | 1 to 8, 10 | none | Done 2026-09-15 in three PRs, migration pushed: destinations table, write_trip, pins, places, digest, merge_trip tool with the Merge into select, multi-row TripForm, and the e2e through a merge | #59, #60, #69 |
 | 10 Finance chart | Net worth on a 30-day date axis with the average | low | 1 to 9 | none | Done 2026-09-15: spine() on a date axis, nulls break the line, padded y, stats over recorded days. The LineChart extraction and the two-day e2e were not done and moved to Phase 11, which is the phase that needs them | #57 |
 | 11 Fitness | Trends, history filters, plan form, Apple arrival on Sync | high | none | 10, 7b | Done 2026-09-15: LineChart extracted with spine() in core, Trends over 30/90/365, the filter row, PlanDrawer over write_plan, Apple arrival on the band from the request log. Owner step (the HAE fixture) still open | |
-| 12 Hardening | error pages, audit step, branch protection, route limits, rotation doc | low | none | all | Not started | |
+| 12 Hardening | error pages, audit step, branch protection, route limits, rotation doc | low | none | all | Done 2026-09-15: error.tsx and global-error.tsx with the digest and retry, pnpm audit in the check job, main protected on check, screens and migrations, maxDuration on MCP, webhook and OAuth, storage buckets mirrored by the backup, rotation table | |
 
 Every UI phase's exit checks include: `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build` pass; an e2e in `e2e/screens.spec.ts` for the flow (workers 1, never overridden); ui-verifier at 402 and 1440 px with no Must fix; spec-reviewer before the PR. Not repeated per phase.
 
@@ -298,14 +298,16 @@ Complexity: low
 Parallel-safe with: none
 Files: new `app/error.tsx`, `app/global-error.tsx`, `.github/workflows/ci.yml`, `app/api/mcp/route.ts`, `app/api/integrations/[id]/webhook/route.ts`, `app/api/integrations/[id]/oauth/*/route.ts`, `docs/RESTORE.md`, `docs/SETUP-SUPABASE.md`, `CLAUDE.md`.
 
-- [ ] `app/error.tsx` and `app/global-error.tsx`: client components, headline, the digest, retry; imports from `components/pos` only.
-- [ ] `ci.yml` check job: `pnpm audit --prod --audit-level=high` after install.
-- [ ] Backup: `docs/RESTORE.md` adds the storage bucket to the backup and restore steps (verify the `supabase storage` CLI subcommands).
-- [ ] Branch protection: repo is public, so free allows it. `gh api -X PUT repos/<owner>/pos/branches/main/protection` requiring `check` and `screens`. The CLAUDE.md sentence was corrected on 2026-09-15; this phase makes it true in the repo settings.
-- [ ] `export const maxDuration`: MCP 60, webhook 30, OAuth start and callback 30.
-- [ ] Secret rotation paragraph in `docs/SETUP-SUPABASE.md`: each secret, where it is set, what rotating breaks (VAPID invalidates every device; `ENCRYPTION_KEY` orphans every `core.connections` row; `CRON_SECRET` and `MCP_TOKEN` are free).
+- [x] `app/error.tsx` and `app/global-error.tsx`: client components, headline, the digest, retry; imports from `components/pos` only.
+- [x] `ci.yml` check job: `pnpm audit --prod --audit-level=high` after install.
+- [x] Backup: `docs/RESTORE.md` adds the storage bucket to the backup and restore steps (verify the `supabase storage` CLI subcommands).
+- [x] Branch protection: repo is public, so free allows it. `gh api -X PUT repos/<owner>/pos/branches/main/protection` requiring `check` and `screens`. The CLAUDE.md sentence was corrected on 2026-09-15; this phase makes it true in the repo settings.
+- [x] `export const maxDuration`: MCP 60, webhook 30, OAuth start and callback 30.
+- [x] Secret rotation paragraph in `docs/SETUP-SUPABASE.md`: each secret, where it is set, what rotating breaks (VAPID invalidates every device; `ENCRYPTION_KEY` orphans every `core.connections` row; `CRON_SECRET` and `MCP_TOKEN` are free).
 
 Exit checks: prod-auditor reports the gaps closed; CI green with the audit step. Depends on: all.
+
+Done 2026-09-15. Two things go past the bullets: branch protection also requires `migrations`, so the db push gate blocks a merge (owner's choice), and `backup.yml` mirrors every storage bucket into `storage/` of pos-backups rather than the restore doc only describing a manual copy; that needs `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF` as repo secrets, which are the owner's step before the next 04:10 UTC run. `supabase storage cp -r ss:/// <dir> --experimental --project-ref <ref>` was run against production from a bare directory (2 files, 164K) and the upload direction against the local stack, where it created the missing bucket private. The error boundary was checked on the dev server with a scratch page that throws in a server component: the digest line and a 44px Try again at 402, 35px at 1440, retry re-rendering the boundary; no artboard exists for it. Protection is enforced for admins, so the owner cannot merge a red PR either. Not done, a speed pass rather than hardening: the `/tasks` client-chunk measurement noted under Phase 3.
 
 ## Platform concerns
 

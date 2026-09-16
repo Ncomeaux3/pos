@@ -32,7 +32,7 @@ Owner: Nick. Solo, nights and weekends. Finish one module before starting the ne
 - Show evidence of verification (test output, command result), not a claim that it works.
 - Commit after each completed step with a descriptive message. Log any decision to decisions/log.md.
 - When compacting, preserve the list of modified files, open questions, and the test command.
-- A red CI check is a merge gate: never merge a PR while any check is red, and say so if asked to. The repo is public, so branch protection is available on the free plan and v1.1 phase 12 turns it on requiring `check` and `screens`. Until it does, the rule is manual.
+- A red CI check is a merge gate: never merge a PR while any check is red, and say so if asked to. Branch protection on main requires `check`, `screens` and `migrations` green and binds admins too (set 2026-09-15 in v1.1 phase 12), so GitHub refuses the merge as well.
 - A PR that adds a migration goes red until its description carries a line reading `db push: done`, or `db push: not needed` when the schema should not move yet. Merging deploys the code; `supabase db push` is manual and does not follow. Twice now the code has arrived in production ahead of its schema and the nightly came back partial naming a table that did not exist.
 
 ## Tools for this project

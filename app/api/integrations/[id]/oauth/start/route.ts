@@ -6,6 +6,9 @@ import { getIntegration } from '@/core/integrations'
 import { oauthStateCookie } from '@/core/oauth'
 import { withLog } from '@/core/log'
 
+// One redirect to the provider.
+export const maxDuration = 30
+
 /**
  * Where the Connect button points. Sets a one time state cookie, then hands off
  * to the provider. Generic: every oauth2 manifest uses this same route.

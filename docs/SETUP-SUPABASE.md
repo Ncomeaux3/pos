@@ -273,6 +273,26 @@ the fastest place to look, not the Vercel logs.
 
 ---
 
+## Rotating a secret
+
+Each secret below is set in a specific place and rotating it breaks a specific thing
+until every place holding it is updated. Nothing rotates on its own.
+
+| Secret | Set in | Rotating it breaks |
+|---|---|---|
+| `ENCRYPTION_KEY` | Vercel and local `.env` | Every row in `core.connections`, which is encrypted with it. Re-enter every provider key in Settings > Connections after the deploy. The rows cannot be re-encrypted because the old key is gone. |
+| `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` | Vercel and `.env`, generated with `node -e "console.log(require('web-push').generateVAPIDKeys())"` | Every push subscription. Each device re-enables notifications in Settings. |
+| `CRON_SECRET` | Vercel (and vercel.json's cron sends it automatically) | Nothing. The next nightly uses the new one. |
+| `MCP_TOKEN` | Vercel and `.env` | Nothing in the app. Re-run `claude mcp add` with the new bearer on each machine. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase dashboard (Project Settings > API keys), then Vercel and `.env` | Nothing once Vercel has the new value; storage uploads and setup fail until it does. |
+| Database password (inside `DATABASE_URL` and the `BACKUP_DATABASE_URL` GitHub secret) | Supabase dashboard (Project Settings > Database), then Vercel, `.env` and the GitHub secret | Every connection until all three are updated; the backup goes red until the GitHub secret is. |
+| `STRAVA_CLIENT_SECRET` | Strava API settings, then Vercel and `.env` | Nothing until the next token refresh, which fails until Vercel has it. |
+| `BACKUP_REPO_TOKEN`, `SUPABASE_ACCESS_TOKEN` | GitHub repo secrets (a GitHub PAT with contents write on pos-backups; a Supabase personal access token) | The nightly backup, until updated. |
+
+Provider keys (Anthropic, Resend, SimpleFIN, Health Auto Export's shared secret) are
+not environment variables. They live encrypted in `core.connections` and rotate in
+Settings > Connections with no deploy.
+
 ## What is not covered here
 
 - **A custom domain.** Optional. Vercel's generated URL works, and changing the
