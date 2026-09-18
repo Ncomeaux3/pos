@@ -69,9 +69,9 @@ beside Strava's clock. The demo seed writes 14 weight readings over 40 days.
 Four e2e tests: Trends counts 10 of 30 and 14 of 90 recorded, the filter
 narrows and survives a reload, the plan drawer adds a day and removes it, and
 a weight posted to the Health Auto Export webhook (secret read from the
-Connections card) shows on `/health` and moves the band's Apple line. Still
-open: the owner step, one real Health Auto Export export as the
-`client.test.ts` fixture; `core.request_log` holds no body, so it will come
+Connections card) shows on `/health` and moves the band's Apple line. Health
+Auto Export connected by the owner 2026-09-18. Still open: one real export as
+the `client.test.ts` fixture; `core.request_log` holds no body, so it will come
 from the app's share sheet. Phase 12 (hardening) is the last v1.1 phase.
 
 **v1.1 Phase 7b, skill picker, remaining drawers** (2026-09-15, branch
@@ -114,8 +114,8 @@ causes: `PullToRefresh` listens on `document`, `useEdgeBack` on `window`, and
 their midpoint, 4 px slop, no pointer capture so a star tap still selects.
 `pinch()` in `modules/skills/ui/view.ts` is unit tested (scale, midpoint held,
 clamp, identity when the fingers share a point). The mobile e2e covers the
-one-finger half. Not verified: the pinch itself on a real phone (Playwright
-cannot send two touches) and the ui-verifier pass at 402 and 1440.
+one-finger half. Pinch confirmed on the owner's phone 2026-09-18 (Playwright cannot
+send two touches). Not verified: the ui-verifier pass at 402 and 1440.
 
 **v1.1 Phase 6, goals, projects, tasks** (2026-09-15, branch
 `phase-6-projects-goals`). `tasks.project.goal_ref` (migration
