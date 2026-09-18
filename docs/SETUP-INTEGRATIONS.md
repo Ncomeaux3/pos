@@ -265,27 +265,6 @@ API to call from a server.
 5. Back on the card, Test. It reads "Last payload received {date}" once the
    first post has landed.
 
-### Backfill history
-
-The REST automation cannot send a custom date range: its periods stop at the
-previous seven days (help.healthyapps.dev, checked 2026-09-18). Older data
-comes from a manual export and one script run:
-
-1. In the app, **Manual Export**: Custom range (say 2026-01-01 to today),
-   Time Grouping Days, JSON, the same metrics and Workouts as the automation.
-   Share the file to this machine (AirDrop, Files).
-2. On the card, Reveal the secret, then:
-
-   ```
-   HAE_SECRET=<secret> pnpm exec tsx scripts/hae-backfill.mts ~/Downloads/<export>.json
-   ```
-
-   Add `--dry-run` first to see the requests without sending. The script posts
-   one request per month plus the workouts twenty at a time, 1.5 s apart, so
-   each stays under the function's body and time limits and the app's rate
-   limit. It stops at the first non-200 and prints the body. Rows upsert, so
-   running it twice is safe, and a workout earns its XP once.
-
 ### What happens next
 
 Each post goes through `/api/integrations/health_auto_export/webhook`. The
