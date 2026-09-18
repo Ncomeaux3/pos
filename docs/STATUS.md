@@ -74,6 +74,23 @@ Auto Export connected by the owner 2026-09-18. Still open: one real export as
 the `client.test.ts` fixture; `core.request_log` holds no body, so it will come
 from the app's share sheet. Phase 12 (hardening) is the last v1.1 phase.
 
+**Health Auto Export backfill, argument handling and a sleep report**
+(2026-09-18, branch `claude/review-merge-open-prs-ccceog`). Two fixes to what
+PR #75 shipped. `scripts/hae-backfill.mts` parsed its arguments by taking the
+first token that did not begin with `--`, so `--url <url> export.json` read the
+URL as the export file, and a misspelled `--dryrun` was ignored and the export
+went to production for real; `parseArgs` in the lib now consumes `--url`'s value
+and refuses a flag it does not know. `--sleep` prints every sleep point in an
+export with its span, the hours the app summed, time in bed and the minutes the
+webhook would store for that day, and sends nothing. It runs `toBodyMetrics`
+itself, so it prints what would be stored rather than a second implementation of
+it. Still open, and the reason the report exists: the real export's nights ran
+297 to 1098 minutes, and 1098 is 18.3 hours. The report names the cause, because
+a day carrying two sleep points keeps the last of them, so an afternoon nap can
+outrank the night it shares a date with, while a single point means the span
+itself is that long. The fix waits on the owner running `--sleep` against the
+real file; nothing about how sleep is stored changed here.
+
 **v1.1 Phase 7b, skill picker, remaining drawers** (2026-09-15, branch
 `phase-7b-skill-picker-rest`). The same `SkillPicker` block on the trip,
 policy, recipe, home asset, health appointment and health record drawers,
