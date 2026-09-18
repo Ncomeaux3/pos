@@ -62,3 +62,11 @@ AGENTS.md
 
 # Worktrees other Claude sessions open inside this checkout
 .claude/worktrees/
+
+# Holon brand kits: 29 MB of masters and renders, sourced from the zip; the
+# app copies only what it uses into public/brand and app/fonts.
+holon-cobalt-sand/
+holon-brand-kit/
+*.zip
+# ad hoc timing and screenshot scripts
+e2e/.scratch/
