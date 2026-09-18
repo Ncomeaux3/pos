@@ -58,7 +58,7 @@ export function TasksTile({ payload }: { payload: Record<string, unknown> }) {
             <span
               aria-hidden
               className={cn(
-                'grid size-3.5 place-items-center border',
+                'grid size-3.5 place-items-center border rounded-full',
                 on ? 'border-brand bg-brand' : 'border-ink-3',
               )}
             >

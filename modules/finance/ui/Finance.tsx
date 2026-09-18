@@ -287,7 +287,7 @@ export function Finance({ data }: { data: FinanceData }) {
         >
           {tab === 'overview' && (
             <div className="mt-[18px] space-y-3.5">
-              <div className="grid grid-cols-2 gap-px border border-rule bg-rule">
+              <div className="grid grid-cols-2 gap-px border border-rule bg-rule rounded-[18px]">
                 <KpiStrip data={data} hot={hot} upcomingTotal={upcomingTotal} daysLeft={daysLeft} />
               </div>
               <Card className={cn(overviewCard, 'flex min-h-[260px] flex-col')}>
@@ -369,7 +369,7 @@ export function Finance({ data }: { data: FinanceData }) {
                 <button
                   type="button"
                   onClick={() => setParams({ limits: '1' }, { push: true })}
-                  className="label border border-rule-2 px-2 py-1 text-[11px] tracking-[0.08em] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink"
+                  className="label border border-rule-2 px-2 py-1 text-[11px] tracking-[0.08em] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full"
                 >
                   Edit limits
                 </button>
@@ -457,7 +457,7 @@ export function Finance({ data }: { data: FinanceData }) {
           * through its segments; the desktop through the drawers. */}
         <div
           data-testid="finance-kpis"
-          className="grid grid-cols-2 gap-px border border-rule bg-rule sm:grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))]"
+          className="grid grid-cols-2 gap-px border border-rule bg-rule sm:grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))] rounded-[18px]"
         >
           <KpiStrip data={data} hot={hot} upcomingTotal={upcomingTotal} daysLeft={daysLeft} />
         </div>
@@ -552,7 +552,7 @@ export function Finance({ data }: { data: FinanceData }) {
                             e.stopPropagation()
                             run(() => setSubscriptionStatus(u.id, 'cancelled'), `${u.name} cancelled`)
                           }}
-                          className="label border border-rule-2 px-2 py-[3px] text-[10px] tracking-[0.08em] text-ink-3 transition-colors duration-150 hover:border-bad hover:text-bad"
+                          className="label border border-rule-2 px-2 py-[3px] text-[10px] tracking-[0.08em] text-ink-3 transition-colors duration-150 hover:border-bad hover:text-bad rounded-full"
                         >
                           Cancel
                         </button>
@@ -581,7 +581,7 @@ export function Finance({ data }: { data: FinanceData }) {
                   <button
                     type="button"
                     onClick={() => setParams({ limits: '1' }, { push: true })}
-                    className="label border border-rule-2 px-2 py-1 text-[11px] tracking-[0.08em] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink"
+                    className="label border border-rule-2 px-2 py-1 text-[11px] tracking-[0.08em] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full"
                   >
                     Edit limits
                   </button>
@@ -707,7 +707,7 @@ export function Finance({ data }: { data: FinanceData }) {
               },
             ]}
           />
-          <div className="mt-3.5 flex items-center gap-3.5 border border-rule px-3.5 py-3">
+          <div className="mt-3.5 flex items-center gap-3.5 border border-rule px-3.5 py-3 rounded-[18px]">
             <Eyebrow className="flex-1">Monthly limit</Eyebrow>
             <span className="num text-[13px] text-ink-3">$</span>
             <input
@@ -840,7 +840,7 @@ function DrawerStats({
   cells: { label: string; value: string; tone?: 'ok' | 'bad' | 'warn' }[]
 }) {
   return (
-    <div className="grid grid-cols-3 border border-rule">
+    <div className="grid grid-cols-3 border border-rule rounded-[18px]">
       {cells.map((c, i) => (
         <div key={c.label} className={cn('px-3.5 py-3', i < cells.length - 1 && 'border-r border-rule')}>
           <Eyebrow>{c.label}</Eyebrow>
@@ -1081,7 +1081,7 @@ function LimitsDrawer({
         <span className="num text-right text-[13px] text-ink">{money(totals.limit)}</span>
       </div>
 
-      <div className="mt-2 flex flex-col gap-2.5 border border-rule px-3.5 py-3">
+      <div className="mt-2 flex flex-col gap-2.5 border border-rule px-3.5 py-3 rounded-[18px]">
         <Eyebrow>Alert threshold</Eyebrow>
         <div className="flex items-center gap-3.5">
           <input

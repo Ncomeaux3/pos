@@ -194,7 +194,7 @@ export function LineChart({
 
           {hover !== null && at !== null && at !== undefined && (
             <div
-              className="pointer-events-none absolute top-0 z-2 whitespace-nowrap border border-rule-2 bg-bg px-2.5 py-1.5 text-[11px]"
+              className="pointer-events-none absolute top-0 z-2 whitespace-nowrap border border-rule-2 bg-bg px-2.5 py-1.5 text-[11px] rounded-[18px]"
               style={{
                 left: `${(hover / Math.max(1, days.length - 1)) * 100}%`,
                 transform: hover > days.length / 2 ? 'translateX(-100%)' : 'none',

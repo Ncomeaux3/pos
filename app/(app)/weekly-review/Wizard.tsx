@@ -358,7 +358,7 @@ export function Wizard({ data }: { data: WeekData }) {
                   <span
                     aria-hidden
                     className={cn(
-                      'size-4 shrink-0 border',
+                      'size-4 shrink-0 border rounded-full',
                       on ? 'border-brand bg-brand' : 'border-ink-3',
                     )}
                   />
@@ -389,7 +389,7 @@ export function Wizard({ data }: { data: WeekData }) {
               selected
               label={`Remove ${win}`}
               onClick={() => patch({ ownWins: answers.ownWins.filter((unused, j) => j !== i) })}
-              mark={<span aria-hidden className="size-4 shrink-0 border border-brand bg-brand" />}
+              mark={<span aria-hidden className="size-4 shrink-0 border border-brand bg-brand rounded-full" />}
               title={win}
               meta="Yours"
               right={<span className="label shrink-0 text-[10px] text-ink-3">Remove</span>}
@@ -438,7 +438,7 @@ export function Wizard({ data }: { data: WeekData }) {
                   <div
                     key={miss.id}
                     className={cn(
-                      'border bg-bg-elev px-4 py-[15px]',
+                      'border bg-bg-elev px-4 py-[15px] rounded-[18px]',
                       action ? 'border-brand' : 'border-rule-2',
                     )}
                   >
@@ -480,7 +480,7 @@ export function Wizard({ data }: { data: WeekData }) {
                               patch({ missActions: next })
                             }}
                             className={cn(
-                              'h-11 border px-3 text-[12px] transition-colors duration-150 active:scale-[.985] sm:h-8',
+                              'h-11 border px-3 text-[12px] transition-colors duration-150 active:scale-[.985] sm:h-8 rounded-full',
                               action === a.value
                                 ? 'border-brand bg-brand-soft text-ink'
                                 : 'border-rule-2 text-ink-3 hover:text-ink',
@@ -541,7 +541,7 @@ export function Wizard({ data }: { data: WeekData }) {
                     : 'bg-brand'
 
               return (
-                <div key={check.id} className="border border-rule-2 bg-bg-elev p-4">
+                <div key={check.id} className="border border-rule-2 bg-bg-elev p-4 rounded-[18px]">
                   <div className="flex flex-wrap items-baseline gap-x-3.5 gap-y-2.5">
                     <span className="min-w-0 flex-[1_1_220px]">
                       <span className="block text-[15px] text-ink">{check.title}</span>
@@ -669,7 +669,7 @@ export function Wizard({ data }: { data: WeekData }) {
                       <span
                         aria-hidden
                         className={cn(
-                          'grid size-6 shrink-0 place-items-center border text-[10px]',
+                          'grid size-6 shrink-0 place-items-center border text-[10px] rounded-full',
                           on ? 'border-brand bg-brand text-white' : 'border-rule-2 text-ink-3',
                         )}
                       >
@@ -711,7 +711,7 @@ export function Wizard({ data }: { data: WeekData }) {
           {/* The note as it will be written, before it is written. The server
               renders these same blocks, so nothing is filed that was not read
               here first. */}
-          <div className="border border-rule-2 bg-bg-elev p-5">
+          <div className="border border-rule-2 bg-bg-elev p-5 rounded-[18px]">
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <Eyebrow>Week {data.weekNumber} note</Eyebrow>
               <span className="label text-[10px] tracking-[0.12em] text-ink-3">
@@ -746,7 +746,7 @@ export function Wizard({ data }: { data: WeekData }) {
             {outcomes.map((outcome) => (
               <div
                 key={outcome.tag}
-                className="min-w-0 flex-[1_1_200px] border border-rule-2 bg-bg p-3.5"
+                className="min-w-0 flex-[1_1_200px] border border-rule-2 bg-bg p-3.5 rounded-[18px]"
               >
                 <p className="label text-[9px] tracking-[0.12em] text-brand">{outcome.tag}</p>
                 <p className="mt-2 text-[13px] leading-[1.5] text-ink-2">{outcome.text}</p>

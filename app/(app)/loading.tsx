@@ -7,9 +7,9 @@ export default function Loading() {
       <div className="mb-6 h-4 w-32 bg-rule" />
       <div className="mb-8 h-8 w-56 bg-rule" />
       <div className="grid gap-3 md:grid-cols-2">
-        <div className="h-32 border border-rule" />
-        <div className="h-32 border border-rule" />
-        <div className="h-32 border border-rule" />
+        <div className="h-32 border border-rule rounded-[18px]" />
+        <div className="h-32 border border-rule rounded-[18px]" />
+        <div className="h-32 border border-rule rounded-[18px]" />
       </div>
     </div>
   )

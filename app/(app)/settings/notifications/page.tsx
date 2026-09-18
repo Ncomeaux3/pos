@@ -11,7 +11,7 @@ import { Channels } from './Channels'
 import { Devices } from './Devices'
 import { QuietHours } from './QuietHours'
 
-const card = 'border border-rule bg-bg-elev px-5 py-[18px]'
+const card = 'border border-rule bg-bg-elev px-5 py-[18px] rounded-xl'
 
 // The coarse view of the same rules the Notifications screen edits one at a
 // time. A switch here writes every rule in that module, which is the thing you

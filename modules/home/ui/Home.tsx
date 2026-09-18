@@ -270,7 +270,7 @@ export function Home({ data }: { data: HomeData }) {
                       type="button"
                       onClick={() => setParams({ asset: asset.id }, { push: true })}
                       className={cn(
-                        'block w-full border bg-bg-elev p-[18px] text-left transition-colors duration-150 active:scale-[.985]',
+                        'block w-full border bg-bg-elev p-[18px] text-left transition-colors duration-150 active:scale-[.985] rounded-full',
                         state === 'due' ? 'border-warn' : 'border-rule-2',
                       )}
                     >
@@ -285,7 +285,7 @@ export function Home({ data }: { data: HomeData }) {
                         </span>
                         <span
                           className={cn(
-                            'label border px-1.5 py-[3px] text-[9px] tracking-[0.1em]',
+                            'label border px-1.5 py-[3px] text-[9px] tracking-[0.1em] rounded-full',
                             state === 'overdue'
                               ? 'border-bad text-bad'
                               : state === 'due'
@@ -348,7 +348,7 @@ export function Home({ data }: { data: HomeData }) {
                     onClick={() => setParams({ month: m.key })}
                     aria-pressed={selected}
                     className={cn(
-                      'block w-full border p-3 text-left transition-colors duration-150 active:scale-[.985]',
+                      'block w-full border p-3 text-left transition-colors duration-150 active:scale-[.985] rounded-full',
                       selected ? 'border-brand bg-brand-soft' : 'border-rule-2 bg-bg-elev',
                     )}
                   >
@@ -471,7 +471,7 @@ export function Home({ data }: { data: HomeData }) {
                   <div
                     key={job.id}
                     className={cn(
-                      'mt-2.5 border bg-bg-elev p-3.5',
+                      'mt-2.5 border bg-bg-elev p-3.5 rounded-[18px]',
                       job.status === 'overdue' ? 'border-bad' : 'border-rule-2',
                     )}
                   >

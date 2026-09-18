@@ -163,7 +163,7 @@ export function ReviewShell({
  * button beside them.
  */
 export const reviewField =
-  'h-11 min-w-0 border border-rule-2 bg-transparent px-[13px] text-[14px] text-ink ' +
+  'h-11 min-w-0 border border-rule-2 bg-transparent px-[13px] text-[14px] text-ink rounded-full ' +
   'outline-none placeholder:text-ink-4 focus-visible:border-brand'
 
 /**
@@ -183,7 +183,7 @@ export function GlanceCard({
   tone?: 'brand' | 'warn' | 'bad' | 'quiet'
 }) {
   return (
-    <div className="border border-rule-2 bg-bg-elev p-4">
+    <div className="border border-rule-2 bg-bg-elev p-4 rounded-[18px]">
       <span className="block text-[11px] leading-none text-ink-3">{label}</span>
       <span className="num mt-[9px] block text-[26px] font-light leading-none tracking-[-0.02em] text-ink">
         {value}
@@ -247,7 +247,7 @@ export function ReviewRow({
       aria-pressed={selected}
       aria-label={label}
       className={cn(
-        'flex w-full flex-wrap items-center gap-x-3.5 gap-y-3 border px-4 py-[15px] text-left',
+        'flex w-full flex-wrap items-center gap-x-3.5 gap-y-3 border px-4 py-[15px] text-left rounded-full',
         'transition-colors duration-150 active:scale-[.985]',
         selected ? 'border-brand bg-brand-soft' : 'border-rule-2 bg-bg-elev hover:border-ink-4',
       )}

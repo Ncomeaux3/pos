@@ -14,7 +14,7 @@ import { approveProposal, dismissProposal } from './review/actions'
 // only code path.
 
 const MINI =
-  'h-11 shrink-0 border border-rule-2 px-2 text-[11px] text-ink-3 transition-colors duration-150 ' +
+  'h-11 shrink-0 border border-rule-2 px-2 text-[11px] text-ink-3 transition-colors duration-150 rounded-full ' +
   'hover:border-ink hover:text-ink disabled:opacity-50 sm:h-[23px]'
 
 export function WarningList({
@@ -205,7 +205,7 @@ export function ProposalList({
                   ),
                 )
               }
-              className="h-11 shrink-0 border border-brand px-2 text-[11px] text-ink transition-colors duration-150 hover:bg-brand hover:text-white sm:h-[23px]"
+              className="h-11 shrink-0 border border-brand px-2 text-[11px] text-ink transition-colors duration-150 hover:bg-brand hover:text-white sm:h-[23px] rounded-full"
             >
               {editing === p.id ? 'Save and approve' : 'Approve'}
             </button>

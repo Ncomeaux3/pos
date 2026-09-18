@@ -85,7 +85,7 @@ export function Results({
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-2.5">
                     <span className="text-[15px] text-ink">{hit.title}</span>
-                    <span className="num border border-rule-2 px-[7px] py-0.5 text-[10px] tracking-[0.06em] text-ink-2 uppercase">
+                    <span className="num border border-rule-2 px-[7px] py-0.5 text-[10px] tracking-[0.06em] text-ink-2 uppercase rounded-full">
                       {hit.entityType}
                     </span>
                   </span>
@@ -156,7 +156,7 @@ export function Results({
               {open.snippet && <p className="mt-2.5 text-[14px] leading-[1.55] text-ink-2">{open.snippet}</p>}
             </div>
 
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] border border-rule">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] border border-rule rounded-[18px]">
               {[
                 ['Module', open.moduleLabel],
                 ['Type', open.entityType],
@@ -174,7 +174,7 @@ export function Results({
                 <Eyebrow>Linked skills</Eyebrow>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {open.skills.map((s) => (
-                    <span key={s} className="num border border-rule-2 px-2 py-[3px] text-[11px] tracking-[0.06em] text-ink-2 uppercase">
+                    <span key={s} className="num border border-rule-2 px-2 py-[3px] text-[11px] tracking-[0.06em] text-ink-2 uppercase rounded-full">
                       {s}
                     </span>
                   ))}

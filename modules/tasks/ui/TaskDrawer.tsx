@@ -13,7 +13,7 @@ import { writeTask, type ActionResult, type WriteInput } from './actions'
 // with Create at the bottom is New task.
 
 const field =
-  'w-full border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand'
+  'w-full border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand rounded-xl'
 
 /** The artboard's due options. `date` reveals a native date input beside the select. */
 const DUE_DAYS: Record<string, number | null> = {
@@ -134,26 +134,19 @@ export function TaskDrawer({
           Tasks <span className="text-ink-4">/</span> {task ? 'Edit' : 'New task'}
         </>
       }
+      title={task ? task.title : 'New task'}
       footer={
         <>
-          {task ? (
-            <button
-              type="button"
-              onClick={onDelete}
-              className="text-[13px] text-ink-3 transition-colors duration-150 hover:text-bad"
-            >
+          {task && (
+            <ActionButton variant="danger" size="md" onClick={onDelete} className="mr-auto">
               Delete
-            </button>
-          ) : (
-            <span />
+            </ActionButton>
           )}
-          <ActionButton
-            variant="solid"
-            className="h-[38px] gap-2 px-3.5 text-[13px]"
-            disabled={!draft.title.trim()}
-            onClick={save}
-          >
-            {task ? 'Save' : 'Create'} <span aria-hidden="true">&rarr;</span>
+          <ActionButton variant="quiet" size="md" onClick={onClose}>
+            Cancel
+          </ActionButton>
+          <ActionButton variant="accent" size="md" disabled={!draft.title.trim()} onClick={save}>
+            {task ? 'Save' : 'Create'}
           </ActionButton>
         </>
       }
@@ -288,7 +281,7 @@ export function TaskDrawer({
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-px border border-rule bg-rule">
+        <div className="grid grid-cols-2 gap-px border border-rule bg-rule rounded-[18px]">
           <div className="bg-bg px-3 py-2.5">
             <Eyebrow>Source · who created it</Eyebrow>
             <div

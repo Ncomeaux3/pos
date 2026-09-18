@@ -208,6 +208,16 @@ html {
     outline-offset: 2px;
   }
 
+  /* Nothing is a sharp rectangle. Controls carry a radius by default and a
+   * utility on the element still wins, so a pill stays a pill. */
+  button,
+  [role='button'],
+  select,
+  textarea,
+  input:not([type='checkbox']):not([type='radio']):not([type='range']) {
+    border-radius: var(--radius-sm);
+  }
+
   /* No background on html: body's propagates to the canvas, and the wash in
    * body::before then paints above it rather than under body's own. */
   html {

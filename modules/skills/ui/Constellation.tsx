@@ -631,7 +631,7 @@ export function Constellation({
       {hovered && hover && (
         <div
           data-testid="skill-hover-card"
-          className="pointer-events-none absolute z-20 min-w-[220px] max-w-[300px] animate-[skill-fadein_.12s_both] border border-white/18 bg-[rgba(6,10,16,.92)] px-3.5 py-3 backdrop-blur-[6px]"
+          className="pointer-events-none absolute z-20 min-w-[220px] max-w-[300px] animate-[skill-fadein_.12s_both] border border-white/18 bg-[rgba(6,10,16,.92)] px-3.5 py-3 backdrop-blur-[6px] rounded-[18px]"
           style={{
             // Centred on the star, but never past the canvas edge: half the
             // card's widest at each side.

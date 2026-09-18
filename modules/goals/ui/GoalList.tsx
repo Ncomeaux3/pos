@@ -73,11 +73,11 @@ export const KIND_LABEL: Record<GoalKind, string> = {
 export const AREAS = ['Engineering', 'Business', 'Communication', 'Health', 'Life ops']
 
 export const mini =
-  'shrink-0 whitespace-nowrap border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink'
+  'shrink-0 whitespace-nowrap border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full'
 export const miniAccent =
-  'shrink-0 whitespace-nowrap border border-brand px-[9px] py-1 text-[11px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg'
+  'shrink-0 whitespace-nowrap border border-brand px-[9px] py-1 text-[11px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg rounded-full'
 export const field =
-  'w-full border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand'
+  'w-full border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand rounded-xl'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -304,7 +304,7 @@ function AddGoal({
       <button
         type="button"
         onClick={() => onOpen(true)}
-        className="w-full border border-dashed border-rule-2 px-4 py-3 text-left text-[13px] text-ink-3 transition-colors duration-150 hover:border-brand hover:text-ink"
+        className="w-full border border-dashed border-rule-2 px-4 py-3 text-left text-[13px] text-ink-3 transition-colors duration-150 hover:border-brand hover:text-ink rounded-full"
       >
         + Add a goal inline
       </button>
@@ -335,7 +335,7 @@ function AddGoal({
         setDeadline('')
         onOpen(false)
       }}
-      className="grid gap-2.5 border border-dashed border-brand px-4 py-3.5 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end"
+      className="grid gap-2.5 border border-dashed border-brand px-4 py-3.5 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end rounded-[18px]"
     >
       <label className="flex flex-col gap-1.5">
         <Eyebrow>Goal</Eyebrow>
@@ -429,7 +429,7 @@ function Card({
   const done = p.status === 'done'
 
   return (
-    <article className="min-w-0 border border-rule bg-bg-elev px-[18px] py-4 transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-rule-2">
+    <article className="min-w-0 border border-rule bg-bg-elev px-[18px] py-4 transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-rule-2 rounded-[18px]">
       <div className="flex items-start justify-between gap-2.5">
         <button type="button" onClick={onOpen} className="min-w-0 text-left">
           <span className="block text-[15px] leading-[1.3] tracking-[-0.01em] text-ink">{goal.title}</span>
@@ -437,7 +437,7 @@ function Card({
             {KIND_LABEL[goal.kind]} · {manual ? 'check-ins' : 'computed'}
           </span>
         </button>
-        <span className={cn('num shrink-0 whitespace-nowrap border px-1.5 py-0.5 text-[9px] tracking-[0.08em]', STATUS_CLASS[p.status])}>
+        <span className={cn('num shrink-0 whitespace-nowrap border px-1.5 py-0.5 text-[9px] tracking-[0.08em] rounded-full', STATUS_CLASS[p.status])}>
           {STATUS_TEXT[p.status]}
         </span>
       </div>

@@ -32,7 +32,7 @@ export function SetupCard({
 
   return (
     <div className="grid-bg -mx-[18px] mt-0 flex flex-1 items-center justify-center px-7 py-10 md:-mx-7">
-      <div className="w-full max-w-[560px] border border-rule-2 bg-bg-elev p-9">
+      <div className="w-full max-w-[560px] border border-rule-2 bg-bg-elev p-9 rounded-[18px]">
         <Eyebrow>Module not connected</Eyebrow>
         <h2 className="mt-3.5 text-[30px] font-normal leading-[1.05] tracking-[-0.03em] text-ink">
           Connect a workout source
@@ -44,7 +44,7 @@ export function SetupCard({
         </p>
 
         <div
-          className={`mt-[26px] flex items-center gap-4 border px-[18px] py-4 ${connected ? 'border-ok' : 'border-rule-2'}`}
+          className={`mt-[26px] flex items-center gap-4 border px-[18px] py-4 ${connected ? 'border-ok' : 'border-rule-2'} rounded-[18px]`}
         >
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2.5">
@@ -66,7 +66,7 @@ export function SetupCard({
           {connected ? (
             <span
               aria-hidden="true"
-              className="flex h-[22px] w-[22px] shrink-0 items-center justify-center border border-ok text-[12px] text-ok"
+              className="flex h-[22px] w-[22px] shrink-0 items-center justify-center border border-ok text-[12px] text-ok rounded-full"
             >
               ✓
             </span>

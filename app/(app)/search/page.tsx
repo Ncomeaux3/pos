@@ -151,7 +151,7 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
         </div>
 
         {query && result.mode === 'degraded' && (
-          <p className="mt-4 border border-warn/40 px-3 py-2 text-[12px] text-warn">
+          <p className="mt-4 border border-warn/40 px-3 py-2 text-[12px] text-warn rounded-full">
             Word matches only. Meaning was worth checking here but Voyage was out of requests,
             which is three a minute on the free tier. Try again in a moment.
           </p>
@@ -186,7 +186,7 @@ function ScopeChip({
     <Link
       href={href}
       className={cn(
-        'inline-flex items-center border px-2.5 py-[5px] text-[12px] leading-none transition-colors duration-150',
+        'inline-flex items-center border px-2.5 py-[5px] text-[12px] leading-none transition-colors duration-150 rounded-full',
         active ? 'border-ink bg-ink text-bg' : 'border-rule-2 text-ink-3 hover:border-ink hover:text-ink',
       )}
     >

@@ -98,7 +98,7 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
     // arrange mode the banner takes 18px of that and the grid 22px more.
     <div className="mt-[22px]">
       {arranging && (
-        <div className="-mt-1 mb-[22px] flex flex-wrap items-center justify-between gap-3 border border-dashed border-brand px-3.5 py-2.5 text-[12px] text-ink-2">
+        <div className="-mt-1 mb-[22px] flex flex-wrap items-center justify-between gap-3 border border-dashed border-brand px-3.5 py-2.5 text-[12px] text-ink-2 rounded-[18px]">
           <span>
             Arrange mode: <span className="max-md:hidden">drag tiles, or </span>use ‹ › and Hide on
             each. The layout is saved for every device.
@@ -137,7 +137,7 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
               )}
             >
               {arranging && (
-                <div className="flex items-center justify-between border border-b-0 border-brand bg-brand-soft px-2 py-1">
+                <div className="flex items-center justify-between border border-b-0 border-brand bg-brand-soft px-2 py-1 rounded-[18px]">
                   <button
                     type="button"
                     aria-label={`Move ${id} earlier`}
@@ -187,7 +187,7 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
               type="button"
               aria-label={`Show ${id}`}
               onClick={() => show(id)}
-              className="border border-rule-2 px-2 py-1 text-ink-2 hover:border-ink hover:text-ink"
+              className="border border-rule-2 px-2 py-1 text-ink-2 hover:border-ink hover:text-ink rounded-full"
             >
               {id} · Show
             </button>
@@ -208,7 +208,7 @@ export function ArrangeToggle() {
       className={cn(
         // 12px in 8px 12px, and filled accent while arranging, as drawn.
         // Arrange is desktop only (2026-09-13 decision).
-        'hidden h-11 shrink-0 items-center border px-3 text-[12px] transition-colors duration-150 sm:h-[33px] md:inline-flex',
+        'hidden h-11 shrink-0 items-center border px-3 text-[12px] transition-colors duration-150 sm:h-[33px] md:inline-flex rounded-full',
         arranging
           ? 'border-brand bg-brand text-bg'
           : 'border-rule-2 text-ink-2 hover:border-ink hover:text-ink',

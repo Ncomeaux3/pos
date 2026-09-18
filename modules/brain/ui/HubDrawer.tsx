@@ -11,7 +11,7 @@ import type { BrainHub, SetParams } from './Brain'
 // keyword picks up what was already unfiled.
 
 const FIELD =
-  'w-full border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand'
+  'w-full border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand rounded-xl'
 
 export function HubDrawer({ hub, setParams }: { hub: BrainHub | null; setParams: SetParams }) {
   const toast = useToast()

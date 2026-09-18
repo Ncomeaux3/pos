@@ -129,7 +129,7 @@ export function CommandPalette({ nav }: { nav: NavItem[] }) {
         aria-label="Command palette"
         className="relative w-[min(640px,calc(100%-32px))] duration-200 animate-in fade-in zoom-in-95"
       >
-        <div className="flex h-[52px] items-center border border-rule-2 bg-bg-elev focus-within:border-brand">
+        <div className="flex h-[52px] items-center border border-rule-2 bg-bg-elev focus-within:border-brand rounded-[18px]">
           <span aria-hidden className="num pl-4 pr-3 text-[13px] text-ink-4">
             &gt;
           </span>
@@ -160,7 +160,7 @@ export function CommandPalette({ nav }: { nav: NavItem[] }) {
           />
         </div>
 
-        <div className="mt-2.5 max-h-[52vh] overflow-y-auto border border-rule-2 bg-bg-elev py-1.5">
+        <div className="mt-2.5 max-h-[52vh] overflow-y-auto border border-rule-2 bg-bg-elev py-1.5 rounded-[18px]">
           {found.length > 0 && (
             <>
               <div className="px-3.5 py-1.5 text-[11px] text-ink-4">Results</div>

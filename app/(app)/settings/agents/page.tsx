@@ -8,7 +8,7 @@ import { AutonomyPicker } from './AutonomyPicker'
 import { McpCommand } from './McpCommand'
 import { revealMcpToken } from './actions'
 
-const card = 'border border-rule bg-bg-elev px-5 py-[18px]'
+const card = 'border border-rule bg-bg-elev px-5 py-[18px] rounded-xl'
 const isRead = (name: string) =>
   name.endsWith('.get_digest') || name.endsWith('.query') || name === 'core.search'
 

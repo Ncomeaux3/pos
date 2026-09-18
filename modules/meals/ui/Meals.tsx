@@ -79,11 +79,11 @@ export const costOf = (recipe: Recipe | undefined, servings: number) =>
 
 // The artboard's three button sizes: the ghost, its accent twin, and the mini.
 export const GHOST =
-  'shrink-0 whitespace-nowrap border border-rule-2 px-3 py-2 text-[12px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink'
+  'shrink-0 whitespace-nowrap border border-rule-2 px-3 py-2 text-[12px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full'
 export const GHOST_ACCENT =
-  'shrink-0 whitespace-nowrap border border-brand px-3 py-2 text-[12px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg'
+  'shrink-0 whitespace-nowrap border border-brand px-3 py-2 text-[12px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg rounded-full'
 export const MINI =
-  'shrink-0 whitespace-nowrap border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink'
+  'shrink-0 whitespace-nowrap border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full'
 
 export function Meals({ data }: { data: MealsData }) {
   const { params, set: setParams } = useSearchState()
@@ -235,7 +235,7 @@ export function Meals({ data }: { data: MealsData }) {
         {tab === 'week' && (
           <div className="mt-[18px] space-y-[18px]">
             {thisWeek && (
-              <section className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-5 gap-y-3 border border-brand px-4 py-3">
+              <section className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-5 gap-y-3 border border-brand px-4 py-3 rounded-[18px]">
                 <Eyebrow className="text-brand">
                   Today · {DAYS[todayIdx].toUpperCase()} {shortDate(data.todayIso).toUpperCase()}
                 </Eyebrow>
@@ -249,7 +249,7 @@ export function Meals({ data }: { data: MealsData }) {
                         disabled={!entry}
                         onClick={() => entry && run(() => markEaten(entry.id, !entry.eaten))}
                         className={cn(
-                          'inline-flex items-center gap-2 border px-2.5 py-[5px] text-[12px] transition-colors duration-150',
+                          'inline-flex items-center gap-2 border px-2.5 py-[5px] text-[12px] transition-colors duration-150 rounded-full',
                           entry?.eaten ? 'border-brand' : 'border-rule-2',
                           entry ? 'text-ink hover:border-ink' : 'text-ink-4',
                         )}
@@ -257,7 +257,7 @@ export function Meals({ data }: { data: MealsData }) {
                         <span
                           aria-hidden
                           className={cn(
-                            'size-3 shrink-0 border text-center text-[9px] leading-[10px] text-bg',
+                            'size-3 shrink-0 border text-center text-[9px] leading-[10px] text-bg rounded-full',
                             entry?.eaten ? 'border-brand bg-brand' : 'border-ink-3',
                           )}
                         >
@@ -327,7 +327,7 @@ export function Meals({ data }: { data: MealsData }) {
             )}
 
             <div className="overflow-x-auto">
-              <div className="grid min-w-[920px] grid-cols-[72px_repeat(7,minmax(120px,1fr))] gap-px border border-rule bg-rule">
+              <div className="grid min-w-[920px] grid-cols-[72px_repeat(7,minmax(120px,1fr))] gap-px border border-rule bg-rule rounded-[18px]">
                 <div className="bg-bg px-2 py-2.5" />
                 {week.map((iso, i) => {
                   const isToday = iso === data.todayIso
@@ -369,7 +369,7 @@ export function Meals({ data }: { data: MealsData }) {
                                 )
                               }
                               className={cn(
-                                'h-full cursor-grab border bg-bg-elev px-[9px] py-2 transition-colors duration-150 hover:border-rule-2',
+                                'h-full cursor-grab border bg-bg-elev px-[9px] py-2 transition-colors duration-150 hover:border-rule-2 rounded-[18px]',
                                 entry.eaten ? 'border-brand' : 'border-rule',
                                 past && !entry.eaten && 'opacity-55',
                               )}
@@ -388,7 +388,7 @@ export function Meals({ data }: { data: MealsData }) {
                                     run(() => markEaten(entry.id, !entry.eaten))
                                   }}
                                   className={cn(
-                                    'size-4 shrink-0 border text-[10px] leading-[14px] text-bg transition-colors hover:border-ink',
+                                    'size-4 shrink-0 border text-[10px] leading-[14px] text-bg transition-colors hover:border-ink rounded-full',
                                     entry.eaten ? 'border-brand bg-brand' : 'border-rule-2',
                                   )}
                                 >
@@ -407,7 +407,7 @@ export function Meals({ data }: { data: MealsData }) {
                               type="button"
                               aria-label="Plan a meal"
                               onClick={() => setParams({ pick: `${iso}:${slot}` }, { push: true })}
-                              className="h-full min-h-16 w-full border border-dashed border-rule text-[16px] text-ink-4 transition-colors duration-150 hover:border-brand hover:text-brand"
+                              className="h-full min-h-16 w-full border border-dashed border-rule text-[16px] text-ink-4 transition-colors duration-150 hover:border-brand hover:text-brand rounded-full"
                             >
                               +
                             </button>
@@ -444,7 +444,7 @@ export function Meals({ data }: { data: MealsData }) {
               </div>
             </div>
 
-            <section className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))] gap-px border border-rule bg-rule">
+            <section className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))] gap-px border border-rule bg-rule rounded-[18px]">
               <WeekCell
                 label="Week · kcal / day"
                 value={avg('kcal').toLocaleString('en-US')}
@@ -530,7 +530,7 @@ export function Meals({ data }: { data: MealsData }) {
                   tabIndex={0}
                   onClick={() => setParams({ recipe: r.id, slot: null }, { push: true })}
                   onKeyDown={(e) => e.key === 'Enter' && setParams({ recipe: r.id, slot: null }, { push: true })}
-                  className="min-w-0 cursor-pointer border border-rule bg-bg-elev px-4 py-3.5 text-left transition-colors duration-200 hover:border-rule-2"
+                  className="min-w-0 cursor-pointer border border-rule bg-bg-elev px-4 py-3.5 text-left transition-colors duration-200 hover:border-rule-2 rounded-[18px]"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <span className="min-w-0 text-[14.5px] leading-[1.3] tracking-[-0.01em]">{r.name}</span>
@@ -554,9 +554,9 @@ export function Meals({ data }: { data: MealsData }) {
                     <span>{money(costOf(r, 1))}/serving</span>
                   </div>
                   <div className="mt-2.5 flex flex-wrap gap-1">
-                    {r.status === 'draft' && <span className="num border border-warn/60 px-[5px] py-px text-[9.5px] text-warn">draft</span>}
+                    {r.status === 'draft' && <span className="num border border-warn/60 px-[5px] py-px text-[9.5px] text-warn rounded-full">draft</span>}
                     {r.tags.map((t) => (
-                      <span key={t} className="num border border-rule px-[5px] py-px text-[9.5px] text-ink-3">
+                      <span key={t} className="num border border-rule px-[5px] py-px text-[9.5px] text-ink-3 rounded-full">
                         {t}
                       </span>
                     ))}

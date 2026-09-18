@@ -76,7 +76,7 @@ export function Calendar({
       {/* Below md the seven columns share the pane: two letter heads, short
         * cells, a dot per task. From md up the grid is the artboard's 560px. */}
       <div className="overflow-x-auto">
-        <div className="border border-rule md:min-w-[560px]">
+        <div className="border border-rule md:min-w-[560px] rounded-[18px]">
           <div className="grid grid-cols-7 gap-px bg-rule">
             {DOWS.map((d) => (
               <span key={d} className="num bg-bg-elev px-1 py-1 text-[10px] tracking-[0.08em] text-ink-3 md:px-2.5 md:py-2">
@@ -150,7 +150,7 @@ export function Calendar({
                         onClick={() => onOpen(t)}
                         title={t.title}
                         className={cn(
-                          'block w-full truncate border bg-bg px-1.5 py-[3px] text-left text-[11px] leading-[1.3] text-ink hover:border-ink',
+                          'block w-full truncate border bg-bg px-1.5 py-[3px] text-left text-[11px] leading-[1.3] text-ink hover:border-ink rounded-full',
                           t.priority === 'P1'
                             ? 'border-bad'
                             : t.status === 'review'

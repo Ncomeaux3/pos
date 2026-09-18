@@ -78,7 +78,7 @@ export function SkillPicker({
       {shown.map((l) => (
         <span
           key={l.id}
-          className="inline-flex items-center gap-1.5 border border-rule-2 px-2 py-[3px] text-[11px] text-ink"
+          className="inline-flex items-center gap-1.5 border border-rule-2 px-2 py-[3px] text-[11px] text-ink rounded-full"
         >
           <Link href={`/skills?skill=${encodeURIComponent(l.id)}`} className="hover:text-brand">
             {l.name}
@@ -131,7 +131,7 @@ export function SkillPicker({
           type="button"
           aria-label="Link a skill"
           onClick={() => setAdding(true)}
-          className="min-h-6 border border-dashed border-rule-2 px-2 py-[3px] text-[11px] text-ink-3 hover:border-ink hover:text-ink"
+          className="min-h-6 border border-dashed border-rule-2 px-2 py-[3px] text-[11px] text-ink-3 hover:border-ink hover:text-ink rounded-full"
         >
           +
         </button>

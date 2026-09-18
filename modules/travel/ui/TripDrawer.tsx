@@ -54,11 +54,11 @@ const isoPlus = (iso: string, days: number) => {
 const shortDate = (iso: string) => `${MONTHS[at(iso).getMonth()]} ${at(iso).getDate()}`
 
 const mini =
-  'border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink'
+  'border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full'
 const miniAccent =
-  'border border-brand px-[9px] py-1 text-[11px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg'
+  'border border-brand px-[9px] py-1 text-[11px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg rounded-full'
 const inlineInput =
-  'min-w-0 border border-rule-2 bg-bg px-2 py-1 text-[12px] text-ink outline-none focus-visible:border-brand'
+  'min-w-0 border border-rule-2 bg-bg px-2 py-1 text-[12px] text-ink outline-none focus-visible:border-brand rounded-xl'
 
 /** "day 2 19:30 Dinner at Narisawa": which day, what time, what. */
 export function parseItem(text: string): { day: number | null; time: string | null; title: string } | null {
@@ -157,7 +157,7 @@ export function TripDrawer({
             <button type="button" onClick={() => setEditing(true)} className={mini}>
               Edit details
             </button>
-            <span className={cn('label border px-1.5 py-0.5 text-[9px] tracking-[0.08em]', STATUS_TONE[trip.status] ?? STATUS_TONE.planned)}>
+            <span className={cn('label border px-1.5 py-0.5 text-[9px] tracking-[0.08em] rounded-full', STATUS_TONE[trip.status] ?? STATUS_TONE.planned)}>
               {trip.status}
             </span>
           </span>
@@ -458,7 +458,7 @@ function Budget({
 
   return (
     <>
-      <div className="grid grid-cols-3 gap-px border border-rule bg-rule">
+      <div className="grid grid-cols-3 gap-px border border-rule bg-rule rounded-[18px]">
         <div className="bg-bg px-3 py-2.5">
           <Eyebrow>Planned · total</Eyebrow>
           <input
@@ -549,7 +549,7 @@ function Budget({
                 return { ok: true }
               }, 'Five lines to fill in')
             }
-            className="border border-dashed border-rule py-4 text-[12px] text-ink-4 hover:text-ink"
+            className="border border-dashed border-rule py-4 text-[12px] text-ink-4 hover:text-ink rounded-full"
           >
             No lines yet. Start with flights, lodging, food, transit and activities.
           </button>
@@ -601,7 +601,7 @@ function Packing({ trip, packing, run }: { trip: Trip; packing: TravelData['pack
               onClick={() => run(() => savePacking({ id: p.id, packed: !p.packed }))}
               className="flex min-w-0 flex-1 items-center gap-2.5 py-[7px] text-left"
             >
-              <span aria-hidden className={cn('grid size-3.5 shrink-0 place-items-center border', p.packed ? 'border-brand bg-brand' : 'border-ink-3')}>
+              <span aria-hidden className={cn('grid size-3.5 shrink-0 place-items-center border rounded-full', p.packed ? 'border-brand bg-brand' : 'border-ink-3')}>
                 {p.packed && <span className="size-1.5 bg-bg" />}
               </span>
               <span className={cn('truncate text-[12px]', p.packed ? 'text-ink-4 line-through' : 'text-ink')}>{p.label}</span>
@@ -643,7 +643,7 @@ function Inbox({ pending, run }: { pending: TravelData['itinerary']; run: Run })
         added without you.
       </p>
       {pending.map((m) => (
-        <div key={m.id} className="flex flex-col gap-2 border border-rule px-3.5 py-3">
+        <div key={m.id} className="flex flex-col gap-2 border border-rule px-3.5 py-3 rounded-[18px]">
           <div className="flex justify-between gap-2.5">
             <span className="min-w-0 truncate text-[11px] text-ink-3">Parsed booking · {m.kind}</span>
             <span className="label shrink-0 text-[9px] tracking-[0.08em] text-warn">pending</span>
@@ -666,7 +666,7 @@ function Inbox({ pending, run }: { pending: TravelData['itinerary']; run: Run })
         </div>
       ))}
       {pending.length === 0 && (
-        <div className="border border-dashed border-rule p-5 text-center text-[12px] text-ink-4">Inbox is clear</div>
+        <div className="border border-dashed border-rule p-5 text-center text-[12px] text-ink-4 rounded-[18px]">Inbox is clear</div>
       )}
     </>
   )

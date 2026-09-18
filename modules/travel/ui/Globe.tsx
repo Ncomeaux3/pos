@@ -337,4 +337,4 @@ const LAND = {
 const OCEAN = 'color-mix(in srgb, var(--accent) 18%, var(--bg-deep))'
 
 const control =
-  'grid size-[26px] place-items-center border border-rule-2 bg-bg text-[13px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink'
+  'grid size-[26px] place-items-center border border-rule-2 bg-bg text-[13px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full'

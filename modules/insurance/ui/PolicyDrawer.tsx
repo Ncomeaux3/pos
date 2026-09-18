@@ -33,7 +33,7 @@ const LEADS = [60, 30, 14, 7, 0]
 const field =
   'w-full rounded-md border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand'
 
-const card = 'border border-rule px-3.5 py-3'
+const card = 'border border-rule px-3.5 py-3 rounded-[18px]'
 
 const CHANNEL_NAMES: Record<string, string> = { push: 'push', email: 'email', inapp: 'in-app' }
 
@@ -234,7 +234,7 @@ function PolicyView({
       }
     >
       <div className="flex flex-col gap-[18px]">
-        <div className="grid grid-cols-3 gap-px border border-rule bg-rule">
+        <div className="grid grid-cols-3 gap-px border border-rule bg-rule rounded-[18px]">
           <Cell label="Expires" value={daysLabel(policy.expiresOn, data.todayIso)} tone={EXPIRY_TEXT[status]}>
             {policy.expiresOn ? shortDate(policy.expiresOn, data.todayIso) : 'not on file'}
           </Cell>
@@ -290,7 +290,7 @@ function PolicyView({
                     title={m.lead === 0 ? 'Day of' : `${m.lead} days before`}
                     style={{ left: `calc(${m.at}% - 4px)` }}
                     className={cn(
-                      'absolute top-[7px] size-[9px] rotate-45 border border-brand',
+                      'absolute top-[7px] size-[9px] rotate-45 border border-brand rounded-full',
                       m.fired ? 'bg-brand' : 'bg-bg-elev',
                     )}
                   />

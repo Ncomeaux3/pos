@@ -65,8 +65,8 @@ const ZONES = [
 const money = (cents: number) => `$${(cents / 100).toFixed(2)}`
 
 const field =
-  'w-full min-w-0 border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none focus-visible:border-brand'
-const card = 'border border-rule bg-bg-elev px-5 py-[18px]'
+  'w-full min-w-0 border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none focus-visible:border-brand rounded-xl'
+const card = 'border border-rule bg-bg-elev px-5 py-[18px] rounded-xl'
 const cell = 'px-3 py-2.5'
 
 export default async function SettingsPage({ searchParams }: PageProps<'/settings'>) {
@@ -144,7 +144,7 @@ export default async function SettingsPage({ searchParams }: PageProps<'/setting
 
         <div className={card}>
           <Eyebrow>Nightly job</Eyebrow>
-          <div className="mt-3 grid border border-rule sm:grid-cols-3">
+          <div className="mt-3 grid border border-rule sm:grid-cols-3 rounded-[18px]">
             <div className={`${cell} border-b border-rule sm:border-b-0 sm:border-r`}>
               <Eyebrow>Schedule</Eyebrow>
               <div className="num mt-1.5 text-[12px] text-ink">0 9 * * * UTC · {local}</div>

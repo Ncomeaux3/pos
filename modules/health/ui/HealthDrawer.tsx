@@ -19,7 +19,7 @@ import {
 // own, so the shared band's crumb carries the kind.
 
 const input =
-  'h-[42px] w-full min-w-0 border border-rule-2 bg-bg px-3 text-[14px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand'
+  'h-[42px] w-full min-w-0 border border-rule-2 bg-bg px-3 text-[14px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand rounded-xl'
 const key = 'w-[120px] shrink-0 text-[10px] tracking-[0.12em] text-ink-3'
 
 export function HealthDrawer({

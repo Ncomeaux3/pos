@@ -5,7 +5,7 @@ import { ActionButton, useToast } from '@/components/pos'
 import { setQuiet } from './actions'
 
 const timeField =
-  'h-[34px] border border-rule-2 bg-bg px-2.5 text-[13px] text-ink num ' +
+  'h-[34px] border border-rule-2 bg-bg px-2.5 text-[13px] text-ink num rounded-xl ' +
   'outline-none focus-visible:border-brand ' +
   '[&::-webkit-calendar-picker-indicator]:opacity-55 ' +
   '[&::-webkit-calendar-picker-indicator]:invert ' +

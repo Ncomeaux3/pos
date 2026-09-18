@@ -90,7 +90,7 @@ function NavRow({
 }
 
 const rowClass =
-  'mx-2 flex h-[38px] items-center gap-2.5 rounded-[10px] px-3 text-left transition-[background-color,color,box-shadow] duration-150 ease-[var(--ease)]'
+  'mx-2 flex h-[38px] shrink-0 items-center gap-2.5 rounded-[10px] px-3 text-left transition-[background-color,color,box-shadow] duration-150 ease-[var(--ease)]'
 
 function fadeClass(collapsed: boolean) {
   return cn('transition-opacity duration-200', collapsed && 'pointer-events-none opacity-0')

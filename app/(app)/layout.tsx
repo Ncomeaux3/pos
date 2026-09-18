@@ -44,7 +44,7 @@ export default async function AppLayout({ children }: LayoutProps<'/'>) {
         // 18px of side padding on a phone, not 28: the artboard's body runs
         // `14px 18px 22px`, and 28 on a 402px screen was costing 20px of a
         // column that was already truncating its own rows.
-        className="reveal min-w-0 flex-1 p-[18px] pb-[calc(var(--tabbar)+18px)] md:px-10 md:py-8 md:[margin-left:var(--rail)]"
+        className="reveal min-w-0 flex-1 p-[18px] pb-[calc(var(--tabbar)+18px)] md:px-10 md:py-7 md:[margin-left:var(--rail)]"
       >
         {children}
       </main>

@@ -66,7 +66,7 @@ export function ProjectsDrawer({
         </ActionButton>
       </form>
 
-      <div className="mt-4 flex flex-col gap-px border border-rule bg-rule">
+      <div className="mt-4 flex flex-col gap-px border border-rule bg-rule rounded-[18px]">
         {projects.length === 0 && (
           <p className="bg-bg px-3 py-4 text-[12px] text-ink-4">No projects yet.</p>
         )}

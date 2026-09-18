@@ -64,7 +64,7 @@ export function LoyaltyDrawer({
         </div>
       ))}
 
-      <div className="mt-5 border border-rule px-3.5 py-3">
+      <div className="mt-5 border border-rule px-3.5 py-3 rounded-[18px]">
         <div className="flex items-baseline justify-between">
           <Eyebrow>Cents per point</Eyebrow>
           <span className="label text-[11px] text-ink-3">both numbers yours</span>
