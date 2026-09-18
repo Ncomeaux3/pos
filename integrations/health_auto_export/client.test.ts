@@ -12,7 +12,9 @@ describe('toBodyMetrics', () => {
           metric('step_count', 'count', [{ qty: 9412.4, date: at('2026-09-11') }]),
           metric('active_energy', 'kcal', [{ qty: 612.7, date: at('2026-09-11') }]),
           metric('apple_exercise_time', 'min', [{ qty: 42, date: at('2026-09-11') }]),
-          metric('apple_stand_time', 'hr', [{ qty: 11, date: at('2026-09-11') }]),
+          metric('apple_stand_hour', 'count', [{ qty: 11, date: at('2026-09-11') }]),
+          // Minutes stood, a different metric; it must not add to the hours.
+          metric('apple_stand_time', 'min', [{ qty: 99, date: at('2026-09-11') }]),
           metric('vo2_max', 'mL/min·kg', [{ qty: 41.3, date: at('2026-09-11') }]),
           metric('blood_oxygen_saturation', '%', [{ qty: 97.6, date: at('2026-09-11') }]),
           metric('respiratory_rate', 'count/min', [{ qty: 14.5, date: at('2026-09-11') }]),
@@ -63,6 +65,34 @@ describe('toBodyMetrics', () => {
       { kind: 'steps', measuredOn: '2026-09-11', value: 4600 },
       { kind: 'steps', measuredOn: '2026-09-12', value: 800 },
       { kind: 'blood_oxygen', measuredOn: '2026-09-11', value: 980 },
+    ])
+  })
+
+  // From a real export (2026-09-18): Eight Sleep's overlapping records make
+  // the app's summed hours two to three times the night. The span between
+  // sleepStart and sleepEnd is the night, dated by the morning it ended.
+  it('reads sleep as the span from sleepStart to sleepEnd, not the summed hours', () => {
+    const rows = toBodyMetrics({
+      data: {
+        metrics: [
+          metric('sleep_analysis', 'hr', [
+            {
+              date: '2026-06-22 00:00:00 -0500',
+              sleepStart: '2026-06-22 00:37:00 -0500',
+              sleepEnd: '2026-06-22 10:09:00 -0500',
+              totalSleep: 26.766666666666666,
+              inBed: 27.400000000000006,
+              asleep: 0,
+            },
+            // The older shape without a span still reads its hours.
+            { date: '2026-06-23 00:00:00 -0500', asleep: 7.5 },
+          ]),
+        ],
+      },
+    })
+    expect(rows).toEqual([
+      { kind: 'sleep_minutes', measuredOn: '2026-06-22', value: 572 },
+      { kind: 'sleep_minutes', measuredOn: '2026-06-23', value: 450 },
     ])
   })
 })

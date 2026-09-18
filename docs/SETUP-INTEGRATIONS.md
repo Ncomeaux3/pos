@@ -254,16 +254,37 @@ API to call from a server.
 3. Enable Workouts (export version 2, the app's recommended one; the legacy
    v1 shape has no id and writes nothing) and the metrics: Body Mass, Resting
    Heart Rate, Heart Rate Variability, Body Fat Percentage, Sleep Analysis,
-   Step Count, Active Energy, Apple Exercise Time, Apple Stand Time, VO2 Max,
+   Step Count, Active Energy, Apple Exercise Time, Apple Stand Hour, VO2 Max,
    Blood Oxygen Saturation, Respiratory Rate, Flights Climbed, Walking +
-   Running Distance, Walking Heart Rate Average, Heart Rate (verify: these
-   are the names on the app's supported-data list, not checked in the app
-   itself). Anything else is accepted and ignored.
+   Running Distance, Walking Heart Rate Average, Heart Rate (the names as a
+   real export sends them, checked 2026-09-18). Anything else is accepted and
+   ignored.
 4. Schedule daily, aggregated by day. Hourly buckets also work: a total such
    as steps is summed across the day's buckets, a level such as blood oxygen
    keeps the last reading. Run it once by hand.
 5. Back on the card, Test. It reads "Last payload received {date}" once the
    first post has landed.
+
+### Backfill history
+
+The REST automation cannot send a custom date range: its periods stop at the
+previous seven days (help.healthyapps.dev, checked 2026-09-18). Older data
+comes from a manual export and one script run:
+
+1. In the app, **Manual Export**: Custom range (say 2026-01-01 to today),
+   Time Grouping Days, JSON, the same metrics and Workouts as the automation.
+   Share the file to this machine (AirDrop, Files).
+2. On the card, Reveal the secret, then:
+
+   ```
+   HAE_SECRET=<secret> pnpm exec tsx scripts/hae-backfill.mts ~/Downloads/<export>.json
+   ```
+
+   Add `--dry-run` first to see the requests without sending. The script posts
+   one request per month plus the workouts twenty at a time, 1.5 s apart, so
+   each stays under the function's body and time limits and the app's rate
+   limit. It stops at the first non-200 and prints the body. Rows upsert, so
+   running it twice is safe, and a workout earns its XP once.
 
 ### What happens next
 
@@ -284,11 +305,11 @@ word rules the Strava sync uses (Running is a run, Cycling a ride, Traditional
 Strength Training strength, Yoga other). Distance, average heart rate and
 active energy are optional; routes and per-second series are not stored.
 
-The metric identifier strings the app sends are marked verify in
-`integrations/health_auto_export/client.ts` until one real export has been
-seen. If a metric you enabled does not appear on Fitness > Body, the row in
-`core.request_log` for the route will show the post arrived, and the payload
-name needs matching to the table's kinds.
+Sleep is the span from the app's `sleepStart` to `sleepEnd`, not its summed
+hours: a source that writes overlapping records (Eight Sleep) makes the sum
+two to three times the night. If a metric you enabled does not appear on
+Fitness > Body, the row in `core.request_log` for the route will show the post
+arrived, and the payload name needs matching to the table's kinds.
 
 ---
 
