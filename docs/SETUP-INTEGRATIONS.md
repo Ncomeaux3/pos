@@ -254,11 +254,11 @@ API to call from a server.
 3. Enable Workouts (export version 2, the app's recommended one; the legacy
    v1 shape has no id and writes nothing) and the metrics: Body Mass, Resting
    Heart Rate, Heart Rate Variability, Body Fat Percentage, Sleep Analysis,
-   Step Count, Active Energy, Apple Exercise Time, Apple Stand Time, VO2 Max,
+   Step Count, Active Energy, Apple Exercise Time, Apple Stand Hour, VO2 Max,
    Blood Oxygen Saturation, Respiratory Rate, Flights Climbed, Walking +
-   Running Distance, Walking Heart Rate Average, Heart Rate (verify: these
-   are the names on the app's supported-data list, not checked in the app
-   itself). Anything else is accepted and ignored.
+   Running Distance, Walking Heart Rate Average, Heart Rate (the names as a
+   real export sends them, checked 2026-09-18). Anything else is accepted and
+   ignored.
 4. Schedule daily, aggregated by day. Hourly buckets also work: a total such
    as steps is summed across the day's buckets, a level such as blood oxygen
    keeps the last reading. Run it once by hand.
@@ -305,11 +305,11 @@ word rules the Strava sync uses (Running is a run, Cycling a ride, Traditional
 Strength Training strength, Yoga other). Distance, average heart rate and
 active energy are optional; routes and per-second series are not stored.
 
-The metric identifier strings the app sends are marked verify in
-`integrations/health_auto_export/client.ts` until one real export has been
-seen. If a metric you enabled does not appear on Fitness > Body, the row in
-`core.request_log` for the route will show the post arrived, and the payload
-name needs matching to the table's kinds.
+Sleep is the span from the app's `sleepStart` to `sleepEnd`, not its summed
+hours: a source that writes overlapping records (Eight Sleep) makes the sum
+two to three times the night. If a metric you enabled does not appear on
+Fitness > Body, the row in `core.request_log` for the route will show the post
+arrived, and the payload name needs matching to the table's kinds.
 
 ---
 

@@ -78,6 +78,21 @@ function day(value: unknown): string | null {
   return m ? m[1] : null
 }
 
+/** Minutes from one app timestamp to another, or null when either does not read or the order is wrong. */
+function minutesBetween(from: unknown, to: unknown): number | null {
+  const a = instant(from)
+  const b = instant(to)
+  return a !== null && b !== null && b > a ? (b - a) / 60_000 : null
+}
+
+// `yyyy-MM-dd HH:mm:ss Z` to epoch milliseconds: Date.parse wants a T and a
+// colon in the offset.
+function instant(value: unknown): number | null {
+  if (typeof value !== 'string' || !DATE.test(value)) return null
+  const ms = Date.parse(value.replace(' ', 'T').replace(/ ([+-]\d{2})(\d{2})$/, '$1:$2'))
+  return Number.isFinite(ms) ? ms : null
+}
+
 function qty(point: Record<string, unknown>, key = 'qty'): number | null {
   const v = point[key]
   return typeof v === 'number' && Number.isFinite(v) ? v : null
@@ -126,18 +141,25 @@ const byName: Record<string, Translate> = {
   resting_heart_rate: simple('resting_hr', identity),
   heart_rate_variability: simple('hrv', identity),
   body_fat_percentage: simple('body_fat', tenths),
-  // Hours asleep, dated by the morning it ended so a night belongs to the day
-  // you woke up. `totalSleep` is the app's newer field; `asleep` the older.
+  // The night is the span from sleepStart to sleepEnd, dated by the morning
+  // it ended so it belongs to the day you woke up. Not the app's summed hours:
+  // a source that writes overlapping records (Eight Sleep, seen 2026-09-18)
+  // makes `totalSleep` two to three times the night. A point without the span
+  // reads its hours, `totalSleep` first, then the older `asleep`.
   sleep_analysis: (point) => {
     const measuredOn = day(point.sleepEnd) ?? day(point.date)
+    const span = minutesBetween(point.sleepStart, point.sleepEnd)
     const hours = qty(point, 'totalSleep') ?? qty(point, 'asleep')
-    if (!measuredOn || hours === null) return null
-    return { kind: 'sleep_minutes', measuredOn, value: hours * 60 }
+    const value = span ?? (hours === null ? null : hours * 60)
+    if (!measuredOn || value === null) return null
+    return { kind: 'sleep_minutes', measuredOn, value }
   },
   step_count: simple('steps', identity),
   active_energy: simple('active_energy', identity),
   apple_exercise_time: simple('exercise_minutes', identity),
-  apple_stand_time: simple('stand_hours', identity),
+  // The count of hours stood, not `apple_stand_time`, which is minutes
+  // (99 for 11 hours in the 2026-09-18 export) and is left unmapped.
+  apple_stand_hour: simple('stand_hours', identity),
   vo2_max: simple('vo2_max', tenths),
   blood_oxygen_saturation: simple('blood_oxygen', tenths),
   respiratory_rate: simple('respiratory_rate', tenths),
