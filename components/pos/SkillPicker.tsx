@@ -83,7 +83,7 @@ export function SkillPicker({
           <Link href={`/skills?skill=${encodeURIComponent(l.id)}`} className="hover:text-brand">
             {l.name}
           </Link>
-          <span className={cn('num text-[10px] tracking-[0.08em]', BADGE[l.by][1])}>
+          <span className={cn('num text-[10px]', BADGE[l.by][1])}>
             {BADGE[l.by][0]}
           </span>
           <button

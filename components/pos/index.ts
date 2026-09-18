@@ -5,7 +5,8 @@ export { BandSearch, SearchButton } from './BandSearch'
 // screen that needs something new adds it here rather than inventing it inline.
 
 export { Eyebrow, StatusDot, type DotTone } from './text'
-export { ComeauxverseMark, ComeauxverseLockup } from './Logo'
+export { HolonMark, HolonWordmark, HolonLockup } from './Logo'
+export { ThemeSwitch } from './ThemeSwitch'
 export {
   PaceBar,
   Radar,

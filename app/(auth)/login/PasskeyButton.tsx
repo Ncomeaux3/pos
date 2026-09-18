@@ -25,7 +25,7 @@ function messageFor(error: unknown): string | null {
     return 'Passkeys are not switched on for this install yet. Use the code.'
   }
   if (code === 'webauthn_credential_not_found') {
-    return 'This device has no passkey for POS. Sign in with the code, then add one in Settings.'
+    return 'This device has no passkey for Holon. Sign in with the code, then add one in Settings.'
   }
   return error instanceof Error ? error.message : 'That did not work. Use the code.'
 }

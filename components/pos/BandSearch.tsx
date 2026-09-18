@@ -21,14 +21,15 @@ export function BandSearch({
       type="button"
       onClick={() => window.dispatchEvent(new Event('pos:search'))}
       className={cn(
-        'flex h-[34px] w-full max-w-[320px] items-center gap-2.5 border border-rule-2 bg-bg pl-3 pr-3 text-left text-ink-4 transition-colors duration-150 hover:border-ink-4 hover:text-ink-3',
+        'flex h-9 w-full max-w-[320px] items-center gap-2.5 rounded-full border border-glass-line bg-field pl-3.5 pr-3 text-left text-ink-4 transition-colors duration-150 hover:text-ink-3',
         className,
       )}
     >
-      {/* PosSearch compact: a chevron in ink-4, then the placeholder at 12px.
-          No shortcut hint; the artboard's bar carries none. */}
-      <span aria-hidden className="label shrink-0 text-[12px]">›</span>
-      <span className="truncate text-[12px]">{placeholder}</span>
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.6} aria-hidden className="shrink-0">
+        <circle cx="7" cy="7" r="4.6" />
+        <path d="M10.5 10.5 L14.5 14.5" />
+      </svg>
+      <span className="truncate text-[13px]">{placeholder}</span>
     </button>
   )
 }
@@ -42,7 +43,7 @@ export function BandSearch({
  */
 export function SearchButton({ className, href }: { className?: string; href?: string }) {
   const shape = cn(
-    'grid size-11 shrink-0 place-items-center border border-rule-2 text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink',
+    'glass-strong grid size-11 shrink-0 place-items-center rounded-full text-ink-2 transition-colors duration-150 hover:text-ink',
     className,
   )
   const glyph = (

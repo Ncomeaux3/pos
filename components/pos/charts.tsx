@@ -35,8 +35,8 @@ export function Sparkline({
       aria-hidden
       className={cn('h-9 w-full', className)}
     >
-      <polygon points={`0,${height} ${coords.join(' ')} ${width},${height}`} fill="var(--accent-soft)" />
-      <polyline points={coords.join(' ')} fill="none" stroke="var(--accent)" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+      <polygon points={`0,${height} ${coords.join(' ')} ${width},${height}`} fill="var(--chart-1)" fillOpacity={0.08} />
+      <polyline points={coords.join(' ')} fill="none" stroke="var(--chart-1)" strokeWidth={1.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
     </svg>
   )
 }
@@ -57,7 +57,7 @@ export function PaceBar({
   className?: string
 }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0
-  const fill = tone === 'bad' ? 'bg-bad' : tone === 'warn' ? 'bg-warn' : 'bg-brand'
+  const fill = tone === 'bad' ? 'bg-bad' : tone === 'warn' ? 'bg-warn' : 'bg-action'
 
   return (
     <div className={cn('relative h-1 w-full rounded-full bg-rule', className)}>
@@ -116,7 +116,7 @@ export function Radar({ axes, size = 132 }: { axes: RadarAxis[]; size?: number }
         const [x, y] = point(i, 1)
         return <line key={a.label} x1={c} y1={c} x2={x} y2={y} stroke="var(--rule)" strokeWidth={1} />
       })}
-      <polygon points={shape} fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth={1.5} />
+      <polygon points={shape} fill="var(--chart-1)" fillOpacity={0.12} stroke="var(--chart-1)" strokeWidth={1.5} strokeLinejoin="round" />
       {axes.map((a, i) => {
         const [x, y] = point(i, 1.2)
         // Anchored away from the centre, so a label on the left does not run
@@ -163,15 +163,15 @@ export function TimelineAxis({ items, days = 7 }: { items: TimelineItem[]; days?
             title={item.label}
             className={cn(
               'absolute top-[11px] h-2 w-2 -translate-x-1/2 rounded-full',
-              item.tone === 'bad' ? 'bg-bad' : item.tone === 'warn' ? 'bg-warn' : 'bg-brand',
+              item.tone === 'bad' ? 'bg-bad' : item.tone === 'warn' ? 'bg-warn' : 'bg-action',
             )}
             style={{ left: `${(Math.min(item.day, days) / days) * 100}%` }}
           />
         ))}
       </div>
       <div className="flex justify-between">
-        <span className="label text-[9px] tracking-[0.1em] text-ink-4">Today</span>
-        <span className="label text-[9px] tracking-[0.1em] text-ink-4">+{days}d</span>
+        <span className="label text-[9px] text-ink-4">Today</span>
+        <span className="label text-[9px] text-ink-4">+{days}d</span>
       </div>
     </div>
   )

@@ -31,7 +31,8 @@ import {
   type StepKey,
 } from '@/core/reviews-shape'
 import { cn } from '@/lib/utils'
-import { toggleTheme } from '../shell-actions'
+import { ThemeSwitch } from '@/components/pos/ThemeSwitch'
+import { setThemeAction } from '../shell-actions'
 import { close, save } from './actions'
 
 // Six steps over one set of answers. Every step writes into the same object and
@@ -288,15 +289,7 @@ export function Wizard({ data }: { data: WeekData }) {
       // The artboard's band has the theme button beside the duration, and
       // the sidebar has its own row; both go through the same setting.
       // 38px, the artboard's control height on desktop; 44 on a phone.
-      themeToggle={
-        <button
-          type="button"
-          onClick={() => start(() => toggleTheme(data.theme))}
-          className="label min-h-11 border border-rule-2 px-3.5 text-[11px] uppercase tracking-[0.12em] text-ink-2 transition-colors duration-150 hover:text-ink md:min-h-[38px]"
-        >
-          {data.theme === 'dark' ? 'Dark' : 'Light'}
-        </button>
-      }
+      themeToggle={<ThemeSwitch theme={data.theme} onChange={setThemeAction} />}
       onBack={index > 0 ? () => setStep(STEPS[index - 1].key) : undefined}
       onNext={index === STEPS.length - 1 ? finish : () => setStep(STEPS[index + 1].key)}
       nextLabel={

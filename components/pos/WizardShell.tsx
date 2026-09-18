@@ -66,7 +66,7 @@ export function WizardShell({
           </div>
           <div className="flex justify-between">
             <Eyebrow>{steps[index]?.name}</Eyebrow>
-            <span className="num text-[11px] tracking-[0.1em] text-ink-3">{pct}%</span>
+            <span className="num text-[11px] text-ink-3">{pct}%</span>
           </div>
         </div>
 
@@ -87,7 +87,7 @@ export function WizardShell({
                 >
                   <span
                     className={cn(
-                      'label w-4 shrink-0 text-[11px] tracking-[0.1em]',
+                      'label w-4 shrink-0 text-[11px]',
                       done ? 'text-ok' : on ? 'text-ink' : 'text-ink-4',
                     )}
                   >

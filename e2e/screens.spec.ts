@@ -1750,18 +1750,22 @@ test('weekly review, six steps and a note built from the answers', async ({ page
   // whatever the server rendered rather than on what the click did.
   await page.waitForLoadState('networkidle')
 
-  // The band's theme button, as the artboard draws it beside the duration. It
-  // names the theme you are on and shares the setting with the sidebar row,
-  // so one click moves both. Desktop only: the sidebar is not on a phone.
+  // The band's theme control: System, Light, Dark. It shares the setting
+  // with the sidebar's control, so one press moves both. System removes the
+  // attribute and the page follows the device. Desktop only: the sidebar is
+  // not on a phone.
   if ((page.viewportSize()?.width ?? 0) >= 768) {
     // shoot() leaves the cookie on dark but the page on its last shot, light.
     await page.reload()
     await page.waitForLoadState('networkidle')
-    const band = page.locator('header').getByRole('button', { name: /^dark$/i })
-    await band.click()
+    const band = page.locator('header').getByRole('group', { name: 'Theme' })
+    const rail = page.getByRole('navigation', { name: 'Sections' }).getByRole('group', { name: 'Theme' })
+    await band.getByRole('button', { name: 'Light', exact: true }).click()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
-    await expect(page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Light', exact: true })).toBeVisible()
-    await page.locator('header').getByRole('button', { name: /^light$/i }).click()
+    await expect(rail.getByRole('button', { name: 'Light', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await band.getByRole('button', { name: 'System', exact: true }).click()
+    await expect(page.locator('html')).not.toHaveAttribute('data-theme')
+    await band.getByRole('button', { name: 'Dark', exact: true }).click()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   }
 

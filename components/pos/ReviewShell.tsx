@@ -83,7 +83,7 @@ export function ReviewShell({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
-          <span className="label text-[10px] tracking-[0.12em] text-ink-3">{duration}</span>
+          <span className="label text-[10px] text-ink-3">{duration}</span>
           {themeToggle}
         </div>
       </header>
@@ -100,7 +100,7 @@ export function ReviewShell({
 
       <div className="flex justify-center px-[18px] md:px-7 pb-11 pt-10">
         <div className="w-full max-w-[760px]">
-          <p className="label text-[11px] tracking-[0.16em] text-brand">{kicker}</p>
+          <p className="label text-[11px] text-brand">{kicker}</p>
           <h2 className="mt-4 text-pretty text-[clamp(26px,3vw,38px)] font-normal leading-[1.08] tracking-[-0.03em] text-ink">
             {title}
           </h2>
@@ -256,7 +256,7 @@ export function ReviewRow({
       <span className="min-w-0 flex-[1_1_200px]">
         <span className="block text-[15px] text-ink">{title}</span>
         {meta && (
-          <span className="mt-1 block text-[11px] uppercase tracking-[0.06em] text-ink-3">{meta}</span>
+          <span className="mt-1 block text-[11px] uppercase text-ink-3">{meta}</span>
         )}
       </span>
       {right}

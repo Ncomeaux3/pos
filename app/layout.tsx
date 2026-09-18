@@ -1,26 +1,26 @@
 import type { Metadata, Viewport } from 'next'
-import { Manrope } from 'next/font/google'
+import localFont from 'next/font/local'
 import { getTheme } from '@/core/theme'
 import './globals.css'
 
-// One family, per ComeauxVerse/brand/visual.md: Manrope 400 to 700, no
-// monospace anywhere. It is a variable font, so the whole weight range arrives
-// in one file and there is no weight list to keep in sync with the guide.
-const manrope = Manrope({
-  variable: '--font-manrope',
-  subsets: ['latin'],
+// Geist, one family, served from the repo under its OFL licence (app/fonts).
+// The Latin subset is a variable font, so the whole weight range is one file.
+const geist = localFont({
+  src: './fonts/Geist-Latin.woff2',
+  weight: '100 900',
+  variable: '--font-geist',
   display: 'swap',
 })
 
 export const metadata: Metadata = {
-  title: 'POS',
-  description: 'Personal operating system',
+  title: 'Holon',
+  description: 'Your life. One system.',
   // iOS reads the startup image at install and only for an exact size match,
   // so this is the owner's phone (iPhone 16 Pro Max, 440 x 956 at 3x) and no
   // other. Android takes its splash from the manifest.
   appleWebApp: {
     capable: true,
-    title: 'POS',
+    title: 'Holon',
     statusBarStyle: 'black-translucent',
     startupImage: [
       {
@@ -31,23 +31,33 @@ export const metadata: Metadata = {
   },
 }
 
-// The address bar matches the page ground in whichever theme is active.
-export const viewport: Viewport = {
-  // Cover, so env(safe-area-inset-*) reads the home indicator instead of zero.
-  viewportFit: 'cover',
-  themeColor: [
-    { media: '(prefers-color-scheme: dark)', color: '#07080A' },
-    { media: '(prefers-color-scheme: light)', color: '#F4F2EC' },
-  ],
+const CANVAS = { light: '#F7F6F2', dark: '#202927' }
+
+// The address bar matches the page ground of the theme that is actually
+// rendered: a forced theme gives one colour, system gives the media pair.
+export async function generateViewport(): Promise<Viewport> {
+  const theme = await getTheme()
+  return {
+    // Cover, so env(safe-area-inset-*) reads the home indicator instead of zero.
+    viewportFit: 'cover',
+    themeColor:
+      theme === 'system'
+        ? [
+            { media: '(prefers-color-scheme: dark)', color: CANVAS.dark },
+            { media: '(prefers-color-scheme: light)', color: CANVAS.light },
+          ]
+        : CANVAS[theme],
+  }
 }
 
 export default async function RootLayout({ children }: LayoutProps<'/'>) {
-  // Written on the server so the first paint is already the right theme. Both
-  // @custom-variant selectors key off this attribute, so it is never absent.
+  // Written on the server so the first paint is already the right theme.
+  // System is the absence of the attribute: the stylesheet's color-scheme then
+  // follows the device and the dark: variant matches through the media query.
   const theme = await getTheme()
 
   return (
-    <html lang="en" data-theme={theme} className={`${manrope.variable} h-full`}>
+    <html lang="en" data-theme={theme === 'system' ? undefined : theme} className={`${geist.variable} h-full`}>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   )
