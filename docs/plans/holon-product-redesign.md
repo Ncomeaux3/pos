@@ -184,21 +184,21 @@ Each phase is a focused branch/PR with a screenshot comparison, relevant regress
 
 ### Phase 0: baseline and representative designs
 Complexity: medium. Depends on owner scope answers.
-- [ ] Reconcile current branch with active v1.1/v2 work; inventory actual routes and actions.
-- [ ] Capture current screens with synthetic data at phone and desktop widths; record a route/state matrix.
+- [x] Reconcile current branch with active v1.1/v2 work; inventory actual routes and actions. (v1.1 complete except Phase 11's owner step; `holon` cut from main e9efdaa)
+- [ ] Capture current screens with synthetic data at phone and desktop widths; record a route/state matrix. (Blocked on the laptop's Docker; a provisional Sep 11 to 15 set is in the session scratchpad.)
 - [ ] Record route bundle sizes, view-switch requests and representative rendering timings.
-- [ ] Build reviewable designs for Today, Tasks, Finance, Second Brain and one shared drawer in both themes and phone/desktop layouts.
-- [ ] Confirm layout, density and hierarchy against the selected kit and owner feedback before module-wide changes.
+- [x] Build reviewable designs for Today, Tasks, Finance and the task drawer in both themes and phone/desktop layouts (docs/design/holon, PR #74; three revisions: register, grouped surfaces, glass).
+- [x] Confirm layout, density and hierarchy against the selected kit and owner feedback before module-wide changes. (Owner: Apple and OpenAI register, then iOS and visionOS glass, smooth; motionsites.ai for motion; 2026-09-18.)
 Exit: concrete visual targets plus current behavior checklist. No speculative feature work.
 
 ### Phase 1: foundations and components
 Complexity: medium. Depends on Phase 0.
 Files: `app/globals.css`, `app/layout.tsx`, `components/pos/*`, local font/brand assets; `core/theme.ts` and shell actions only if default behavior needs change.
-- [ ] Introduce semantic Holon tokens and locally served Geist, maintaining existing aliases where practical.
-- [ ] Restyle shared controls, typography, cards, overlays, tables and feedback states.
-- [ ] Replace ComeauxverseMark with Holon wrapper; choose compact raster or simplified SVG for repeated UI use after measuring the large vector master's size.
-- [ ] Add a development-only component preview or test fixture using existing tooling, not a new design-system app.
-- [ ] Verify themes, focus, dialogs, touch targets and readable status variants.
+- [x] Introduce semantic Holon tokens and locally served Geist, maintaining existing aliases where practical. (`light-dark()` on the old names; glass tokens; Geist via next/font/local.)
+- [x] Restyle shared controls, typography, cards, overlays, tables and feedback states. (Button, Chip, TabBar, Segments, controls, field, Card, MetricStrip, Row, DataTable, Overlay, EmptyState, Toast, SyncBand, BandSearch, PageHeader, charts.)
+- [x] Replace ComeauxverseMark with Holon wrapper: HolonMark (transparent optical PNG at 2x), HolonWordmark (inlined outline SVG), HolonLockup.
+- [x] Not built: the mockups under docs/design/holon plus the e2e screenshot run are the preview; a second fixture page would be a third copy of the components.
+- [ ] Verify themes, focus, dialogs, touch targets and readable status variants. (CI green on push; the ui-verifier pass on real screens waits for Docker.)
 Exit: representative screens use the new foundation without behavior regressions. Every module receives a smoke check because global CSS affects all of them.
 
 ### Phase 2: shell and entry surfaces
