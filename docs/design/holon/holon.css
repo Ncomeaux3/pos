@@ -55,8 +55,17 @@
   --radius: 12px;
   --radius-lg: 18px;
   --radius-xl: 24px;
-  --shadow-card: light-dark(0 1px 2px rgba(32, 41, 39, 0.04), none);
-  --shadow-pop: light-dark(0 24px 64px rgba(32, 41, 39, 0.18), 0 24px 64px rgba(0, 0, 0, 0.5));
+  --shadow-card: light-dark(0 1px 2px rgba(32, 41, 39, 0.05), 0 1px 2px rgba(0, 0, 0, 0.3));
+  --shadow-pop: light-dark(0 24px 64px rgba(32, 41, 39, 0.22), 0 24px 64px rgba(0, 0, 0, 0.55));
+
+  /* Glass: a translucent surface over the canvas wash, blurred and saturated,
+     with a one pixel highlight on its top edge. */
+  --glass: light-dark(rgba(255, 255, 255, 0.62), rgba(41, 51, 47, 0.55));
+  --glass-strong: light-dark(rgba(255, 255, 255, 0.78), rgba(41, 51, 47, 0.78));
+  --glass-edge: light-dark(rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.09));
+  --glass-line: light-dark(rgba(32, 41, 39, 0.08), rgba(255, 255, 255, 0.08));
+  --blur: 28px;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 
   --font: 'Geist', system-ui, sans-serif;
   --fast: 160ms;
@@ -77,6 +86,27 @@ body {
   font: 400 14px/1.5 var(--font);
   -webkit-font-smoothing: antialiased;
 }
+/* The canvas wash: cobalt and sand at a few percent, fixed behind everything,
+   which is what the glass surfaces blur. A pseudo element rather than
+   background-attachment, which iOS does not honour. */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(60% 55% at 12% -5%, light-dark(rgba(65, 106, 202, 0.14), rgba(65, 106, 202, 0.22)), transparent 65%),
+    radial-gradient(45% 40% at 95% 15%, light-dark(rgba(214, 187, 154, 0.26), rgba(214, 187, 154, 0.10)), transparent 65%),
+    radial-gradient(50% 45% at 70% 105%, light-dark(rgba(65, 106, 202, 0.10), rgba(65, 106, 202, 0.14)), transparent 65%);
+}
+.glass, .card, .rows, table, .kpis, .attention-band, .panel, .rail, .tabbar, .segments, .theme, .review-bar {
+  background: var(--glass);
+  -webkit-backdrop-filter: saturate(180%) blur(var(--blur));
+  backdrop-filter: saturate(180%) blur(var(--blur));
+  border: 1px solid var(--glass-line);
+  box-shadow: inset 0 1px 0 var(--glass-edge), var(--shadow-card);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass, .card, .rows, table, .kpis, .attention-band, .panel, .rail, .tabbar, .segments, .theme, .review-bar { background: var(--bg-elev); backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+* { transition-timing-function: var(--ease); }
 a { color: inherit; text-decoration: none; }
 button, input, select, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -97,7 +127,7 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
 .rail {
   position: fixed; inset: 0 auto 0 0; width: var(--rail);
   display: flex; flex-direction: column; padding: 22px 14px 16px;
-  background: var(--bg);
+  border-width: 0 1px 0 0; border-radius: 0; box-shadow: none;
 }
 .rail a.rail-brand { height: auto; display: flex; align-items: center; gap: 12px; padding: 4px 10px 26px; background: none; }
 .rail-brand img { width: 36px; height: 36px; display: block; }
@@ -109,8 +139,8 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
   border-radius: var(--radius-sm); color: var(--ink-2); position: relative; font-size: 14.5px;
   transition: background var(--fast), color var(--fast);
 }
-.rail a:hover { background: var(--bg-deep); color: var(--ink); }
-.rail a[aria-current='page'] { background: var(--bg-elev); color: var(--ink); font-weight: 600; box-shadow: var(--shadow-card), 0 0 0 1px var(--rule); }
+.rail a:hover { background: var(--glass); color: var(--ink); }
+.rail a[aria-current='page'] { background: var(--glass-strong); color: var(--ink); font-weight: 600; box-shadow: inset 0 1px 0 var(--glass-edge), var(--shadow-card), 0 0 0 1px var(--glass-line); }
 .rail a[aria-current='page'] svg { color: var(--action); }
 .rail a svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 .rail .badge {
@@ -119,18 +149,17 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
   display: inline-flex; align-items: center; justify-content: center;
 }
 .rail-foot { margin-top: auto; display: flex; flex-direction: column; gap: 2px; }
-.theme { display: flex; gap: 2px; padding: 3px; margin-top: 12px; border-radius: 10px; background: var(--bg-deep); }
+.theme { display: flex; gap: 2px; padding: 3px; margin-top: 12px; border-radius: 11px; }
 .theme button {
   flex: 1; height: 28px; border: 0; border-radius: 8px; background: transparent; color: var(--ink-3);
   font-size: 12px; font-weight: 500; cursor: pointer;
 }
-.theme button[aria-pressed='true'] { background: var(--bg-elev); color: var(--ink); box-shadow: var(--shadow-card), 0 0 0 1px var(--rule); }
+.theme button[aria-pressed='true'] { background: var(--glass-strong); color: var(--ink); box-shadow: inset 0 1px 0 var(--glass-edge), 0 2px 6px rgba(0, 0, 0, 0.08); }
 
 .tabbar {
   display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
   height: var(--tabbar); padding: 6px 8px max(env(safe-area-inset-bottom), 12px);
-  background: color-mix(in srgb, var(--bg-elev) 82%, transparent); backdrop-filter: saturate(180%) blur(18px); -webkit-backdrop-filter: saturate(180%) blur(18px);
-  border-top: 1px solid var(--rule);
+  border-width: 1px 0 0; border-radius: 0; box-shadow: none;
   grid-template-columns: repeat(4, 1fr);
 }
 .tabbar a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; height: 52px; border-radius: var(--radius-sm); color: var(--ink-3); font-size: 11px; font-weight: 500; }
@@ -152,15 +181,18 @@ main { margin-left: var(--rail); padding: 36px 40px 56px; max-width: calc(1180px
 /* Controls: pills for buttons and chips, 12px for fields. */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  height: 40px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--rule-2);
-  background: var(--bg-elev); color: var(--ink); font-weight: 500; cursor: pointer; white-space: nowrap;
-  transition: background var(--fast), border-color var(--fast), transform var(--fast);
+  height: 40px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--glass-line);
+  background: var(--glass-strong); color: var(--ink); font-weight: 500; cursor: pointer; white-space: nowrap;
+  box-shadow: inset 0 1px 0 var(--glass-edge), var(--shadow-card);
+  -webkit-backdrop-filter: saturate(180%) blur(12px); backdrop-filter: saturate(180%) blur(12px);
+  transition: background var(--fast), transform var(--fast), box-shadow var(--fast);
 }
-.btn:hover { background: var(--bg-deep); }
-.btn:active { transform: scale(0.98); }
-.btn.primary { background: var(--action); border-color: var(--action); color: var(--action-fg); }
-.btn.quiet { border-color: transparent; background: transparent; color: var(--ink-2); }
-.btn.danger { color: var(--risk); border-color: transparent; background: transparent; }
+.btn:hover { background: var(--bg-elev); }
+.btn:active { transform: scale(0.97); }
+.btn.primary { background: linear-gradient(180deg, color-mix(in srgb, var(--action) 88%, white) 0%, var(--action) 100%); border-color: transparent; color: var(--action-fg); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 6px 16px color-mix(in srgb, var(--action) 35%, transparent); }
+.btn.primary:hover { background: var(--action); }
+.btn.quiet { border-color: transparent; background: transparent; color: var(--ink-2); box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.btn.danger { color: var(--risk); border-color: transparent; background: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
 .btn.sm { height: 34px; padding: 0 14px; font-size: 13px; }
 .btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
 .icon-btn { width: 36px; height: 36px; padding: 0; border-radius: 999px; border: 0; background: transparent; color: var(--ink-3); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
@@ -168,9 +200,9 @@ main { margin-left: var(--rail); padding: 36px 40px 56px; max-width: calc(1180px
 .icon-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; }
 
 /* Segmented control: a sunken track and a raised selected pill. */
-.segments { display: inline-flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--bg-deep); max-width: 100%; overflow-x: auto; }
-.segments button { height: 32px; padding: 0 14px; border: 0; border-radius: 8px; background: transparent; color: var(--ink-3); font-size: 13.5px; font-weight: 500; white-space: nowrap; cursor: pointer; }
-.segments button[aria-pressed='true'] { background: var(--bg-elev); color: var(--ink); font-weight: 600; box-shadow: var(--shadow-card), 0 0 0 1px var(--rule); }
+.segments { display: inline-flex; gap: 2px; padding: 3px; border-radius: 12px; max-width: 100%; overflow-x: auto; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06); }
+.segments button { height: 32px; padding: 0 14px; border: 0; border-radius: 9px; transition: background var(--fast), color var(--fast); background: transparent; color: var(--ink-3); font-size: 13.5px; font-weight: 500; white-space: nowrap; cursor: pointer; }
+.segments button[aria-pressed='true'] { background: var(--glass-strong); color: var(--ink); font-weight: 600; box-shadow: inset 0 1px 0 var(--glass-edge), 0 2px 6px rgba(0, 0, 0, 0.08); }
 @media (max-width: 767px) { .segments button { height: 36px; } }
 
 .chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12.5px; font-weight: 500; color: var(--ink-2); background: var(--bg-deep); }
@@ -183,8 +215,9 @@ main { margin-left: var(--rail); padding: 36px 40px 56px; max-width: calc(1180px
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field > span { font-size: 13px; font-weight: 500; color: var(--ink-2); }
 .field input, .field select, .field textarea {
-  height: 42px; padding: 0 14px; border-radius: var(--radius); border: 1px solid transparent;
-  background: var(--bg-deep); color: var(--ink); width: 100%;
+  height: 42px; padding: 0 14px; border-radius: var(--radius); border: 1px solid var(--glass-line);
+  background: light-dark(rgba(32, 41, 39, 0.04), rgba(0, 0, 0, 0.22)); color: var(--ink); width: 100%;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
   /* No background transition: Chromium leaves a form control's transition
      stuck at its start value when the theme flips. Border only. */
   transition: border-color var(--fast);
@@ -195,7 +228,7 @@ main { margin-left: var(--rail); padding: 36px 40px 56px; max-width: calc(1180px
 @media (max-width: 767px) { .field input, .field select, .field textarea { font-size: 16px; height: 46px; } }
 
 /* Surfaces. Lists live in grouped rounded surfaces; hairlines are inset. */
-.card { background: var(--bg-elev); border: 1px solid var(--rule); border-radius: var(--radius-lg); padding: 18px 20px; box-shadow: var(--shadow-card); }
+.card { border-radius: var(--radius-lg); padding: 18px 20px; }
 .card-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .card-head h2 { font-size: 15px; font-weight: 600; }
 .card-head a:hover, .card-head h2 a:hover { color: var(--action); }
@@ -204,8 +237,8 @@ main { margin-left: var(--rail); padding: 36px 40px 56px; max-width: calc(1180px
 .section > h2 .meta { font-weight: 400; }
 
 /* Rows: a grouped list. Title, meta, and a fixed right column for the number or the date. */
-.rows { display: flex; flex-direction: column; background: var(--bg-elev); border: 1px solid var(--rule); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); overflow: hidden; }
-.card .rows, .attention-band .rows { background: transparent; border: 0; border-radius: 0; box-shadow: none; overflow: visible; }
+.rows { display: flex; flex-direction: column; border-radius: var(--radius-lg); overflow: hidden; }
+.card .rows, .attention-band .rows { background: transparent; border: 0; border-radius: 0; box-shadow: none; overflow: visible; backdrop-filter: none; -webkit-backdrop-filter: none; }
 .row {
   display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
   min-height: 48px; padding: 10px 16px; color: inherit; position: relative;
@@ -213,7 +246,7 @@ main { margin-left: var(--rail); padding: 36px 40px 56px; max-width: calc(1180px
 .row + .row::before { content: ''; position: absolute; left: 16px; right: 0; top: 0; height: 1px; background: var(--rule); }
 .card .row, .attention-band .row { padding-left: 0; padding-right: 0; min-height: 40px; padding-top: 7px; padding-bottom: 7px; }
 .card .row + .row::before, .attention-band .row + .row::before { left: 0; }
-a.row:hover, .row.hover { background: var(--bg-deep); }
+a.row:hover, .row.hover { background: var(--glass-strong); }
 .row.selected { background: var(--accent-soft); }
 .row.selected::before, .row.selected + .row::before { opacity: 0; }
 .row .title { display: block; font-weight: 500; font-size: 14.5px; line-height: 1.35; }
@@ -234,7 +267,7 @@ a.row:hover, .row.hover { background: var(--bg-deep); }
 
 /* Tables: one grouped surface, inset hairlines; below md the date and amount
    take one line and the rest wraps under. */
-table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--bg-elev); border: 1px solid var(--rule); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); overflow: hidden; }
+table { width: 100%; border-collapse: separate; border-spacing: 0; border-radius: var(--radius-lg); overflow: hidden; }
 th { text-align: left; font-size: 12px; font-weight: 500; color: var(--ink-3); padding: 12px 12px 8px 16px; border-bottom: 1px solid var(--rule); }
 td { padding: 12px 12px 12px 16px; border-bottom: 1px solid var(--rule); vertical-align: top; }
 tr:last-child td { border-bottom: 0; }
@@ -253,7 +286,7 @@ td .meta { display: block; }
 }
 
 /* KPI strip: one surface, cells separated by inset rules. */
-.kpis { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--rule); border-radius: var(--radius-lg); background: var(--bg-elev); box-shadow: var(--shadow-card); overflow: hidden; }
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); border-radius: var(--radius-lg); overflow: hidden; }
 .kpi { padding: 18px 22px; border-right: 1px solid var(--rule); }
 .kpi:last-child { border-right: 0; }
 .kpi .label { margin-bottom: 8px; }
@@ -268,7 +301,7 @@ td .meta { display: block; }
 }
 
 /* Attention band: the one warm surface on Today. */
-.attention-band { background: var(--sand-surface); border-radius: var(--radius-lg); padding: 16px 20px; }
+.attention-band { background: light-dark(rgba(240, 231, 218, 0.72), rgba(214, 187, 154, 0.12)); border-radius: var(--radius-lg); padding: 16px 20px; }
 .attention-band h2 { font-size: 15px; margin-bottom: 4px; }
 .attention-band .row + .row::before { background: color-mix(in srgb, var(--sand) 45%, transparent); }
 
@@ -295,11 +328,13 @@ td .meta { display: block; }
 /* Overlay: a floating panel on desktop, a sheet on the phone. The band has the
    crumb, per-record actions and one close control; the footer has Save. */
 .overlay { position: fixed; inset: 0; z-index: 50; }
-.overlay .dim { position: absolute; inset: 0; background: rgba(20, 26, 24, 0.35); border: 0; backdrop-filter: blur(2px); }
+.overlay .dim { position: absolute; inset: 0; background: light-dark(rgba(32, 41, 39, 0.28), rgba(0, 0, 0, 0.45)); border: 0; }
 .panel {
   position: absolute; right: 12px; top: 12px; bottom: 12px; width: min(480px, calc(100% - 24px));
-  display: flex; flex-direction: column; background: var(--bg-elev); border-radius: var(--radius-xl);
-  border: 1px solid var(--rule); box-shadow: var(--shadow-pop); overflow: hidden;
+  display: flex; flex-direction: column; border-radius: var(--radius-xl); overflow: hidden;
+  background: light-dark(rgba(255, 255, 255, 0.8), rgba(41, 51, 47, 0.88));
+  -webkit-backdrop-filter: saturate(180%) blur(40px); backdrop-filter: saturate(180%) blur(40px);
+  box-shadow: inset 0 1px 0 var(--glass-edge), var(--shadow-pop);
 }
 .panel .band { display: flex; align-items: center; gap: 6px; height: 56px; padding: 0 14px 0 22px; flex: none; }
 .panel .band .crumb { flex: 1; min-width: 0; font-size: 13px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -307,14 +342,14 @@ td .meta { display: block; }
 .panel .band kbd { font: 500 11px var(--font); color: var(--ink-3); background: var(--bg-deep); border-radius: 6px; padding: 3px 6px; }
 .panel .body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 22px 22px; display: flex; flex-direction: column; gap: 16px; }
 .panel .body h2 { font-size: 22px; line-height: 28px; letter-spacing: -0.02em; }
-.panel .foot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 14px 22px; border-top: 1px solid var(--rule); flex: none; background: var(--bg-elev); }
+.panel .foot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 14px 22px; border-top: 1px solid var(--glass-line); flex: none; }
 .panel .foot .danger { margin-right: auto; }
 .handle { display: none; }
 @media (max-width: 767px) {
   .panel {
     top: auto; bottom: 0; left: 0; right: 0; width: 100%; height: auto; max-height: min(78dvh, 100%);
     border: 0; border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.22);
+    box-shadow: inset 0 1px 0 var(--glass-edge), 0 -16px 48px rgba(0, 0, 0, 0.22);
   }
   .handle { display: block; width: 36px; height: 5px; border-radius: 3px; background: var(--rule-2); margin: 8px auto 0; }
   .panel .band { height: 46px; padding-left: 18px; }
@@ -328,7 +363,7 @@ td .meta { display: block; }
 /* Mockup-only chrome: the review bar that switches theme and page. */
 .review-bar {
   position: fixed; bottom: 10px; left: calc(var(--rail) + 12px); z-index: 60; display: flex; gap: 6px; align-items: center;
-  padding: 4px 6px; background: var(--bg-elev); border: 1px solid var(--rule); border-radius: 999px; font-size: 12px; color: var(--ink-3); box-shadow: var(--shadow-card);
+  padding: 4px 6px; border-radius: 999px; font-size: 12px; color: var(--ink-3);
 }
 .review-bar select { height: 26px; border-radius: 8px; border: 1px solid var(--rule); background: var(--bg); font-size: 12px; }
 @media (max-width: 767px) { .review-bar { top: 6px; bottom: auto; left: auto; right: 6px; padding: 2px 4px; } }
