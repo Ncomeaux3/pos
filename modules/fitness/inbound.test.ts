@@ -55,7 +55,8 @@ it('translates each metric into the units the table stores', async () => {
         metric('heart_rate_variability', 'ms', [{ qty: 61, date: at('2026-09-11') }]),
         metric('body_fat_percentage', '%', [{ qty: 18.4, date: at('2026-09-11') }]),
         metric('sleep_analysis', 'hr', [
-          { totalSleep: 7.5, asleep: 7.2, sleepStart: at('2026-09-10'), sleepEnd: at('2026-09-11') },
+          // The night is the span; the app's summed hours are not read when it is there.
+          { totalSleep: 26.7, asleep: 0, sleepStart: at('2026-09-10', '23:00:00'), sleepEnd: at('2026-09-11', '06:30:00') },
         ]),
       ],
     },
