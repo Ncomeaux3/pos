@@ -28,7 +28,11 @@ export function chunk(payload: Payload): Payload[] {
   }
   const out: Payload[] = [...byMonth.keys()].sort().map((month) => ({ data: { metrics: byMonth.get(month) } }))
 
-  const workouts = payload.data.workouts ?? []
+  // A workout from the app carries its route and per-minute series, megabytes
+  // the module never reads; only the scalars go, so a request stays small.
+  const workouts = (payload.data.workouts ?? []).map((w) =>
+    Object.fromEntries(Object.entries(w).filter(([, v]) => !Array.isArray(v))),
+  )
   for (let i = 0; i < workouts.length; i += WORKOUTS_PER_REQUEST) {
     out.push({ data: { workouts: workouts.slice(i, i + WORKOUTS_PER_REQUEST) } })
   }

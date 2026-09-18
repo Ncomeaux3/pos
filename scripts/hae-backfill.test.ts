@@ -24,6 +24,12 @@ describe('chunk', () => {
     expect(out.slice(2).map((c) => c.data.workouts?.length)).toEqual([20, 20, 5])
   })
 
+  it('drops the series arrays a workout carries and keeps its scalar fields', () => {
+    const w = { id: 'a', name: 'Outdoor Run', start: '2026-09-16 17:26:05 -0500', duration: 1662, route: [{ lat: 1 }], heartRateData: [1, 2], heartRate: { avg: { qty: 152, units: 'bpm' } } }
+    const out = chunk({ data: { workouts: [w] } })
+    expect(out[0].data.workouts).toEqual([{ id: 'a', name: 'Outdoor Run', start: '2026-09-16 17:26:05 -0500', duration: 1662, heartRate: { avg: { qty: 152, units: 'bpm' } } }])
+  })
+
   it('keeps a point whose date does not read, under its own bucket, rather than dropping it', () => {
     const out = chunk({ data: { metrics: [{ name: 'step_count', data: [{ qty: 1 }] }] } })
     expect(out).toHaveLength(1)
