@@ -3,6 +3,14 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session; the paragraph below names the plan that comes next.
 
+**Current plan: docs/plans/holon-product-redesign.md** (2026-09-18). The
+app is being rebranded and redesigned as Holon on the integration branch
+`holon`; phase PRs target it and one final PR lands on `main`. Production keeps
+the old brand until then. Phase 0 (mockups under docs/design/holon/, decisions
+in decisions/log.md under 2026-09-18) is open for the owner's review; the
+before-set screenshot run on `main` is still owed once Docker is up. v1.1 below
+is complete except Phase 11's owner step.
+
 **Next plan: docs/plans/pos-v1-1.md** (2026-09-14, from /adopt-repo). Twelve
 phases from the owner's first week of live use: diagnosis and small bugs, the
 notes stub deleted, server and client speed, dashboard layout and freshness,
