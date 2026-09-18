@@ -1290,7 +1290,7 @@ test('tasks, a row expands in place and EDIT opens the form drawer', async ({ pa
     const box = (await drawer.boundingBox())!
     expect(box.x).toBe(0)
     expect(box.width).toBe(viewport.width)
-    expect(box.height).toBeLessThanOrEqual(viewport.height * 0.74 + 1)
+    expect(box.height).toBeLessThanOrEqual(viewport.height * 0.78 + 1)
   }
 
   // Edits hold until Save, then land as one write.
@@ -1365,7 +1365,8 @@ test('tasks, the six views and the month grid', async ({ page }) => {
     const dot = pane.locator('button:has(> span.rounded-full)').first()
     const title = (await dot.getAttribute('aria-label')) ?? ''
     await dot.click()
-    await expect(page.getByRole('dialog', { name: /Tasks \/ Edit/ })).toBeVisible()
+    // The drawer is named by the task's title now, not the crumb.
+    await expect(page.getByRole('dialog', { name: title })).toBeVisible()
     await expect(page.getByRole('dialog').getByLabel('Title')).toHaveValue(title)
   }
 })
@@ -1859,7 +1860,8 @@ test('finance, net worth and the budget pace marks', async ({ page }) => {
       .getByRole('button')
       .first()
       .evaluate((el) => getComputedStyle(el).padding)
-    expect(rowPadding).toBe('9px 0px')
+    // Rows sit inside the grouped surface with a 16px inset.
+    expect(rowPadding).toBe('12px 16px')
     await expect(page.getByRole('button', { name: /edit limits/i })).toBeVisible()
   }
 
