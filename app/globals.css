@@ -208,9 +208,10 @@ html {
     outline-offset: 2px;
   }
 
+  /* No background on html: body's propagates to the canvas, and the wash in
+   * body::before then paints above it rather than under body's own. */
   html {
     @apply font-sans;
-    background: var(--bg);
     color: var(--ink);
   }
 
