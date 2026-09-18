@@ -99,7 +99,7 @@ Two sources are built and live in production (PRs #17, #18, #19, all
       Body, then add the rest of the keys. Then the daily 7:00 AM automation.
       Tell me what the run returns; the one place the recipe may not match
       your iOS is the Request Body control in Get Contents of URL.
-- [x] **15. Workouts.** Connected 2026-09-18; the export JSON for the fixture is still wanted. Native Shortcuts cannot read them (checked on your
+- [x] **15. Workouts.** Connected 2026-09-18 and 90 days backfilled the same day (docs/SETUP-INTEGRATIONS.md, Backfill history). Native Shortcuts cannot read them (checked on your
       phone 2026-09-13: Find Health Samples has no Workouts type). When you
       want workouts in POS: Health Auto Export, Premium for one month ($1.99),
       its webhook is already built and tested. Copy the URL and secret from
