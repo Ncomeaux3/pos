@@ -13,7 +13,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-15 (Phase 11). Branch `main`, production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-18 (Health Auto Export backfill, #75). Branch `main`, production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -70,9 +70,17 @@ Four e2e tests: Trends counts 10 of 30 and 14 of 90 recorded, the filter
 narrows and survives a reload, the plan drawer adds a day and removes it, and
 a weight posted to the Health Auto Export webhook (secret read from the
 Connections card) shows on `/health` and moves the band's Apple line. Health
-Auto Export connected by the owner 2026-09-18. Still open: one real export as
-the `client.test.ts` fixture; `core.request_log` holds no body, so it will come
-from the app's share sheet. Phase 12 (hardening) is the last v1.1 phase.
+Auto Export connected by the owner 2026-09-18, and the same day a 90-day manual
+export (2026-06-20 to 2026-09-18) went through `scripts/hae-backfill.mts` (#75):
+the app's REST automation cannot send a custom range, so history is a manual
+export posted a month per request with workout series stripped. The real
+payload corrected two guesses: sleep is the `sleepStart` to `sleepEnd` span
+(Eight Sleep's overlapping records made `totalSleep` two to three times the
+night) and stand hours read `apple_stand_hour`, not `apple_stand_time`
+(minutes). Verified on production: 39 workouts, steps and sleep unbroken over
+90 days. Known: two zero rows from earlier tests (weight, body fat) and the
+fitness goal tile printing its value unrounded. Phase 12 (hardening) is the
+last v1.1 phase.
 
 **v1.1 Phase 7b, skill picker, remaining drawers** (2026-09-15, branch
 `phase-7b-skill-picker-rest`). The same `SkillPicker` block on the trip,
