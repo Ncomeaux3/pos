@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { ActionButton, Eyebrow, Overlay, SkillPicker } from '@/components/pos'
+import { ActionButton, Eyebrow, Overlay, SkillPicker, StatusChip } from '@/components/pos'
 import type { Metric } from '@/core/metrics'
 import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
@@ -11,8 +11,7 @@ import { deleteGoal, recordCheckin, writeGoal, type ActionResult, type GoalInput
 import {
   AREAS,
   KIND_LABEL,
-  STATUS_CLASS,
-  STATUS_TEXT,
+  StatusMark,
   checkinPlaceholder,
   field,
   formatDate,
@@ -141,7 +140,7 @@ function View({
               onRun(() => deleteGoal(goal.id), 'Deleted')
               onClose()
             }}
-            className="text-[13px] text-ink-3 transition-colors duration-150 hover:text-bad"
+            className={cn(mini, 'hover:text-bad')}
           >
             Delete
           </button>
@@ -152,9 +151,7 @@ function View({
         <div>
           <div className="flex items-start justify-between gap-3">
             <h2 className="text-[22px] font-normal leading-[1.2] tracking-[-0.03em] text-ink">{goal.title}</h2>
-            <span className={cn('num mt-1 shrink-0 whitespace-nowrap border px-1.5 py-0.5 text-[9px] tracking-[0.08em] rounded-full', STATUS_CLASS[p.status])}>
-              {STATUS_TEXT[p.status]}
-            </span>
+            <StatusMark status={p.status} className="mt-1" />
           </div>
           <p className="mt-1.5 text-[12px] text-ink-3">
             {goal.area} · {KIND_LABEL[goal.kind]} · {manual ? 'check-ins' : 'computed'}
@@ -162,7 +159,7 @@ function View({
           {goal.notes && <p className="mt-2.5 text-[13px] leading-[1.55] text-ink-2">{goal.notes}</p>}
         </div>
 
-        <div className="grid grid-cols-3 gap-px border border-rule bg-rule rounded-[18px]">
+        <div className="glass grid grid-cols-3 gap-px overflow-hidden rounded-[18px] [&>*]:shadow-[-1px_-1px_0_var(--rule)]">
           <Cell label="Now" value={formatValue(p.current, goal.kind, goal.unit)} />
           <Cell label="Target" value={formatValue(goal.targetValue, goal.kind, goal.unit)} />
           <Cell label="Days left" value={p.daysLeft >= 0 ? `${p.daysLeft} days left` : `${-p.daysLeft} days over`} />
@@ -203,10 +200,10 @@ function View({
               <circle key={i} cx={d.x} cy={d.y} r={2.5} fill={d.manual ? 'var(--ink)' : 'var(--accent)'} stroke="var(--bg-elev)" vectorEffect="non-scaling-stroke" />
             ))}
           </svg>
-          <div className="mt-1 flex justify-between text-[10px] text-ink-4">
-            <span>{`${MONTHS[startDate.getMonth()]} ${startDate.getDate()}`.toUpperCase()}</span>
+          <div className="mt-1 flex justify-between text-[11px] text-ink-4">
+            <span>{`${MONTHS[startDate.getMonth()]} ${startDate.getDate()}`}</span>
             <span>dashed = target · grey = needed pace</span>
-            <span>TODAY</span>
+            <span>Today</span>
           </div>
           {manual && goal.kind !== 'milestone' && (
             <form
@@ -225,7 +222,7 @@ function View({
                 onChange={(e) => setValue(e.target.value)}
                 aria-label={`Check in on ${goal.title}`}
                 placeholder={checkinPlaceholder(goal.unit)}
-                className={cn(field, 'num min-w-0 flex-1 px-2.5 py-2')}
+                className={cn(field, 'num min-w-0 flex-1')}
               />
               <button type="submit" className={miniAccent}>
                 Check in
@@ -293,7 +290,7 @@ function View({
                 <div key={pr.id} className="border-b border-rule py-2">
                   <div className="flex justify-between gap-2.5">
                     <span className="text-[11px] text-ink-3">{pr.from}</span>
-                    <span className="num text-[9px] tracking-[0.08em] text-warn">PENDING</span>
+                    <StatusChip tone="warn">Pending</StatusChip>
                   </div>
                   <div className="mt-[3px] text-[13px] text-ink">{pr.title}</div>
                 </div>
@@ -308,9 +305,9 @@ function View({
 
 function Cell({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-bg px-3 py-2.5">
+    <div className="px-4 py-3">
       <Eyebrow>{label}</Eyebrow>
-      <div className="num mt-1.5 text-[18px] font-light text-ink">{value}</div>
+      <div className="num mt-1 text-[18px] font-semibold tracking-[-0.01em] text-ink">{value}</div>
     </div>
   )
 }

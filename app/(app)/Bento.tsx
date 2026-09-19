@@ -16,9 +16,7 @@ import { saveDashboardLayout } from './shell-actions'
 // client because of it. The layout is one setting for every device (v1.1
 // Phase 5); it arrives as a prop and goes back through a server action.
 
-/** `phone: false` hides both the tile and its grid cell below md, so a tile
- * the phone does not carry leaves no blank row behind it. */
-export type Tile = { id: string; node: ReactNode; phone?: boolean }
+export type Tile = { id: string; node: ReactNode }
 
 export type Layout = Settings['dashboard_layout']
 
@@ -59,9 +57,11 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
   const order = layout?.order ?? null
   const hidden = layout?.hidden ?? []
 
-  // The stored order names tiles that may no longer exist, and cannot know
-  // about a module installed since. Known ids first in their saved order, then
-  // everything new in the order the server sent it.
+  // The stored order names tiles that may no longer exist (a module gone, or
+  // the four ids Holon phase 3 turned into sections), and cannot know about a
+  // module installed since. Known ids first in their saved order, then
+  // everything new in the order the server sent it; an unknown id is dropped
+  // whether it was hidden or not.
   const ids = tiles.map((t) => t.id)
   const sorted = order
     ? [...order.filter((id) => ids.includes(id)), ...ids.filter((id) => !order.includes(id))]
@@ -130,8 +130,7 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
               onDragOver={(e) => arranging && e.preventDefault()}
               onDrop={() => drop(id)}
               className={cn(
-                tile.phone === false ? 'hidden md:flex' : 'flex',
-                'min-w-0 flex-col',
+                'flex min-w-0 flex-col',
                 arranging && 'cursor-grab',
                 dragging === id && 'opacity-60',
               )}

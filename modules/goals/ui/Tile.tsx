@@ -44,18 +44,18 @@ export function GoalsTile({ payload }: { payload: Record<string, unknown> }) {
       {goals.slice(0, 3).map((g) => {
         const tone = TONE[g.status] ?? TONE.done
         return (
-          <div key={g.id} className="border-b border-rule py-[9px]">
+          <div key={g.id} className="border-b border-rule py-[9px] last:border-b-0">
             <div className="flex justify-between gap-2.5 text-[13px]">
               <span className="truncate text-ink">{g.title}</span>
-              <span className={cn('label shrink-0 text-[10px] tracking-[0.06em]', tone.text)}>
+              <span className={cn('t-caption shrink-0 font-medium', tone.text)}>
                 {LABEL[g.status] ?? g.status}
               </span>
             </div>
             <div className="mt-1.5 flex items-center gap-2.5">
-              <div className="h-0.5 flex-1 bg-rule-2">
-                <div className={cn('h-0.5', tone.bar)} style={{ width: `${g.percent}%` }} />
+              <div className="h-1 flex-1 rounded-full bg-rule-2">
+                <div className={cn('h-1 rounded-full', tone.bar)} style={{ width: `${g.percent}%` }} />
               </div>
-              <span className="num w-[88px] shrink-0 text-right text-[11px] text-ink-3">
+              <span className="num t-caption w-[88px] shrink-0 text-right text-ink-3">
                 {g.current !== undefined && g.target !== undefined ? figure(g) : `${g.percent}%`}
               </span>
             </div>

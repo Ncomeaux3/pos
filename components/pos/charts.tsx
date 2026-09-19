@@ -129,11 +129,12 @@ export function Radar({ axes, size = 132 }: { axes: RadarAxis[]; size?: number }
             y={y}
             textAnchor={anchor}
             dominantBaseline="middle"
-            className="label"
-            fontSize={size < 150 ? 7 : 8}
+            // Inline, not the `.label` class: a stylesheet rule beats an
+            // SVG presentation attribute, and 12px labels overran the tile.
+            style={{ fontSize: size < 150 ? 7.5 : 8.5, fontWeight: 500 }}
             fill="var(--ink-3)"
           >
-            {a.label.slice(0, 6).toUpperCase()}
+            {a.label.length > 8 ? `${a.label.slice(0, 7)}.` : a.label}
           </text>
         )
       })}

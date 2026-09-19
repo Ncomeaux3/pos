@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { ActionButton, Eyebrow, Overlay, SkillPicker } from '@/components/pos'
+import { ActionButton, Eyebrow, Overlay, SkillPicker, fieldClass } from '@/components/pos'
 import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
 import type { Task } from '../shape'
@@ -12,8 +12,7 @@ import { writeTask, type ActionResult, type WriteInput } from './actions'
 // until Save, with Delete in the footer for an existing task. The same form
 // with Create at the bottom is New task.
 
-const field =
-  'w-full border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand rounded-xl'
+const field = fieldClass
 
 /** The artboard's due options. `date` reveals a native date input beside the select. */
 const DUE_DAYS: Record<string, number | null> = {
@@ -164,7 +163,7 @@ export function TaskDrawer({
             value={draft.title}
             onChange={set('title')}
             placeholder="What needs doing?"
-            className={cn(field, 'px-3 py-2.5 text-[15px]')}
+            className={cn(field, 'text-[16px] md:text-[15px]')}
           />
         </label>
 
@@ -202,7 +201,7 @@ export function TaskDrawer({
           <label className="flex flex-col gap-1.5">
             <Eyebrow>Project</Eyebrow>
             <select value={draft.project} onChange={set('project')} className={field}>
-              <option value="">None</option>
+              <option value="">No project</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.name}>
                   {p.name}
@@ -213,7 +212,7 @@ export function TaskDrawer({
           <label className="flex flex-col gap-1.5">
             <Eyebrow>Time · optional</Eyebrow>
             <div className="flex items-center gap-2">
-              <input type="time" value={draft.time} onChange={set('time')} className={cn(field, 'num py-2')} />
+              <input type="time" value={draft.time} onChange={set('time')} className={cn(field, 'num')} />
               {draft.time && (
                 <button
                   type="button"
@@ -249,7 +248,7 @@ export function TaskDrawer({
         <label className="flex flex-col gap-1.5">
           <Eyebrow>Goal</Eyebrow>
           <select value={draft.goal} onChange={set('goal')} className={field}>
-            <option value="">{inherited ? 'From the project' : 'None'}</option>
+            <option value="">{inherited ? 'Inherit from project' : 'No goal'}</option>
             {goals.map((g) => (
               <option key={g.id} value={g.id}>
                 {g.title}
@@ -257,7 +256,9 @@ export function TaskDrawer({
             ))}
           </select>
           {inherited && (
-            <span className="text-[11px] text-ink-2">Inherits {inherited.title} from the project</span>
+            <span className="t-caption text-ink-3">
+              Counts toward the project&apos;s goal, {inherited.title}, unless a goal is set here.
+            </span>
           )}
         </label>
 
@@ -268,7 +269,7 @@ export function TaskDrawer({
             onChange={set('notes')}
             rows={4}
             placeholder="Context, links, acceptance…"
-            className={cn(field, 'resize-y px-3 py-2.5 leading-[1.5]')}
+            className={cn(field, 'resize-y leading-[1.5]')}
           />
         </label>
 
@@ -281,23 +282,23 @@ export function TaskDrawer({
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-px border border-rule bg-rule rounded-[18px]">
-          <div className="bg-bg px-3 py-2.5">
-            <Eyebrow>Source · who created it</Eyebrow>
+        <div className="glass grid grid-cols-2 gap-px overflow-hidden rounded-[18px] [&>*]:shadow-[-1px_-1px_0_var(--rule)]">
+          <div className="px-4 py-3">
+            <Eyebrow>Source</Eyebrow>
             <div
               className={cn(
-                'num mt-1.5 text-[12px]',
+                'num mt-1 text-[13px]',
                 task?.source.startsWith('agent') ? 'text-warn' : 'text-ink',
               )}
             >
               {task?.source ?? 'manual'}
             </div>
           </div>
-          <div className="bg-bg px-3 py-2.5">
+          <div className="px-4 py-3">
             <Eyebrow>Reminder channel</Eyebrow>
-            <div className="num mt-1.5 text-[12px] text-ink">
+            <div className="num mt-1 text-[13px] text-ink">
               {reminderChannels ? reminderChannels.join(' · ') : 'Off'} ·{' '}
-              <Link href="/settings/notifications" className="text-ink-3 hover:text-ink">
+              <Link href="/settings/notifications" className="text-action hover:underline">
                 change
               </Link>
             </div>

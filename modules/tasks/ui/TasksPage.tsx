@@ -72,16 +72,20 @@ export default async function TasksPage() {
 
   const open = tasks.filter((t) => t.status === 'open').length
   const doneToday = tasks.filter((t) => t.status === 'done' && t.doneDaysAgo === 0).length
+  const overdue = tasks.filter(
+    (t) => t.status === 'open' && t.dueInDays !== null && t.dueInDays < 0,
+  ).length
 
   return (
     <div className="space-y-[18px]">
-      {/* The artboard has no title block: the band, then the line you type a
-        * task on. The eyebrow's view label is the board's, so it lives there. */}
+      {/* The band carries the view in its crumb; the title block says where
+        * the week stands and holds New task. The quick add line follows. */}
       <PageHeader
         eyebrow={<BoardCrumb />}
         title="Tasks"
-        hideTitle
-        phoneAction={<NewTaskButton />}
+        lede={`${open} open, ${overdue} overdue, ${doneToday} done today.`}
+        actions={<NewTaskButton />}
+        phoneAction={<NewTaskButton phone />}
         status={
           <Eyebrow dot="brand" className="whitespace-nowrap">
             {open} open · {doneToday} done today
