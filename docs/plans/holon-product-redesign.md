@@ -229,11 +229,11 @@ Files: `modules/brain/ui`, `modules/ideas/ui`, `modules/skills/ui`.
 Exit: text/URL/file capture, note reading, idea research states and skill navigation remain usable, including long content and reduced motion.
 
 ### Phase 5: finance, health and fitness
-Complexity: high. Depends on Phase 4; reorder ahead of Phase 4 if owner priorities warrant.
+Complexity: high. Depends on Phase 4; reorder ahead of Phase 4 if owner priorities warrant. Done 2026-09-19: Finance's KPI strip and drawer stats on `MetricStrip`, Health rebuilt on the shared rows, chips, cards and the TabBar, Fitness strings and buttons; the e2e copy moved with the marks.
 Files: respective module UI, shared charts.
-- [ ] Apply chart roles and semantic state colors; preserve precision and null handling.
-- [ ] Restyle overview/detail/history/connection states and phone forms.
-- [ ] Integrate any completed v1.1 finance/fitness improvements rather than rebuild them.
+- [x] Apply chart roles and semantic state colors; preserve precision and null handling. (`LineChart`, `Sparkline`, `PaceBar` and `Radar` already drew from `--chart-1/2` and the ok/warn/bad tokens since Phase 1; this phase added `valueTone` on `MetricTile` so the 30-day change and a stalled goal colour the number from the same tokens, and moved the threshold slider to the action colour. Amounts, dates and null handling untouched: the money formatters, `core/series` and the chart labels the e2e reads are unchanged.)
+- [x] Restyle overview/detail/history/connection states and phone forms. (Finance: `Kpi`/`KpiStrip`/`DrawerStats` became `MetricStrip` cells, Edit limits and Cancel became `ActionButton`, Fixed and over-threshold marks `StatusChip`, limit inputs on `fieldClass`, the limit and threshold boxes `Card`. Health: the four hand-rolled control classes and the local input class deleted; vitals one strip; Upcoming/History the `TabBar`; records filter and the drawer's type picker `PillGroup`; appointments, medications, records, coverage and care team `RowList` rows; screenings `Card`s with a `StatusChip` state; empty states `EmptyState`; drawer fields on `fieldClass` under `Eyebrow` labels; every string-level uppercase gone. Fitness: `units.ts` labels in sentence case, Clear, Edit, Cancel, Remove and Add exercise on `ActionButton`, Required and Connected `StatusChip`s. SyncBand and SetupCard placement above the header stays for Phase 7.)
+- [x] Integrate any completed v1.1 finance/fitness improvements rather than rebuild them. (All of v1.1 is in the `holon` cut; nothing rebuilt.)
 Exit: amounts and dates match pre-redesign fixtures, charts handle sparse data, forms save and integrations report honest state.
 
 ### Phase 6: remaining life modules and review

@@ -120,6 +120,7 @@ export function MetricTile({
   value,
   delta,
   deltaTone = 'quiet',
+  valueTone,
   size = 'md',
   className,
   children,
@@ -128,6 +129,8 @@ export function MetricTile({
   value: ReactNode
   delta?: ReactNode
   deltaTone?: DeltaTone
+  /** Colours the number itself, as Finance's 30-day change and a stalled goal read. */
+  valueTone?: Exclude<DeltaTone, 'quiet'>
   size?: keyof typeof METRIC_SIZE
   className?: string
   /** A sparkline or bar, rendered under the delta. */
@@ -138,7 +141,8 @@ export function MetricTile({
       <Eyebrow>{label}</Eyebrow>
       <p
         className={cn(
-          'num font-semibold tracking-[-0.025em] text-ink',
+          'num font-semibold tracking-[-0.025em]',
+          valueTone ? DELTA[valueTone] : 'text-ink',
           METRIC_SIZE[size],
           // After the size: tailwind-merge drops a leading-* that precedes a
           // text size, since Tailwind's own sizes carry a line-height.

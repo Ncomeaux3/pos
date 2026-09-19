@@ -1,26 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { ActionButton, Eyebrow, Overlay, SkillPicker } from '@/components/pos'
+import { ActionButton, Eyebrow, Overlay, PillGroup, SkillPicker, fieldClass } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { logVisit, recordUrl, setAppointmentStatus, type ActionResult } from './actions'
-import {
-  KIND_LABEL,
-  ctl,
-  longWhen,
-  pill,
-  recordDate,
-  type Appointment,
-  type HealthRecord,
-} from './Health'
+import { KIND_LABEL, longWhen, recordDate, type Appointment, type HealthRecord } from './Health'
 
 // The one drawer on the Health page: keyed rows for an appointment or a
 // record, or the Log a visit form. The artboard's drawer has no band of its
 // own, so the shared band's crumb carries the kind.
 
-const input =
-  'h-[42px] w-full min-w-0 border border-rule-2 bg-bg px-3 text-[14px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand rounded-xl'
-const key = 'w-[120px] shrink-0 text-[10px] tracking-[0.12em] text-ink-3'
+const key = 'w-[120px] shrink-0 text-[12px] text-ink-3'
 
 export function HealthDrawer({
   appointment,
@@ -54,7 +44,7 @@ function Rows({ rows }: { rows: [string, string][] }) {
         .filter(([, v]) => v)
         .map(([k, v]) => (
           <div key={k} className="flex flex-wrap items-baseline gap-2 gap-x-3.5 border-b border-rule py-[13px]">
-            <span className={key}>{k.toUpperCase()}</span>
+            <span className={key}>{k.charAt(0).toUpperCase() + k.slice(1)}</span>
             <span className="min-w-0 flex-[1_1_160px] text-[14px] leading-[1.45] text-ink">{v}</span>
           </div>
         ))}
@@ -98,7 +88,7 @@ function AppointmentView({
       />
       {a.notes && (
         <div className="mt-5">
-          <span className="num text-[10px] tracking-[0.12em] text-ink-3">NOTES</span>
+          <Eyebrow>Notes</Eyebrow>
           <p className="mt-2.5 text-[13px] leading-[1.6] text-ink-2">{a.notes}</p>
         </div>
       )}
@@ -114,7 +104,6 @@ function AppointmentView({
         <div className="mt-[26px] flex flex-wrap gap-2.5">
           <ActionButton
             variant="accent"
-            className="h-10 px-4 text-[13px]"
             onClick={() => {
               onRun(() => setAppointmentStatus(a.id, 'done'), 'Marked done')
               onClose()
@@ -132,7 +121,7 @@ function RecordView({ record: r, skills, onClose }: { record: HealthRecord; skil
   const [opening, setOpening] = useState(false)
   return (
     <Overlay open narrow onClose={onClose} eyebrow={`Record · ${r.kind}`}>
-      <Head title={r.title} sub={[recordDate(r.takenOn), r.file ?? 'NO FILE', r.summary].filter(Boolean).join(' · ')} />
+      <Head title={r.title} sub={[recordDate(r.takenOn), r.file ?? 'No file', r.summary].filter(Boolean).join(' · ')} />
       <Rows rows={[...Object.entries(r.fields), ...(r.summary ? ([['Summary', r.summary]] as [string, string][]) : [])]} />
       <div className="mt-5">
         <Eyebrow>Linked skills</Eyebrow>
@@ -144,10 +133,8 @@ function RecordView({ record: r, skills, onClose }: { record: HealthRecord; skil
       </div>
       {r.file && (
         <div className="mt-[26px] flex flex-wrap gap-2.5">
-          <button
-            type="button"
+          <ActionButton
             disabled={opening}
-            className={ctl}
             onClick={async () => {
               setOpening(true)
               const result = await recordUrl(r.id)
@@ -156,7 +143,7 @@ function RecordView({ record: r, skills, onClose }: { record: HealthRecord; skil
             }}
           >
             Open the file
-          </button>
+          </ActionButton>
         </div>
       )}
     </Overlay>
@@ -198,26 +185,25 @@ function Form({
           onClose()
         }}
       >
-        <div>
-          <span className="num text-[10px] tracking-[0.12em] text-ink-3">TYPE</span>
-          <div role="radiogroup" aria-label="Type" className="mt-2.5 flex flex-wrap gap-1.5">
-            {KINDS.map((k) => (
-              <button key={k} type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)} className={pill(kind === k)}>
-                {KIND_LABEL[k]}
-              </button>
-            ))}
-          </div>
+        <div className="flex flex-col gap-1.5">
+          <Eyebrow>Type</Eyebrow>
+          <PillGroup
+            label="Type"
+            value={kind}
+            onChange={setKind}
+            options={KINDS.map((k) => ({ value: k, label: KIND_LABEL[k] }))}
+          />
         </div>
-        <label className="flex flex-col gap-2">
-          <span className="num text-[10px] tracking-[0.12em] text-ink-3">TITLE</span>
-          <input name="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Annual physical" className={input} />
+        <label className="flex flex-col gap-1.5">
+          <Eyebrow>Title</Eyebrow>
+          <input name="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Annual physical" className={fieldClass} />
         </label>
-        <label className="flex flex-col gap-2">
-          <span className="num text-[10px] tracking-[0.12em] text-ink-3">PROVIDER</span>
+        <label className="flex flex-col gap-1.5">
+          <Eyebrow>Provider</Eyebrow>
           <select
             name="provider"
             defaultValue={(providers.find((p) => /primary/i.test(p.role)) ?? providers[0])?.id ?? ''}
-            className={input}
+            className={fieldClass}
           >
             {providers.map((p) => (
               <option key={p.id} value={p.id}>
@@ -228,28 +214,28 @@ function Form({
           </select>
         </label>
         <div className="flex flex-wrap gap-3">
-          <label className="flex min-w-0 flex-[1_1_140px] flex-col gap-2">
-            <span className="num text-[10px] tracking-[0.12em] text-ink-3">DATE</span>
-            <input name="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className={cn(input, 'num')} />
+          <label className="flex min-w-0 flex-[1_1_140px] flex-col gap-1.5">
+            <Eyebrow>Date</Eyebrow>
+            <input name="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className={cn(fieldClass, 'num')} />
           </label>
-          <label className="flex min-w-0 flex-[1_1_120px] flex-col gap-2">
-            <span className="num text-[10px] tracking-[0.12em] text-ink-3">COST</span>
-            <input name="cost" placeholder="$40 copay" className={input} />
+          <label className="flex min-w-0 flex-[1_1_120px] flex-col gap-1.5">
+            <Eyebrow>Cost</Eyebrow>
+            <input name="cost" placeholder="$40 copay" className={fieldClass} />
           </label>
         </div>
-        <label className="flex flex-col gap-2">
-          <span className="num text-[10px] tracking-[0.12em] text-ink-3">NOTES</span>
-          <textarea name="notes" placeholder="What was decided, what to follow up on" className={cn(input, 'h-auto min-h-24 resize-y px-3 py-2.5 leading-[1.5]')} />
+        <label className="flex flex-col gap-1.5">
+          <Eyebrow>Notes</Eyebrow>
+          <textarea name="notes" placeholder="What was decided, what to follow up on" className={cn(fieldClass, 'min-h-24 resize-y leading-[1.5]')} />
         </label>
-        <div>
-          <span className="num text-[10px] tracking-[0.12em] text-ink-3">ATTACHMENT</span>
+        <div className="flex flex-col gap-1.5">
+          <Eyebrow>Attachment</Eyebrow>
           <input
             name="file"
             type="file"
             accept="application/pdf,image/*"
             disabled={future}
             aria-label="Attachment"
-            className="mt-2.5 block w-full text-[12px] text-ink-3 file:mr-3 file:h-8 file:border file:border-rule-2 file:bg-transparent file:px-3 file:text-[10px] file:tracking-[0.08em] file:text-ink-3 disabled:opacity-100"
+            className="block w-full text-[12px] text-ink-3 file:mr-3 file:h-8 file:rounded-full file:border file:border-glass-line file:bg-glass-strong file:px-3 file:text-[12px] file:font-medium file:text-ink disabled:opacity-100"
           />
           {future && <p className="mt-1.5 text-[11px] text-ink-4">Files attach to a record, once the visit has happened.</p>}
         </div>
@@ -261,12 +247,10 @@ function Form({
               : 'Past date: this files under Records.'}
         </p>
         <div className="mt-2 flex flex-wrap gap-2.5">
-          <ActionButton type="submit" variant="accent" className="h-10 px-4 text-[13px]">
+          <ActionButton type="submit" variant="accent">
             Save entry
           </ActionButton>
-          <button type="button" onClick={onClose} className={ctl}>
-            Cancel
-          </button>
+          <ActionButton onClick={onClose}>Cancel</ActionButton>
         </div>
       </form>
     </Overlay>

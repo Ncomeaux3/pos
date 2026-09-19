@@ -7,9 +7,11 @@ in a fresh session; the paragraph below names the plan that comes next.
 app is being rebranded and redesigned as Holon on the integration branch
 `holon`; phase PRs target it and one final PR lands on `main`. Production keeps
 the old brand until then. Phases 0 (mockups, #74), 1 (foundations, #76), 2
-(shell, #79) and 3 (Today recomposed, task and goal rows, #82) are merged into
-`holon`; Phase 4 (Second Brain, Ideas and Skills on the shared controls, cards
-and chips; Constellation untouched) is the open PR; Phases 5 to 7 follow.
+(shell, #79), 3 (Today recomposed, task and goal rows, #82) and 4 (Second
+Brain, Ideas and Skills on the shared controls, #83) are merged into `holon`;
+Phase 5 (Finance KPIs as a MetricStrip, Health rebuilt on rows, chips, cards
+and the TabBar, Fitness strings and buttons) is the open PR; Phases 6 and 7
+follow.
 Decisions are in decisions/log.md under 2026-09-18 and 2026-09-19. v1.1 below
 is complete except Phase 11's owner step.
 

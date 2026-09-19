@@ -30,6 +30,13 @@ const GOAL_TONE: Record<string, string> = {
   done: 'text-ok',
 }
 
+const GOAL_LABEL: Record<string, string> = {
+  stalled: 'Stalled',
+  at_risk: 'At risk',
+  on_track: 'On track',
+  done: 'Done',
+}
+
 /**
  * A tile's number and its unit on one 34px line box, as the artboard draws
  * them. (MetricTile's own leading-none was once lost to tailwind-merge; Card
@@ -159,12 +166,12 @@ export default async function FitnessPage() {
         lede="Workouts, what they came to, and the body metrics behind them. The coach reads the week and proposes plan changes into Review; nothing here changes the plan itself."
         actions={
           // Only once there is a span to state. A live page reached on
-          // readings alone has no first year, and "0 WORKOUTS · → TODAY" is
+          // readings alone has no first year, and "0 workouts · → today" is
           // not a fact about anything.
           state === 'live' &&
           span.count > 0 && (
-            <span className="num text-[11px] tracking-[0.08em] text-ink-3">
-              {span.count} WORKOUTS · {span.firstYear} → TODAY
+            <span className="num text-[11px] text-ink-3">
+              {span.count} workouts · {span.firstYear} → today
             </span>
           )
         }
@@ -187,7 +194,7 @@ export default async function FitnessPage() {
                   <Num>
                     {data.weekWorkouts} <Unit>workouts</Unit>
                   </Num>
-                  <Sub>{`${hoursLabel(data.weekMinutes)} · LOAD ${data.weekLoad}`}</Sub>
+                  <Sub>{`${hoursLabel(data.weekMinutes)} · load ${data.weekLoad}`}</Sub>
                 </>
               }
             />
@@ -202,14 +209,14 @@ export default async function FitnessPage() {
                       {mass(heaviest.best!.weightG).replace(' lb', '')}{' '}
                       <Unit>{`×${heaviest.best!.reps}`}</Unit>
                     </Num>
-                    <Sub>{`${whenLabel(heaviest.startedAt, todayIso)} · ${heaviest.name.toUpperCase()}`}</Sub>
+                    <Sub>{`${whenLabel(heaviest.startedAt, todayIso)} · ${heaviest.name}`}</Sub>
                   </>
                 ) : (
                   <>
                     <Num>
                       <span className="text-ink-3">--</span>
                     </Num>
-                    <Sub>NOTHING LIFTED YET</Sub>
+                    <Sub>Nothing lifted yet</Sub>
                   </>
                 )
               }
@@ -225,14 +232,14 @@ export default async function FitnessPage() {
                       <span className={GOAL_TONE[goal.status] ?? ''}>{goal.current}</span>{' '}
                       <Unit>{`/ ${goal.target}`}</Unit>
                     </Num>
-                    <Sub>{`${goal.status.replace('_', ' ').toUpperCase()} · ${goal.percent}%`}</Sub>
+                    <Sub>{`${GOAL_LABEL[goal.status] ?? goal.status} · ${goal.percent}%`}</Sub>
                   </>
                 ) : (
                   <>
                     <Num>
                       <span className="text-ink-3">--</span>
                     </Num>
-                    <Sub>NO FITNESS GOAL</Sub>
+                    <Sub>No fitness goal</Sub>
                   </>
                 )
               }
@@ -247,14 +254,14 @@ export default async function FitnessPage() {
                     <Num>
                       {mass(weight.value).replace(' lb', '')} <Unit>lb</Unit>
                     </Num>
-                    <Sub>{`MEASURED ${monthDay(weight.measuredOn)}`}</Sub>
+                    <Sub>{`Measured ${monthDay(weight.measuredOn)}`}</Sub>
                   </>
                 ) : (
                   <>
                     <Num>
                       <span className="text-ink-3">--</span>
                     </Num>
-                    <Sub>NO READINGS YET</Sub>
+                    <Sub>No readings yet</Sub>
                   </>
                 )
               }
