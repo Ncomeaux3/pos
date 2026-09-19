@@ -54,6 +54,15 @@ export function distance(metres: number, unit: DistanceUnit = 'mi'): string {
   return `${(metres / METRES_PER_MILE).toFixed(2)} mi`
 }
 
+/**
+ * "Sep 12", the row's date in the owner's zone. Not `getDate()`: a client
+ * component is also rendered on the server, where that is UTC, so a 20:30
+ * run would be dated tomorrow there and mismatch on hydration.
+ */
+export function shortDate(iso: string, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-US', { timeZone, month: 'short', day: '2-digit' }).format(new Date(iso))
+}
+
 /** "58m", "1h 02m". What a workout duration reads as in a list. */
 export function duration(seconds: number): string {
   const minutes = Math.round(seconds / 60)
