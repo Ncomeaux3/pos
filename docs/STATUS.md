@@ -13,7 +13,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-18 (Health Auto Export backfill, #75). Branch `main`, production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-19 (nine-month Apple Health import and the Fitness fixes it surfaced, #84 to #89, plus the owner-timezone clocks below). Branch `main`, production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -38,6 +38,31 @@ and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
 ## Done
+
+**Apple Health, nine months in, and what the data surfaced** (2026-09-19,
+five small PRs off main, each merged the same morning). The owner's manual
+Health Auto Export of 2026-01-01 to 2026-09-19 (64 MB, 58 metrics, 217
+workouts) went through `scripts/hae-backfill.mts` twice: once after #84 and
+again after #89. Every mapped metric arrived in the units the parser expects.
+#84: sleep stores the smaller of the `sleepStart` to `sleepEnd` span and the
+summed hours and skips a night over 14 h in both (Eight Sleep inflates each
+on different nights; 10 of 225 skipped), and pool swims arrive in yards.
+#85: the Recent workouts head counts Apple Health rows as APPLE HEALTH
+rather than BY HAND, a trend whose readings never go below zero keeps its
+axis at zero, and `strength` joins the Strength keywords so Apple's
+"Traditional Strength Training" places by rule. #87: the workout list pages
+by 40 with Show more and the tab badge counts every workout; swims read in
+yards with pace per 100 yd. #89: `distance_m` is `numeric(10,2)` (a 625 yd
+swim read as 626 from whole metres), pushed by the owner before the merge.
+Then this branch: `SyncBand`'s clocks and the workout list's dates were
+formatted in the renderer's zone, which on Vercel is UTC, so the band said
+"arrived 16:44" for an 11:44 arrival and a load that hydrated differently
+logged React #418; both now take the owner's timezone from `core.settings`
+through `core/clock.ts`, a pure module a client component can import. Two
+stale sleep rows from the 09-18 import (nights the new rule skips, so the
+upsert never touched them) were deleted by hand in the dashboard SQL editor.
+Verified on production after each merge: 217 workouts, steps high 32,193,
+swims 600 to 750 yd exact, sleep 365-day high 13h39m.
 
 **v1.1 Phase 12, hardening** (2026-09-15, branch `phase-12-hardening`). The
 last v1.1 phase; the plan is complete once its PR merges. `app/error.tsx` and
