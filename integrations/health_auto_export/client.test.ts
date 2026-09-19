@@ -96,6 +96,48 @@ describe('toBodyMetrics', () => {
     ])
   })
 
+  // From the 2026-09-19 export: 17 Eight Sleep sessions ended in the afternoon
+  // (22:52 to 17:09) with a plausible totalSleep, so the span was 13 to 20
+  // hours and the hours were right. The smaller of the two is the night.
+  it('takes the smaller of the span and the summed hours', () => {
+    const rows = toBodyMetrics({
+      data: {
+        metrics: [
+          metric('sleep_analysis', 'hr', [
+            {
+              date: '2026-09-13 00:00:00 -0500',
+              sleepStart: '2026-09-12 22:52:00 -0500',
+              sleepEnd: '2026-09-13 17:09:30 -0500',
+              totalSleep: 7.091666666666667,
+              asleep: 0,
+            },
+          ]),
+        ],
+      },
+    })
+    expect(rows).toEqual([{ kind: 'sleep_minutes', measuredOn: '2026-09-13', value: 426 }])
+  })
+
+  // Same export: 11 nights had the span and the hours both over 12 hours.
+  it('skips a night whose best reading is over 14 hours', () => {
+    const rows = toBodyMetrics({
+      data: {
+        metrics: [
+          metric('sleep_analysis', 'hr', [
+            {
+              date: '2026-02-18 00:00:00 -0600',
+              sleepStart: '2026-02-17 23:16:00 -0600',
+              sleepEnd: '2026-02-18 14:44:00 -0600',
+              totalSleep: 15.666666666666666,
+              asleep: 0,
+            },
+          ]),
+        ],
+      },
+    })
+    expect(rows).toEqual([])
+  })
+
   it('converts kilojoules to kilocalories and takes anything else as kilocalories', () => {
     const energy = (units: string, q: number) =>
       toBodyMetrics({ data: { metrics: [metric('active_energy', units, [{ qty: q, date: at('2026-09-11') }])] } })[0]
@@ -157,11 +199,12 @@ describe('toWorkouts', () => {
     ).toEqual(['strength', 'strength', 'strength', 'run', 'ride', 'swim', 'walk', 'walk', 'other'])
   })
 
-  it('converts km, tolerates missing optionals, and skips what has no id, start or duration', () => {
+  it('converts km and yards, tolerates missing optionals, and skips what has no id, start or duration', () => {
     const rows = toWorkouts({
       data: {
         workouts: [
           { id: 'a', name: 'Cycling', start: run.start, end: run.end, duration: 3600, distance: { qty: 20, units: 'km' } },
+          { id: 'b', name: 'Pool Swim', start: run.start, end: run.end, duration: 1800, distance: { qty: 700, units: 'yd' } },
           { name: 'Legacy v1', start: run.start, end: run.end, totalEnergy: { qty: 1 } },
           { id: 'c', name: 'No start', duration: 60 },
           { id: 'd', name: 'Bad date', start: '11/09/2026', duration: 60 },
@@ -176,6 +219,16 @@ describe('toWorkouts', () => {
         startedAt: run.start,
         durationS: 3600,
         distanceM: 20000,
+        avgHr: null,
+        detail: '',
+      },
+      {
+        externalId: 'b',
+        name: 'Pool Swim',
+        kind: 'swim',
+        startedAt: run.start,
+        durationS: 1800,
+        distanceM: 640,
         avgHr: null,
         detail: '',
       },

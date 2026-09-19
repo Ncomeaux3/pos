@@ -96,8 +96,11 @@ it. Still open, and the reason the report exists: the real export's nights ran
 297 to 1098 minutes, and 1098 is 18.3 hours. The report names the cause, because
 a day carrying two sleep points keeps the last of them, so an afternoon nap can
 outrank the night it shares a date with, while a single point means the span
-itself is that long. The fix waits on the owner running `--sleep` against the
-real file; nothing about how sleep is stored changed here.
+itself is that long. Resolved 2026-09-19 against the nine-month export
+(2026-01-01 to 2026-09-19, 58 metrics, 217 workouts): every mapped metric
+arrived in the units the parser expects; sleep now stores the smaller of the
+span and the summed hours and skips a night over 14 h in both (10 of 225
+nights, all Eight Sleep); pool swims arrive in yards and were stored as 0 m.
 
 **v1.1 Phase 7b, skill picker, remaining drawers** (2026-09-15, branch
 `phase-7b-skill-picker-rest`). The same `SkillPicker` block on the trip,

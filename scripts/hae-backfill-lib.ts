@@ -122,7 +122,9 @@ export function sleepReport(payload: Payload): SleepNight[] {
 
   const byDay = new Map<string, Point[]>()
   for (const point of points) {
-    const day = stored([point])?.day ?? '?'
+    // The webhook's date rule (sleepEnd, else date), read here rather than
+    // through stored() so a night the webhook skips still lands on its day.
+    const day = (asText(point.sleepEnd) || asText(point.date)).slice(0, 10) || '?'
     byDay.set(day, [...(byDay.get(day) ?? []), point])
   }
 
