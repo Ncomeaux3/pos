@@ -40,14 +40,19 @@ async function spendThisMonthCents(): Promise<number> {
   return Number(rows[0].cents)
 }
 
+// The last nightly run, the same row the Agent Log describes, so the two
+// screens cannot disagree. Aggregating core.jobs instead read any job's
+// last_run as the nightly's and any stale failed row as its status.
 async function nightlyJobState() {
   const { rows } = await db().query<{ last_run: Date | null; last_status: string | null; n: string }>(
-    `select max(last_run) as last_run,
-            min(last_status) filter (where last_status = 'failed') as last_status,
-            count(*)::text as n
-       from core.jobs`,
+    `select r.started_at as last_run, r.status as last_status,
+            (select count(*)::text from core.jobs) as n
+       from core.job_runs r
+      where r.finished_at is not null
+      order by r.started_at desc
+      limit 1`,
   )
-  return rows[0]
+  return rows[0] ?? { last_run: null, last_status: null, n: '0' }
 }
 
 const ZONES = [
@@ -64,6 +69,7 @@ const ZONES = [
 ]
 
 const money = (cents: number) => `$${(cents / 100).toFixed(2)}`
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 const field = fieldClass
 
@@ -148,10 +154,18 @@ export default async function SettingsPage({ searchParams }: PageProps<'/setting
               label="Last run"
               value={
                 lastRun
-                  ? `${job.last_status === 'failed' ? 'Failed' : 'Ok'} · ${lastRun} · ${job.n} jobs`
+                  ? `${job.last_status === 'clean' ? 'Ok' : cap(job.last_status ?? 'unknown')} · ${lastRun} · ${job.n} jobs`
                   : 'Never'
               }
-              valueTone={job.last_status === 'failed' ? 'bad' : lastRun ? 'ok' : undefined}
+              valueTone={
+                !lastRun
+                  ? undefined
+                  : job.last_status === 'clean'
+                    ? 'ok'
+                    : job.last_status === 'partial'
+                      ? 'warn'
+                      : 'bad'
+              }
               size="xs"
             />
             <MetricTile label="Jobs registered" value={`${job.n} · every module plus core`} size="xs" />

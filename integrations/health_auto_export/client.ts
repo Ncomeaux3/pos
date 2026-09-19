@@ -53,6 +53,16 @@ export type Workout = {
 
 const GRAMS_PER_LB = 453.59237
 const METRES_PER_MI = 1609.344
+const METRES_PER_YD = 0.9144
+const KJ_PER_KCAL = 4.184
+
+/** Metres to the centimetre, which is what the distance column keeps. */
+const cm = (metres: number) => Math.round(metres * 100) / 100
+
+// A night longer than this is a phantom session, not sleep: 10 of 225 Eight
+// Sleep nights in the 2026-09-19 export had every field over 14 hours. It is
+// skipped, so the day is a gap rather than a spike on the trend.
+const MAX_NIGHT_MIN = 14 * 60
 
 /**
  * A total is summed across the day's points, because the app can be set to
@@ -76,6 +86,21 @@ const DATE = /^(\d{4}-\d{2}-\d{2}) \d{2}:\d{2}:\d{2} [+-]\d{4}$/
 function day(value: unknown): string | null {
   const m = typeof value === 'string' ? DATE.exec(value) : null
   return m ? m[1] : null
+}
+
+/** Minutes from one app timestamp to another, or null when either does not read or the order is wrong. */
+function minutesBetween(from: unknown, to: unknown): number | null {
+  const a = instant(from)
+  const b = instant(to)
+  return a !== null && b !== null && b > a ? (b - a) / 60_000 : null
+}
+
+// `yyyy-MM-dd HH:mm:ss Z` to epoch milliseconds: Date.parse wants a T and a
+// colon in the offset.
+function instant(value: unknown): number | null {
+  if (typeof value !== 'string' || !DATE.test(value)) return null
+  const ms = Date.parse(value.replace(' ', 'T').replace(/ ([+-]\d{2})(\d{2})$/, '$1:$2'))
+  return Number.isFinite(ms) ? ms : null
 }
 
 function qty(point: Record<string, unknown>, key = 'qty'): number | null {
@@ -115,7 +140,25 @@ const mass = (q: number, units: string) => {
 
 const length = (q: number, units: string) => {
   const u = units.toLowerCase()
-  return u.startsWith('mi') ? q * METRES_PER_MI : u.startsWith('km') ? q * 1000 : u === 'm' ? q : null
+  if (u.startsWith('mi')) return q * METRES_PER_MI
+  if (u.startsWith('km')) return q * 1000
+  // Pool swims arrive in yards (2026-09-19 export).
+  if (u.startsWith('yd')) return q * METRES_PER_YD
+  return u === 'm' ? q : null
+}
+
+/**
+ * Energy as kilocalories, whatever the phone is set to send.
+ *
+ * Unlike mass and length this does not skip what it cannot read: kilocalories
+ * are what Apple Health stores and what every US export has sent, so a missing
+ * or unrecognised units string is taken as kcal rather than dropping the day's
+ * energy. Only kilojoules are converted, because only kilojoules are wrong by
+ * a factor rather than wrong by a name.
+ */
+const energy = (q: number, units: string) => {
+  const u = units.toLowerCase()
+  return u === 'kj' || u.startsWith('kilojoule') ? q / KJ_PER_KCAL : q
 }
 
 const byName: Record<string, Translate> = {
@@ -126,18 +169,29 @@ const byName: Record<string, Translate> = {
   resting_heart_rate: simple('resting_hr', identity),
   heart_rate_variability: simple('hrv', identity),
   body_fat_percentage: simple('body_fat', tenths),
-  // Hours asleep, dated by the morning it ended so a night belongs to the day
-  // you woke up. `totalSleep` is the app's newer field; `asleep` the older.
+  // The night is dated by the morning it ended so it belongs to the day you
+  // woke up. Its length is the smaller of the span from sleepStart to sleepEnd
+  // and the app's summed hours (`totalSleep`, then the older `asleep`),
+  // because Eight Sleep gets each one wrong on different nights: overlapping
+  // records make the hours two to three times the night (2026-09-18), and a
+  // session that ends in the afternoon makes the span 13 to 20 hours while
+  // the hours read right (6 nights in the 2026-09-19 export). A point with
+  // only one of the two reads that one.
   sleep_analysis: (point) => {
     const measuredOn = day(point.sleepEnd) ?? day(point.date)
+    const span = minutesBetween(point.sleepStart, point.sleepEnd)
     const hours = qty(point, 'totalSleep') ?? qty(point, 'asleep')
-    if (!measuredOn || hours === null) return null
-    return { kind: 'sleep_minutes', measuredOn, value: hours * 60 }
+    const summed = hours === null ? null : hours * 60
+    const value = span === null ? summed : summed === null ? span : Math.min(span, summed)
+    if (!measuredOn || value === null || value > MAX_NIGHT_MIN) return null
+    return { kind: 'sleep_minutes', measuredOn, value }
   },
   step_count: simple('steps', identity),
-  active_energy: simple('active_energy', identity),
+  active_energy: simple('active_energy', energy),
   apple_exercise_time: simple('exercise_minutes', identity),
-  apple_stand_time: simple('stand_hours', identity),
+  // The count of hours stood, not `apple_stand_time`, which is minutes
+  // (99 for 11 hours in the 2026-09-18 export) and is left unmapped.
+  apple_stand_hour: simple('stand_hours', identity),
   vo2_max: simple('vo2_max', tenths),
   blood_oxygen_saturation: simple('blood_oxygen', tenths),
   respiratory_rate: simple('respiratory_rate', tenths),
@@ -217,7 +271,7 @@ export function toWorkouts(payload: unknown): Workout[] {
     const distance = quantity(w.distance)
     const metres = distance ? length(distance.qty, distance.units) : null
     const hr = quantity((w.heartRate as { avg?: unknown } | undefined)?.avg)
-    const energy = quantity(w.activeEnergyBurned)
+    const burned = quantity(w.activeEnergyBurned)
 
     out.push({
       externalId,
@@ -225,9 +279,9 @@ export function toWorkouts(payload: unknown): Workout[] {
       kind: toKind(name),
       startedAt,
       durationS: Math.round(duration),
-      distanceM: metres === null ? 0 : Math.round(metres),
+      distanceM: metres === null ? 0 : cm(metres),
       avgHr: hr ? Math.round(hr.qty) : null,
-      detail: energy ? `${Math.round(energy.qty)} kcal` : '',
+      detail: burned ? `${Math.round(energy(burned.qty, burned.units))} kcal` : '',
     })
   }
   return out

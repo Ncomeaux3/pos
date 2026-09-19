@@ -115,7 +115,7 @@ nodes:
   - id: strength
     parent: health
     name: Strength
-    keywords: [squat, deadlift, bench, press, lifting, lift, gym, barbell, dumbbell, reps, sets, pull up, push up, workout]
+    keywords: [strength, squat, deadlift, bench, press, lifting, lift, gym, barbell, dumbbell, reps, sets, pull up, push up, workout]
   - id: endurance
     parent: health
     name: Endurance
