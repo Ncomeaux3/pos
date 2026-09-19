@@ -322,7 +322,10 @@ export async function fitnessGoal(): Promise<FitnessGoal | null> {
   const goal = attention.find((g) =>
     goalLinks.get((g as FitnessGoal & { id: string }).id)?.skills.some((s) => workoutSkills.has(s.id)),
   )
+  // One decimal, the way Goals prints a value: a weight converted from grams
+  // arrives as 190.99968546644905 otherwise.
+  const tenth = (n: number) => Math.round(n * 10) / 10
   return goal
-    ? { title: goal.title, status: goal.status, percent: goal.percent, current: goal.current, target: goal.target }
+    ? { title: goal.title, status: goal.status, percent: goal.percent, current: tenth(goal.current), target: tenth(goal.target) }
     : null
 }

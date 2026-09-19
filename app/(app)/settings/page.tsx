@@ -39,14 +39,19 @@ async function spendThisMonthCents(): Promise<number> {
   return Number(rows[0].cents)
 }
 
+// The last nightly run, the same row the Agent Log describes, so the two
+// screens cannot disagree. Aggregating core.jobs instead read any job's
+// last_run as the nightly's and any stale failed row as its status.
 async function nightlyJobState() {
   const { rows } = await db().query<{ last_run: Date | null; last_status: string | null; n: string }>(
-    `select max(last_run) as last_run,
-            min(last_status) filter (where last_status = 'failed') as last_status,
-            count(*)::text as n
-       from core.jobs`,
+    `select r.started_at as last_run, r.status as last_status,
+            (select count(*)::text from core.jobs) as n
+       from core.job_runs r
+      where r.finished_at is not null
+      order by r.started_at desc
+      limit 1`,
   )
-  return rows[0]
+  return rows[0] ?? { last_run: null, last_status: null, n: '0' }
 }
 
 const ZONES = [
@@ -151,8 +156,8 @@ export default async function SettingsPage({ searchParams }: PageProps<'/setting
             </div>
             <div className={`${cell} border-b border-rule sm:border-b-0 sm:border-r`}>
               <Eyebrow>Last run</Eyebrow>
-              <div className={`num mt-1.5 text-[12px] ${job.last_status === 'failed' ? 'text-bad' : lastRun ? 'text-ok' : 'text-ink-3'}`}>
-                {lastRun ? `${job.last_status === 'failed' ? 'failed' : 'ok'} · ${lastRun} · ${job.n} jobs` : 'never'}
+              <div className={`num mt-1.5 text-[12px] ${!lastRun ? 'text-ink-3' : job.last_status === 'clean' ? 'text-ok' : job.last_status === 'partial' ? 'text-warn' : 'text-bad'}`}>
+                {lastRun ? `${job.last_status === 'clean' ? 'ok' : job.last_status} · ${lastRun} · ${job.n} jobs` : 'never'}
               </div>
             </div>
             <div className={cell}>
