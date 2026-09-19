@@ -79,7 +79,7 @@ describe('toReadings', () => {
         kind: 'run',
         startedAt: '2026-09-13T06:00:00-05:00',
         durationS: 1824,
-        distanceM: 5633,
+        distanceM: 5632.7,
         avgHr: 150,
         detail: '350 kcal',
       },
