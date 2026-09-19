@@ -185,8 +185,8 @@ Each phase is a focused branch/PR with a screenshot comparison, relevant regress
 ### Phase 0: baseline and representative designs
 Complexity: medium. Depends on owner scope answers.
 - [x] Reconcile current branch with active v1.1/v2 work; inventory actual routes and actions. (v1.1 complete except Phase 11's owner step; `holon` cut from main e9efdaa)
-- [ ] Capture current screens with synthetic data at phone and desktop widths; record a route/state matrix. (Blocked on the laptop's Docker; a provisional Sep 11 to 15 set is in the session scratchpad.)
-- [ ] Record route bundle sizes, view-switch requests and representative rendering timings.
+- [x] Capture current screens with synthetic data at phone and desktop widths; record a route/state matrix. (e2e on `main` e9efdaa run 2026-09-18: 222 passed, 3 failed, all pre-existing; 348 screenshots in `e2e/.scratch/before/`, gitignored. The route and state matrix is the e2e suite's test list.)
+- [x] Record route bundle sizes, view-switch requests and representative rendering timings. (Next 16 prints no per-route sizes; client JS total is the measure: main 1704 kB in 36 chunks, phase 2 1700 kB. In `e2e/.scratch/before/build-sizes.md`. View-switch requests are asserted by the tasks e2e; timings are compared in Phase 7.)
 - [x] Build reviewable designs for Today, Tasks, Finance and the task drawer in both themes and phone/desktop layouts (docs/design/holon, PR #74; three revisions: register, grouped surfaces, glass).
 - [x] Confirm layout, density and hierarchy against the selected kit and owner feedback before module-wide changes. (Owner: Apple and OpenAI register, then iOS and visionOS glass, smooth; motionsites.ai for motion; 2026-09-18.)
 Exit: concrete visual targets plus current behavior checklist. No speculative feature work.
@@ -204,11 +204,11 @@ Exit: representative screens use the new foundation without behavior regressions
 ### Phase 2: shell and entry surfaces
 Complexity: medium. Depends on Phase 1.
 Files: app layouts, Sidebar, PageHeader, CommandPalette, Browse/Search, `core/nav.ts`, auth/onboarding pages, `app/manifest.ts`, favicon, `public/icons`, `public/splash`, relevant service-worker references.
-- [ ] Apply agreed navigation grouping and Today label; retain route contracts and module discovery.
-- [ ] Complete expanded/collapsed rail, tablet behavior and safe-area-aware phone navigation.
-- [ ] Rebrand sign-in, onboarding, document titles and PWA assets as Holon.
-- [ ] Update theme-color handling to match the active theme, not only device preference.
-- [ ] Inspect digest/email/push templates for user-facing POS naming; preserve sender/domain configuration.
+- [x] Apply agreed navigation grouping and Today label; retain route contracts and module discovery. (`core/nav-groups.ts` holds the group table; the rail, Browse and the palette hint read it; routes and module ids unchanged.)
+- [x] Complete expanded/collapsed rail, tablet behavior and safe-area-aware phone navigation. (Group headings fade out when the rail collapses; the tab bar keeps its safe-area padding from Phase 1; Today's tab glyph is the ribbon.)
+- [x] Rebrand sign-in, onboarding, document titles and PWA assets as Holon. (Sign-in and titles in Phase 1; the wizard rail carries the lockup and the splash is the kit's mobile splash at 1320x2868.)
+- [x] Update theme-color handling to match the active theme, not only device preference. (Done in Phase 1 by `generateViewport()`.)
+- [x] Inspect digest/email/push templates for user-facing POS naming; preserve sender/domain configuration. (Sender name and push title became Holon in Phase 1; the digest subject is the headline and never named the app.)
 Exit: entry through sign-in and installed PWA is consistent; existing sessions/passkeys and shortcuts work.
 
 ### Phase 3: Today and daily execution

@@ -321,7 +321,7 @@ export function Onboarding({ data }: { data: SetupData }) {
       onStep={(key) => setStep(key as StepKey)}
       kicker={
         <span className="text-brand">
-          STEP {String(index + 1).padStart(2, '0')} / {STEPS.length}
+          Step {index + 1} of {STEPS.length}
         </span>
       }
       title={stage.question}

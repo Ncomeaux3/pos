@@ -64,7 +64,7 @@ export function CommandPalette({ nav }: { nav: NavItem[] }) {
 
   const goto: Row[] = nav
     .filter((n) => !query || n.label.toLowerCase().includes(query.toLowerCase()))
-    .map((n) => ({ key: `nav-${n.href}`, label: n.label, hint: `G ${n.code}`, go: n.href, group: 'goto' as const }))
+    .map((n) => ({ key: `nav-${n.href}`, label: n.label, hint: n.group === 'today' || n.group === 'review' ? n.label : n.group[0].toUpperCase() + n.group.slice(1), go: n.href, group: 'goto' as const }))
 
   const fresh = hits.q === query.trim() && query.trim().length >= 2 ? hits.rows : []
   const found: Row[] = fresh.map((h) => ({

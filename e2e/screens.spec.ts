@@ -64,14 +64,13 @@ async function shoot(page: Page, name: string) {
 test('dashboard shell', async ({ page }) => {
   await page.goto('/')
 
-  // The nav is built from manifests, so Dashboard has to be there for the
+  // The nav is built from manifests, so Today has to be there for the
   // module contract to still be working.
   const nav = page.getByRole('navigation', { name: /modules|sections/i }).first()
   const mobile = (page.viewportSize()?.width ?? 0) < 768
-  // The rail says Dashboard; the phone's first tab says Home.
-  await expect(nav.getByRole('link', { name: mobile ? 'Home' : 'Dashboard' })).toBeVisible()
+  await expect(nav.getByRole('link', { name: 'Today' })).toBeVisible()
 
-  // The phone bar holds Home, Tasks, Finance and Browse, and Browse is the
+  // The phone bar holds Today, Tasks, Finance and Browse, and Browse is the
   // page where Review lives. What is worth asserting is that Review is
   // reachable, wherever it sits.
   if (mobile) {
@@ -96,26 +95,31 @@ test('dashboard shell', async ({ page }) => {
   await expect(nav.locator('a[href="/notes"]')).toHaveCount(0)
 
   if (!mobile) {
-    // PosSidebar.dc.html at 1440x900: the order of the rail, top to bottom.
+    // The Holon rail, top to bottom: Today, then Plan, Knowledge and Life
+    // under their headings, then Review with the weekly review beside it.
     const labels = await nav.locator('a').evaluateAll((links) =>
       links.map((a) => a.querySelector('.truncate')?.textContent?.trim()),
     )
     expect(labels).toEqual([
-      'Dashboard',
-      'Finance',
-      'Skill Tree',
+      'Today',
       'Tasks',
       'Goals',
+      'Skills',
       'Second Brain',
-      'Insurance',
       'Ideas',
-      'Fitness',
+      'Finance',
       'Health',
-      'Home & Assets',
+      'Fitness',
       'Meals',
       'Travel',
+      'Home & Property',
+      'Insurance',
       'Review',
+      'Weekly review',
     ])
+    await expect(nav.getByText('Plan', { exact: true })).toBeVisible()
+    await expect(nav.getByText('Knowledge', { exact: true })).toBeVisible()
+    await expect(nav.getByText('Life', { exact: true })).toBeVisible()
 
     // A rail row is a 38px pill with the route's icon before its label, and
     // the Review badge is filled with the action colour.
@@ -156,19 +160,19 @@ test('dashboard shell', async ({ page }) => {
       'Tasks · today',
       'Review · agent proposals',
       'Goals',
-      'Skill Tree',
+      'Skills',
       'Model spend · month',
       'Next 7 days',
     ])
     expect(eyebrows.slice(8)).toEqual([
       'Second Brain',
-      'Insurance',
       'Ideas',
-      'Fitness',
       'Health',
-      'Home & Assets',
+      'Fitness',
       'Meals',
       'Travel',
+      'Home & Property',
+      'Insurance',
     ])
     const tile = await bento.locator(':scope > div > div').first().evaluate((el) => {
       const cs = getComputedStyle(el)
@@ -200,21 +204,23 @@ test('dashboard shell', async ({ page }) => {
   await shoot(page, 'dashboard')
 })
 
-test('browse lists every enabled module and the POS group', async ({ page }) => {
+test('browse lists the rail groups', async ({ page }) => {
   await page.goto('/browse')
-  // Same source as the rail, minus Dashboard and Review, which have their own
-  // places: a tab and the POS group.
-  const modules = page.getByRole('list').first()
-  await expect(modules.getByRole('link')).toHaveCount(12)
-  await expect(modules.getByRole('link', { name: 'Finance' })).toBeVisible()
-  await expect(modules.getByRole('link', { name: 'Travel' })).toBeVisible()
-  await expect(modules.getByRole('link', { name: 'Dashboard' })).toHaveCount(0)
+  // Same source as the rail, in the rail's groups, minus Today (the first
+  // tab) and Search (the band above). Plan, Knowledge, Life, Review, Utilities.
+  const lists = page.getByRole('list')
+  await expect(lists).toHaveCount(5)
+  await expect(lists.nth(0).getByRole('link')).toHaveCount(3)
+  await expect(lists.nth(2).getByRole('link')).toHaveCount(7)
+  await expect(lists.nth(2).getByRole('link', { name: 'Finance' })).toBeVisible()
+  // Not in the list: the desktop rail beside it still has its own Today.
+  await expect(page.getByRole('main').getByRole('link', { name: 'Today' })).toHaveCount(0)
 
-  const pos = page.getByRole('list').last()
-  const labels = await pos.getByRole('link').evaluateAll((links) =>
-    links.map((a) => a.textContent?.replace(/\d+$/, '').trim()),
+  const utilities = await lists.last().getByRole('link').evaluateAll((links) =>
+    links.map((a) => a.textContent?.trim()),
   )
-  expect(labels).toEqual(['Review', 'Notifications', 'Agent log', 'Settings'])
+  expect(utilities).toEqual(['Notifications', 'Agent log', 'Settings'])
+  await expect(lists.nth(3).getByRole('link', { name: /^Review/ })).toBeVisible()
   await shoot(page, 'browse')
 })
 
@@ -235,21 +241,23 @@ test('phone header shows back off a tab root and not on one', async ({ page }, t
 test('home shows Run now on the phone', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile', 'The phone header is a phone thing')
 
-  // Home is a tab root, so its phone header is title plus one action, no
+  // Today is a tab root, so its phone header is title plus one action, no
   // Back: the one thing to do from a phone after a run is press it again.
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Home', level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Today', level: 1 })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Back' })).toHaveCount(0)
   // The phone header's own Run now, first in DOM order; the desktop band's
   // copy of the same button sits after it, hidden below md.
   await expect(page.getByRole('button', { name: 'Run now' }).first()).toBeVisible()
 
   // A Today page fits in two swipes: the seed's warnings and proposals show
-  // two and one rows here, the rest behind a link.
+  // two and one rows here, the rest behind a link. The budget grew by one
+  // headline line for the greeting (Holon phase 2); phase 3 recomposes Today
+  // and sets it again.
   await expect(page.getByRole('button', { name: /^Dismiss / })).toHaveCount(2)
   await expect(page.getByRole('link', { name: /and \d+ more/ })).toHaveCount(2)
   await expect(page.getByRole('button', { name: 'Approve' })).toHaveCount(1)
-  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(1800)
+  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(1840)
 })
 
 test('dashboard, the week ahead and arranging the tiles', async ({ page }) => {
@@ -305,7 +313,7 @@ test('skill tree, constellation and the selected skill panel', async ({ page }) 
   // Three shots of the heaviest page in the app, each in two themes.
   test.slow()
   await page.goto('/skills')
-  await expect(page.getByRole('heading', { name: 'Skill Tree' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Skills' })).toBeVisible()
   await expect(page.getByRole('img', { name: 'Skill constellation' })).toBeVisible()
 
   // POS Skill Tree.dc.html opens on a skill (the top gainer), so the right
@@ -662,10 +670,10 @@ test('command palette opens on cmd k and finds an entity', async ({ page }) => {
   await expect(palette).toBeVisible()
 
   // The Go to list is the same nav the sidebar builds, so it is there before
-  // anything is typed, each row with its G-code.
+  // anything is typed, each row with its group as the hint.
   await expect(palette.getByText('Go to')).toBeVisible()
   await expect(palette.getByRole('button', { name: /Settings/ })).toBeVisible()
-  await expect(palette.getByRole('button', { name: /Finance G 02/ })).toBeVisible()
+  await expect(palette.getByRole('button', { name: /Finance Life/ })).toBeVisible()
   await page.getByLabel(/command palette search/i).fill('deadlift')
   await expect(palette.getByRole('button', { name: /Deadlift 405/ })).toBeVisible()
   await shoot(page, 'command-palette')
@@ -1156,12 +1164,12 @@ test('agent log, the run accordion and the rail', async ({ page }) => {
   await expect(page.getByText('Undo history / 0')).toBeVisible()
   await expect(page.getByRole('radiogroup', { name: 'Agent autonomy' })).toBeVisible()
 
-  // The filter pills read in the sidebar's module order (Skill Tree is order
+  // The filter pills read in the sidebar's module order (Skills is order
   // 20, Ideas is 80), not the order entries happened to be written in: the
   // seed writes the ideas row first.
   const pills = page.getByRole('radiogroup', { name: 'Filter the log by module' }).getByRole('radio')
   const labels = await pills.allTextContents()
-  expect(labels.indexOf('Skill Tree')).toBeLessThan(labels.indexOf('Ideas'))
+  expect(labels.indexOf('Skills')).toBeLessThan(labels.indexOf('Ideas'))
 
   await shoot(page, 'agent-log')
 })
