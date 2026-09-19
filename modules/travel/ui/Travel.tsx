@@ -223,7 +223,7 @@ export function Travel({ data }: { data: TravelData }) {
           <button
             type="button"
             onClick={() => setParams({ new: 'wish', trip: null }, { push: true })}
-            className="whitespace-nowrap border border-rule-2 px-3 py-2 text-[12px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink"
+            className="whitespace-nowrap border border-rule-2 px-3 py-2 text-[12px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full"
           >
             Add to wishlist
           </button>
@@ -233,7 +233,7 @@ export function Travel({ data }: { data: TravelData }) {
         </div>
       </div>
 
-      <div data-testid="travel-globe" className="relative mt-[18px] h-[clamp(240px,38vh,420px)] border border-rule bg-bg-elev">
+      <div data-testid="travel-globe" className="relative mt-[18px] h-[clamp(240px,38vh,420px)] border border-rule bg-bg-elev rounded-[18px]">
         <Globe
           pins={pins}
           onPick={(id) => {
@@ -243,7 +243,7 @@ export function Travel({ data }: { data: TravelData }) {
           }}
           alert={
             data.alert && (
-              <div className="flex items-center gap-2.5 border border-warn bg-bg px-3 py-2">
+              <div className="flex items-center gap-2.5 border border-warn bg-bg px-3 py-2 rounded-[18px]">
                 <span className="label shrink-0 text-[9px] tracking-[0.08em] text-warn">Alert</span>
                 <span className="min-w-0 text-[12px] text-ink">{data.alert.title}</span>
               </div>
@@ -276,7 +276,7 @@ export function Travel({ data }: { data: TravelData }) {
                     key={t.id}
                     type="button"
                     onClick={() => setParams({ trip: t.id, new: null }, { push: true })}
-                    className="border border-rule bg-bg-elev px-[18px] py-4 text-left transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-rule-2"
+                    className="border border-rule bg-bg-elev px-[18px] py-4 text-left transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-rule-2 rounded-full"
                   >
                     <div className="flex items-start justify-between gap-2.5">
                       <div className="min-w-0">
@@ -357,7 +357,7 @@ export function Travel({ data }: { data: TravelData }) {
                   <button
                     type="button"
                     onClick={() => run(() => setTripStatus(w.id, 'planned'), `${w.name} is planned`)}
-                    className="border border-brand px-[9px] py-1 text-[11px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg"
+                    className="border border-brand px-[9px] py-1 text-[11px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg rounded-full"
                   >
                     Plan
                   </button>
@@ -367,7 +367,7 @@ export function Travel({ data }: { data: TravelData }) {
                     onClick={() => {
                       if (window.confirm(`Remove ${w.name} from the wishlist?`)) run(() => deleteTrip(w.id), 'Removed')
                     }}
-                    className="border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink"
+                    className="border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full"
                   >
                     ✕
                   </button>

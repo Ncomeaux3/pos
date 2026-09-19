@@ -118,7 +118,7 @@ export function GroceryDrawer({
         </div>
 
         {groups.length === 0 && (
-          <div className="border border-dashed border-rule-2 p-[30px] text-center">
+          <div className="border border-dashed border-rule-2 p-[30px] text-center rounded-[18px]">
             <p className="num text-[22px] font-light text-ink">Nothing planned</p>
             <p className="mt-1.5 text-[12px] text-ink-3">Plan a meal and its ingredients appear here.</p>
           </div>
@@ -145,7 +145,7 @@ export function GroceryDrawer({
                     className="flex items-center justify-between gap-2.5 border-b border-rule py-[7px] text-left"
                   >
                     <span className="flex min-w-0 items-center gap-2.5">
-                      <span aria-hidden className={cn('size-3 shrink-0 border', on ? 'border-brand bg-brand' : 'border-ink-3')} />
+                      <span aria-hidden className={cn('size-3 shrink-0 border rounded-full', on ? 'border-brand bg-brand' : 'border-ink-3')} />
                       <span className={cn('text-[13px]', on ? 'text-ink-3 line-through' : 'text-ink')}>{ing.item}</span>
                     </span>
                     <span className="num shrink-0 text-[10px] text-ink-3">
@@ -259,15 +259,15 @@ export function RecipeDrawer({
             <button
               type="button"
               onClick={() => run(() => setFavourite(recipe.id, !recipe.favourite))}
-              className={cn('num shrink-0 border border-rule-2 px-2 py-1 text-[12px] transition-colors hover:border-ink', recipe.favourite ? 'text-brand' : 'text-ink-3')}
+              className={cn('num shrink-0 border border-rule-2 px-2 py-1 text-[12px] transition-colors hover:border-ink rounded-full', recipe.favourite ? 'text-brand' : 'text-ink-3')}
             >
               {recipe.favourite ? '★ Favorite' : '☆ Add favorite'}
             </button>
           </div>
           <div className="mt-2.5 flex flex-wrap gap-1.5">
-            {draft && <span className="num border border-warn/60 px-1.5 py-0.5 text-[10px] text-warn">draft</span>}
+            {draft && <span className="num border border-warn/60 px-1.5 py-0.5 text-[10px] text-warn rounded-full">draft</span>}
             {recipe.tags.map((t) => (
-              <span key={t} className="num border border-rule px-1.5 py-0.5 text-[10px] text-ink-3">
+              <span key={t} className="num border border-rule px-1.5 py-0.5 text-[10px] text-ink-3 rounded-full">
                 {t}
               </span>
             ))}
@@ -284,7 +284,7 @@ export function RecipeDrawer({
           )}
         </div>
 
-        <div className="grid grid-cols-4 gap-px border border-rule bg-rule">
+        <div className="grid grid-cols-4 gap-px border border-rule bg-rule rounded-[18px]">
           <Cell label="kcal">{recipe.macros.kcal}</Cell>
           <Cell label="Protein" className="text-brand">
             {recipe.macros.protein}g

@@ -149,7 +149,7 @@ export function Brain({ data }: { data: BrainData }) {
               type="button"
               onClick={() => setParams({ folder: f.id === 'inbox' ? null : f.id, note: null })}
               className={cn(
-                'inline-flex min-h-11 items-center gap-2 border px-2.5 py-[5px] text-[12px] transition-colors duration-150 md:min-h-0',
+                'inline-flex min-h-11 items-center gap-2 border px-2.5 py-[5px] text-[12px] transition-colors duration-150 md:min-h-0 rounded-full',
                 on ? 'border-ink bg-ink text-bg' : 'border-rule-2 text-ink-3 hover:border-ink hover:text-ink',
                 i === 2 && 'ml-2.5',
               )}
@@ -189,7 +189,7 @@ export function Brain({ data }: { data: BrainData }) {
               type="button"
               onClick={() => setParams({ folder: h.id, note: null })}
               className={cn(
-                'inline-flex min-h-11 items-center gap-2 border px-2.5 py-[5px] text-[12px] transition-colors duration-150 md:min-h-0',
+                'inline-flex min-h-11 items-center gap-2 border px-2.5 py-[5px] text-[12px] transition-colors duration-150 md:min-h-0 rounded-full',
                 on ? 'border-ink bg-ink text-bg' : 'border-rule-2 text-ink-3 hover:border-ink hover:text-ink',
               )}
             >
@@ -201,7 +201,7 @@ export function Brain({ data }: { data: BrainData }) {
         <button
           type="button"
           onClick={() => setParams({ hub: 'new' }, { push: true })}
-          className="inline-flex min-h-11 items-center gap-2 border border-dashed border-rule-2 px-2.5 py-[5px] text-[12px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink md:min-h-0"
+          className="inline-flex min-h-11 items-center gap-2 border border-dashed border-rule-2 px-2.5 py-[5px] text-[12px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink md:min-h-0 rounded-full"
         >
           + Hub
         </button>
@@ -257,7 +257,7 @@ export function Brain({ data }: { data: BrainData }) {
                       {n.kind}
                     </span>
                     {n.status === 'draft' && (
-                      <span className="label border border-warn px-1 text-[9px] tracking-[0.08em] text-warn">
+                      <span className="label border border-warn px-1 text-[9px] tracking-[0.08em] text-warn rounded-full">
                         draft
                       </span>
                     )}

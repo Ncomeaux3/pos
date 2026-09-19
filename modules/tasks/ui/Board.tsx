@@ -48,9 +48,9 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 
 /** The artboard's small buttons: 11px, 4px 9px, a rule-2 border. */
 export const mini =
-  'border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink'
+  'border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full'
 export const miniAccent =
-  'border border-brand px-[9px] py-1 text-[11px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg'
+  'border border-brand px-[9px] py-1 text-[11px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg rounded-full'
 
 export const priorityColor = (p: Task['priority']) =>
   p === 'P1' ? 'text-bad' : p === 'P2' ? 'text-ink-2' : 'text-ink-4'
@@ -297,7 +297,7 @@ export function Board({
                     run(() => writeTask({ id, ...dropPatch(column.drop!) }), `Moved to ${column.label}`)
                   }}
                   className={cn(
-                    'min-w-0 border bg-bg-elev px-2.5 py-3 transition-colors duration-150',
+                    'min-w-0 border bg-bg-elev px-2.5 py-3 transition-colors duration-150 rounded-[18px]',
                     // A dashed accent border says this column will take the card.
                     // A read-only column stays solid, so it says it will not.
                     dragging && column.drop ? 'border-dashed border-brand' : 'border-rule',
@@ -334,7 +334,7 @@ export function Board({
 
                   <div className="flex min-h-[60px] flex-col gap-1.5 pt-2.5">
                     {column.tasks.length === 0 ? (
-                      <p className="border border-dashed border-rule px-2 py-[18px] text-center text-[12px] text-ink-4">
+                      <p className="border border-dashed border-rule px-2 py-[18px] text-center text-[12px] text-ink-4 rounded-full">
                         {column.empty}
                       </p>
                     ) : (
@@ -453,7 +453,7 @@ function Mark({ tone, children }: { tone: 'bad' | 'warn'; children: string }) {
   return (
     <span
       className={cn(
-        'num border px-[5px] py-px text-[9px] tracking-[0.08em]',
+        'num border px-[5px] py-px text-[9px] tracking-[0.08em] rounded-full',
         tone === 'bad' ? 'border-bad text-bad' : 'border-warn text-warn',
       )}
     >
@@ -530,7 +530,7 @@ function Row({
         {...swipe}
         style={{ transform: dx ? `translateX(${dx}px)` : undefined }}
         className={cn(
-          'relative border bg-bg p-2.5 transition-colors duration-150 [touch-action:pan-y]',
+          'relative border bg-bg p-2.5 transition-colors duration-150 [touch-action:pan-y] rounded-[18px]',
           !dx && 'transition-transform',
           expanded ? 'border-rule-2' : 'border-rule',
           draggable && 'cursor-grab active:cursor-grabbing',
@@ -543,7 +543,7 @@ function Row({
             title={agent ? 'Approve first' : done ? 'Reopen' : 'Complete'}
             aria-label={done ? `Reopen ${task.title}` : `Complete ${task.title}`}
             className={cn(
-              'mt-px flex size-4 shrink-0 items-center justify-center border transition-colors duration-150',
+              'mt-px flex size-4 shrink-0 items-center justify-center border transition-colors duration-150 rounded-full',
               done
                 ? 'border-brand bg-brand'
                 : agent
@@ -583,7 +583,7 @@ function Row({
               {remind && (
                 <span
                   title="Reminder"
-                  className="num inline-flex items-center gap-[3px] whitespace-nowrap border border-rule-2 px-[5px] py-px text-[9px] tracking-[0.06em] text-ink-4"
+                  className="num inline-flex items-center gap-[3px] whitespace-nowrap border border-rule-2 px-[5px] py-px text-[9px] tracking-[0.06em] text-ink-4 rounded-full"
                 >
                   ⏰ {remind}
                 </span>
@@ -602,7 +602,7 @@ function Row({
             onClick={onEdit}
             title="Edit task"
             aria-label={`Edit ${task.title}`}
-            className="num hidden shrink-0 border border-rule px-1.5 py-0.5 text-[9px] tracking-[0.08em] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink md:inline-flex"
+            className="num hidden shrink-0 border border-rule px-1.5 py-0.5 text-[9px] tracking-[0.08em] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink md:inline-flex rounded-full"
           >
             EDIT
           </button>
@@ -745,7 +745,7 @@ function QuickAdd({
             save()
           }}
           className={cn(
-            'flex h-11 min-w-0 flex-1 basis-[280px] items-center border bg-bg-elev transition-colors duration-150',
+            'flex h-11 min-w-0 flex-1 basis-[280px] items-center border bg-bg-elev transition-colors duration-150 rounded-[18px]',
             text ? 'border-brand' : 'border-rule-2',
           )}
         >
@@ -770,7 +770,7 @@ function QuickAdd({
                 <span
                   key={p.field}
                   className={cn(
-                    'border border-current px-[7px] py-0.5 text-[10px]',
+                    'border border-current px-[7px] py-0.5 text-[10px] rounded-full',
                     chipColor(p.field, p.value),
                   )}
                 >

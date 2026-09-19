@@ -3,21 +3,19 @@ import { cn } from '@/lib/utils'
 
 export type ChipTone = 'neutral' | 'brand' | 'ok' | 'warn' | 'bad' | 'quiet'
 
-// Colour carries meaning here, so every tone also differs in its wording. The
-// accent is 3.8:1 on dark, which is fine for a bordered label and not enough to
-// be the only signal.
+// Colour carries meaning here, so every tone also differs in its wording. A
+// tinted fill rather than a coloured border, so the chip reads as a pill.
 const TONE: Record<ChipTone, string> = {
-  neutral: 'border-rule-2 text-ink-2',
-  brand: 'border-brand text-ok',
-  ok: 'border-ok/60 text-ok',
-  warn: 'border-warn/60 text-warn',
-  bad: 'border-bad/60 text-bad',
-  quiet: 'border-rule text-ink-3',
+  neutral: 'bg-glass-strong text-ink-2 shadow-[inset_0_0_0_1px_var(--glass-line)]',
+  brand: 'bg-brand-soft text-ink',
+  ok: 'bg-ok/12 text-ok',
+  warn: 'bg-warn/14 text-warn',
+  bad: 'bg-bad/12 text-bad',
+  quiet: 'bg-bg-deep/70 text-ink-3',
 }
 
 /**
- * The pill: 11px, 0.08em tracking, uppercase, 999px.
- * Tags, counts, kinds. Not a control.
+ * The pill: 12px, 500, sentence case, 999px. Tags, counts, kinds. Not a control.
  */
 export function Chip({
   children,
@@ -31,8 +29,8 @@ export function Chip({
   return (
     <span
       className={cn(
-        'label inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5',
-        'text-[11px] uppercase tracking-[0.08em] leading-none',
+        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5',
+        'text-[12px] font-medium leading-none',
         TONE[tone],
         className,
       )}
@@ -43,8 +41,8 @@ export function Chip({
 }
 
 /**
- * A state badge: same type, square corners. ON TRACK, GUARDED, PENDING, CLEAN.
- * Square so a state never reads as a removable tag.
+ * A state badge: same type, 6px corners. On track, Guarded, Pending, Clean.
+ * Squarer so a state never reads as a removable tag.
  */
 export function StatusChip({
   children,
@@ -58,8 +56,8 @@ export function StatusChip({
   return (
     <span
       className={cn(
-        'label inline-flex items-center gap-1.5 rounded-md border px-2 py-1',
-        'text-[10px] uppercase tracking-[0.1em] leading-none',
+        'inline-flex items-center gap-1.5 rounded-md px-2 py-1',
+        'text-[11px] font-medium leading-none',
         TONE[tone],
         className,
       )}

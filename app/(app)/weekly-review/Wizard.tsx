@@ -31,7 +31,8 @@ import {
   type StepKey,
 } from '@/core/reviews-shape'
 import { cn } from '@/lib/utils'
-import { toggleTheme } from '../shell-actions'
+import { ThemeSwitch } from '@/components/pos/ThemeSwitch'
+import { setThemeAction } from '../shell-actions'
 import { close, save } from './actions'
 
 // Six steps over one set of answers. Every step writes into the same object and
@@ -288,15 +289,7 @@ export function Wizard({ data }: { data: WeekData }) {
       // The artboard's band has the theme button beside the duration, and
       // the sidebar has its own row; both go through the same setting.
       // 38px, the artboard's control height on desktop; 44 on a phone.
-      themeToggle={
-        <button
-          type="button"
-          onClick={() => start(() => toggleTheme(data.theme))}
-          className="label min-h-11 border border-rule-2 px-3.5 text-[11px] uppercase tracking-[0.12em] text-ink-2 transition-colors duration-150 hover:text-ink md:min-h-[38px]"
-        >
-          {data.theme === 'dark' ? 'Dark' : 'Light'}
-        </button>
-      }
+      themeToggle={<ThemeSwitch theme={data.theme} onChange={setThemeAction} />}
       onBack={index > 0 ? () => setStep(STEPS[index - 1].key) : undefined}
       onNext={index === STEPS.length - 1 ? finish : () => setStep(STEPS[index + 1].key)}
       nextLabel={
@@ -365,7 +358,7 @@ export function Wizard({ data }: { data: WeekData }) {
                   <span
                     aria-hidden
                     className={cn(
-                      'size-4 shrink-0 border',
+                      'size-4 shrink-0 border rounded-full',
                       on ? 'border-brand bg-brand' : 'border-ink-3',
                     )}
                   />
@@ -396,7 +389,7 @@ export function Wizard({ data }: { data: WeekData }) {
               selected
               label={`Remove ${win}`}
               onClick={() => patch({ ownWins: answers.ownWins.filter((unused, j) => j !== i) })}
-              mark={<span aria-hidden className="size-4 shrink-0 border border-brand bg-brand" />}
+              mark={<span aria-hidden className="size-4 shrink-0 border border-brand bg-brand rounded-full" />}
               title={win}
               meta="Yours"
               right={<span className="label shrink-0 text-[10px] text-ink-3">Remove</span>}
@@ -445,7 +438,7 @@ export function Wizard({ data }: { data: WeekData }) {
                   <div
                     key={miss.id}
                     className={cn(
-                      'border bg-bg-elev px-4 py-[15px]',
+                      'border bg-bg-elev px-4 py-[15px] rounded-[18px]',
                       action ? 'border-brand' : 'border-rule-2',
                     )}
                   >
@@ -487,7 +480,7 @@ export function Wizard({ data }: { data: WeekData }) {
                               patch({ missActions: next })
                             }}
                             className={cn(
-                              'h-11 border px-3 text-[12px] transition-colors duration-150 active:scale-[.985] sm:h-8',
+                              'h-11 border px-3 text-[12px] transition-colors duration-150 active:scale-[.985] sm:h-8 rounded-full',
                               action === a.value
                                 ? 'border-brand bg-brand-soft text-ink'
                                 : 'border-rule-2 text-ink-3 hover:text-ink',
@@ -548,7 +541,7 @@ export function Wizard({ data }: { data: WeekData }) {
                     : 'bg-brand'
 
               return (
-                <div key={check.id} className="border border-rule-2 bg-bg-elev p-4">
+                <div key={check.id} className="border border-rule-2 bg-bg-elev p-4 rounded-[18px]">
                   <div className="flex flex-wrap items-baseline gap-x-3.5 gap-y-2.5">
                     <span className="min-w-0 flex-[1_1_220px]">
                       <span className="block text-[15px] text-ink">{check.title}</span>
@@ -676,7 +669,7 @@ export function Wizard({ data }: { data: WeekData }) {
                       <span
                         aria-hidden
                         className={cn(
-                          'grid size-6 shrink-0 place-items-center border text-[10px]',
+                          'grid size-6 shrink-0 place-items-center border text-[10px] rounded-full',
                           on ? 'border-brand bg-brand text-white' : 'border-rule-2 text-ink-3',
                         )}
                       >
@@ -718,7 +711,7 @@ export function Wizard({ data }: { data: WeekData }) {
           {/* The note as it will be written, before it is written. The server
               renders these same blocks, so nothing is filed that was not read
               here first. */}
-          <div className="border border-rule-2 bg-bg-elev p-5">
+          <div className="border border-rule-2 bg-bg-elev p-5 rounded-[18px]">
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <Eyebrow>Week {data.weekNumber} note</Eyebrow>
               <span className="label text-[10px] tracking-[0.12em] text-ink-3">
@@ -753,7 +746,7 @@ export function Wizard({ data }: { data: WeekData }) {
             {outcomes.map((outcome) => (
               <div
                 key={outcome.tag}
-                className="min-w-0 flex-[1_1_200px] border border-rule-2 bg-bg p-3.5"
+                className="min-w-0 flex-[1_1_200px] border border-rule-2 bg-bg p-3.5 rounded-[18px]"
               >
                 <p className="label text-[9px] tracking-[0.12em] text-brand">{outcome.tag}</p>
                 <p className="mt-2 text-[13px] leading-[1.5] text-ink-2">{outcome.text}</p>

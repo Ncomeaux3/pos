@@ -79,15 +79,15 @@ export const QUADRANT_BG: Record<Quadrant, string> = {
 export const LEVEL_TEXT: Record<Level, string> = { 1: 'Low', 2: 'Med', 3: 'High' }
 
 export const ghost =
-  'shrink-0 whitespace-nowrap border border-rule-2 px-3 py-2 text-[12px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink'
+  'shrink-0 whitespace-nowrap border border-rule-2 px-3 py-2 text-[12px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full'
 export const ghostAccent =
-  'shrink-0 whitespace-nowrap border border-brand px-3 py-2 text-[12px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg'
+  'shrink-0 whitespace-nowrap border border-brand px-3 py-2 text-[12px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg rounded-full'
 export const mini =
-  'shrink-0 whitespace-nowrap border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink'
+  'shrink-0 whitespace-nowrap border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full'
 export const miniAccent =
-  'shrink-0 whitespace-nowrap border border-brand px-[9px] py-1 text-[11px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg'
+  'shrink-0 whitespace-nowrap border border-brand px-[9px] py-1 text-[11px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg rounded-full'
 export const field =
-  'w-full min-w-0 border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand'
+  'w-full min-w-0 border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand rounded-xl'
 
 /** The artboard's 30 by 6 three-segment bar, filled to the level. */
 export function LevelBar({ level, tone }: { level: Level; tone: 'brand' | 'ink' }) {
@@ -109,7 +109,7 @@ export function LevelBar({ level, tone }: { level: Level; tone: 'brand' | 'ink' 
 /** The outlined quadrant mark. */
 export function QuadrantPill({ q, className }: { q: Quadrant; className?: string }) {
   return (
-    <span className={cn('num shrink-0 whitespace-nowrap border px-1.5 py-0.5 text-[9px] tracking-[0.08em]', QUADRANT_CLASS[q], className)}>
+    <span className={cn('num shrink-0 whitespace-nowrap border px-1.5 py-0.5 text-[9px] tracking-[0.08em] rounded-full', QUADRANT_CLASS[q], className)}>
       {QUADRANT_TEXT[q]}
     </span>
   )
@@ -135,7 +135,7 @@ export function ViewSwitch() {
   const { params, setParams } = useParams()
   const view = params.get('view') === 'matrix' ? 'matrix' : 'board'
   return (
-    <div className="flex shrink-0 border border-rule-2">
+    <div className="flex shrink-0 border border-rule-2 rounded-[18px]">
       {(['board', 'matrix'] as const).map((v) => (
         <button
           key={v}
@@ -219,7 +219,7 @@ export function Ideas({ data }: { data: IdeasData }) {
       </form>
 
       {pairA && pairB && !dismissed && (
-        <div className="mt-3.5 flex flex-wrap items-center justify-between gap-3.5 border border-brand px-3.5 py-2.5 duration-300 animate-in fade-in">
+        <div className="mt-3.5 flex flex-wrap items-center justify-between gap-3.5 border border-brand px-3.5 py-2.5 duration-300 animate-in fade-in rounded-[18px]">
           <div className="flex min-w-0 items-center gap-2.5">
             <span className="num shrink-0 text-[9px] tracking-[0.08em] text-brand">AGENT</span>
             <span className="min-w-0 text-[13px] text-ink-2">
@@ -285,7 +285,7 @@ export function Ideas({ data }: { data: IdeasData }) {
                       />
                     ))}
                     {list.length === 0 && (
-                      <div className={cn('border border-dashed p-[18px] text-center text-[12px] text-ink-4', dragging ? 'border-brand' : 'border-rule')}>
+                      <div className={cn('border border-dashed p-[18px] text-center text-[12px] text-ink-4 rounded-[18px]', dragging ? 'border-brand' : 'border-rule')}>
                         Drop here
                       </div>
                     )}
@@ -334,7 +334,7 @@ function Card({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onOpen}
-      className="min-w-0 cursor-grab border border-rule bg-bg-elev px-3.5 py-3 transition-[border-color,transform] duration-150 hover:-translate-y-px hover:border-rule-2 active:cursor-grabbing"
+      className="min-w-0 cursor-grab border border-rule bg-bg-elev px-3.5 py-3 transition-[border-color,transform] duration-150 hover:-translate-y-px hover:border-rule-2 active:cursor-grabbing rounded-[18px]"
     >
       <button type="button" className={cn('block text-left text-[13.5px] leading-[1.35] tracking-[-0.01em]', killed ? 'text-ink-3' : 'text-ink')}>
         {idea.title}
@@ -356,12 +356,12 @@ function Card({
       {(idea.tags.length > 0 || idea.skills.length > 0) && (
         <div className="mt-2.5 flex flex-wrap items-center gap-1">
           {idea.tags.map((t) => (
-            <span key={t} className="num border border-rule px-[5px] py-px text-[9.5px] text-ink-3">
+            <span key={t} className="num border border-rule px-[5px] py-px text-[9.5px] text-ink-3 rounded-full">
               #{t}
             </span>
           ))}
           {idea.skills.map((s) => (
-            <span key={s.id} className="num border border-brand-soft px-[5px] py-px text-[9.5px] text-brand">
+            <span key={s.id} className="num border border-brand-soft px-[5px] py-px text-[9.5px] text-brand rounded-full">
               {s.name}
             </span>
           ))}
@@ -404,7 +404,7 @@ function Matrix({
         Impact →
       </div>
 
-      <div className="relative min-h-[420px] border border-rule-2">
+      <div className="relative min-h-[420px] border border-rule-2 rounded-[18px]">
         <div className="absolute inset-x-0 top-1/2 h-px bg-rule" aria-hidden />
         <div className="absolute inset-y-0 left-1/2 w-px bg-rule" aria-hidden />
 
@@ -435,7 +435,7 @@ function Matrix({
                 top: `calc(${(3 - idea.impact) * 33 + 17}% + ${jitter * 0.6}px)`,
               }}
               className={cn(
-                'absolute flex max-w-[220px] -translate-x-1/2 -translate-y-1/2 items-center gap-2 border bg-bg-elev px-2.5 py-1.5 text-left transition-colors duration-150',
+                'absolute flex max-w-[220px] -translate-x-1/2 -translate-y-1/2 items-center gap-2 border bg-bg-elev px-2.5 py-1.5 text-left transition-colors duration-150 rounded-full',
                 openId === idea.id ? 'z-[2] border-brand' : 'border-rule-2 hover:z-[3] hover:border-ink',
               )}
             >

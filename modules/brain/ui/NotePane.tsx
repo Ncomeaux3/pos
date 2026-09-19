@@ -14,10 +14,10 @@ import { isFinished, type BrainHub, type BrainNote, type SetParams } from './Bra
 
 // 44px on a phone, the artboard's 30 from md up: the shell's touch rule.
 const MINI =
-  'min-h-11 whitespace-nowrap border border-rule-2 px-2.5 py-[5px] text-[11px] text-ink-3 transition-colors duration-150 md:min-h-0'
-const CELL = 'border border-rule px-3.5 py-3'
+  'min-h-11 whitespace-nowrap border border-rule-2 px-2.5 py-[5px] text-[11px] text-ink-3 transition-colors duration-150 md:min-h-0 rounded-full'
+const CELL = 'border border-rule px-3.5 py-3 rounded-[18px]'
 const CHIP =
-  'label inline-flex items-center gap-1.5 border border-rule-2 px-[7px] py-[2px] text-[10px] tracking-[0.08em] text-ink-2'
+  'label inline-flex items-center gap-1.5 border border-rule-2 px-[7px] py-[2px] text-[10px] tracking-[0.08em] text-ink-2 rounded-full'
 
 type Run = (action: () => Promise<ActionResult>, ok?: string) => void
 
@@ -111,7 +111,7 @@ export function NotePane({
         </div>
 
         <div className="grid flex-1 grid-cols-[repeat(auto-fit,minmax(min(100%,320px),1fr))] gap-3.5 px-6 pb-6 pt-4">
-          <div className="flex min-h-[280px] flex-col border border-rule bg-bg-elev">
+          <div className="flex min-h-[280px] flex-col border border-rule bg-bg-elev rounded-[18px]">
             <div className="flex justify-between gap-2 border-b border-rule px-3.5 py-2.5">
               <Eyebrow>Source</Eyebrow>
               <span className="num text-[10px] text-ink-3">{sourceMeta(note)}</span>
@@ -120,7 +120,7 @@ export function NotePane({
               {note.sourceText || 'No source text was kept for this draft.'}
             </p>
           </div>
-          <div className="flex min-h-[280px] flex-col border border-brand bg-bg-elev">
+          <div className="flex min-h-[280px] flex-col border border-brand bg-bg-elev rounded-[18px]">
             <div className="flex justify-between gap-2 border-b border-rule px-3.5 py-2.5">
               <Eyebrow>Draft summary</Eyebrow>
               <span className="num text-[10px] text-ink-3">

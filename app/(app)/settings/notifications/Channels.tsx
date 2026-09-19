@@ -21,7 +21,7 @@ export function Channels({
   const toast = useToast()
 
   return (
-    <div className="mt-3 grid gap-px border border-rule bg-rule sm:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
+    <div className="mt-3 grid gap-px border border-rule bg-rule sm:grid-cols-[repeat(auto-fit,minmax(200px,1fr))] rounded-[18px]">
       {channels.map((c) => (
         <div key={c.value} className="flex items-center justify-between gap-2.5 bg-bg px-3.5 py-3">
           <span>

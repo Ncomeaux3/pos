@@ -13,7 +13,7 @@ export function PlaceDrawer({ place, onClose }: { place: TravelData['places'][nu
     : 'no date'
   return (
     <Overlay open onClose={onClose} eyebrow="Travel / Places" title={place.name} lede={place.country || undefined} narrow>
-      <div className="grid grid-cols-2 gap-px border border-rule bg-rule">
+      <div className="grid grid-cols-2 gap-px border border-rule bg-rule rounded-[18px]">
         <div className="bg-bg px-3 py-2.5">
           <Eyebrow>Visited</Eyebrow>
           <div className="mt-1 text-[15px] text-ink">{visited}</div>

@@ -13,7 +13,7 @@ import type { SetParams } from './Brain'
 // is no extractor and the Node runtime cannot run one.
 
 const FIELD =
-  'w-full border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand'
+  'w-full border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand rounded-xl'
 
 type Kind = 'url' | 'youtube' | 'book' | 'note'
 
@@ -95,7 +95,7 @@ export function IngestDrawer({ setParams }: { setParams: SetParams }) {
           void submit()
         }}
       >
-        <div data-testid="brain-ingest-kinds" className="grid grid-cols-4 gap-px border border-rule bg-rule">
+        <div data-testid="brain-ingest-kinds" className="grid grid-cols-4 gap-px border border-rule bg-rule rounded-[18px]">
           {(Object.keys(KIND_LABEL) as Kind[]).map((k) => (
             <button
               key={k}
@@ -165,7 +165,7 @@ export function IngestDrawer({ setParams }: { setParams: SetParams }) {
         </label>
 
         {running && (
-          <div className="flex items-center gap-2.5 border border-brand px-3.5 py-3 text-[12px] text-ink">
+          <div className="flex items-center gap-2.5 border border-brand px-3.5 py-3 text-[12px] text-ink rounded-[18px]">
             <span className="status-dot" aria-hidden />
             Reading, drafting, classifying · a few seconds
           </div>

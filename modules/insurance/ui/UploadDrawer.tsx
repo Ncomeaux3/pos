@@ -154,7 +154,7 @@ export function UploadDrawer({
               <Eyebrow className="text-warn">Extracted · confirm each field</Eyebrow>
               <span className="num truncate text-[10px] text-ink-3">{draft.fileName}</span>
             </div>
-            <div className="flex flex-col gap-px border border-rule bg-rule">
+            <div className="flex flex-col gap-px border border-rule bg-rule rounded-[18px]">
               {draft.fields.map((field, i) => {
                 const low = field.confidence < LOW_CONFIDENCE
                 return (

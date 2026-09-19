@@ -109,9 +109,9 @@ function usedBy(id: string): string[] {
 }
 
 const btn =
-  'inline-flex items-center gap-2 border border-rule-2 px-3.5 py-2 text-[13px] text-ink transition-colors duration-150 hover:border-ink hover:bg-ink hover:text-bg'
+  'inline-flex items-center gap-2 border border-rule-2 px-3.5 py-2 text-[13px] text-ink transition-colors duration-150 hover:border-ink hover:bg-ink hover:text-bg rounded-full'
 const btnQuiet =
-  'inline-flex items-center border border-rule-2 px-3.5 py-2 text-[13px] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink'
+  'inline-flex items-center border border-rule-2 px-3.5 py-2 text-[13px] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full'
 
 export default async function ConnectionsPage({ searchParams }: PageProps<'/settings/connections'>) {
   const params = await searchParams
@@ -148,7 +148,7 @@ export default async function ConnectionsPage({ searchParams }: PageProps<'/sett
     <div className="space-y-[18px]">
       <SettingsHeader current="/settings/connections" />
 
-      {error && <p className="border border-bad/60 px-3 py-2.5 text-[13px] text-bad">{error}</p>}
+      {error && <p className="border border-bad/60 px-3 py-2.5 text-[13px] text-bad rounded-full">{error}</p>}
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,380px),1fr))] items-stretch gap-3.5">
         {manifests.map((manifest) => (
@@ -212,12 +212,12 @@ function ProviderCard({
   const hoursLeft = expires ? Math.round((expires.getTime() - now.getTime()) / 3_600_000) : null
 
   return (
-    <div className="flex flex-col border border-rule bg-bg-elev px-5 py-[18px] transition-colors duration-150 hover:border-rule-2">
+    <div className="flex flex-col border border-rule bg-bg-elev px-5 py-[18px] transition-colors duration-150 hover:border-rule-2 rounded-[18px]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
             <span className="text-[16px] text-ink">{manifest.label}</span>
-            <span className="num border border-rule-2 px-2 py-[3px] text-[10px] tracking-[0.08em] text-ink-2">
+            <span className="num border border-rule-2 px-2 py-[3px] text-[10px] tracking-[0.08em] text-ink-2 rounded-full">
               {AUTH_LABEL[manifest.auth.type]}
             </span>
           </div>
@@ -240,7 +240,7 @@ function ProviderCard({
 
       {status ? (
         <>
-          <div className="mt-3.5 grid border border-rule sm:grid-cols-2">
+          <div className="mt-3.5 grid border border-rule sm:grid-cols-2 rounded-[18px]">
             <div className="border-b border-rule px-3 py-2.5 sm:border-b-0 sm:border-r">
               <Eyebrow>Last test</Eyebrow>
               <div className={`num mt-1.5 break-words text-[12px] ${connected ? 'text-ok' : 'text-bad'}`}>
@@ -264,7 +264,7 @@ function ProviderCard({
           </div>
 
           {manifest.auth.type === 'webhook' && (
-            <div className="mt-2.5 flex flex-col gap-2 border border-rule px-3 py-2.5">
+            <div className="mt-2.5 flex flex-col gap-2 border border-rule px-3 py-2.5 rounded-[18px]">
               {/* Wraps rather than truncates: the phone is where this gets read, and a
                   cut-off URL cannot be checked against the one pasted into the app. */}
               <div className="flex flex-col gap-1">
@@ -338,7 +338,7 @@ function ProviderCard({
             <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
               <a
                 href={`/api/integrations/${manifest.id}/oauth/start`}
-                className="inline-flex h-9 items-center gap-2 border border-ink bg-ink px-3.5 text-[13px] text-bg transition-colors duration-150 hover:bg-ink-2"
+                className="inline-flex h-9 items-center gap-2 border border-ink bg-ink px-3.5 text-[13px] text-bg transition-colors duration-150 hover:bg-ink-2 rounded-full"
               >
                 Connect with {manifest.label} <span aria-hidden="true">&rarr;</span>
               </a>

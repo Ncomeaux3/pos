@@ -216,7 +216,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
           <button
             type="button"
             onClick={() => setResetToken((t) => t + 1)}
-            className="shrink-0 whitespace-nowrap border border-rule-2 px-3 py-[7px] text-[12px] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink"
+            className="shrink-0 whitespace-nowrap border border-rule-2 px-3 py-[7px] text-[12px] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full"
           >
             Reset view
           </button>
@@ -255,7 +255,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
 
             {/* One pip per attribute, the character sheet, six letters each as
               * the artboard cuts them. Cells on a hairline grid. */}
-            <div className="z-10 mx-5 mt-3 flex flex-wrap justify-end gap-px border border-white/12 bg-white/12 md:absolute md:right-5 md:top-[18px] md:mx-0 md:mt-0 md:max-w-[calc(100%-320px)]">
+            <div className="z-10 mx-5 mt-3 flex flex-wrap justify-end gap-px border border-white/12 bg-white/12 md:absolute md:right-5 md:top-[18px] md:mx-0 md:mt-0 md:max-w-[calc(100%-320px)] rounded-[18px]">
               {attributes.map((a) => (
                 <button
                   key={a.id}
@@ -413,7 +413,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
                 {/* Three cells on a hairline grid rather than three loose
                   * columns, which is what the artboard draws and what makes
                   * them read as one instrument. */}
-                <dl className="grid grid-cols-3 gap-px border border-rule bg-rule">
+                <dl className="grid grid-cols-3 gap-px border border-rule bg-rule rounded-[18px]">
                   <Stat
                     label="30 days"
                     value={stat.gained30d > 0 ? `+${round(stat.gained30d)} XP` : 'idle'}

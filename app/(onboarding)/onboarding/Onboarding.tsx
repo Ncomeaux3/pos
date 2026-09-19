@@ -559,7 +559,7 @@ export function Onboarding({ data }: { data: SetupData }) {
                         <span className="flex items-baseline gap-2">
                           <span className="text-[15px] text-ink">{displayName}</span>
                           {needed && (
-                            <span className="label border border-amber px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-amber">
+                            <span className="label border border-amber px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-amber rounded-full">
                               Needed
                             </span>
                           )}
@@ -841,7 +841,7 @@ export function Onboarding({ data }: { data: SetupData }) {
 
         return (
           <div className="space-y-5">
-            <div className="space-y-2 border border-brand bg-brand-soft p-4">
+            <div className="space-y-2 border border-brand bg-brand-soft p-4 rounded-[18px]">
               <Eyebrow>First run</Eyebrow>
               <p className="text-[14px] leading-[1.55] text-ink">
                 Tonight at {data.nightlyAt} the agent classifies what it finds and writes the{' '}

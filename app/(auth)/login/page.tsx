@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ComeauxverseLockup, Eyebrow, fieldClass } from '@/components/pos'
+import { Eyebrow, HolonLockup, fieldClass } from '@/components/pos'
 import { sendCode, verifyCode } from './actions'
 import { CodeInput } from './CodeInput'
 import { Countdown } from './Countdown'
@@ -22,14 +22,14 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      {/* The artboard's top band: the lockup, and what this install is. */}
-      <header className="flex h-14 shrink-0 flex-wrap items-center justify-between gap-3 px-7">
-        <ComeauxverseLockup className="h-5 text-ink" />
-        <Eyebrow dot="brand">POS · single owner · v0.1</Eyebrow>
+      {/* The top band: the lockup, and what this install is. */}
+      <header className="flex h-16 shrink-0 flex-wrap items-center justify-between gap-3 px-7">
+        <HolonLockup size={32} />
+        <Eyebrow>Single owner</Eyebrow>
       </header>
 
       <main className="grid flex-1 place-items-center p-6">
-      <div className="w-full max-w-[440px] border border-rule-2 bg-bg-elev p-9 pb-7">
+      <div className="glass w-full max-w-[440px] rounded-[24px] p-9 pb-7">
         {sent ? (
           <div className="space-y-5">
             <div className="space-y-3">
@@ -101,8 +101,8 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
               * you are signing in to is the heading. */}
             <div className="space-y-3">
               <Eyebrow>Sign in</Eyebrow>
-              <h1 className="text-[30px] font-normal leading-[1.05] tracking-[-0.03em] text-ink">
-                Personal Operating System
+              <h1 className="text-[36px] font-semibold leading-[1.05] tracking-[-0.03em] text-ink">
+                Your life. One system.
               </h1>
               <p className="t-caption text-ink-3">
                 One owner, one login. Use the passkey on this device, or have a sign in code sent

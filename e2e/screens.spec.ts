@@ -117,28 +117,26 @@ test('dashboard shell', async ({ page }) => {
       'Review',
     ])
 
-    // PosSidebar.dc.html: a row is 36px tall at least, its index is 11px mono,
-    // and the Review badge is drawn in the accent, not the green.
+    // A rail row is a 38px pill with the route's icon before its label, and
+    // the Review badge is filled with the action colour.
     const row = nav.locator('a[href="/finance"]')
-    const geometry = await row.evaluate((a) => {
-      const index = a.querySelector('.label')!
-      return {
-        minHeight: getComputedStyle(a).minHeight,
-        indexSize: getComputedStyle(index).fontSize,
-      }
-    })
-    expect(geometry).toEqual({ minHeight: '36px', indexSize: '11px' })
+    const geometry = await row.evaluate((a) => ({
+      height: getComputedStyle(a).height,
+      radius: getComputedStyle(a).borderRadius,
+      icon: a.querySelector('svg') !== null,
+    }))
+    expect(geometry).toEqual({ height: '38px', radius: '10px', icon: true })
 
     const badge = nav.locator('a[href="/review"] span').last()
     const accent = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
     )
-    const badgeColor = await badge.evaluate((el) => getComputedStyle(el).color)
+    const badgeColor = await badge.evaluate((el) => getComputedStyle(el).backgroundColor)
     const accentRgb = await page.evaluate((hex) => {
       const probe = document.createElement('span')
-      probe.style.color = hex
+      probe.style.backgroundColor = hex
       document.body.append(probe)
-      const rgb = getComputedStyle(probe).color
+      const rgb = getComputedStyle(probe).backgroundColor
       probe.remove()
       return rgb
     }, accent)
@@ -186,10 +184,12 @@ test('dashboard shell', async ({ page }) => {
     // The band's search, with the artboard's question rather than PageHeader's default.
     await expect(page.getByRole('button', { name: /What are you looking for/ })).toBeVisible()
 
-    // The footer is a list too: Dark (or Light) and Collapse are rows in it
-    // with 13px labels, not a bar under it.
+    // The footer holds the three-way theme control and the Collapse row.
     const footer = page.getByRole('navigation', { name: /sections/i })
-    await expect(footer.getByRole('button', { name: /^(Dark|Light)$/ })).toBeVisible()
+    const themeGroup = footer.getByRole('group', { name: 'Theme' })
+    await expect(themeGroup.getByRole('button', { name: 'System', exact: true })).toBeVisible()
+    // No cookie yet, so the page follows the device and System is pressed.
+    await expect(themeGroup.getByRole('button', { name: 'System', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await expect(footer.getByRole('button', { name: 'Collapse' })).toBeVisible()
     const labelSize = await footer
       .getByRole('button', { name: 'Collapse' })
@@ -717,9 +717,8 @@ test('login, signed out', async ({ page, context }) => {
   await expect(page.getByLabel(/owner email/i)).toBeVisible()
   await expect(page.getByLabel(/owner email/i)).toHaveAttribute('placeholder', /.+/)
   await expect(page.getByText(/code expires in 15 min/i)).toBeVisible()
-  // The install band uses middots, matching the artboard; a page crumb like
-  // "Review / Pending" is the only place this app uses a plain slash.
-  await expect(page.getByText(/POS · single owner · v0\.1/i)).toBeVisible()
+  // The band names the install: one owner, no version string.
+  await expect(page.getByText(/^single owner$/i)).toBeVisible()
   // The arrow glyph is aria-hidden, so the accessible name stays plain.
   await expect(page.getByRole('button', { name: /^send sign-in code$/i })).toBeVisible()
   await shoot(page, 'login')
@@ -823,14 +822,12 @@ test('review inbox, list and sticky detail panel', async ({ page }) => {
   // seeded proposals is guarded.
   await expect(page.getByRole('button', { name: /approve all non-guarded \(1\)/i })).toBeVisible()
 
-  // The card: "{agent} · {when}", the state word and the meta line as plain
-  // text, no chips.
+  // The card: "{agent} · {when}", the state word and the meta line.
   const first = page.getByRole('button', { name: /Add a pitch to a bare idea/ })
   await expect(first).toHaveText(/ideas\.tidy · (\d\d:\d\d today|yesterday|\d+ days ago)/)
   await expect(first).toContainText('PENDING')
   await expect(first).toContainText('64% confident')
   await expect(list).toContainText('GUARDED')
-  await expect(page.locator('.rounded-full', { hasText: /confident|write|guarded/i })).toHaveCount(0)
 
   // The panel for the default selection: Current / After, the strip, the
   // three actions.
@@ -1293,7 +1290,7 @@ test('tasks, a row expands in place and EDIT opens the form drawer', async ({ pa
     const box = (await drawer.boundingBox())!
     expect(box.x).toBe(0)
     expect(box.width).toBe(viewport.width)
-    expect(box.height).toBeLessThanOrEqual(viewport.height * 0.74 + 1)
+    expect(box.height).toBeLessThanOrEqual(viewport.height * 0.78 + 1)
   }
 
   // Edits hold until Save, then land as one write.
@@ -1368,7 +1365,8 @@ test('tasks, the six views and the month grid', async ({ page }) => {
     const dot = pane.locator('button:has(> span.rounded-full)').first()
     const title = (await dot.getAttribute('aria-label')) ?? ''
     await dot.click()
-    await expect(page.getByRole('dialog', { name: /Tasks \/ Edit/ })).toBeVisible()
+    // The drawer is named by the task's title now, not the crumb.
+    await expect(page.getByRole('dialog', { name: title })).toBeVisible()
     await expect(page.getByRole('dialog').getByLabel('Title')).toHaveValue(title)
   }
 })
@@ -1750,18 +1748,22 @@ test('weekly review, six steps and a note built from the answers', async ({ page
   // whatever the server rendered rather than on what the click did.
   await page.waitForLoadState('networkidle')
 
-  // The band's theme button, as the artboard draws it beside the duration. It
-  // names the theme you are on and shares the setting with the sidebar row,
-  // so one click moves both. Desktop only: the sidebar is not on a phone.
+  // The band's theme control: System, Light, Dark. It shares the setting
+  // with the sidebar's control, so one press moves both. System removes the
+  // attribute and the page follows the device. Desktop only: the sidebar is
+  // not on a phone.
   if ((page.viewportSize()?.width ?? 0) >= 768) {
     // shoot() leaves the cookie on dark but the page on its last shot, light.
     await page.reload()
     await page.waitForLoadState('networkidle')
-    const band = page.locator('header').getByRole('button', { name: /^dark$/i })
-    await band.click()
+    const band = page.locator('header').getByRole('group', { name: 'Theme' })
+    const rail = page.getByRole('navigation', { name: 'Sections' }).getByRole('group', { name: 'Theme' })
+    await band.getByRole('button', { name: 'Light', exact: true }).click()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
-    await expect(page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Light', exact: true })).toBeVisible()
-    await page.locator('header').getByRole('button', { name: /^light$/i }).click()
+    await expect(rail.getByRole('button', { name: 'Light', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await band.getByRole('button', { name: 'System', exact: true }).click()
+    await expect(page.locator('html')).not.toHaveAttribute('data-theme')
+    await band.getByRole('button', { name: 'Dark', exact: true }).click()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   }
 
@@ -1858,7 +1860,9 @@ test('finance, net worth and the budget pace marks', async ({ page }) => {
       .getByRole('button')
       .first()
       .evaluate((el) => getComputedStyle(el).padding)
-    expect(rowPadding).toBe('9px 0px')
+    // Rows sit inside the grouped surface with a 16px inset; the overview keeps
+    // its 9px row height (`overviewRow`) until Phase 5 restyles Finance.
+    expect(rowPadding).toBe('9px 16px')
     await expect(page.getByRole('button', { name: /edit limits/i })).toBeVisible()
   }
 

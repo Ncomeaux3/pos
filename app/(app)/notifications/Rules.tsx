@@ -477,7 +477,7 @@ function Preview({
           <div className="rounded-md border border-white/10 bg-white/[0.08] px-3.5 py-3 backdrop-blur-sm">
             <div className="flex items-baseline justify-between gap-2.5">
               <span className="label text-[10px] tracking-[0.12em] text-[#8de3d4]">
-                POS / {moduleLabel}
+                Holon / {moduleLabel}
               </span>
               <span className="label text-[10px] text-[#f2f2f0]/55">{when}</span>
             </div>

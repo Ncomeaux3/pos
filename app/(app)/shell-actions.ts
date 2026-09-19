@@ -9,9 +9,11 @@ import { setSidebarCollapsed, setTheme, type Theme } from '@/core/theme'
 // Server actions are standalone POST endpoints addressed by id, so the (app)
 // layout does not run for them and each one authenticates on its own.
 
-export async function toggleTheme(current: Theme) {
+const themeSchema = z.enum(['light', 'dark', 'system'])
+
+export async function setThemeAction(theme: Theme) {
   await requireOwner()
-  await setTheme(current === 'dark' ? 'light' : 'dark')
+  await setTheme(themeSchema.parse(theme))
   revalidatePath('/', 'layout')
 }
 

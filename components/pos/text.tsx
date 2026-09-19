@@ -33,7 +33,7 @@ export function StatusDot({ tone = 'brand', className }: { tone?: DotTone; class
 }
 
 /**
- * Mono 11px, 0.16em tracking, uppercase, ink-3. The universal small label.
+ * 13px, 500, sentence case, ink-3. The universal small label.
  * Pass `dot` for the leading status dot.
  */
 export function Eyebrow({

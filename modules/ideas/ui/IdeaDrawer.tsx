@@ -122,7 +122,7 @@ function View({
           {idea.tags.length > 0 && (
             <div className="mt-2.5 flex flex-wrap gap-1.5">
               {idea.tags.map((t) => (
-                <span key={t} className="num border border-rule px-1.5 py-0.5 text-[10px] text-ink-3">
+                <span key={t} className="num border border-rule px-1.5 py-0.5 text-[10px] text-ink-3 rounded-full">
                   #{t}
                 </span>
               ))}
@@ -130,7 +130,7 @@ function View({
           )}
         </div>
 
-        <div className="grid grid-cols-3 gap-px border border-rule bg-rule">
+        <div className="grid grid-cols-3 gap-px border border-rule bg-rule rounded-[18px]">
           <div className="bg-bg px-3 py-2.5">
             <Eyebrow>Stage</Eyebrow>
             <div className={cn('mt-1.5 text-[14px]', stage.className)}>{stage.label}</div>
@@ -176,7 +176,7 @@ function View({
           </div>
         )}
 
-        <div className="flex flex-col gap-2.5 border border-rule px-3.5 py-3">
+        <div className="flex flex-col gap-2.5 border border-rule px-3.5 py-3 rounded-[18px]">
           <div className="flex items-baseline justify-between">
             <Eyebrow className="text-brand">Agent</Eyebrow>
             <span className="text-[11px] text-ink-3">drafts land in Review</span>
@@ -282,7 +282,7 @@ function ResearchCard({
   onRun: (depth: 'quick' | 'deep') => void
 }) {
   return (
-    <div className="flex flex-col gap-2.5 border border-rule px-3.5 py-3">
+    <div className="flex flex-col gap-2.5 border border-rule px-3.5 py-3 rounded-[18px]">
       <div className="flex items-baseline justify-between">
         <Eyebrow>Research</Eyebrow>
         <span className="num text-[11px] text-ink-3">{run === null ? 'never run' : `${run.depth} · ${run.ranOn}`}</span>
@@ -301,7 +301,7 @@ function ResearchCard({
       {run?.status === 'ok' && (
         <div className="flex flex-col gap-2.5">
           <div className="flex flex-wrap items-center gap-2">
-            <span className={cn('num border px-1.5 py-0.5 text-[9px] tracking-[0.08em] uppercase', VERDICT_CLASS[run.verdict] ?? VERDICT_CLASS.unclear)}>
+            <span className={cn('num border px-1.5 py-0.5 text-[9px] tracking-[0.08em] uppercase rounded-full', VERDICT_CLASS[run.verdict] ?? VERDICT_CLASS.unclear)}>
               {run.verdict}
             </span>
             <span className="num text-[11px] text-ink-3">
@@ -378,7 +378,7 @@ function Segment({
   return (
     <div className="flex flex-col gap-1.5">
       <Eyebrow>{label}</Eyebrow>
-      <div role="radiogroup" aria-label={label} className="flex border border-rule-2">
+      <div role="radiogroup" aria-label={label} className="flex border border-rule-2 rounded-[18px]">
         {LEVELS.map((l) => (
           <button
             key={l}
@@ -516,7 +516,7 @@ function Form({
           <Eyebrow>Tags</Eyebrow>
           <input value={d.tags} onChange={set('tags')} placeholder="saas, b2b, hardware" className={cn(field, 'num')} />
         </label>
-        <div className="border border-rule px-3.5 py-3">
+        <div className="border border-rule px-3.5 py-3 rounded-[18px]">
           <div className="flex items-baseline justify-between">
             <Eyebrow>Skills · linked</Eyebrow>
             <span className="text-[11px] text-ink-3">from title, pitch and tags · corrected on the Skill tree</span>
@@ -526,7 +526,7 @@ function Form({
               <span className="text-[12px] text-ink-4">{idea ? 'Nothing matched yet.' : 'Classified when it is saved.'}</span>
             ) : (
               idea.skills.map((s) => (
-                <span key={s.id} className="num border border-rule-2 px-2 py-[3px] text-[11px] tracking-[0.06em] text-ink-2 uppercase">
+                <span key={s.id} className="num border border-rule-2 px-2 py-[3px] text-[11px] tracking-[0.06em] text-ink-2 uppercase rounded-full">
                   {s.name}
                 </span>
               ))

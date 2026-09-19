@@ -129,15 +129,15 @@ export const KIND_LABEL: Record<string, string> = {
 // The artboard's three control shapes.
 export const pill = (on: boolean) =>
   cn(
-    'num h-[30px] shrink-0 border px-[11px] text-[10px] tracking-[0.1em] uppercase transition-colors duration-150',
+    'num h-[30px] shrink-0 border px-[11px] text-[10px] tracking-[0.1em] uppercase transition-colors duration-150 rounded-full',
     on ? 'border-brand bg-brand-soft text-ink' : 'border-rule-2 text-ink-3 hover:text-ink',
   )
 export const small =
-  'num inline-flex h-8 shrink-0 items-center whitespace-nowrap border border-rule-2 px-3 text-[10px] tracking-[0.08em] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink'
+  'num inline-flex h-8 shrink-0 items-center whitespace-nowrap border border-rule-2 px-3 text-[10px] tracking-[0.08em] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full'
 export const ctl =
-  'inline-flex h-10 shrink-0 items-center whitespace-nowrap border border-rule-2 px-4 text-[11px] tracking-[0.12em] uppercase text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink'
+  'inline-flex h-10 shrink-0 items-center whitespace-nowrap border border-rule-2 px-4 text-[11px] tracking-[0.12em] uppercase text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full'
 export const accentOutline =
-  'inline-flex h-[34px] shrink-0 items-center whitespace-nowrap border border-brand px-[13px] text-[12px] text-brand transition-colors duration-150 hover:bg-brand hover:text-white'
+  'inline-flex h-[34px] shrink-0 items-center whitespace-nowrap border border-brand px-[13px] text-[12px] text-brand transition-colors duration-150 hover:bg-brand hover:text-white rounded-full'
 
 function useParams() {
   const { params, set: setParams } = useSearchState()
@@ -241,7 +241,7 @@ export function Health({ data }: { data: HealthData }) {
                 type="button"
                 onClick={() => setParams({ appt: a.id, record: null, new: null }, { push: true })}
                 className={cn(
-                  'mt-2.5 flex w-full flex-wrap items-center gap-3 gap-x-4 border bg-bg-elev p-4 text-left transition-colors duration-150 hover:border-ink',
+                  'mt-2.5 flex w-full flex-wrap items-center gap-3 gap-x-4 border bg-bg-elev p-4 text-left transition-colors duration-150 hover:border-ink rounded-full',
                   held ? 'border-warn' : 'border-rule-2',
                 )}
               >
@@ -259,7 +259,7 @@ export function Health({ data }: { data: HealthData }) {
                   <span className="num text-[10px] text-ink-3">{d.toTimeString().slice(0, 5)}</span>
                   <span
                     className={cn(
-                      'num border px-[7px] py-1 text-[9px] tracking-[0.1em] uppercase',
+                      'num border px-[7px] py-1 text-[9px] tracking-[0.1em] uppercase rounded-full',
                       held ? 'border-warn text-warn' : past ? 'border-rule-2 text-ink-3' : 'border-brand text-brand',
                     )}
                   >
@@ -270,7 +270,7 @@ export function Health({ data }: { data: HealthData }) {
             )
           })}
           {shownAppts.length === 0 && (
-            <div className="mt-3 border border-dashed border-rule-2 px-[18px] py-[30px] text-center">
+            <div className="mt-3 border border-dashed border-rule-2 px-[18px] py-[30px] text-center rounded-[18px]">
               <div className="num text-[20px] font-light text-ink-2">{tab === 'upcoming' ? 'NOTHING BOOKED' : 'NO HISTORY'}</div>
               <div className="mt-2 text-[12px] text-ink-3">
                 {tab === 'upcoming' ? 'Nothing is on the calendar. Log a visit with a future date to add one.' : 'Nothing has happened yet.'}
@@ -375,7 +375,7 @@ export function Health({ data }: { data: HealthData }) {
             </button>
           ))}
           {records.length === 0 && (
-            <div className="mt-3 border border-dashed border-rule-2 px-[18px] py-[30px] text-center">
+            <div className="mt-3 border border-dashed border-rule-2 px-[18px] py-[30px] text-center rounded-[18px]">
               <div className="num text-[20px] font-light text-ink-2">{data.records.length === 0 ? 'NO RECORDS' : 'NO MATCHES'}</div>
               <div className="mt-2 text-[12px] text-ink-3">
                 {data.records.length === 0 ? 'Log a visit with a past date to file one.' : q ? `Nothing in this filter matches "${query.trim()}".` : 'Nothing in this filter.'}
@@ -403,7 +403,7 @@ export function Health({ data }: { data: HealthData }) {
             const tone =
               state === 'overdue' ? 'text-bad' : state === 'scheduled' ? 'text-brand' : state === 'never' ? 'text-ink-3' : 'text-warn'
             return (
-              <div key={s.id} className={cn('mt-2.5 border bg-bg-elev p-3.5', state === 'overdue' ? 'border-bad' : 'border-rule-2')}>
+              <div key={s.id} className={cn('mt-2.5 border bg-bg-elev p-3.5 rounded-[18px]', state === 'overdue' ? 'border-bad' : 'border-rule-2')}>
                 <div className="flex items-baseline justify-between gap-2.5">
                   <span className={cn('num text-[9px] tracking-[0.12em]', tone)}>
                     {state === 'scheduled' ? 'SCHEDULED' : state === 'overdue' ? 'OVERDUE' : state === 'never' ? 'NEVER DONE' : 'DUE SOON'}
@@ -490,7 +490,7 @@ export function Health({ data }: { data: HealthData }) {
 
 function Tile({ name, src, value, delta }: { name: string; src: string; value: string; delta: string }) {
   return (
-    <div className="border border-rule-2 bg-bg-elev p-[15px]">
+    <div className="border border-rule-2 bg-bg-elev p-[15px] rounded-[18px]">
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-[11px] text-ink-3">{name}</span>
         <span className="num text-[9px] tracking-[0.1em] text-ink-3">{src}</span>

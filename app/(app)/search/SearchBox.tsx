@@ -38,7 +38,7 @@ export function SearchBox({ initial }: { initial: string }) {
     >
       <div
         className={cn(
-          'flex h-[60px] items-center border bg-bg-elev transition-colors duration-150',
+          'flex h-[60px] items-center border bg-bg-elev transition-colors duration-150 rounded-[18px]',
           has ? 'border-brand' : 'border-rule-2 focus-within:border-brand',
         )}
       >

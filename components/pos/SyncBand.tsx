@@ -74,16 +74,9 @@ export function SyncBand({
           Apple data last arrived {arrived ? clock(arrived) : 'never'}
         </span>
       )}
-      {/* The DS button at 51px on the desktop band, the 44px control on a phone. */}
-      <ActionButton
-        variant="solid"
-        size="xl"
-        className="h-11 gap-2 px-3 text-[12px] md:h-[51px] md:px-[22px] md:text-[15px]"
-        onClick={sync}
-        disabled={pending}
-      >
+      {/* A quiet glass pill: syncing is a maintenance action, not the page's primary. */}
+      <ActionButton variant="outline" size="md" onClick={sync} disabled={pending}>
         <span className={cn(pending && 'animate-pulse')}>{pending ? 'Syncing' : 'Sync now'}</span>
-        {!pending && <span aria-hidden="true">&rarr;</span>}
       </ActionButton>
     </>
   )

@@ -18,7 +18,7 @@ function toId(name: string): string {
 }
 
 const mini =
-  'shrink-0 whitespace-nowrap border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink'
+  'shrink-0 whitespace-nowrap border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full'
 
 export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overrideCount: number }) {
   const [showDeleted, setShowDeleted] = useState(false)
@@ -38,7 +38,7 @@ export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overr
             <button
               type="button"
               onClick={() => setShowDeleted((s) => !s)}
-              className="whitespace-nowrap border border-rule-2 px-2.5 py-1.5 text-[12px] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink"
+              className="whitespace-nowrap border border-rule-2 px-2.5 py-1.5 text-[12px] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full"
             >
               {showDeleted ? 'Hide deleted' : `Show deleted (${deletedCount})`}
             </button>
@@ -58,7 +58,7 @@ export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overr
       {groups.map(({ attribute, skills }) => {
         const visible = showDeleted ? skills : skills.filter((s) => !s.deleted)
         return (
-          <div key={attribute.id} className="border border-rule bg-bg-elev px-5 py-3.5">
+          <div key={attribute.id} className="border border-rule bg-bg-elev px-5 py-3.5 rounded-[18px]">
             <div className="flex items-baseline justify-between gap-3">
               <Eyebrow>{attribute.name}</Eyebrow>
               <span className="num text-[11px] text-ink-3">{skills.filter((s) => !s.deleted).length} skills</span>
@@ -88,7 +88,7 @@ export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overr
                   />
                   <span className="order-last col-span-2 flex min-w-0 items-center gap-1.5 md:order-none md:col-span-1 md:shrink-0">
                     {skill.origin === 'custom' && (
-                      <span className="num border border-brand px-[5px] py-px text-[9px] tracking-[0.08em] text-brand">CUSTOM</span>
+                      <span className="num border border-brand px-[5px] py-px text-[9px] tracking-[0.08em] text-brand rounded-full">CUSTOM</span>
                     )}
                     {skill.renamedFrom && (
                       <span className="num text-[9px] tracking-[0.08em] text-ink-3">was {skill.renamedFrom}</span>
