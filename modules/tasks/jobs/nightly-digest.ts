@@ -22,7 +22,8 @@ export type TasksDigest = {
   upcoming: {
     id: string
     title: string
-    dueOn: string
+    /** Null only on a task finished today that never had a date. */
+    dueOn: string | null
     priority: string
     project: string | null
     estimateMinutes: number | null
@@ -72,7 +73,7 @@ export async function nightlyDigest(): Promise<TasksDigest> {
        left join tasks.project p on p.id = t.project_id
       where (t.status in ('open', 'review') and t.due_on is not null)
          or (t.status = 'done' and t.completed_at >= core.today())
-      order by t.due_on > core.today(), t.status = 'done', t.due_on, t.priority
+      order by coalesce(t.due_on > core.today(), false), t.status = 'done', t.due_on, t.priority
       limit 6`,
   )
   const { rows: [{ today }] } = await db().query<{ today: string }>(`select core.today()::text as today`)

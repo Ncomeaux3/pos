@@ -21,11 +21,13 @@ export function SevenDays({ items, today }: { items: Item[]; today: string }) {
   const offset = (iso: string) =>
     Math.round((day(iso).getTime() - day(today).getTime()) / 86_400_000)
 
+  // The seventh day out shares today's weekday name, so it carries its date.
   const when = (iso: string) => {
     const days = offset(iso)
     if (days === 0) return 'Today'
     if (days === 1) return 'Tmrw'
-    return DOW[day(iso).getDay()]
+    const d = day(iso)
+    return days < 7 ? DOW[d.getDay()] : `${DOW[d.getDay()]} ${d.getDate()}`
   }
 
   if (items.length === 0) {

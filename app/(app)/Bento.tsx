@@ -6,6 +6,7 @@ import { useState, useTransition, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { useLongPress } from '@/components/pos/gestures'
 import type { Settings } from '@/core/settings'
+import { arrange } from '@/core/dashboard-layout'
 import { saveDashboardLayout } from './shell-actions'
 
 // The dashboard grid, in the order the owner likes it.
@@ -54,20 +55,11 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
     setLayout(next)
     start(() => saveDashboardLayout(next))
   }
-  const order = layout?.order ?? null
   const hidden = layout?.hidden ?? []
-
-  // The stored order names tiles that may no longer exist (a module gone, or
-  // the four ids Holon phase 3 turned into sections), and cannot know about a
-  // module installed since. Known ids first in their saved order, then
-  // everything new in the order the server sent it; an unknown id is dropped
-  // whether it was hidden or not.
-  const ids = tiles.map((t) => t.id)
-  const sorted = order
-    ? [...order.filter((id) => ids.includes(id)), ...ids.filter((id) => !order.includes(id))]
-    : ids
-  const shown = sorted.filter((id) => !hidden.includes(id))
-  const hiddenTiles = sorted.filter((id) => hidden.includes(id))
+  const { sorted, shown, hidden: hiddenTiles } = arrange(
+    tiles.map((t) => t.id),
+    layout,
+  )
 
   // Moves are over the visible tiles, so ‹ on the tile after a hidden one
   // swaps with what the owner sees, not with the hidden one.

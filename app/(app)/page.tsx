@@ -34,14 +34,20 @@ import { RunNow } from './RunNow'
 async function nextSevenDays(
   todayIso: string,
 ): Promise<{ id: string; title: string; meta: string; at: string; module: string; href?: string }[]> {
+  // Tomorrow through the seventh day out. Today's tasks are the section
+  // beside this one, so they stay off it; anything else dated today (a
+  // renewal, a charge, a trip) has nowhere else on the page and stays.
   const week = new Date(`${todayIso}T12:00:00`)
-  week.setDate(week.getDate() + 7)
+  week.setDate(week.getDate() + 8)
   const until = week.toISOString().slice(0, 10)
 
   return (await upcoming())
     .flatMap((c) => c.items.map((i) => ({ ...i, module: c.module })))
-    // From tomorrow: today's own work is the section beside this one.
-    .flatMap((i) => (i.at && i.at > todayIso && i.at < until ? [{ ...i, at: i.at }] : []))
+    .flatMap((i) =>
+      i.at && i.at >= todayIso && i.at < until && !(i.module === 'tasks' && i.at === todayIso)
+        ? [{ ...i, at: i.at }]
+        : [],
+    )
     .sort((a, b) => a.at.localeCompare(b.at))
     .slice(0, 6)
 }
@@ -98,9 +104,9 @@ const money = (cents: number) => `$${(cents / 100).toFixed(2)}`
 const ORDER = ['finance', 'goals', 'skills']
 
 /** A section heading: the title, and the count or line that qualifies it. */
-function SectionHead({ id, title, meta, className }: { id: string; title: string; meta?: string; className?: string }) {
+function SectionHead({ id, title, meta }: { id: string; title: string; meta?: string }) {
   return (
-    <div className={cn('flex flex-wrap items-baseline gap-x-2.5 gap-y-1 px-1 pb-3', className)}>
+    <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 px-1 pb-3">
       <h2 id={id} className="text-[20px] font-semibold leading-tight tracking-[-0.015em] text-ink">
         {title}
       </h2>

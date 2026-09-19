@@ -103,10 +103,10 @@ export function TasksTile({ payload }: { payload: Record<string, unknown> }) {
  * task with an estimate says how long, and the rest say the priority.
  */
 function tagFor(
-  t: { priority: string; dueOn: string; estimateMinutes?: number | null; status?: string },
+  t: { priority: string; dueOn: string | null; estimateMinutes?: number | null; status?: string },
   today: string,
 ): { text: string; tone?: 'action' | 'bad' } {
-  if (t.status === 'done') return { text: 'done' }
+  if (t.status === 'done' || t.dueOn === null) return { text: 'done' }
   if (t.status === 'review') return { text: 'Review', tone: 'action' }
   if (t.dueOn < today) return { text: 'Overdue', tone: 'bad' }
   if (t.dueOn > today) {

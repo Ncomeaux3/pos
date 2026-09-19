@@ -358,6 +358,7 @@ export function Board({
                                 ),
                             }))}
                           draggable={column.drop !== null}
+                          inToday={column.id === 'today'}
                           isPhone={isPhone}
                           onDragStart={(e) => {
                             e.dataTransfer.setData('text/plain', task.id)
@@ -464,6 +465,7 @@ function Row({
   expanded,
   moves,
   draggable,
+  inToday,
   isPhone,
   onDragStart,
   onDragEnd,
@@ -478,6 +480,8 @@ function Row({
   expanded: boolean
   moves: { label: string; go: () => void }[]
   draggable: boolean
+  /** In the Today column, where a due date of today says nothing the heading does not. */
+  inToday: boolean
   /** No inline expand and no EDIT button at this width: tapping the row opens the drawer. */
   isPhone: boolean
   onDragStart: (e: React.DragEvent) => void
@@ -584,12 +588,12 @@ function Row({
               )}
               <span>{task.projectName ?? 'No project'}</span>
               {/* Overdue is the due label itself in the risk colour, not a second
-                * mark. A task due today with no time says nothing here: the
-                * column it sits in already says today. */}
-              {(task.dueInDays !== 0 || task.dueAt) && (
+                * mark. In the Today column a task due today with no time says
+                * nothing here: the heading already says today. */}
+              {(!inToday || task.dueInDays !== 0 || task.dueAt) && (
                 <span className={cn('num', overdue && 'font-medium text-bad')}>
-                  {task.dueInDays === 0 ? task.dueAt : dueLabel(task.dueInDays, today)}
-                  {task.dueInDays !== 0 && task.dueAt ? ` · ${task.dueAt}` : ''}
+                  {inToday && task.dueInDays === 0 ? task.dueAt : dueLabel(task.dueInDays, today)}
+                  {!(inToday && task.dueInDays === 0) && task.dueAt ? ` · ${task.dueAt}` : ''}
                 </span>
               )}
               {remind && (
