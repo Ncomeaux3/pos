@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { ConfirmButton, Eyebrow, InlineEdit } from '@/components/pos'
+import { ActionButton, Card, Chip, ConfirmButton, Eyebrow, fieldClass, InlineEdit } from '@/components/pos'
 import type { MergedSkill } from '@/modules/skills/tree'
 import { cn } from '@/lib/utils'
 import { addSkill, deleteSkill, renameSkill, resetTree, restoreSkill, setKeywords } from './actions'
@@ -16,9 +16,6 @@ function toId(name: string): string {
     .replace(/^_+|_+$/g, '')
     .slice(0, 64)
 }
-
-const mini =
-  'shrink-0 whitespace-nowrap border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full'
 
 export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overrideCount: number }) {
   const [showDeleted, setShowDeleted] = useState(false)
@@ -35,19 +32,15 @@ export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overr
         </p>
         <div className="flex items-center gap-2">
           {deletedCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setShowDeleted((s) => !s)}
-              className="whitespace-nowrap border border-rule-2 px-2.5 py-1.5 text-[12px] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full"
-            >
+            <ActionButton onClick={() => setShowDeleted((s) => !s)}>
               {showDeleted ? 'Hide deleted' : `Show deleted (${deletedCount})`}
-            </button>
+            </ActionButton>
           )}
           {overrideCount > 0 && (
             <ConfirmButton
               confirmLabel={`Drop ${overrideCount} ${overrideCount === 1 ? 'edit' : 'edits'}`}
               onConfirm={() => run(resetTree)}
-              className="border-0 px-1 text-[12px] text-ink-3 hover:text-ink sm:h-auto"
+              className="text-ink-3"
             >
               Reset to skills.yaml
             </ConfirmButton>
@@ -58,10 +51,10 @@ export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overr
       {groups.map(({ attribute, skills }) => {
         const visible = showDeleted ? skills : skills.filter((s) => !s.deleted)
         return (
-          <div key={attribute.id} className="border border-rule bg-bg-elev px-5 py-3.5 rounded-[18px]">
+          <Card key={attribute.id} className="py-3.5">
             <div className="flex items-baseline justify-between gap-3">
               <Eyebrow>{attribute.name}</Eyebrow>
-              <span className="num text-[11px] text-ink-3">{skills.filter((s) => !s.deleted).length} skills</span>
+              <span className="num text-[12px] text-ink-3">{skills.filter((s) => !s.deleted).length} skills</span>
             </div>
             <div className="mt-1.5 flex flex-col">
               {visible.map((skill) => (
@@ -82,19 +75,21 @@ export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overr
                       if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
                     }}
                     className={cn(
-                      'min-w-0 border border-transparent bg-transparent px-2 py-[5px] text-[13px] outline-none focus-visible:border-brand focus-visible:bg-bg',
+                      'h-11 min-w-0 rounded-lg border border-transparent bg-transparent px-2 text-[16px] outline-none focus-visible:border-action focus-visible:bg-bg sm:h-8 sm:text-[13px]',
                       skill.deleted ? 'text-ink-3 line-through' : 'text-ink',
                     )}
                   />
                   <span className="order-last col-span-2 flex min-w-0 items-center gap-1.5 md:order-none md:col-span-1 md:shrink-0">
                     {skill.origin === 'custom' && (
-                      <span className="num border border-brand px-[5px] py-px text-[9px] tracking-[0.08em] text-brand rounded-full">CUSTOM</span>
+                      <Chip tone="brand" className="px-2 py-1 text-[11px]">
+                        Custom
+                      </Chip>
                     )}
                     {skill.renamedFrom && (
-                      <span className="num text-[9px] tracking-[0.08em] text-ink-3">was {skill.renamedFrom}</span>
+                      <span className="num text-[11px] text-ink-3">was {skill.renamedFrom}</span>
                     )}
                     {skill.deleted ? (
-                      <span className="num whitespace-nowrap text-[10px] text-ink-4">
+                      <span className="num whitespace-nowrap text-[11px] text-ink-4">
                         {(skill.keywords ?? []).slice(0, 3).join(' · ')}
                       </span>
                     ) : (
@@ -112,19 +107,19 @@ export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overr
                             ),
                           )
                         }
-                        className="num w-auto max-w-[220px] truncate rounded-none px-1 py-0 text-[10px] text-ink-4"
+                        className="num min-h-11 w-auto max-w-[220px] truncate rounded-none px-1 py-0 text-[12px] text-ink-3 sm:min-h-0"
                       />
                     )}
                   </span>
                   {skill.deleted ? (
-                    <button type="button" onClick={() => run(() => restoreSkill(skill.id))} className={mini}>
+                    <ActionButton size="sm" onClick={() => run(() => restoreSkill(skill.id))}>
                       Restore
-                    </button>
+                    </ActionButton>
                   ) : (
                     <ConfirmButton
                       confirmLabel="Really delete"
                       onConfirm={() => run(() => deleteSkill(skill.id))}
-                      className="h-auto border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 hover:border-bad hover:text-bad sm:h-auto"
+                      className="h-11 px-3 text-[11px] text-ink-3 hover:text-bad sm:h-6 sm:px-2.5"
                     >
                       Delete
                     </ConfirmButton>
@@ -136,7 +131,7 @@ export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overr
               parent={attribute.name}
               onAdd={(name) => run(() => addSkill(toId(name), name, attribute.id))}
             />
-          </div>
+          </Card>
         )
       })}
     </div>
@@ -162,11 +157,11 @@ function AddSkill({ parent, onAdd }: { parent: string; onAdd: (name: string) => 
         aria-label={`Add a skill under ${parent}`}
         placeholder={`Add a skill to ${parent}…`}
         maxLength={80}
-        className="min-w-0 flex-1 border border-dashed border-rule-2 bg-bg px-2.5 py-[7px] text-[12px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand"
+        className={cn(fieldClass, 'flex-1 border-dashed')}
       />
-      <button type="submit" disabled={!toId(name.trim())} className={cn(mini, 'disabled:text-ink-4')}>
+      <ActionButton type="submit" size="sm" disabled={!toId(name.trim())}>
         Add
-      </button>
+      </ActionButton>
     </form>
   )
 }

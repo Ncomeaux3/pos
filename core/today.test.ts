@@ -16,8 +16,8 @@ describe('the owner clock', () => {
   })
 
   it('reads the date in the timezone asked for', () => {
-    expect(dayIn(evening, 'America/Chicago')).toBe('9 SEP')
-    expect(dayIn(evening, 'UTC')).toBe('10 SEP')
+    expect(dayIn(evening, 'America/Chicago')).toBe('9 Sep')
+    expect(dayIn(evening, 'UTC')).toBe('10 Sep')
   })
 
   it('counts minutes since midnight, which is what quiet hours compares', () => {

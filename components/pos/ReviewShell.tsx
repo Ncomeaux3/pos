@@ -83,7 +83,7 @@ export function ReviewShell({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
-          <span className="label text-[10px] text-ink-3">{duration}</span>
+          <span className="label text-ink-3">{duration}</span>
           {themeToggle}
         </div>
       </header>
@@ -100,7 +100,7 @@ export function ReviewShell({
 
       <div className="flex justify-center px-[18px] md:px-7 pb-11 pt-10">
         <div className="w-full max-w-[760px]">
-          <p className="label text-[11px] text-brand">{kicker}</p>
+          <p className="label text-action">{kicker}</p>
           <h2 className="mt-4 text-pretty text-[clamp(26px,3vw,38px)] font-normal leading-[1.08] tracking-[-0.03em] text-ink">
             {title}
           </h2>
@@ -191,14 +191,14 @@ export function GlanceCard({
       {delta && (
         <span
           className={cn(
-            'mt-1.5 block text-[10px] leading-none',
+            'mt-1.5 block text-[12px] leading-none',
             tone === 'warn'
               ? 'text-warn'
               : tone === 'bad'
                 ? 'text-bad'
                 : tone === 'quiet'
                   ? 'text-ink-3'
-                  : 'text-brand',
+                  : 'text-action',
           )}
         >
           {delta}

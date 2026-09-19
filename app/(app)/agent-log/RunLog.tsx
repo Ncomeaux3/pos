@@ -134,15 +134,10 @@ export function RunLog({
                 >
                   <div className="min-w-0 flex-1 basis-[240px] space-y-1.5">
                     <div className="flex flex-wrap items-baseline gap-x-2.5">
-                      <span
-                        className={cn(
-                          'label text-[11px] tracking-[0.12em]',
-                          r.status === 'clean' ? 'text-ok' : 'text-warn',
-                        )}
-                      >
+                      <span className={cn('label num', r.status === 'clean' ? 'text-ok' : 'text-warn')}>
                         {r.date}
                       </span>
-                      <span className="label text-[10px] text-ink-3">
+                      <span className="t-caption num text-ink-3">
                         {r.clock} / {r.duration}
                       </span>
                     </div>
@@ -153,7 +148,7 @@ export function RunLog({
                       {r.writes} {r.writes === 1 ? 'write' : 'writes'}
                     </Chip>
                     <StatusChip tone={r.status === 'clean' ? 'brand' : 'warn'}>
-                      {r.status}
+                      {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
                     </StatusChip>
                     <span aria-hidden className="text-ink-3">
                       {isOpen ? '▴' : '▾'}
@@ -186,18 +181,11 @@ export function RunLog({
                         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
                           <div className="min-w-0 flex-1 basis-[220px] space-y-1">
                             <div className="flex flex-wrap items-baseline gap-x-2.5">
-                              <span
-                                className={cn(
-                                  'label text-[10px] tracking-[0.12em]',
-                                  e.undone ? 'text-ink-3' : 'text-ok',
-                                )}
-                              >
-                                {e.moduleLabel.toUpperCase()}
+                              <span className={cn('label', e.undone ? 'text-ink-3' : 'text-ok')}>
+                                {e.moduleLabel}
                               </span>
-                              <span className="label text-[10px] tracking-[0.1em] text-ink-3">
-                                {e.kind}
-                              </span>
-                              <span className="label text-[10px] text-ink-3">{e.time}</span>
+                              <span className="t-caption text-ink-3">{e.kind}</span>
+                              <span className="t-caption num text-ink-3">{e.time}</span>
                             </div>
                             {/* Struck through when reverted, so the log reads as
                                 a history rather than as current state. */}
@@ -252,7 +240,7 @@ export function RunLog({
                           key={`${j.module}.${j.name}`}
                           className="space-y-2 border-t border-rule bg-bad/5 px-4 py-3.5"
                         >
-                          <Eyebrow className="text-[10px] tracking-[0.1em] text-bad">Error</Eyebrow>
+                          <Eyebrow className="text-bad">Error</Eyebrow>
                           <p className="t-body text-ink">{jobLabel(j.name)}</p>
                           {/* The raw provider message, not a paraphrase of it.
                               A rewritten error is one you cannot search for. */}

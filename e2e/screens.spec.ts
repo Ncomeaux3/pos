@@ -712,10 +712,10 @@ test('settings, connections', async ({ page }) => {
   // One card per provider with its auth kind and a status mark; a connected
   // one carries the last test and when it was connected. The fixture enables
   // the Health Auto Export webhook, so at least one card is connected.
-  await expect(page.getByText('CONNECTED', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Connected', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('Last test').first()).toBeVisible()
   await expect(page.getByText(/^(Connected since|Token expires)$/).first()).toBeVisible()
-  await expect(page.getByText('NOT CONNECTED').first()).toBeVisible()
+  await expect(page.getByText('Not connected').first()).toBeVisible()
   await shoot(page, 'connections')
 })
 
@@ -833,9 +833,9 @@ test('review inbox, list and sticky detail panel', async ({ page }) => {
   // The card: "{agent} · {when}", the state word and the meta line.
   const first = page.getByRole('button', { name: /Add a pitch to a bare idea/ })
   await expect(first).toHaveText(/ideas\.tidy · (\d\d:\d\d today|yesterday|\d+ days ago)/)
-  await expect(first).toContainText('PENDING')
+  await expect(first).toContainText('Pending')
   await expect(first).toContainText('64% confident')
-  await expect(list).toContainText('GUARDED')
+  await expect(list).toContainText('Guarded')
 
   // The panel for the default selection: Current / After, the strip, the
   // three actions.
@@ -921,9 +921,10 @@ test('review, inbox clear', async ({ page }) => {
   for (const name of [/Draft a weekly summary idea/, /Add a little weight/]) {
     await page.getByRole('button', { name }).click()
     await page.getByRole('button', { name: 'Dismiss' }).click()
-    await expect(page.getByText('Dismissed', { exact: true })).toBeVisible()
+    // The toast, not the panel's Dismissed chip.
+    await expect(page.locator('[aria-live="polite"]').getByText('Dismissed', { exact: true })).toBeVisible()
   }
-  await expect(page.getByText('inbox clear')).toBeVisible()
+  await expect(page.getByText('Inbox clear')).toBeVisible()
   await expect(page.getByText(/after the nightly run at \d\d:\d\d\./)).toBeVisible()
   await shoot(page, 'review-empty')
 
@@ -944,11 +945,11 @@ test('settings, agents and mcp', async ({ page }) => {
   await expect(page.getByText(/claude mcp add --transport http pos/)).toBeVisible()
   await expect(page.getByText(/Bearer ••••••••/)).toBeVisible()
   await expect(page.getByRole('button', { name: 'Reveal token' })).toBeVisible()
-  await expect(page.getByText(/LIVE · \d+ TOOLS/)).toBeVisible()
+  await expect(page.getByText(/Live · \d+ tools/)).toBeVisible()
 
   // Reads collapse to one open row; every write is listed with its mode.
   await expect(page.getByText('*.get_digest · *.query · core.search')).toBeVisible()
-  await expect(page.getByText('GUARDED').first()).toBeVisible()
+  await expect(page.getByText('Guarded', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('finance.write')).toBeVisible()
 
   await shoot(page, 'settings-agents')
@@ -1030,14 +1031,14 @@ test('notifications, rules table and the alert centre', async ({ page }) => {
   // join with the same middle dot. Statement due carries all three channels
   // and a 3 day lead, so its row spells out both joins at once.
   await expect(page.getByText('Channels · timing · state')).toBeVisible()
-  await expect(page.getByText('PUSH · EMAIL · IN-APP').first()).toBeVisible()
-  await expect(page.getByText('IMMEDIATE · 3 days')).toBeVisible()
+  await expect(page.getByText('Push · Email · In-app').first()).toBeVisible()
+  await expect(page.getByText('Immediate · 3 days')).toBeVisible()
 
   // A live Insurance rule's module label reads amber, not the flat green
   // every module used to share. Scoped to the row itself: the filter pill
   // above the table also renders the word "Insurance".
   const policyRow = page.getByRole('button', { name: /Policy renewal/ })
-  await expect(policyRow.getByText('INSURANCE', { exact: true })).toHaveClass(/text-warn/)
+  await expect(policyRow.getByText('Insurance', { exact: true })).toHaveClass(/text-warn/)
 
   // The seeded rule set, the schedule above it and the preview rail that
   // follows the selected row. All three are the screen.
@@ -1063,12 +1064,12 @@ test('notifications, rules table and the alert centre', async ({ page }) => {
   // An unread alert's module label is flat accent, like the artboard, not the
   // rules table's per-module colour and not the old flat green.
   const chaseAlert = page.locator('div.bg-brand-soft', { hasText: 'Chase Sapphire due in 3 days' })
-  await expect(chaseAlert.getByText('FINANCE', { exact: true })).toHaveClass(/text-brand/)
+  await expect(chaseAlert.getByText('Finance', { exact: true })).toHaveClass(/text-action/)
 
   // The email digest's section header is a plain accent label and a plain
   // item count, not the shared Eyebrow (fixed ink-3) or a Chip pill.
   const digestCard = page.locator('div.bg-bg-elev', { hasText: 'Your morning digest' })
-  await expect(digestCard.getByText('Finance', { exact: true })).toHaveClass(/text-brand/)
+  await expect(digestCard.getByText('Finance', { exact: true })).toHaveClass(/text-action/)
   await expect(digestCard.getByText('1 item').first()).toBeVisible()
 
   await shoot(page, 'notifications')
@@ -1206,7 +1207,8 @@ test('settings, notifications', async ({ page }) => {
   await expect(page.getByRole('switch', { name: 'Email digest' })).toBeVisible()
   await expect(page.getByRole('switch', { name: 'Digest for Finance' })).toBeVisible()
   await expect(page.getByRole('switch', { name: 'In-app for System' })).toBeVisible()
-  await expect(page.getByText('WHAT TRIGGERS IT')).toBeVisible()
+  // The head is hidden below md, so the trigger column is checked by a row.
+  await expect(page.getByText(/^statement due, /)).toBeVisible()
   await expect(page.getByText('No push between')).toBeVisible()
   await expect(page.getByRole('button', { name: /breaks through/i })).toBeVisible()
 
@@ -2756,8 +2758,8 @@ test('health, a weight posted to the Apple webhook shows on the page', async ({ 
   // The secret lives in core.connections and the card is the one place it is
   // shown, so the test reads it where the owner would.
   await page.goto('/settings/connections')
-  const card = page.locator('div.border').filter({ has: page.getByText('Health Auto Export', { exact: true }) }).first()
-  await card.getByRole('button', { name: 'REVEAL' }).click()
+  const card = page.locator('div.glass').filter({ has: page.getByText('Health Auto Export', { exact: true }) }).first()
+  await card.getByRole('button', { name: 'Reveal' }).click()
   const secret = (await card.locator('span.flex-1.break-all').textContent())?.trim() ?? ''
   expect(secret.length).toBeGreaterThan(10)
 
