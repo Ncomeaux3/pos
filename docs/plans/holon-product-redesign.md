@@ -185,8 +185,8 @@ Each phase is a focused branch/PR with a screenshot comparison, relevant regress
 ### Phase 0: baseline and representative designs
 Complexity: medium. Depends on owner scope answers.
 - [x] Reconcile current branch with active v1.1/v2 work; inventory actual routes and actions. (v1.1 complete except Phase 11's owner step; `holon` cut from main e9efdaa)
-- [ ] Capture current screens with synthetic data at phone and desktop widths; record a route/state matrix. (Blocked on the laptop's Docker; a provisional Sep 11 to 15 set is in the session scratchpad.)
-- [ ] Record route bundle sizes, view-switch requests and representative rendering timings.
+- [x] Capture current screens with synthetic data at phone and desktop widths; record a route/state matrix. (e2e on `main` e9efdaa run 2026-09-18: 222 passed, 3 failed, all pre-existing; 348 screenshots in `e2e/.scratch/before/`, gitignored. The route and state matrix is the e2e suite's test list.)
+- [x] Record route bundle sizes, view-switch requests and representative rendering timings. (Next 16 prints no per-route sizes; client JS total is the measure: main 1704 kB in 36 chunks, phase 2 1700 kB. In `e2e/.scratch/before/build-sizes.md`. View-switch requests are asserted by the tasks e2e; timings are compared in Phase 7.)
 - [x] Build reviewable designs for Today, Tasks, Finance and the task drawer in both themes and phone/desktop layouts (docs/design/holon, PR #74; three revisions: register, grouped surfaces, glass).
 - [x] Confirm layout, density and hierarchy against the selected kit and owner feedback before module-wide changes. (Owner: Apple and OpenAI register, then iOS and visionOS glass, smooth; motionsites.ai for motion; 2026-09-18.)
 Exit: concrete visual targets plus current behavior checklist. No speculative feature work.
