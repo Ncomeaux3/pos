@@ -66,7 +66,10 @@ export function LineChart({
   // flush against the frame. A flat month has no span to pad, so it is given
   // one and lands mid height rather than along the top edge.
   const pad = (max - min) * 0.05 || Math.max(1, Math.abs(max) * 0.05)
-  const lo_ = min - pad
+  // A series that never goes below zero keeps its axis there: a 40 minute
+  // night under a 17 hour high was drawing a "-11m" tick, and steps a
+  // "-1,578". A series with a negative reading (a net worth) still pads below.
+  const lo_ = min >= 0 ? Math.max(0, min - pad) : min - pad
   const hi_ = max + pad
   const span = hi_ - lo_
 

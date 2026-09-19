@@ -138,6 +138,9 @@ describe('the overview labels', () => {
 
   it('counts where the rows came from and drops zeros', () => {
     expect(sourcesLabel([{ source: 'strava' }, { source: 'demo' }, { source: 'manual' }])).toBe('1 STRAVA · 2 BY HAND')
+    expect(
+      sourcesLabel([{ source: 'health_auto_export' }, { source: 'apple_shortcuts' }, { source: 'manual' }]),
+    ).toBe('2 APPLE HEALTH · 1 BY HAND')
     expect(sourcesLabel([{ source: 'demo' }])).toBe('1 BY HAND')
     expect(sourcesLabel([])).toBe('')
   })
