@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Card } from '@/components/pos'
+import { Card, EmptyState, StatusChip, type ChipTone } from '@/components/pos'
 import type { DiffEntry, ProposalStatus } from '@/core/proposals'
 import { cn } from '@/lib/utils'
 import { ProposalPanel } from './ProposalPanel'
@@ -30,12 +30,18 @@ export function confidenceClass(c: number): string {
   return 'text-warn'
 }
 
-/** The state word: amber while it waits, green once it ran, quiet once it went. */
-export const STATE_CLASS: Record<ProposalStatus, string> = {
-  pending: 'text-warn',
-  approved: 'text-ok',
-  dismissed: 'text-ink-4',
-  rejected: 'text-ink-4',
+/** The state chip: amber while it waits, green once it ran, quiet once it went. */
+export const STATE_TONE: Record<ProposalStatus, ChipTone> = {
+  pending: 'warn',
+  approved: 'ok',
+  dismissed: 'quiet',
+  rejected: 'quiet',
+}
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+
+export function StateChip({ status }: { status: ProposalStatus }) {
+  return <StatusChip tone={STATE_TONE[status]}>{cap(status)}</StatusChip>
 }
 
 export function ReviewList({
@@ -63,18 +69,14 @@ export function ReviewList({
 
   if (items.length === 0) {
     return (
-      <div className="flex min-h-[360px] items-center justify-center p-10 text-center">
-        <div>
-          <p className="num text-[34px] font-light text-ink-3">
-            {status === 'pending' ? 'inbox clear' : `nothing ${status}`}
-          </p>
-          <p className="mt-2.5 text-[13px] text-ink-3">
-            {status === 'pending'
-              ? `Next proposals arrive after the nightly run at ${nightly}.`
-              : `Nothing has been ${status} yet.`}
-          </p>
-        </div>
-      </div>
+      <EmptyState
+        className="mt-[18px]"
+        headline={status === 'pending' ? 'Inbox clear' : `Nothing ${status}`}
+      >
+        {status === 'pending'
+          ? `Next proposals arrive after the nightly run at ${nightly}.`
+          : `Nothing has been ${status} yet.`}
+      </EmptyState>
     )
   }
 
@@ -88,6 +90,7 @@ export function ReviewList({
             <button
               key={item.id}
               type="button"
+              aria-pressed={on}
               onClick={() => select(item.id)}
               className="group block w-full text-left"
             >
@@ -98,24 +101,13 @@ export function ReviewList({
                   !on && 'border-rule group-hover:border-rule-2',
                 )}
               >
-                <div className="flex items-baseline justify-between gap-2.5">
+                <div className="flex items-center justify-between gap-2.5">
                   <span className="text-[11px] text-ink-3">
                     {item.agent} <span className="text-ink-4">·</span> {item.when}
                   </span>
                   <span className="flex items-center gap-1.5">
-                    {item.guarded && (
-                      <span className="num text-[10px] uppercase tracking-[0.08em] text-warn">
-                        GUARDED
-                      </span>
-                    )}
-                    <span
-                      className={cn(
-                        'num text-[10px] uppercase tracking-[0.08em]',
-                        STATE_CLASS[item.status],
-                      )}
-                    >
-                      {item.status.toUpperCase()}
-                    </span>
+                    {item.guarded && <StatusChip tone="warn">Guarded</StatusChip>}
+                    <StateChip status={item.status} />
                   </span>
                 </div>
                 {/* Decided cards read quieter in ink, where the artboard fades

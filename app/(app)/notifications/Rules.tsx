@@ -12,6 +12,7 @@ import {
   RowList,
   StatusChip,
   Switch,
+  timeFieldClass as timeField,
   useToast,
 } from '@/components/pos'
 import { isLive, leadLabel, leadOptions, ruleState, type Rule } from '@/core/notification-rules'
@@ -47,26 +48,13 @@ const TIMINGS = [
   { value: 'evening' as const, label: 'Evening' },
 ]
 
-// The native time input is the right control (a picker for free, keyboard
-// entry, mobile wheel), but Chrome paints its own clock indicator in a blue
-// that belongs to no theme here. invert-[.55] pulls it onto the ink ramp in
-// dark and the light variant puts it back.
-const timeField =
-  'h-[34px] rounded-md border border-rule-2 bg-transparent px-2 text-[13px] text-ink num ' +
-  'outline-none focus-visible:border-brand ' +
-  '[&::-webkit-calendar-picker-indicator]:opacity-55 ' +
-  '[&::-webkit-calendar-picker-indicator]:invert ' +
-  'light:[&::-webkit-calendar-picker-indicator]:invert-0'
-
 function channelLabel(rule: Rule): string {
-  const on = CHANNELS.filter((c) => rule.channels.includes(c.value)).map((c) =>
-    c.label.toUpperCase(),
-  )
-  return on.length > 0 ? on.join(' · ') : 'NONE'
+  const on = CHANNELS.filter((c) => rule.channels.includes(c.value)).map((c) => c.label)
+  return on.length > 0 ? on.join(' · ') : 'None'
 }
 
 function timingLabel(rule: Rule): string {
-  const base = rule.timing.toUpperCase()
+  const base = TIMINGS.find((t) => t.value === rule.timing)?.label ?? rule.timing
   return rule.lead_days ? `${base} · ${leadLabel(rule.lead_days)}` : base
 }
 
@@ -75,7 +63,7 @@ function timingLabel(rule: Rule): string {
 // the rule is not live, whatever the module.
 const MOD_TONE: Record<string, string> = { insurance: 'text-warn', system: 'text-ink-2' }
 function moduleTone(module: string, live: boolean): string {
-  return live ? (MOD_TONE[module] ?? 'text-brand') : 'text-ink-3'
+  return live ? (MOD_TONE[module] ?? 'text-action') : 'text-ink-3'
 }
 
 /** What the expander says the rule will actually do, in one sentence. */
@@ -244,7 +232,7 @@ export function Notifications({
             />
           </div>
 
-          <div className="label flex flex-wrap gap-x-3 gap-y-1 border-b border-rule-2 px-1 pb-2.5 text-[10px] tracking-[0.12em] text-ink-3">
+          <div className="t-caption flex flex-wrap gap-x-3 gap-y-1 border-b border-rule-2 px-1 pb-2.5 text-ink-3">
             <span className="min-w-0 flex-1">Rule</span>
             <span>Channels · timing · state</span>
           </div>
@@ -270,13 +258,8 @@ export function Notifications({
                   }}
                   title={
                     <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                      <span
-                        className={cn(
-                          'label text-[10px] tracking-[0.12em]',
-                          moduleTone(rule.module, live),
-                        )}
-                      >
-                        {(moduleLabels[rule.module] ?? rule.module).toUpperCase()}
+                      <span className={cn('label', moduleTone(rule.module, live))}>
+                        {moduleLabels[rule.module] ?? rule.module}
                       </span>
                       {rule.label}
                     </span>
@@ -284,12 +267,8 @@ export function Notifications({
                   meta={rule.trigger_text}
                   right={
                     <>
-                      <span className="label text-[10px] tracking-[0.08em] text-ink-3">
-                        {channelLabel(rule)}
-                      </span>
-                      <span className="label text-[10px] tracking-[0.08em] text-ink-3">
-                        {timingLabel(rule)}
-                      </span>
+                      <span className="t-caption text-ink-3">{channelLabel(rule)}</span>
+                      <span className="t-caption text-ink-3">{timingLabel(rule)}</span>
                       <StatusChip
                         tone={
                           state.tone === 'on' ? 'brand' : state.tone === 'snoozed' ? 'warn' : 'quiet'
@@ -308,7 +287,7 @@ export function Notifications({
                       className="grid gap-5 border-t border-rule pt-4 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,200px),1fr))]"
                     >
                       <div className="space-y-2.5">
-                        <Eyebrow className="text-[10px] tracking-[0.12em]">Channels</Eyebrow>
+                        <Eyebrow>Channels</Eyebrow>
                         <PillGroup
                           multiple
                           label={`Channels for ${rule.label}`}
@@ -327,7 +306,7 @@ export function Notifications({
                       </div>
 
                       <div className="space-y-2.5">
-                        <Eyebrow className="text-[10px] tracking-[0.12em]">Timing</Eyebrow>
+                        <Eyebrow>Timing</Eyebrow>
                         <PillGroup
                           label={`Timing for ${rule.label}`}
                           value={rule.timing}
@@ -337,7 +316,7 @@ export function Notifications({
                       </div>
 
                       <div className="space-y-2.5">
-                        <Eyebrow className="text-[10px] tracking-[0.12em]">Lead time</Eyebrow>
+                        <Eyebrow>Lead time</Eyebrow>
                         <PillGroup
                           label={`Lead time for ${rule.label}`}
                           value={String(rule.lead_days)}
@@ -349,7 +328,7 @@ export function Notifications({
                       </div>
 
                       <div className="space-y-2.5">
-                        <Eyebrow className="text-[10px] tracking-[0.12em]">Urgency</Eyebrow>
+                        <Eyebrow>Urgency</Eyebrow>
                         <ActionButton
                           variant={rule.urgent ? 'brand' : 'outline'}
                           onClick={() => run(() => updateRule(rule.id, { urgent: !rule.urgent }))}
@@ -364,7 +343,7 @@ export function Notifications({
                       </div>
 
                       <div className="space-y-2.5">
-                        <Eyebrow className="text-[10px] tracking-[0.12em]">Snooze / mute</Eyebrow>
+                        <Eyebrow>Snooze / mute</Eyebrow>
                         <div className="flex flex-wrap gap-1.5">
                           {[1, 7].map((days) => (
                             <ActionButton
@@ -464,7 +443,7 @@ function Preview({
       </div>
 
       <div className="space-y-3">
-        <Eyebrow className="text-[10px] tracking-[0.12em]">Push, lock screen</Eyebrow>
+        <Eyebrow>Push, lock screen</Eyebrow>
         {/* Fixed dark ground on purpose: a phone lock screen is dark whatever
             theme the app is in, so the preview would lie if it followed it. */}
         <div className="space-y-3.5 rounded-lg border border-rule-2 bg-[#101216] p-4">
@@ -489,7 +468,7 @@ function Preview({
       </div>
 
       <div className="space-y-3">
-        <Eyebrow className="text-[10px] tracking-[0.12em]">
+        <Eyebrow>
           Email, {isMorning ? 'morning' : 'evening'} digest
         </Eyebrow>
         <div className="rounded-lg border border-rule-2 bg-bg-elev">
@@ -517,10 +496,10 @@ function Preview({
                     {/* Plain spans, not Eyebrow/Chip: the artboard's module
                       * label is flat accent (Eyebrow is fixed ink-3) and its
                       * count is plain mono text, not a pill. */}
-                    <span className="label text-[10px] tracking-[0.12em] text-brand">
+                    <span className="label text-action">
                       {s.module}
                     </span>
-                    <span className="num text-[10px] text-ink-3">
+                    <span className="t-caption num text-ink-3">
                       {s.lines.length} item{s.lines.length > 1 ? 's' : ''}
                     </span>
                   </div>

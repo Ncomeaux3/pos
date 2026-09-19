@@ -110,6 +110,8 @@ export function MetricStrip({
  * on a screen and how loud it is belongs to the screen.
  */
 const METRIC_SIZE = {
+  /** A short string rather than a number: a cron line, "Ok · 04:00 · 12 jobs". */
+  xs: 'text-[14px] font-medium',
   sm: 'text-[24px]',
   md: 'text-[24px] sm:text-[30px]',
   lg: 'text-[24px] sm:text-[34px]',

@@ -50,11 +50,11 @@ export function clockIn(at: Date, timeZone: string): string {
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
 }
 
-// "7 SEP", not the locale's "7 Sept". Three letters, so the column stays the
+// "7 Sep", not the locale's "7 Sept". Three letters, so the column stays the
 // same width whichever month it is.
-const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-/** "9 SEP" in the owner's timezone. */
+/** "9 Sep" in the owner's timezone. */
 export function dayIn(at: Date, timeZone: string): string {
   const { day, month } = partsIn(at, timeZone)
   return `${day} ${MONTHS[month - 1]}`

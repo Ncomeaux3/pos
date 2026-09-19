@@ -25,7 +25,7 @@ export function DiffRow({ diff, undone }: { diff: Diff; undone?: boolean }) {
       <span className={cn('num text-xs text-ink-3', undone && 'line-through')}>
         {from}
       </span>
-      <span aria-hidden className="label text-xs text-ink-4">
+      <span aria-hidden className="label text-xs text-ink-3">
         to
       </span>
       <span className={cn('num text-xs', undone ? 'text-ink-3 line-through' : 'text-ink')}>

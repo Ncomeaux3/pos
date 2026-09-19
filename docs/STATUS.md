@@ -12,8 +12,9 @@ Brain, Ideas and Skills on the shared controls, #83) are merged into `holon`;
 Phase 5 (Finance KPIs as a MetricStrip, Health rebuilt on rows, chips, cards
 and the TabBar, Fitness strings and buttons, #86) is merged; Phase 6 is two
 PRs, the first (Meals, Travel, Home & Property and Insurance on the shared
-controls) open, the second (Review, Weekly review, Notifications, Settings,
-Agent log) next; Phase 7 follows.
+controls, #88) merged, the second (Review, Weekly review, Notifications,
+Settings, Agent log on the shared controls) open; Phase 7 (release
+validation and handoff) follows.
 Decisions are in decisions/log.md under 2026-09-18 and 2026-09-19. v1.1 below
 is complete except Phase 11's owner step.
 

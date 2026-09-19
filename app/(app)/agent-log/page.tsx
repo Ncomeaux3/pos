@@ -1,4 +1,4 @@
-import { Card, CardHead, Chip, Eyebrow, MetricTile, PageHeader, StatusChip } from '@/components/pos'
+import { Card, CardHead, Chip, Eyebrow, MetricTile, PageHeader, Row, RowList, StatusChip } from '@/components/pos'
 import { getModule, getModules } from '@/core/modules'
 import { getSetting } from '@/core/settings'
 import { clockIn, dayIn } from '@/core/today'
@@ -37,7 +37,7 @@ export default async function AgentLogPage() {
         module: e.module,
         moduleLabel: label(e.module),
         tool: e.tool,
-        kind: e.kind.toUpperCase(),
+        kind: e.kind.charAt(0).toUpperCase() + e.kind.slice(1),
         title: e.title,
         reason: e.reason,
         diff: e.diff,
@@ -124,24 +124,20 @@ export default async function AgentLogPage() {
             <Eyebrow>Jobs</Eyebrow>
             {last && last.jobs.length > 0 ? (
               <>
-                <div className="[&>*:last-child]:border-b-0">
+                <RowList>
                   {last.jobs.map((j) => (
-                    <div
+                    <Row
                       key={`${j.module}.${j.name}`}
-                      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-rule py-2.5"
-                    >
-                      <span className="t-caption min-w-0 flex-1 basis-[130px] text-ink-2">
-                        {label(j.module)} / {jobLabel(j.name)}
-                      </span>
-                      <span className="label text-[10px] text-ink-3">
-                        {duration(j.durationMs)}
-                      </span>
-                      <StatusChip tone={j.status === 'ok' ? 'brand' : 'bad'}>
-                        {j.status === 'ok' ? 'ok' : 'fail'}
-                      </StatusChip>
-                    </div>
+                      title={`${label(j.module)} / ${jobLabel(j.name)}`}
+                      amount={duration(j.durationMs)}
+                      right={
+                        <StatusChip tone={j.status === 'ok' ? 'brand' : 'bad'}>
+                          {j.status === 'ok' ? 'Ok' : 'Failed'}
+                        </StatusChip>
+                      }
+                    />
                   ))}
-                </div>
+                </RowList>
                 <p className="t-caption text-ink-3">
                   A failed job retries twice inside the same run, then waits for the next one.
                 </p>
@@ -166,7 +162,7 @@ export default async function AgentLogPage() {
                   <div key={u.id} className="space-y-1 border-b border-rule py-3">
                     <div className="flex items-baseline justify-between gap-2.5">
                       <Chip tone="warn">Reverted</Chip>
-                      <span className="label text-[10px] text-ink-3">
+                      <span className="t-caption num text-ink-3">
                         {day(u.undone_at)} {clock(u.undone_at)}
                       </span>
                     </div>

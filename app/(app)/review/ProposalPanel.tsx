@@ -4,7 +4,7 @@ import { Fragment, useState, useTransition, type ReactNode } from 'react'
 import { ActionButton, Card, Eyebrow, useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { approveProposal, dismissProposal, reopenProposal } from './actions'
-import { confidenceClass, STATE_CLASS, type ReviewItem } from './ReviewList'
+import { confidenceClass, StateChip, type ReviewItem } from './ReviewList'
 
 // Sticky panel rather than a drawer: the design keeps the list visible so you
 // can work down the inbox without reopening anything.
@@ -60,14 +60,7 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
           </Eyebrow>
           <h2 className="mt-2.5 text-[20px] leading-[1.3] tracking-[-0.02em] text-ink">{item.title}</h2>
         </div>
-        <span
-          className={cn(
-            'num shrink-0 whitespace-nowrap pt-1 text-[10px] uppercase tracking-[0.08em]',
-            STATE_CLASS[item.status],
-          )}
-        >
-          {item.status.toUpperCase()}
-        </span>
+        <StateChip status={item.status} />
       </div>
 
       <div>
@@ -86,7 +79,7 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
                 <Fragment key={d.field}>
                   <div className="min-w-0 bg-bg px-3 py-2.5">
                     <span className="text-[11px] text-ink-3">{one ? 'Current' : `${d.field} · current`}</span>
-                    <div className={cn('num mt-1.5 break-words text-[13px]', before === 'empty' ? 'text-ink-4' : 'text-ink')}>
+                    <div className={cn('num mt-1.5 break-words text-[13px]', before === 'empty' ? 'text-ink-3' : 'text-ink')}>
                       {before}
                     </div>
                   </div>
@@ -104,7 +97,7 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
                         }}
                       />
                     ) : (
-                      <div className="num mt-1.5 break-words text-[13px] text-brand">
+                      <div className="num mt-1.5 break-words text-[13px] text-action">
                         {show(after(d.field, d.after))}
                       </div>
                     )}
