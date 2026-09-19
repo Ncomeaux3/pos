@@ -1860,8 +1860,9 @@ test('finance, net worth and the budget pace marks', async ({ page }) => {
       .getByRole('button')
       .first()
       .evaluate((el) => getComputedStyle(el).padding)
-    // Rows sit inside the grouped surface with a 16px inset.
-    expect(rowPadding).toBe('12px 16px')
+    // Rows sit inside the grouped surface with a 16px inset; the overview keeps
+    // its 9px row height (`overviewRow`) until Phase 5 restyles Finance.
+    expect(rowPadding).toBe('9px 16px')
     await expect(page.getByRole('button', { name: /edit limits/i })).toBeVisible()
   }
 
