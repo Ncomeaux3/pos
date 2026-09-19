@@ -79,9 +79,9 @@ export function Calendar({
         <div className="border border-rule md:min-w-[560px] rounded-[18px]">
           <div className="grid grid-cols-7 gap-px bg-rule">
             {DOWS.map((d) => (
-              <span key={d} className="num bg-bg-elev px-1 py-1 text-[10px] tracking-[0.08em] text-ink-3 md:px-2.5 md:py-2">
-                <span className="md:hidden">{d.slice(0, 2).toUpperCase()}</span>
-                <span className="hidden md:inline">{d.toUpperCase()}</span>
+              <span key={d} className="label bg-bg-elev px-1 py-1 text-ink-3 md:px-2.5 md:py-2">
+                <span className="md:hidden">{d.slice(0, 2)}</span>
+                <span className="hidden md:inline">{d}</span>
               </span>
             ))}
             {cells.map((day, i) => {

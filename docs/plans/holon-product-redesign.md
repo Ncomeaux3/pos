@@ -214,10 +214,10 @@ Exit: entry through sign-in and installed PWA is consistent; existing sessions/p
 ### Phase 3: Today and daily execution
 Complexity: high. Depends on Phase 2.
 Files: dashboard page/Bento/DashboardTiles/Inbox and `modules/tasks/ui`, `modules/goals/ui`.
-- [ ] Recompose Today around attention and current work without dropping hidden/order settings.
-- [ ] Keep existing tile IDs. Define a deterministic fallback for new/removed keys before changing composition.
-- [ ] Restyle task views, projects, goals and drawers using the same control language.
-- [ ] Keep system run status discoverable but lower in hierarchy than personal work.
+- [x] Recompose Today around attention and current work without dropping hidden/order settings. (Date line and greeting; a Needs attention band with the warnings, proposals and nightly alerts; today's tasks, the tasks module's own tile promoted out of the grid, beside the next seven days; then one summary per module in the saved order. The phone shows the same page, as the mockup has it, in place of the five-tile Home of 2026-09-13.)
+- [x] Keep existing tile IDs. Define a deterministic fallback for new/removed keys before changing composition. (Module ids and `llm` unchanged. `warnings`, `review`, `tasks` and `timeline` are sections now; Bento keeps only the ids it is handed, so a saved entry for them is ignored whether hidden or not, and a new id appends in server order. No migration.)
+- [x] Restyle task views, projects, goals and drawers using the same control language. (Columns as headings over one grouped surface; rows with a 20px check, one meta line, the estimate right; sentence-case marks; the title block with New task; drawer fields on `fieldClass`; goal status chips; the small buttons are ActionButton's `sm` everywhere.)
+- [x] Keep system run status discoverable but lower in hierarchy than personal work. (One line under the summaries: run clock, failed jobs, month spend of cap, Agent log. The Model spend summary stays last in the grid because its per-purpose breakdown exists nowhere else.)
 Exit: create/edit/complete a task, navigate its project/goal, arrange dashboard, refresh and reload successfully on phone and desktop. Switching local task views adds no RSC request.
 
 ### Phase 4: knowledge and progress

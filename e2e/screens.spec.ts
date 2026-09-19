@@ -265,9 +265,10 @@ test('dashboard, the week ahead and arranging the tiles', async ({ page }) => {
   // task from the Tasks module appears on a core screen without core reading
   // the tasks schema.
   await expect(page.getByText('Next 7 days')).toBeVisible()
-  // Dated by the module that owns it, not by core. The strip's entry is a
-  // link named by its day; the Tasks tile lists the same title as a button.
-  const amex = page.getByRole('link', { name: /Pay the Amex statement$/ })
+  // Dated by the module that owns it, not by core. The week's row is a link
+  // (day, title, the module's line); today's work lists the same title as a
+  // button.
+  const amex = page.getByRole('link', { name: /Pay the Amex statement/ })
   await expect(amex).toBeVisible()
   // The row opens the task's own drawer, not the module root (v1.1 Phase 1).
   await expect(amex).toHaveAttribute('href', /\?task=/)
@@ -1335,7 +1336,7 @@ test('tasks, the six views and the month grid', async ({ page }) => {
   // until it is accepted.
   await openView(/Review/)
   await expect(page.getByText('Test the bank sync against three months of history')).toBeVisible()
-  await expect(page.getByText('AGENT · REVIEW').first()).toBeVisible()
+  await expect(page.getByText('Agent, review').first()).toBeVisible()
   // The view is in the URL, which is what lets it survive the reload shoot()
   // does to switch themes. Without it the shot would show Today and the test
   // would still pass.
