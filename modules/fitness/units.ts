@@ -28,7 +28,7 @@ export const toGrams = (value: number, unit: MassUnit): number =>
   Math.round(unit === 'kg' ? value * 1000 : value * GRAMS_PER_POUND)
 
 /**
- * "3.2 mi", "410 ft". Feet until a mile is the more readable number.
+ * "3.17 mi", "410 ft". Feet until a mile is the more readable number.
  *
  * Miles are the default because the owner is in the US and every source the
  * app reads from (Apple Health, Strava) is set to imperial there. Metres stay
@@ -39,11 +39,13 @@ export function distance(metres: number, unit: DistanceUnit = 'mi'): string {
   if (unit === 'km') {
     return metres < 1000 ? `${Math.round(metres)} m` : `${(metres / 1000).toFixed(1)} km`
   }
-  // A tenth of a mile is where the decimal stops saying anything useful.
+  // A tenth of a mile is where the decimals stop saying anything useful.
   if (metres < METRES_PER_MILE / 10) {
     return `${Math.round(metres / METRES_PER_FOOT).toLocaleString('en-US')} ft`
   }
-  return `${(metres / METRES_PER_MILE).toFixed(1)} mi`
+  // Two decimals, as every run tracker shows a distance: 3.2 and 3.24 are a
+  // hundred and thirty yards apart, which is a lap of a track.
+  return `${(metres / METRES_PER_MILE).toFixed(2)} mi`
 }
 
 /** "58m", "1h 02m". What a workout duration reads as in a list. */

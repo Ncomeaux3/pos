@@ -2604,8 +2604,8 @@ test('fitness, workouts with pace derived rather than stored', async ({ page }) 
   await expect(page.getByRole('heading', { name: 'Fitness' })).toBeVisible()
 
   // Pace is a ratio of the stored distance and duration, so it can never
-  // disagree with them. 5,100 m is 3.2 mi, and 51 minutes over it is 16:06/mi.
-  await expect(page.getByText(/3\.2 mi at 16:06\/mi/)).toBeVisible()
+  // disagree with them. 5,100 m is 3.17 mi, and 51 minutes over it is 16:06/mi.
+  await expect(page.getByText(/3\.17 mi at 16:06\/mi/)).toBeVisible()
 
   // The heaviest set is shown as what happened, not as a one rep max estimate.
   await expect(page.getByText(/Deadlift 355 lb × 1/)).toBeVisible()

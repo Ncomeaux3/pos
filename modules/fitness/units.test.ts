@@ -32,8 +32,8 @@ describe('mass', () => {
 describe('distance', () => {
   it('reads in miles, because the owner reads imperial', () => {
     // 5,100 m is the 5 km run Health Auto Export sent as 3.17 mi.
-    expect(distance(5100)).toBe('3.2 mi')
-    expect(distance(1609.344)).toBe('1.0 mi')
+    expect(distance(5100)).toBe('3.17 mi')
+    expect(distance(1609.344)).toBe('1.00 mi')
   })
 
   it('switches to feet under a tenth of a mile', () => {

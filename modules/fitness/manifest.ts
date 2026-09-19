@@ -310,7 +310,7 @@ export default defineModule({
       const parts = [
         minutes < 60 ? `${minutes}m` : minutes % 60 === 0 ? `${minutes / 60}h` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`,
       ]
-      if (miles >= 0.1) parts.push(`${miles.toFixed(1)} mi`)
+      if (miles >= 0.1) parts.push(`${miles.toFixed(2)} mi`)
 
       return [
         {
