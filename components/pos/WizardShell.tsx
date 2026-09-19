@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { ActionButton, type ActionButtonVariant } from './Button'
+import { HolonLockup } from './Logo'
 import { Eyebrow } from './text'
 
 export type WizardStep = { key: string; name: string; hint?: string }
@@ -55,6 +56,7 @@ export function WizardShell({
   return (
     <div className="flex min-h-dvh flex-col gap-8 p-7 lg:flex-row lg:gap-12">
       <aside className="w-full shrink-0 space-y-6 lg:w-[264px]">
+        <HolonLockup size={26} />
         <div className="space-y-2">
           <h1 className="t-title text-ink">{railTitle}</h1>
           {railLede && <p className="t-caption text-ink-3">{railLede}</p>}

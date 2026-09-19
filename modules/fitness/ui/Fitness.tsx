@@ -248,7 +248,7 @@ export function Fitness({ data }: { data: FitnessData }) {
         (data.workouts.length === 0 ? (
           <EmptyState headline="Nothing logged">
             Connect Strava at Settings and the nightly job pulls your history, or log one by hand.
-            Every workout links to a Health skill and earns XP on the Skill Tree.
+            Every workout links to a Health skill and earns XP on Skills.
           </EmptyState>
         ) : (
           <Card className="py-3.5">

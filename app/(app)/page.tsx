@@ -22,7 +22,7 @@ import { unreadWarnings } from '@/core/notify'
 import { upcoming } from '@/core/review-registry'
 import { headlineSegments, jobStates, latestSummary } from '@/core/orchestrator'
 import { getSettings } from '@/core/settings'
-import { clockIn, ownerToday, zoneAbbrIn } from '@/core/today'
+import { clockIn, minutesIn, ownerToday, zoneAbbrIn } from '@/core/today'
 import { RunNow } from './RunNow'
 
 // The bento. Every tile reads core, never a module's own tables: module numbers
@@ -357,6 +357,9 @@ export default async function DashboardPage() {
   }
   const tiles = [...unsorted].sort((a, b) => position(a.id) - position(b.id))
 
+  const hour = Math.floor(minutesIn(new Date(), settings.timezone) / 60)
+  const greeting = hour < 12 ? 'Morning' : hour < 18 ? 'Afternoon' : 'Evening'
+
   return (
     <div>
       {/* Band one only: the headline below is the page's opening statement,
@@ -366,10 +369,10 @@ export default async function DashboardPage() {
       <PageHeader
         eyebrow={
           <>
-            Dashboard <span className="text-ink-4">/</span> {today}
+            Today <span className="text-ink-4">/</span> {today}
           </>
         }
-        title="Home"
+        title="Today"
         hideTitle
         searchPlaceholder="What are you looking for?"
         phoneAction={<RunNow />}
@@ -405,6 +408,8 @@ export default async function DashboardPage() {
           * the parts of it that name something you can open are links, which
           * is the artboard's one piece of colour in the sentence. */}
         <p className="mt-3 max-w-[920px] text-pretty text-[clamp(22px,2.2vw,30px)] font-normal leading-[1.25] tracking-[-0.03em] text-ink">
+          {/* The one place the owner's name appears since it left the rail. */}
+          {settings.owner_name && <span className="font-semibold">{greeting}, {settings.owner_name}. </span>}
           {segments.length > 0
             ? segments.map((s, i) =>
                 s.href ? (
