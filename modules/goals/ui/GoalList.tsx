@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
-import { ActionButton, Eyebrow, useToast, type SkillLink } from '@/components/pos'
+import { ActionButton, Eyebrow, StatusChip, fieldClass, useToast, type ChipTone, type SkillLink } from '@/components/pos'
+import { actionButtonBase, actionButtonSizes, actionButtonVariants } from '@/components/pos/Button'
 import { Segments } from '@/components/pos/Segments'
 import { useIsPhone } from '@/components/pos/useIsPhone'
 import { useSearchState } from '@/components/pos/searchState'
@@ -36,18 +37,27 @@ export type GoalCard = {
   proposals: { id: string; from: string; title: string }[]
 }
 
-// The artboard's status colours: green, amber, red, and the accent for done.
+// The status colours: positive, attention, risk, and the action colour for done.
 export const STATUS_TEXT: Record<Status, string> = {
-  done: 'DONE',
-  on_track: 'ON TRACK',
-  at_risk: 'AT RISK',
-  stalled: 'STALLED',
+  done: 'Done',
+  on_track: 'On track',
+  at_risk: 'At risk',
+  stalled: 'Stalled',
 }
-export const STATUS_CLASS: Record<Status, string> = {
-  done: 'text-brand border-brand',
-  on_track: 'text-ok border-ok',
-  at_risk: 'text-warn border-warn',
-  stalled: 'text-bad border-bad',
+const STATUS_TONE: Record<Status, ChipTone> = {
+  done: 'brand',
+  on_track: 'ok',
+  at_risk: 'warn',
+  stalled: 'bad',
+}
+
+/** The state badge on a card and in the drawer. */
+export function StatusMark({ status, className }: { status: Status; className?: string }) {
+  return (
+    <StatusChip tone={STATUS_TONE[status]} className={cn('shrink-0 whitespace-nowrap', className)}>
+      {STATUS_TEXT[status]}
+    </StatusChip>
+  )
 }
 const STATUS_STROKE: Record<Status, string> = {
   done: 'var(--accent)',
@@ -72,12 +82,10 @@ export const KIND_LABEL: Record<GoalKind, string> = {
 /** The artboard's life areas, in its order; anything else the data has follows. */
 export const AREAS = ['Engineering', 'Business', 'Communication', 'Health', 'Life ops']
 
-export const mini =
-  'shrink-0 whitespace-nowrap border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full'
-export const miniAccent =
-  'shrink-0 whitespace-nowrap border border-brand px-[9px] py-1 text-[11px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg rounded-full'
-export const field =
-  'w-full border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand rounded-xl'
+/** The small buttons, as ActionButton draws them: a glass pill, and the soft action fill. */
+export const mini = cn(actionButtonBase, actionButtonSizes.sm, actionButtonVariants.outline)
+export const miniAccent = cn(actionButtonBase, actionButtonSizes.sm, actionButtonVariants.brand)
+export const field = fieldClass
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -304,7 +312,7 @@ function AddGoal({
       <button
         type="button"
         onClick={() => onOpen(true)}
-        className="w-full border border-dashed border-rule-2 px-4 py-3 text-left text-[13px] text-ink-3 transition-colors duration-150 hover:border-brand hover:text-ink rounded-full"
+        className="w-full rounded-[18px] border border-dashed border-rule-2 px-4 py-3 text-left text-[13px] text-ink-3 transition-colors duration-150 hover:border-action hover:text-ink"
       >
         + Add a goal inline
       </button>
@@ -335,7 +343,7 @@ function AddGoal({
         setDeadline('')
         onOpen(false)
       }}
-      className="grid gap-2.5 border border-dashed border-brand px-4 py-3.5 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end rounded-[18px]"
+      className="grid gap-2.5 rounded-[18px] border border-dashed border-action px-4 py-3.5 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end"
     >
       <label className="flex flex-col gap-1.5">
         <Eyebrow>Goal</Eyebrow>
@@ -344,7 +352,7 @@ function AddGoal({
           autoFocus
           onChange={(e) => setTitle(e.target.value)}
           placeholder="e.g. Run a half marathon"
-          className={cn(field, 'px-2.5 py-2')}
+          className={field}
         />
       </label>
       <label className="hidden flex-col gap-1.5 md:flex">
@@ -354,7 +362,7 @@ function AddGoal({
           value={target}
           onChange={(e) => setTarget(e.target.value)}
           placeholder="21.1"
-          className={cn(field, 'num px-2.5 py-2')}
+          className={cn(field, 'num')}
         />
       </label>
       <label className="hidden flex-col gap-1.5 md:flex">
@@ -364,14 +372,14 @@ function AddGoal({
           value={deadline}
           min={todayIso}
           onChange={(e) => setDeadline(e.target.value)}
-          className={cn(field, 'num px-2.5 py-[7px]')}
+          className={cn(field, 'num')}
         />
       </label>
       <div className="flex flex-wrap gap-1.5">
         <button
           type="submit"
           disabled={isPhone ? !title.trim() : !ready}
-          className={cn(miniAccent, 'disabled:border-rule-2 disabled:text-ink-4')}
+          className={miniAccent}
         >
           {isPhone ? 'Next' : 'Add'}
         </button>
@@ -429,31 +437,29 @@ function Card({
   const done = p.status === 'done'
 
   return (
-    <article className="min-w-0 border border-rule bg-bg-elev px-[18px] py-4 transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-rule-2 rounded-[18px]">
+    <article className="glass min-w-0 rounded-[18px] px-[18px] py-4 transition-[border-color,transform] duration-200 hover:-translate-y-0.5">
       <div className="flex items-start justify-between gap-2.5">
         <button type="button" onClick={onOpen} className="min-w-0 text-left">
-          <span className="block text-[15px] leading-[1.3] tracking-[-0.01em] text-ink">{goal.title}</span>
-          <span className="mt-1 block text-[11px] text-ink-3">
+          <span className="block text-[15px] font-medium leading-[1.3] tracking-[-0.01em] text-ink">{goal.title}</span>
+          <span className="t-caption mt-0.5 block text-ink-3">
             {KIND_LABEL[goal.kind]} · {manual ? 'check-ins' : 'computed'}
           </span>
         </button>
-        <span className={cn('num shrink-0 whitespace-nowrap border px-1.5 py-0.5 text-[9px] tracking-[0.08em] rounded-full', STATUS_CLASS[p.status])}>
-          {STATUS_TEXT[p.status]}
-        </span>
+        <StatusMark status={p.status} />
       </div>
 
       <div className="mt-3.5 flex items-baseline justify-between gap-2.5">
-        <span className="num text-[26px] font-light leading-none tracking-[-0.02em] text-ink">
+        <span className="num text-[24px] font-semibold leading-none tracking-[-0.02em] text-ink">
           {formatValue(p.current, goal.kind, goal.unit)}{' '}
-          <span className="text-[12px] text-ink-3">/ {formatValue(goal.targetValue, goal.kind, goal.unit)}</span>
+          <span className="text-[12.5px] font-normal text-ink-3">/ {formatValue(goal.targetValue, goal.kind, goal.unit)}</span>
         </span>
         <span className="num text-[13px] text-ink-2">{Math.round(p.percent)}%</span>
       </div>
 
       {/* The mark is where a straight line from the start would have you today,
           so the bar shows pace rather than only distance. */}
-      <div className="relative mt-2.5 h-[3px] bg-rule-2">
-        <div className={cn('h-full', STATUS_BG[p.status])} style={{ width: `${p.percent}%` }} />
+      <div className="relative mt-2.5 h-1 rounded-full bg-rule-2">
+        <div className={cn('h-full rounded-full', STATUS_BG[p.status])} style={{ width: `${p.percent}%` }} />
         <span
           title="Where you should be today"
           className="absolute -top-[3px] h-[9px] w-px bg-ink-2"
@@ -463,8 +469,8 @@ function Card({
 
       <div className="mt-3 grid grid-cols-[1fr_auto] items-end gap-3">
         <div className="min-w-0">
-          <p className="text-[11px] leading-[1.5] text-ink-3">{goal.rule}</p>
-          <p className="mt-1 truncate text-[11px] text-ink-3">
+          <p className="t-caption text-ink-3">{goal.rule}</p>
+          <p className="t-caption mt-1 text-ink-3">
             Deadline <span className="text-ink-2">{formatDate(goal.deadline, todayIso)}</span> ·{' '}
             <span className="text-ink-2">
               {p.daysLeft >= 0 ? `${p.daysLeft} days left` : `${-p.daysLeft} days over`}
@@ -482,7 +488,7 @@ function Card({
       <div className="mt-3 flex items-center justify-between gap-2.5 border-t border-rule pt-2.5">
         <Link
           href="/tasks?view=goal"
-          className="min-w-0 truncate text-[11px] text-ink-3 transition-colors duration-150 hover:text-brand"
+          className="t-caption min-w-0 truncate text-ink-3 transition-colors duration-150 hover:text-action"
         >
           {next
             ? `Next: ${next.title} · ${next.meta}`
@@ -507,7 +513,7 @@ function Card({
               onChange={(e) => setValue(e.target.value)}
               aria-label={`Check in on ${goal.title}`}
               placeholder={checkinPlaceholder(goal.unit)}
-              className="num w-[72px] border border-rule-2 bg-bg px-2 py-1 text-[11px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand"
+              className={cn(field, 'num h-11 w-[84px] px-2.5 py-1 text-[13px] sm:h-6 sm:rounded-full')}
             />
             <button type="submit" className={mini}>
               Check in
@@ -526,8 +532,8 @@ function Card({
           </button>
         )}
         {!manual && (
-          <span className="num shrink-0 whitespace-nowrap text-[10px] text-ink-4">
-            AUTO · {goal.metricSource}
+          <span className="code t-caption min-w-0 max-w-[60%] truncate text-ink-4">
+            computed · {goal.metricSource}
           </span>
         )}
       </div>

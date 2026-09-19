@@ -1,33 +1,37 @@
 'use client'
 
+import { Check } from 'lucide-react'
 import { useState, useTransition } from 'react'
-import { useToast } from '@/components/pos'
+import { RowList, useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import type { TasksDigest } from '../jobs/nightly-digest'
+import { hoursLabel } from '../shape'
 import { completeTask } from './actions'
 
-// The Tasks dashboard tile, as POS Dashboard.dc.html draws it: four rows of
-// a 14px box, the title and one mark on the right. What is due, not how many
-// are due; the count is the head's "0 of 4 done".
+// Today's work on the Today page: the next tasks from the digest as rows, a
+// check circle in front of each, the project under the title and one mark on
+// the right. What is due, not how many are due; the count is the section's
+// heading.
 //
-// The boxes tick, as the artboard's do. Completing here is the same write the
-// board makes, so a task ticked on the dashboard earns the same XP.
+// The circles tick. Completing here is the same write the board makes, so a
+// task ticked on Today earns the same XP.
 
 export function TasksTile({ payload }: { payload: Record<string, unknown> }) {
   const d = payload as Partial<TasksDigest>
   const upcoming = d.upcoming ?? []
   const due = d.dueToday ?? 0
   const overdue = d.overdue ?? 0
-  // The digest is written nightly, so its rows are dated against that day;
-  // the earliest row is today unless nothing was due.
-  const today = upcoming[0]?.dueOn ?? ''
+  // The date the digest dated its rows against: the nightly's day, or this
+  // minute's, since every write recomputes it. A digest from before the
+  // field existed listed nothing overdue, so its first row is the day.
+  const today = d.today ?? upcoming[0]?.dueOn ?? ''
 
   const [ticked, setTicked] = useState<string[]>([])
   const [pending, start] = useTransition()
   const toast = useToast()
 
   if (upcoming.length === 0 && due === 0 && overdue === 0) {
-    return <p className="t-caption text-ink-3">Nothing due today.</p>
+    return <p className="t-caption px-1 text-ink-3">Nothing due today.</p>
   }
 
   const tick = (id: string) => {
@@ -42,63 +46,75 @@ export function TasksTile({ payload }: { payload: Record<string, unknown> }) {
   }
 
   return (
-    <div className="mt-2 flex flex-col">
-      {upcoming.slice(0, 4).map((t) => {
-        const on = ticked.includes(t.id)
+    <RowList>
+      {upcoming.map((t) => {
+        const on = t.status === 'done' || ticked.includes(t.id)
         const tag = tagFor(t, today)
         return (
-          <button
+          <div
             key={t.id}
-            type="button"
-            disabled={on || pending}
-            onClick={() => tick(t.id)}
-            aria-label={`Complete ${t.title}`}
-            className="grid grid-cols-[16px_1fr_auto] items-center gap-2.5 border-b border-rule py-[9px] text-left"
+            className="relative flex items-start gap-3 px-4 py-2.5 before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-rule first:before:hidden"
           >
-            <span
-              aria-hidden
+            <button
+              type="button"
+              disabled={on || pending}
+              onClick={() => tick(t.id)}
+              aria-label={`Complete ${t.title}`}
               className={cn(
-                'grid size-3.5 place-items-center border rounded-full',
-                on ? 'border-brand bg-brand' : 'border-ink-3',
+                'mt-px grid size-5 shrink-0 place-items-center rounded-full border transition-colors duration-150',
+                on ? 'border-action bg-action text-action-fg' : 'border-rule-2 hover:border-action',
               )}
             >
-              {on && <span className="size-1.5 bg-bg" />}
-            </span>
-            <span className={cn('truncate text-[13px]', on ? 'text-ink-3 line-through' : 'text-ink')}>
-              {t.title}
+              {on && <Check size={12} strokeWidth={3} aria-hidden />}
+            </button>
+            <span className="min-w-0 flex-1">
+              <span
+                className={cn(
+                  'block truncate text-[14.5px] font-medium leading-[1.35]',
+                  on ? 'text-ink-3 line-through' : 'text-ink',
+                )}
+              >
+                {t.title}
+              </span>
+              <span className="t-caption mt-0.5 block truncate text-ink-3">
+                {t.project ?? 'No project'}
+              </span>
             </span>
             <span
               className={cn(
-                'label shrink-0 text-[10px] tracking-[0.06em]',
-                tag.accent ? 'text-brand' : 'text-ink-3',
+                'num shrink-0 pt-0.5 text-[12.5px]',
+                tag.tone === 'action' && 'font-medium text-action',
+                tag.tone === 'bad' && 'font-medium text-bad',
+                !tag.tone && 'text-ink-3',
               )}
             >
               {tag.text}
             </span>
-          </button>
+          </div>
         )
       })}
-    </div>
+    </RowList>
   )
 }
 
 /**
- * The one mark on the right of a row, as the artboard picks it: an agent's
- * task says so, a task due later says when, a task with a project says which
- * at what priority, an estimate says how long, and the rest say the priority.
+ * The one mark on the right of a row: a finished task says done, an agent's
+ * task says review, an overdue one says so, a task due later says when, a
+ * task with an estimate says how long, and the rest say the priority.
  */
 function tagFor(
-  t: { priority: string; dueOn: string; project?: string | null; estimateMinutes?: number | null; status?: string },
+  t: { priority: string; dueOn: string | null; estimateMinutes?: number | null; status?: string },
   today: string,
-): { text: string; accent: boolean } {
-  if (t.status === 'review') return { text: 'Agent · review', accent: true }
+): { text: string; tone?: 'action' | 'bad' } {
+  if (t.status === 'done' || t.dueOn === null) return { text: 'done' }
+  if (t.status === 'review') return { text: 'Review', tone: 'action' }
+  if (t.dueOn < today) return { text: 'Overdue', tone: 'bad' }
   if (t.dueOn > today) {
     const d = new Date(`${t.dueOn}T12:00:00`)
-    return { text: `${MONTHS[d.getMonth()]} ${d.getDate()}`, accent: false }
+    return { text: `${MONTHS[d.getMonth()]} ${d.getDate()}` }
   }
-  if (t.project) return { text: `${t.priority} · ${t.project}`, accent: false }
-  if (t.estimateMinutes) return { text: `${t.estimateMinutes} min`, accent: false }
-  return { text: t.priority, accent: false }
+  if (t.estimateMinutes) return { text: hoursLabel(t.estimateMinutes) }
+  return { text: t.priority }
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']

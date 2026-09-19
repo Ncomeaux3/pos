@@ -1,16 +1,6 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import {
-  Card,
-  CardHead,
-  Chip,
-  EmptyState,
-  Eyebrow,
-  PaceBar,
-  PageHeader,
-  Row,
-  RowList,
-} from '@/components/pos'
+import { Card, EmptyState, PaceBar, PageHeader, Row, RowList, StatusDot } from '@/components/pos'
 import { db } from '@/core/db'
 import { Bento, ArrangeToggle, type Tile } from './Bento'
 import { SevenDays } from './DashboardTiles'
@@ -25,27 +15,39 @@ import { getSettings } from '@/core/settings'
 import { clockIn, minutesIn, ownerToday, zoneAbbrIn } from '@/core/today'
 import { RunNow } from './RunNow'
 
-// The bento. Every tile reads core, never a module's own tables: module numbers
-// arrive through their digests, which is what keeps this page ignorant of all
-// of them and stops it breaking when one is deleted.
+// Today. Every part of it reads core, never a module's own tables: module
+// numbers arrive through their digests, which is what keeps this page ignorant
+// of all of them and stops it breaking when one is deleted.
+//
+// Top to bottom, as the Holon mockup (docs/design/holon/today.html) lays it
+// out: the greeting, what needs attention, today's work beside the week
+// ahead, then one summary per module in the owner's saved order, and the
+// system's own line last.
 
 /**
  * What is coming in the next seven days.
  *
  * Composed from what each module says is upcoming, which is the same list the
  * Weekly Review picks next week's three from. Core reads no module schema to
- * build it and a module that dates nothing simply never appears on the strip.
+ * build it and a module that dates nothing simply never appears.
  */
 async function nextSevenDays(
   todayIso: string,
 ): Promise<{ id: string; title: string; meta: string; at: string; module: string; href?: string }[]> {
+  // Tomorrow through the seventh day out. Today's tasks are the section
+  // beside this one, so they stay off it; anything else dated today (a
+  // renewal, a charge, a trip) has nowhere else on the page and stays.
   const week = new Date(`${todayIso}T12:00:00`)
-  week.setDate(week.getDate() + 7)
+  week.setDate(week.getDate() + 8)
   const until = week.toISOString().slice(0, 10)
 
   return (await upcoming())
     .flatMap((c) => c.items.map((i) => ({ ...i, module: c.module })))
-    .flatMap((i) => (i.at && i.at >= todayIso && i.at < until ? [{ ...i, at: i.at }] : []))
+    .flatMap((i) =>
+      i.at && i.at >= todayIso && i.at < until && !(i.module === 'tasks' && i.at === todayIso)
+        ? [{ ...i, at: i.at }]
+        : [],
+    )
     .sort((a, b) => a.at.localeCompare(b.at))
     .slice(0, 6)
 }
@@ -81,7 +83,7 @@ async function spendByPurpose(): Promise<
 
 const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
-/** "claude-haiku-4-5-20251001" reads as "Haiku" on a tile, as the artboard has it. */
+/** "claude-haiku-4-5-20251001" reads as "Haiku" on a tile. */
 function modelName(model: string): string {
   const family = model.match(/haiku|sonnet|opus|fable/i)?.[0]
   return family ? capitalise(family.toLowerCase()) : model
@@ -90,41 +92,64 @@ function modelName(model: string): string {
 const money = (cents: number) => `$${(cents / 100).toFixed(2)}`
 
 /**
- * The artboard's default order, POS Dashboard.dc.html line 194. Everything
- * else that wrote a digest follows in rail order; the owner's saved layout
- * still wins over both once there is one.
+ * The default order of the summaries: the three the owner uses most, then
+ * every other module that wrote a digest in rail order, and the model spend
+ * last. The owner's saved layout wins over this once there is one.
+ *
+ * Saved layouts from before Holon phase 3 may still name `warnings`,
+ * `review`, `tasks` and `timeline`, which are sections above the grid now
+ * rather than tiles. Bento keeps only the ids it is handed, so those entries
+ * are ignored, hidden or not, and nothing has to be migrated.
  */
-const ORDER = ['warnings', 'finance', 'tasks', 'review', 'goals', 'skills', 'llm', 'timeline']
+const ORDER = ['finance', 'goals', 'skills']
+
+/** A section heading: the title, and the count or line that qualifies it. */
+function SectionHead({ id, title, meta }: { id: string; title: string; meta?: string }) {
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 px-1 pb-3">
+      <h2 id={id} className="text-[20px] font-semibold leading-tight tracking-[-0.015em] text-ink">
+        {title}
+      </h2>
+      {meta && <span className="t-caption num text-ink-3">{meta}</span>}
+    </div>
+  )
+}
 
 /**
- * Phone Home is a Today page: the headline plus these five (2026-09-13
- * decision). Every other tile's grid cell is `phone: false`, which Bento
- * hides below md so no tile leaves a blank 200px row behind it.
+ * A summary's head: the module name, which opens it, and the line the module
+ * wrote for the right, which opens it too. No footer link.
  */
-const PHONE_TILES = new Set(['warnings', 'finance', 'tasks', 'review', 'timeline'])
+function TileHead({ href, name, meta }: { href: string; name: string; meta?: string }) {
+  return (
+    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+      <h2 className="text-[15px] font-semibold leading-tight text-ink">
+        <Link href={href} aria-label={`Open ${name}`} className="hover:text-action">
+          {name}
+        </Link>
+      </h2>
+      {meta && (
+        <Link href={href} className="t-caption text-ink-3 hover:text-ink">
+          {meta}
+        </Link>
+      )}
+    </div>
+  )
+}
 
-/**
- * The tile's border is the quiet rule, not rule-2; module tiles lift on hover.
- * `h-full` fills the grid cell so the bottoms of a row align and an empty
- * state has room to centre; the row itself is as tall as its tallest tile,
- * with no minimum (Bento).
- */
-const tileClass = 'flex h-full flex-col gap-3 border-rule'
+/** A summary fills its grid cell so the bottoms of a row align. */
+const tileClass = 'flex h-full flex-col gap-3 transition-colors duration-150'
 
 export default async function DashboardPage() {
   // The owner's date, not the server's: on Vercel those differ all evening.
-  // Two forms of it, and they are not interchangeable. `todayIso` is what
-  // dates are compared against; `today` is the label in the band.
+  // `todayIso` is what dates are compared against; `today` is the label.
   const [settings, todayIso] = await Promise.all([getSettings(), ownerToday()])
-  // "Fri Sep 11", the artboard's band date, in the owner's zone.
-  const today = new Intl.DateTimeFormat('en-US', {
+  // "Friday 18 September", in the owner's zone.
+  const today = new Intl.DateTimeFormat('en-GB', {
     timeZone: settings.timezone,
-    weekday: 'short',
-    month: 'short',
+    weekday: 'long',
     day: 'numeric',
-  })
-    .format(new Date())
-    .replace(',', '')
+    month: 'long',
+  }).format(new Date())
 
   const [latest, digests, jobs, diary, warnings, proposals, spend, nav, offRail] = await Promise.all([
     latestSummary(),
@@ -141,14 +166,15 @@ export default async function DashboardPage() {
 
   const summary = latest?.summary
   const segments = summary ? headlineSegments(summary, todayIso) : []
+  const alerts = summary?.alerts ?? []
   const failed = jobs.filter((j) => j.status === 'failed')
   const spendCents = summary?.spendCents ?? 0
   const capCents = summary?.capCents ?? settings.llm_soft_cap_cents
 
-  // The tiles read the latest digest per module, not the nightly summary's
-  // copy: every write tool recomputes its digest (core/tools.ts), so this is
-  // this minute's numbers. The headline, alerts and Last run stay nightly. A
-  // module that is off in Settings, or gone from the folder, has no tile.
+  // The summaries read the latest digest per module, not the nightly's copy:
+  // every write tool recomputes its digest (core/tools.ts), so this is this
+  // minute's numbers. The headline, alerts and the run line stay nightly. A
+  // module that is off in Settings, or gone from the folder, has no summary.
   const enabled = settings.modules_enabled
   const moduleDigests = digests.flatMap((d) => {
     const manifest = getModules().find((m) => m.id === d.module)
@@ -156,160 +182,51 @@ export default async function DashboardPage() {
     return [{ module: d.module, payload: d.payload, manifest }]
   })
 
+  // Today's work is the tasks module's own tile, promoted out of the grid: the
+  // rows with their checkboxes are what the module draws from its digest, and
+  // ticking one here is the same write the board makes. With no Tasks module
+  // there is no Today section, and the week ahead takes the width.
+  const tasks = moduleDigests.find((m) => m.module === 'tasks')
+  const TasksTile = tasks?.manifest.tile
+  const tasksHead = tasks && tasks.manifest.tileHead?.(tasks.payload)
+
   const unsorted: Tile[] = [
-    {
-      id: 'warnings',
-      phone: PHONE_TILES.has('warnings'),
-      node: (
-        <Card className={tileClass}>
-          {/* The eyebrow itself turns amber while there is something open;
-            * the artboard draws no dot on this tile. */}
-          <CardHead
-            label={<span className={warnings.length > 0 ? 'text-warn' : undefined}>Warnings</span>}
-            meta={`${warnings.length} open`}
-            plainMeta
-          />
-          {warnings.length === 0 ? (
-            <p className="grid flex-1 place-items-center text-[26px] font-light text-ink-3">
-              0 warnings
-            </p>
-          ) : (
-            <WarningList
-              phoneLimit={2}
-              warnings={warnings.map((w) => ({
-                id: w.id,
-                title: w.title,
-                sub: w.body,
-                urgent: w.urgency === 'urgent',
-                href: w.href,
-              }))}
-            />
-          )}
-        </Card>
-      ),
-    },
-    {
-      id: 'review',
-      phone: PHONE_TILES.has('review'),
-      node: (
-        <Card className={tileClass}>
-          <CardHead
-            label={
-              <Link href="/review" aria-label="Open Review" className="hover:text-ink">
-                Review · agent proposals
-              </Link>
-            }
-            meta={
-              <Link href="/review" className="hover:text-ink">
-                {proposals.length} pending →
-              </Link>
-            }
-            plainMeta
-          />
-          {proposals.length === 0 ? (
-            <p className="grid flex-1 place-items-center text-[26px] font-light text-ink-3">
-              inbox clear
-            </p>
-          ) : (
-            <ProposalList
-              phoneLimit={1}
-              proposals={proposals.map((p) => ({
-                id: p.id,
-                title: p.title ?? 'Proposal',
-                from: p.agent ?? 'agent',
-              }))}
-            />
-          )}
-        </Card>
-      ),
-    },
-    {
-      id: 'timeline',
-      phone: PHONE_TILES.has('timeline'),
-      node: (
-        <Card className={tileClass}>
-          <CardHead label="Next 7 days" meta={`${diary.length} item${diary.length === 1 ? '' : 's'}`} plainMeta />
-          <SevenDays
-            today={todayIso}
-            items={diary.map((d) => ({
-              id: `${d.module}.${d.id}`,
-              title: d.title,
-              meta: d.meta,
-              at: d.at,
-              module: d.module,
-              href: d.href,
-            }))}
-          />
-        </Card>
-      ),
-    },
+    // One summary per module that wrote a digest. A module is responsible
+    // for its own numbers; this page only lays them out.
+    ...moduleDigests
+      .filter((m) => m.module !== 'tasks')
+      .map((m) => {
+        const { manifest } = m
+        const name = manifest.nav.label
+        const ModuleTile = manifest.tile
+        const head = manifest.tileHead?.(m.payload) ?? {}
+        const href = `/${m.module}`
 
-    // One tile per module that wrote a digest. A module is responsible for its
-    // own numbers; this page only lays them out.
-    ...moduleDigests.map((m) => {
-      const { manifest } = m
-      const name = manifest.nav.label
-      const ModuleTile = manifest.tile
-      const head = manifest.tileHead?.(m.payload) ?? {}
-      const href = `/${m.module}`
-
-      return {
-        id: m.module,
-        phone: PHONE_TILES.has(m.module),
-        node: (
-          <Card className={cn(tileClass, 'transition-colors duration-150 hover:border-rule-2')}>
-            {/* The head is the way in, as the artboard has it: the name and
-              * the line on the right both open the module. No footer link. */}
-            <CardHead
-              label={
-                <Link href={href} aria-label={`Open ${name}`} className="hover:text-ink">
-                  {head.label ?? name}
-                </Link>
-              }
-              meta={
-                head.meta ? (
-                  <Link href={href} className="hover:text-ink">
-                    {head.meta} →
-                  </Link>
-                ) : ModuleTile ? undefined : (
-                  'digest'
-                )
-              }
-              plainMeta
-            />
-            {/* The module says how its own numbers read. Core only places the
-              * result: it has no way to know what a finance payload holds, and
-              * walking the object generically is what put "debt cents 231000"
-              * on the dashboard. */}
-            {ModuleTile ? (
-              <ModuleTile payload={m.payload} />
-            ) : (
-              <GenericDigest payload={m.payload} />
-            )}
-          </Card>
-        ),
-      }
-    }),
+        return {
+          id: m.module,
+          node: (
+            <Card className={cn(tileClass, 'hover:border-rule-2')}>
+              <TileHead href={href} name={head.label ?? name} meta={head.meta} />
+              {/* The module says how its own numbers read. Core only places
+                * the result: it has no way to know what a finance payload
+                * holds, and walking the object generically is what put
+                * "debt cents 231000" on the dashboard. */}
+              {ModuleTile ? <ModuleTile payload={m.payload} /> : <GenericDigest payload={m.payload} />}
+            </Card>
+          ),
+        }
+      }),
 
     {
       id: 'llm',
-      phone: PHONE_TILES.has('llm'),
       node: (
         <Card className={tileClass}>
-          <CardHead
-            label="Model spend · month"
-            meta={
-              <Link href="/settings" className="hover:text-ink">
-                cap {money(capCents)} →
-              </Link>
-            }
-            plainMeta
-          />
+          <TileHead href="/settings" name="Model spend" meta={`cap ${money(capCents)} this month`} />
           <div className="mt-0.5 flex items-baseline gap-2.5">
-            <span className="num text-[30px] font-light leading-none text-ink">
+            <span className="num text-[24px] font-semibold leading-none tracking-[-0.02em] text-ink">
               {money(spendCents)}
             </span>
-            <span className="num text-[11px] text-ink-3">
+            <span className="t-caption num text-ink-3">
               {capCents > 0 ? `${Math.round((spendCents / capCents) * 100)}% of cap` : 'no cap set'}
             </span>
           </div>
@@ -317,7 +234,6 @@ export default async function DashboardPage() {
             value={spendCents}
             max={capCents}
             tone={spendCents >= capCents ? 'bad' : spendCents > capCents * 0.8 ? 'warn' : 'brand'}
-            className="h-0.5 rounded-none [&>div]:rounded-none"
           />
           {spend.length === 0 ? (
             <p className="t-caption text-ink-3">
@@ -328,15 +244,15 @@ export default async function DashboardPage() {
               {spend.map((row) => (
                 <div
                   key={`${row.purpose}.${row.model}`}
-                  className="grid grid-cols-[1fr_auto_auto] gap-3 border-b border-rule py-[7px] text-[12px]"
+                  className="grid grid-cols-[1fr_auto_auto] gap-3 border-b border-rule py-[7px] text-[13px] last:border-b-0"
                 >
                   <span className="truncate text-ink">
                     {capitalise(row.purpose)} · {modelName(row.model)}
                   </span>
-                  <span className="num text-[11px] text-ink-3">
+                  <span className="num t-caption text-ink-3">
                     {row.calls.toLocaleString('en-US')} {row.calls === 1 ? 'call' : 'calls'}
                   </span>
-                  <span className="num text-[11px] text-ink">{money(row.cents)}</span>
+                  <span className="num t-caption text-ink">{money(row.cents)}</span>
                 </div>
               ))}
             </div>
@@ -346,12 +262,13 @@ export default async function DashboardPage() {
     },
   ]
 
-  // The artboard's nine first, in its order, then the rest of the modules in
-  // rail order. `unsorted` above is grouped by kind because that is how the
-  // tiles are built, not how they are laid out.
+  // The three most used first, then the rest of the modules in rail order,
+  // then the model spend. `unsorted` above is grouped by kind because that is
+  // how the tiles are built, not how they are laid out.
   const position = (id: string) => {
     const fixed = ORDER.indexOf(id)
     if (fixed >= 0) return fixed
+    if (id === 'llm') return ORDER.length + rail.length + 1
     const onRail = rail.indexOf(id)
     return ORDER.length + (onRail >= 0 ? onRail : rail.length)
   }
@@ -360,18 +277,16 @@ export default async function DashboardPage() {
   const hour = Math.floor(minutesIn(new Date(), settings.timezone) / 60)
   const greeting = hour < 12 ? 'Morning' : hour < 18 ? 'Afternoon' : 'Evening'
 
+  const attention = warnings.length + proposals.length + alerts.length
+
   return (
     <div>
-      {/* Band one only: the headline below is the page's opening statement,
-        * drawn to the artboard's size; the h1 is PageHeader's "Home". On the phone this is
-        * the back-control-less title row (Home is a tab root) with Run now as
+      {/* Band one only: the greeting below is the page's opening statement
+        * and the h1 is PageHeader's "Today". On the phone this is the
+        * back-control-less title row (Today is a tab root) with Run now as
         * the one action. */}
       <PageHeader
-        eyebrow={
-          <>
-            Today <span className="text-ink-4">/</span> {today}
-          </>
-        }
+        eyebrow="Today"
         title="Today"
         hideTitle
         searchPlaceholder="What are you looking for?"
@@ -384,40 +299,18 @@ export default async function DashboardPage() {
         }
       />
 
-      <section className="mt-[26px]">
-        {/* One line at every width: the "Nightly summary" prefix is desktop
-          * only, since with "Agent Log" on the end it wraps at 402 and the
-          * phone Home has a height budget. */}
-        <Link href="/agent-log" className="eyebrow text-ink-3 hover:text-ink">
-          <span
-            className="status-dot"
-            data-tone={failed.length > 0 ? 'bad' : latest ? 'ok' : 'idle'}
-            aria-hidden="true"
-          />
-          {/* The run's own clock, in the owner's zone, as the artboard writes
-            * it: "Last run 04:02 CDT · ok". */}
-          <span>
-            <span className="max-md:hidden">Nightly summary · </span>
-            {latest
-              ? `Last run ${clockIn(new Date(latest.runAt), settings.timezone)} ${zoneAbbrIn(settings.timezone)} · ${failed.length > 0 ? `${failed.length} failed` : 'ok'} · Agent Log`
-              : 'No run yet · Agent Log'}
-          </span>
-        </Link>
-        {/* The opening statement, at the size the design gives it. It is the
-          * first thing on the page and reads as a sentence, not a heading, and
-          * the parts of it that name something you can open are links, which
-          * is the artboard's one piece of colour in the sentence. */}
-        <p className="mt-3 max-w-[920px] text-pretty text-[clamp(22px,2.2vw,30px)] font-normal leading-[1.25] tracking-[-0.03em] text-ink">
+      <section className="mt-5 max-w-[920px] md:mt-6">
+        <p className="label text-ink-3">{today}</p>
+        {/* The opening statement, at the size the design gives it. It reads
+          * as a sentence, not a heading, and the parts of it that name
+          * something you can open are links, the one piece of colour in it. */}
+        <p className="mt-2 text-pretty text-[clamp(22px,2.2vw,30px)] font-normal leading-[1.25] tracking-[-0.03em] text-ink">
           {/* The one place the owner's name appears since it left the rail. */}
           {settings.owner_name && <span className="font-semibold">{greeting}, {settings.owner_name}. </span>}
           {segments.length > 0
             ? segments.map((s, i) =>
                 s.href ? (
-                  <Link
-                    key={i}
-                    href={s.href}
-                    className="underline decoration-brand decoration-1 underline-offset-4 hover:text-brand"
-                  >
+                  <Link key={i} href={s.href} className="text-action hover:underline">
                     {s.text}
                   </Link>
                 ) : (
@@ -426,8 +319,8 @@ export default async function DashboardPage() {
               )
             : (latest?.headline ?? 'Nothing has run yet.')}
         </p>
-        {/* Hidden on a phone, as everywhere else: none of the four phone
-          * artboards puts a paragraph under its opening line. */}
+        {/* Hidden on a phone: none of the phone artboards puts a paragraph
+          * under its opening line. */}
         <p className="mt-2 hidden text-[13px] text-ink-3 md:block">
           {latest
             ? 'Written from module digests only. Raw data is touched when you ask a direct question.'
@@ -435,27 +328,145 @@ export default async function DashboardPage() {
         </p>
       </section>
 
-      <Bento tiles={tiles} layout={settings.dashboard_layout} />
-
       {!latest && (
-        <EmptyState headline="No run yet" className="mt-7">
+        <EmptyState headline="No run yet" className="mt-6">
           The orchestrator writes core.dashboard_summary on the nightly run. Press Run now to do it
           straight away.
         </EmptyState>
       )}
 
-      <div className="mt-7 flex flex-wrap items-center gap-2">
-        <Eyebrow>Alerts</Eyebrow>
-        {(summary?.alerts ?? []).length === 0 ? (
-          <Chip tone="ok">Nothing outstanding</Chip>
-        ) : (
-          (summary?.alerts ?? []).map((a) => (
-            <Chip key={a.title} tone={a.tone === 'bad' ? 'bad' : 'warn'}>
-              {a.title}
-            </Chip>
-          ))
+      {/* Only actionable things, and only when there are any: a warning, a
+        * proposal, or an alert the nightly summary raised. Sand, because this
+        * is the one warm surface on the page and it is meant to be read
+        * first. Every row's action is the same write its own screen makes. */}
+      {attention > 0 && (
+        <section
+          aria-labelledby="attention"
+          data-testid="dashboard-attention"
+          className="mt-6 rounded-[18px] bg-sand-surface px-4 py-3.5 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--sand)_45%,transparent)] md:px-5 md:py-4"
+        >
+          <div className="flex items-baseline justify-between gap-3 px-1">
+            <h2 id="attention" className="text-[15px] font-semibold leading-tight text-ink">
+              Needs attention
+            </h2>
+            <span className="t-caption num text-ink-3">
+              {attention} {attention === 1 ? 'item' : 'items'}
+            </span>
+          </div>
+          {warnings.length > 0 && (
+            <WarningList
+              phoneLimit={2}
+              warnings={warnings.map((w) => ({
+                id: w.id,
+                title: w.title,
+                sub: w.body,
+                urgent: w.urgency === 'urgent',
+                href: w.href,
+              }))}
+            />
+          )}
+          {proposals.length > 0 && (
+            <ProposalList
+              phoneLimit={1}
+              proposals={proposals.map((p) => ({
+                id: p.id,
+                title: p.title ?? 'Proposal',
+                from: p.agent ?? 'agent',
+              }))}
+            />
+          )}
+          {/* The nightly summary's alerts, as rows like the rest: a fact and
+            * its detail, nothing to press, since each names something the
+            * band or the system line already lets you act on. */}
+          {alerts.length > 0 && (
+            <div className="mt-2 flex flex-col">
+              {alerts.map((a) => (
+                <div
+                  key={a.title}
+                  className="flex items-start gap-3 border-t border-[color-mix(in_srgb,var(--sand)_45%,transparent)] px-1 py-2.5 first:border-t-0"
+                >
+                  <span
+                    className={cn('mt-[7px] size-2 shrink-0 rounded-full', a.tone === 'bad' ? 'bg-bad' : a.tone === 'ok' ? 'bg-ok' : 'bg-warn')}
+                    aria-hidden
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[14.5px] font-medium leading-[1.35] text-ink">{a.title}</span>
+                    {a.detail && <span className="t-caption mt-0.5 block text-ink-3">{a.detail}</span>}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      <div
+        className={cn(
+          'mt-7 grid gap-7 md:mt-8',
+          TasksTile && 'lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:gap-8',
         )}
+      >
+        {TasksTile && tasks && (
+          <section aria-labelledby="today-work" data-testid="dashboard-today">
+            <SectionHead id="today-work" title="Today" meta={tasksHead?.meta} />
+            <TasksTile payload={tasks.payload} />
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Link
+                href="/tasks?task=new"
+                className="inline-flex h-11 items-center rounded-full border border-glass-line bg-glass-strong px-4 text-[13px] font-medium text-ink shadow-[inset_0_1px_0_var(--glass-edge),var(--lift)] hover:bg-bg-elev sm:h-9"
+              >
+                Add a task
+              </Link>
+              <Link
+                href="/tasks"
+                className="inline-flex h-11 items-center rounded-full px-4 text-[13px] font-medium text-ink-3 hover:bg-glass hover:text-ink sm:h-9"
+              >
+                All tasks
+              </Link>
+            </div>
+          </section>
+        )}
+
+        <section aria-labelledby="next-days" data-testid="dashboard-week">
+          <SectionHead
+            id="next-days"
+            title="Next 7 days"
+            meta={`${diary.length} item${diary.length === 1 ? '' : 's'}`}
+          />
+          <SevenDays
+            today={todayIso}
+            items={diary.map((d) => ({
+              id: `${d.module}.${d.id}`,
+              title: d.title,
+              meta: d.meta,
+              at: d.at,
+              module: d.module,
+              href: d.href,
+            }))}
+          />
+        </section>
       </div>
+
+      <Bento tiles={tiles} layout={settings.dashboard_layout} />
+
+      {/* The system's own line, last: discoverable, and below every piece of
+        * personal work. The run's own clock, in the owner's zone. */}
+      <p className="mt-8 px-1 t-caption text-ink-3">
+        <StatusDot
+          tone={failed.length > 0 ? 'bad' : latest ? 'ok' : 'idle'}
+          className="mr-2 inline-block align-middle"
+        />
+        <span>
+          {latest
+            ? `Nightly summary ran at ${clockIn(new Date(latest.runAt), settings.timezone)} ${zoneAbbrIn(settings.timezone)}, ${failed.length > 0 ? `${failed.length} job${failed.length === 1 ? '' : 's'} failed` : 'all jobs ok'}.`
+            : 'No run yet.'}{' '}
+          Model spend this month {money(spendCents)}
+          {capCents > 0 ? ` of ${money(capCents)}` : ''}.
+        </span>{' '}
+        <Link href="/agent-log" className="text-action hover:underline">
+          Agent log
+        </Link>
+      </p>
     </div>
   )
 }
@@ -514,4 +525,3 @@ function readableValue(key: string, value: number | string): string {
   }
   return typeof value === 'number' ? value.toLocaleString() : String(value)
 }
-

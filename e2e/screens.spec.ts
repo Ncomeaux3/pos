@@ -79,10 +79,13 @@ test('dashboard shell', async ({ page }) => {
     await expect(page.getByRole('link', { name: /^Review/ })).toBeVisible()
     await page.goto('/')
 
-    // Phone Home is a Today page: the headline plus five tiles (2026-09-13
-    // decision) - warnings, finance, tasks, review, timeline. Every other
-    // tile is desktop only.
-    await expect(page.getByTestId('dashboard-bento').locator(':scope > div:visible')).toHaveCount(5)
+    // Phone Today is the same page as the desktop's (Holon phase 3): the
+    // greeting, what needs attention, today's work, the week ahead, then
+    // every module's summary in the saved order.
+    await expect(page.getByTestId('dashboard-attention')).toBeVisible()
+    await expect(page.getByTestId('dashboard-today')).toBeVisible()
+    await expect(page.getByTestId('dashboard-week')).toBeVisible()
+    await expect(page.getByTestId('dashboard-bento').locator(':scope > div:visible')).toHaveCount(12)
   } else {
     // By href: the sidebar prefixes each label with its two character index and
     // appends the pending count, so the accessible name is "RV Review 2", and
@@ -146,25 +149,24 @@ test('dashboard shell', async ({ page }) => {
     }, accent)
     expect(badgeColor).toBe(accentRgb)
 
-    // POS Dashboard.dc.html at 1440x900: the artboard's nine tiles first, in
-    // its default order, then every other module's tile in rail order. The
-    // tile is 16px 20px inside a 1px --rule border, and the band's search is
-    // the compact one with its placeholder.
+    // Holon phase 3: warnings, proposals, today's tasks and the week ahead
+    // are sections above the grid, in that order, and the grid holds one
+    // summary per module: the three most used first, then rail order, then
+    // the model spend. A summary is a glass card at 16px 20px.
+    const attention = page.getByTestId('dashboard-attention')
+    await expect(attention.getByRole('heading', { name: 'Needs attention' })).toBeVisible()
+    await expect(attention.getByRole('button', { name: 'Snooze' }).first()).toBeVisible()
+    await expect(attention.getByRole('button', { name: 'Approve' }).first()).toBeVisible()
+    await expect(page.getByTestId('dashboard-today').getByRole('heading', { name: 'Today' })).toBeVisible()
+    await expect(page.getByTestId('dashboard-week').getByRole('heading', { name: 'Next 7 days' })).toBeVisible()
     const bento = page.getByTestId('dashboard-bento')
-    const eyebrows = await bento
+    const heads = await bento
       .locator(':scope > div')
-      .evaluateAll((tiles) => tiles.map((t) => t.querySelector('.eyebrow')?.textContent?.trim()))
-    expect(eyebrows.slice(0, 8)).toEqual([
-      'Warnings',
+      .evaluateAll((tiles) => tiles.map((t) => t.querySelector('h2')?.textContent?.trim()))
+    expect(heads).toEqual([
       'Finance',
-      'Tasks · today',
-      'Review · agent proposals',
       'Goals',
       'Skills',
-      'Model spend · month',
-      'Next 7 days',
-    ])
-    expect(eyebrows.slice(8)).toEqual([
       'Second Brain',
       'Ideas',
       'Health',
@@ -173,18 +175,13 @@ test('dashboard shell', async ({ page }) => {
       'Travel',
       'Home & Property',
       'Insurance',
+      'Model spend',
     ])
-    const tile = await bento.locator(':scope > div > div').first().evaluate((el) => {
-      const cs = getComputedStyle(el)
-      const rule = getComputedStyle(document.documentElement).getPropertyValue('--rule').trim()
-      const probe = document.createElement('span')
-      probe.style.color = rule
-      document.body.append(probe)
-      const ruleRgb = getComputedStyle(probe).color
-      probe.remove()
-      return { padding: cs.padding, border: cs.borderTopColor === ruleRgb }
-    })
-    expect(tile).toEqual({ padding: '16px 20px', border: true })
+    const tile = await bento.locator(':scope > div > div').first().evaluate((el) => ({
+      padding: getComputedStyle(el).padding,
+      glass: el.classList.contains('glass'),
+    }))
+    expect(tile).toEqual({ padding: '16px 20px', glass: true })
     // The band's search, with the artboard's question rather than PageHeader's default.
     await expect(page.getByRole('button', { name: /What are you looking for/ })).toBeVisible()
 
@@ -250,14 +247,15 @@ test('home shows Run now on the phone', async ({ page }, testInfo) => {
   // copy of the same button sits after it, hidden below md.
   await expect(page.getByRole('button', { name: 'Run now' }).first()).toBeVisible()
 
-  // A Today page fits in two swipes: the seed's warnings and proposals show
-  // two and one rows here, the rest behind a link. The budget grew by one
-  // headline line for the greeting (Holon phase 2); phase 3 recomposes Today
-  // and sets it again.
+  // The personal work fits in two swipes: the seed's warnings and proposals
+  // show two and one rows here, the rest behind a link, and the week ahead
+  // ends inside the second screen. The module summaries scroll on below
+  // (Holon phase 3, following the phone mockup).
   await expect(page.getByRole('button', { name: /^Dismiss / })).toHaveCount(2)
   await expect(page.getByRole('link', { name: /and \d+ more/ })).toHaveCount(2)
   await expect(page.getByRole('button', { name: 'Approve' })).toHaveCount(1)
-  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(1840)
+  const week = (await page.getByTestId('dashboard-week').boundingBox())!
+  expect(week.y + week.height).toBeLessThan(1800)
 })
 
 test('dashboard, the week ahead and arranging the tiles', async ({ page }) => {
@@ -267,9 +265,10 @@ test('dashboard, the week ahead and arranging the tiles', async ({ page }) => {
   // task from the Tasks module appears on a core screen without core reading
   // the tasks schema.
   await expect(page.getByText('Next 7 days')).toBeVisible()
-  // Dated by the module that owns it, not by core. The strip's entry is a
-  // link named by its day; the Tasks tile lists the same title as a button.
-  const amex = page.getByRole('link', { name: /Pay the Amex statement$/ })
+  // Dated by the module that owns it, not by core. The week's row is a link
+  // (day, title, the module's line); today's work lists the same title as a
+  // button.
+  const amex = page.getByRole('link', { name: /Pay the Amex statement/ })
   await expect(amex).toBeVisible()
   // The row opens the task's own drawer, not the module root (v1.1 Phase 1).
   await expect(amex).toHaveAttribute('href', /\?task=/)
@@ -291,15 +290,16 @@ test('dashboard, the week ahead and arranging the tiles', async ({ page }) => {
       page.waitForResponse(
         (r) => r.request().method() === 'POST' && 'next-action' in r.request().headers(),
       )
+    const spend = main.getByRole('link', { name: 'Open Model spend' })
     let acted = saved()
     await page.getByRole('button', { name: 'Hide llm' }).click()
-    await expect(main.getByText('Model spend · month')).toBeHidden()
+    await expect(spend).toBeHidden()
     await acted
     await page.reload()
-    await expect(main.getByText('Model spend · month')).toBeHidden()
+    await expect(spend).toBeHidden()
     acted = saved()
     await page.getByTestId('dashboard-hidden').getByRole('button', { name: 'Show llm' }).click()
-    await expect(main.getByText('Model spend · month')).toBeVisible()
+    await expect(spend).toBeVisible()
     await acted
 
     await page.getByRole('link', { name: 'Done', exact: true }).click()
@@ -967,7 +967,6 @@ test('changing autonomy is what decides whether an agent write is held', async (
 
 test('dashboard renders the nightly run', async ({ page }) => {
   await page.goto('/')
-  const mobile = (page.viewportSize()?.width ?? 0) < 768
 
   // Run now is a server action behind requireOwner, not a call to the cron
   // route, so it needs no secret. On both widths: a job runs from a button
@@ -977,27 +976,24 @@ test('dashboard renders the nightly run', async ({ page }) => {
   await expect(page.getByText(/^Run clean$|jobs? failed/i)).toBeVisible({ timeout: 20_000 })
   await page.reload()
 
-  // Tile labels are uppercased by CSS, so the DOM still says "Warnings".
   const main = page.getByRole('main')
-  await expect(main.getByText('Warnings')).toBeVisible()
-  // The System tile is gone (v1.1 Phase 1): the run line at the top of the
-  // page is the health corner and links to the Agent Log.
-  await expect(main.getByRole('link', { name: /Agent Log$/ })).toHaveAttribute('href', '/agent-log')
-  if (!mobile) {
-    // Model spend and the module tiles are desktop only on the phone
-    // (2026-09-13 decision): Home is warnings, finance, tasks, review, timeline.
-    await expect(main.getByText('Model spend')).toBeVisible()
-    // One tile per module that wrote a digest, so the page needs no knowledge of
-    // any module to show its numbers. The tile's head is the link in, as drawn.
-    await expect(main.getByRole('link', { name: /open ideas/i })).toBeVisible()
-  }
+  await expect(main.getByText('Needs attention')).toBeVisible()
+  // The System tile is gone (v1.1 Phase 1): the run line at the foot of the
+  // page is the health corner and links to the Agent Log (Holon phase 3
+  // moved it under the summaries).
+  await expect(main.getByRole('link', { name: /Agent log$/ })).toHaveAttribute('href', '/agent-log')
+  await expect(main.getByRole('link', { name: 'Open Model spend' })).toBeVisible()
+  // One summary per module that wrote a digest, so the page needs no knowledge
+  // of any module to show its numbers. The head is the link in.
+  await expect(main.getByRole('link', { name: /open ideas/i })).toBeVisible()
 
   // Snooze holds the notification row itself, not its rule, so the row is gone
   // now and still gone after a reload (v1.1 Phase 1; before this the button
   // wrote to a rule id that did not exist and the row came straight back).
-  const snoozeButton = main.getByRole('button', { name: 'Snooze' }).first()
+  const warningRow = main.getByTestId('warning-row').filter({ visible: true }).first()
+  const snoozeButton = warningRow.getByRole('button', { name: 'Snooze' })
   await expect(snoozeButton).toBeVisible()
-  const snoozedTitle = (await snoozeButton.locator('../..').locator('a.text-ink').first().textContent()) ?? ''
+  const snoozedTitle = (await warningRow.getByRole('link').first().textContent()) ?? ''
   expect(snoozedTitle).not.toBe('')
   // Every warning row goes somewhere (v1.1 Phase 5): the nightly digest's row
   // opens the alert centre.
@@ -1015,7 +1011,7 @@ test('dashboard renders the nightly run', async ({ page }) => {
   await expect(main.getByText(snoozedTitle, { exact: true })).toHaveCount(0)
   await acted
   await page.reload()
-  await expect(main.getByText('Warnings')).toBeVisible()
+  await expect(main.getByText('Needs attention')).toBeVisible()
   await expect(main.getByText(snoozedTitle, { exact: true })).toHaveCount(0)
 
   await shoot(page, 'dashboard-live')
@@ -1230,7 +1226,7 @@ test('tasks, the board and the quick add parser', async ({ page }) => {
   await expectBand(page, page.getByText(/\d+ open · \d+ done today/))
 
   // Today holds what is due today and what slipped, because a slip is today.
-  await expect(page.getByText(/^Today · \w{3} \w{3} \d+$/)).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Today, \w+day \d+$/ })).toBeVisible()
   await expect(page.getByText('Recurring detection tests')).toBeVisible()
   await expect(page.getByText('Read DDIA ch. 5, Replication')).toBeVisible()
 
@@ -1312,7 +1308,7 @@ test('tasks, a row expands in place and EDIT opens the form drawer', async ({ pa
     const t = (await toast.boundingBox())!
     expect(t.y + t.height).toBeLessThan(bar.y)
   }
-  await expect(page.locator('article').filter({ hasText: 'Recurring detection tests' }).getByText('95m')).toBeVisible()
+  await expect(page.locator('article').filter({ hasText: 'Recurring detection tests' }).getByText('1.6 h')).toBeVisible()
 })
 
 test('tasks, the six views and the month grid', async ({ page }) => {
@@ -1340,7 +1336,7 @@ test('tasks, the six views and the month grid', async ({ page }) => {
   // until it is accepted.
   await openView(/Review/)
   await expect(page.getByText('Test the bank sync against three months of history')).toBeVisible()
-  await expect(page.getByText('AGENT · REVIEW').first()).toBeVisible()
+  await expect(page.getByText('Agent, review').first()).toBeVisible()
   // The view is in the URL, which is what lets it survive the reload shoot()
   // does to switch themes. Without it the shot would show Today and the test
   // would still pass.
@@ -1380,10 +1376,10 @@ test('tasks, the six views and the month grid', async ({ page }) => {
 })
 
 test('tasks, completing one emits the event that earns XP', async ({ page }) => {
-  // The dashboard's Tasks tile reads the latest digest, and every write tool
-  // recomputes it (v1.1 Phase 5), so the count moves without Run now.
+  // Today's work on the dashboard reads the latest tasks digest, and every
+  // write tool recomputes it (v1.1 Phase 5), so the count moves without Run now.
   await page.goto('/')
-  const tasksMeta = page.getByRole('main').getByRole('link', { name: /of \d+ done/ })
+  const tasksMeta = page.getByTestId('dashboard-today').getByText(/of \d+ done/)
   const before = await tasksMeta.textContent()
 
   await page.goto('/tasks')
@@ -1622,10 +1618,10 @@ test('goals, progress by area with the rule behind each status', async ({ page }
   await expect(page.getByText(/Pace .* vs .* needed \(\d+%\)\./).first()).toBeVisible()
 
   // The demo history is shaped so every rule is on screen at once.
-  // The card badges, not the band's "1 STALLED", which the phone does not draw.
-  await expect(page.getByText('STALLED', { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('AT RISK', { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('ON TRACK', { exact: true }).first()).toBeVisible()
+  // The card badges, not the band's "1 stalled", which the phone does not draw.
+  await expect(page.getByText('Stalled', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('At risk', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('On track', { exact: true }).first()).toBeVisible()
 
   // The card names the next linked task, which Tasks answers through core.
   await expect(netWorth.getByText(/^Next: /)).toBeVisible()

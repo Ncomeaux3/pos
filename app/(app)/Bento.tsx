@@ -6,6 +6,7 @@ import { useState, useTransition, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { useLongPress } from '@/components/pos/gestures'
 import type { Settings } from '@/core/settings'
+import { arrange } from '@/core/dashboard-layout'
 import { saveDashboardLayout } from './shell-actions'
 
 // The dashboard grid, in the order the owner likes it.
@@ -16,9 +17,7 @@ import { saveDashboardLayout } from './shell-actions'
 // client because of it. The layout is one setting for every device (v1.1
 // Phase 5); it arrives as a prop and goes back through a server action.
 
-/** `phone: false` hides both the tile and its grid cell below md, so a tile
- * the phone does not carry leaves no blank row behind it. */
-export type Tile = { id: string; node: ReactNode; phone?: boolean }
+export type Tile = { id: string; node: ReactNode }
 
 export type Layout = Settings['dashboard_layout']
 
@@ -56,18 +55,11 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
     setLayout(next)
     start(() => saveDashboardLayout(next))
   }
-  const order = layout?.order ?? null
   const hidden = layout?.hidden ?? []
-
-  // The stored order names tiles that may no longer exist, and cannot know
-  // about a module installed since. Known ids first in their saved order, then
-  // everything new in the order the server sent it.
-  const ids = tiles.map((t) => t.id)
-  const sorted = order
-    ? [...order.filter((id) => ids.includes(id)), ...ids.filter((id) => !order.includes(id))]
-    : ids
-  const shown = sorted.filter((id) => !hidden.includes(id))
-  const hiddenTiles = sorted.filter((id) => hidden.includes(id))
+  const { sorted, shown, hidden: hiddenTiles } = arrange(
+    tiles.map((t) => t.id),
+    layout,
+  )
 
   // Moves are over the visible tiles, so ‹ on the tile after a hidden one
   // swaps with what the owner sees, not with the hidden one.
@@ -130,8 +122,7 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
               onDragOver={(e) => arranging && e.preventDefault()}
               onDrop={() => drop(id)}
               className={cn(
-                tile.phone === false ? 'hidden md:flex' : 'flex',
-                'min-w-0 flex-col',
+                'flex min-w-0 flex-col',
                 arranging && 'cursor-grab',
                 dragging === id && 'opacity-60',
               )}
