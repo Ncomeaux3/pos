@@ -42,7 +42,7 @@ export type WorkoutFilter = {
 export async function listWorkouts(filter: WorkoutFilter = {}): Promise<WorkoutRow[]> {
   const { rows } = await db().query<WorkoutRow>(
     `select w.id, w.name, w.detail, w.kind, w.source, w.started_at, w.duration_s,
-            w.distance_m, w.avg_hr,
+            w.distance_m::float8 as distance_m, w.avg_hr,
             (select count(*)::text from fitness.set_entry s where s.workout_id = w.id)
               as set_count,
             b.weight_g::text as best_weight_g, b.reps as best_reps, b.name as best_exercise

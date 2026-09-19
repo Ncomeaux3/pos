@@ -39,7 +39,7 @@ async function rows() {
 async function workouts(source = 'health_auto_export') {
   const { rows } = await db().query(
     `select name, kind, to_char(started_at at time zone 'UTC', 'YYYY-MM-DD HH24:MI') as started_at,
-            duration_s, distance_m, avg_hr, detail, source, external_id
+            duration_s, distance_m::float8 as distance_m, avg_hr, detail, source, external_id
        from fitness.workout where source = $1 order by started_at`,
     [source],
   )
@@ -182,7 +182,7 @@ it('takes the Shortcut payload through its own inbound with its own source', asy
       kind: 'run',
       started_at: '2026-09-13 11:00',
       duration_s: 1800,
-      distance_m: 5633,
+      distance_m: 5632.7,
       avg_hr: null,
       detail: '',
       source: 'apple_shortcuts',

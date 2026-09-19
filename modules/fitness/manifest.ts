@@ -35,7 +35,7 @@ export default defineModule({
         kind: z.enum(['strength', 'run', 'ride', 'swim', 'walk', 'other']).default('other'),
         started_at: z.string(),
         duration_s: z.number().int().min(0).max(86_400),
-        distance_m: z.number().int().min(0).max(1_000_000).default(0),
+        distance_m: z.number().min(0).max(1_000_000).default(0),
         avg_hr: z.number().int().min(20).max(260).nullable().optional(),
         sets: z
           .array(
