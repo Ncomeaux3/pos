@@ -251,11 +251,13 @@ test('home shows Run now on the phone', async ({ page }, testInfo) => {
   await expect(page.getByRole('button', { name: 'Run now' }).first()).toBeVisible()
 
   // A Today page fits in two swipes: the seed's warnings and proposals show
-  // two and one rows here, the rest behind a link.
+  // two and one rows here, the rest behind a link. The budget grew by one
+  // headline line for the greeting (Holon phase 2); phase 3 recomposes Today
+  // and sets it again.
   await expect(page.getByRole('button', { name: /^Dismiss / })).toHaveCount(2)
   await expect(page.getByRole('link', { name: /and \d+ more/ })).toHaveCount(2)
   await expect(page.getByRole('button', { name: 'Approve' })).toHaveCount(1)
-  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(1800)
+  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(1840)
 })
 
 test('dashboard, the week ahead and arranging the tiles', async ({ page }) => {
