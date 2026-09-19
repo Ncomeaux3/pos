@@ -69,11 +69,11 @@ export function LoyaltyDrawer({
         </p>
         <div className="mt-3 grid grid-cols-2 gap-2.5">
           <label className="space-y-1.5">
-            <Eyebrow className="text-[10px]">Cash fare</Eyebrow>
+            <Eyebrow className="text-[11px]">Cash fare</Eyebrow>
             <input inputMode="decimal" value={cash} onChange={(e) => setCash(e.target.value)} aria-label="Cash fare in dollars" placeholder="640" className={cn(fieldClass, 'w-full')} />
           </label>
           <label className="space-y-1.5">
-            <Eyebrow className="text-[10px]">Points</Eyebrow>
+            <Eyebrow className="text-[11px]">Points</Eyebrow>
             <input inputMode="decimal" value={points} onChange={(e) => setPoints(e.target.value)} aria-label="Points required" placeholder="35000" className={cn(fieldClass, 'w-full')} />
           </label>
         </div>

@@ -1,5 +1,8 @@
 # Login to the artboard
 
+Superseded for styling on 2026-09-19 by the Holon redesign (docs/plans/holon-product-redesign.md, section 4): colour, type, radii, surfaces and control shapes now come from the Holon design contract and the shared components in `components/pos/`. This plan still governs what each screen shows and how it is laid out.
+
+
 ## Context
 
 Core screen of the fidelity pass (method: docs/plans/weekly-review-fidelity.md). `POS Login.dc.html` (121 lines) captured at 1440x900 into `/private/tmp/pos-handoff-sources/login/`: the idle form, the inline validation error, the sending state, the sent state and the denied state, dark and light (10 PNGs). Login already had one fidelity commit (`51289f7 Login to its artboard`, 2026-09-10): the card is 440px not 400, "Sign in" is the eyebrow over the heading, the button sits sized on the right of the form rather than as a bar, and the top band with the lockup and the install eyebrow exists. What is still open is small: the install eyebrow uses "/" where the artboard uses "·", the email input has no placeholder and no arrow on the button, the sent card is missing the artboard's "Sent via" cell (which this app cannot honestly draw), and the artboard's footer (domain plus a live nightly-job dot) is not built at all. The app also has one thing by deliberate, already-logged decision that the artboard draws and the build must keep leaving out: the denied view (see decisions/log.md 2026-09-07). Nothing else on the artboard needs a decision; the rest is measurement.

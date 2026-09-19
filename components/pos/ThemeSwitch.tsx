@@ -41,7 +41,7 @@ export function ThemeSwitch({
           disabled={pending}
           onClick={() => o.value !== theme && start(() => onChange(o.value))}
           className={cn(
-            'h-7 flex-1 rounded-lg px-2 text-[12px] font-medium text-ink-3 transition-colors duration-150',
+            'h-11 flex-1 rounded-lg px-2 text-[12px] sm:h-7 font-medium text-ink-3 transition-colors duration-150',
             o.value === theme && 'bg-bg-elev text-ink shadow-card ring-1 ring-rule',
           )}
         >

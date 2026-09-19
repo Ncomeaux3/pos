@@ -21,6 +21,7 @@ export function Row({
   selected,
   muted,
   onClick,
+  expanded,
   className,
 }: {
   title: ReactNode
@@ -37,6 +38,8 @@ export function Row({
   selected?: boolean
   muted?: boolean
   onClick?: () => void
+  /** For a row that toggles its `children`: announced as expanded or collapsed. */
+  expanded?: boolean
   className?: string
 }) {
   const interactive = Boolean(onClick)
@@ -58,6 +61,7 @@ export function Row({
       <div
         onClick={onClick}
         role={interactive ? 'button' : undefined}
+        aria-expanded={interactive ? expanded : undefined}
         tabIndex={interactive ? 0 : undefined}
         onKeyDown={
           interactive
@@ -72,7 +76,11 @@ export function Row({
               }
             : undefined
         }
-        className="flex min-h-7 flex-wrap items-center justify-between gap-x-3.5 gap-y-2"
+        // 44px on touch for a row that opens something; 28 on a pointer.
+        className={cn(
+          'flex flex-wrap items-center justify-between gap-x-3.5 gap-y-2',
+          interactive ? 'min-h-11 sm:min-h-7' : 'min-h-7',
+        )}
       >
         <div className="min-w-0 flex-1 basis-[180px]">
           <p className={cn('text-[14.5px] font-medium leading-[1.35]', muted ? 'text-ink-3' : 'text-ink')}>

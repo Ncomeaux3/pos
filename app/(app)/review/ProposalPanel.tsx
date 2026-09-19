@@ -71,7 +71,7 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
       {item.diff.length > 0 && (
         <div>
           <Eyebrow>Proposed change</Eyebrow>
-          <div className="mt-2 grid grid-cols-2 gap-px border border-rule bg-rule rounded-[18px]">
+          <div className="mt-2 grid grid-cols-2 gap-px overflow-hidden rounded-[18px] border border-rule bg-rule">
             {item.diff.map((d) => {
               const one = item.diff.length === 1
               const before = show(d.before)
@@ -109,7 +109,7 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-px border border-rule bg-rule rounded-[18px]">
+      <div className="grid grid-cols-3 gap-px overflow-hidden rounded-[18px] border border-rule bg-rule">
         <Cell label="Confidence">
           <div
             className={cn(

@@ -532,7 +532,7 @@ function Card({
           </button>
         )}
         {!manual && (
-          <span className="code t-caption min-w-0 max-w-[60%] truncate text-ink-4">
+          <span className="code t-caption min-w-0 max-w-[60%] truncate text-ink-3">
             computed · {goal.metricSource}
           </span>
         )}

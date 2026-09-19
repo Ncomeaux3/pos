@@ -102,7 +102,10 @@ export function Switch({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
+        // The track is 44x26; the pseudo element widens the hit area to 44px
+        // tall without changing what is drawn.
         'relative h-[26px] w-11 shrink-0 rounded-full transition-colors duration-200 ease-[var(--ease)]',
+        'before:absolute before:-inset-x-0 before:-inset-y-[9px] before:content-[""]',
         checked ? 'bg-action' : 'bg-ink-4/60',
         disabled && 'cursor-not-allowed opacity-100',
         className,

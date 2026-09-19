@@ -163,13 +163,13 @@ export function CommandPalette({ nav }: { nav: NavItem[] }) {
         <div className="mt-2.5 max-h-[52vh] overflow-y-auto border border-rule-2 bg-bg-elev py-1.5 rounded-[18px]">
           {found.length > 0 && (
             <>
-              <div className="px-3.5 py-1.5 text-[11px] text-ink-4">Results</div>
+              <div className="px-3.5 py-1.5 text-[11px] text-ink-3">Results</div>
               <ul>{found.map(rowButton)}</ul>
             </>
           )}
           {goto.length > 0 && (
             <>
-              <div className="px-3.5 py-1.5 text-[11px] text-ink-4">Go to</div>
+              <div className="px-3.5 py-1.5 text-[11px] text-ink-3">Go to</div>
               <ul>{goto.map(rowButton)}</ul>
             </>
           )}

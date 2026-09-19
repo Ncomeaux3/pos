@@ -294,7 +294,7 @@ function PolicyView({
                 ))}
                 <span className="absolute left-0 top-1 h-[15px] w-px bg-ink" />
               </div>
-              <div className="flex justify-between text-[10px] text-ink-4">
+              <div className="flex justify-between text-[11px] text-ink-3">
                 <span>Today</span>
                 <span>{shortDate(policy.expiresOn!, data.todayIso)}</span>
               </div>
@@ -331,7 +331,7 @@ function PolicyView({
               const inner = (
                 <>
                   <span className="min-w-0 truncate">{d.name}</span>
-                  <span className="num shrink-0 text-[10px] text-ink-4">{d.meta}</span>
+                  <span className="num shrink-0 text-[11px] text-ink-3">{d.meta}</span>
                 </>
               )
               const row = 'flex justify-between gap-2.5 border-b border-rule py-2 text-[12px] leading-[1.4]'

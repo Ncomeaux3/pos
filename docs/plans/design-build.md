@@ -1,5 +1,8 @@
 # Build POS against the Omelette design handoff
 
+Superseded for styling on 2026-09-19 by the Holon redesign (docs/plans/holon-product-redesign.md, section 4): colour, type, radii, surfaces and control shapes now come from the Holon design contract and the shared components in `components/pos/`. This plan still governs what each screen shows and how it is laid out.
+
+
 ## Context
 
 The repo is a working Phase 1 core at **step 7 of 16** ([docs/plans/phase-1-core.md](docs/plans/phase-1-core.md)): scaffold, core migration, auth, crypto/settings/llm, module registry with the `notes` stub, entities/events/xp/classify, and the integration registry with a Connections page. Everything after that (search, proposals, query, MCP, cron, notify, orchestrator, setup, CI, deploy) is unbuilt, and the UI is stock shadcn placeholder: Geist fonts, neutral oklch palette, `--radius: 0.625rem`, light-first.

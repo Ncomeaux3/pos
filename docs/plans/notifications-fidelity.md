@@ -1,5 +1,8 @@
 # Notifications to the artboard
 
+Superseded for styling on 2026-09-19 by the Holon redesign (docs/plans/holon-product-redesign.md, section 4): colour, type, radii, surfaces and control shapes now come from the Holon design contract and the shared components in `components/pos/`. This plan still governs what each screen shows and how it is laid out.
+
+
 ## Context
 
 This is a core screen (not a module), already closer to the artboard than most: the band, the schedule card, the rules table with its expander, the alert centre and its history, and the preview rail all exist with the right bones, and the fourteen seeded rules (`supabase/migrations/20260908232600_core_notification_rules.sql`) match the artboard's `RULES` array module for module, key for key, and copy for copy. What differs is mostly surface: separators (the artboard joins every generated string with "·"; the app mixes "/" and "to"), a module colour on the rules table the app has flattened to one green, three small honesty gaps in the preview rail, and one shared-component ceiling. Two things the app already gets right and the plan does not touch: the morning digest field is a computed, non-editable display (`nightlyRunAt`) where the artboard shows a live time input, because the digest time is the Vercel cron and no field here could move it; and every header/page button stays sentence case (Button.tsx's own comment: "the tracked uppercase treatment is reserved for the theme toggle", which lives in the sidebar, not this screen) where the artboard's "Pause all" reads uppercase-tracked like its own theme toggle. Neither is chased.

@@ -14,9 +14,9 @@ export type Tab<T extends string> = {
 }
 
 // The segmented control: a sunken glass track holding the tabs, the selected
-// one raised as a pill. 13.5px, 32px tall on desktop and 36 on a phone.
+// one raised as a pill. 13.5px, 32px tall on desktop and 44 on a phone.
 const TAB_BASE =
-  'flex h-9 shrink-0 items-center rounded-[9px] px-3.5 text-[13.5px] font-medium whitespace-nowrap transition-[background-color,color,box-shadow] duration-150 ease-[var(--ease)] md:h-8'
+  'flex h-11 shrink-0 items-center rounded-[9px] px-3.5 text-[13.5px] font-medium whitespace-nowrap transition-[background-color,color,box-shadow] duration-150 ease-[var(--ease)] md:h-8'
 const TAB_ON = 'bg-glass-strong text-ink font-semibold shadow-[inset_0_1px_0_var(--glass-edge),0_2px_6px_rgba(0,0,0,.08)]'
 const TAB_OFF = 'text-ink-3 hover:text-ink'
 const TAB_SOON = 'text-ink-4 cursor-not-allowed'
@@ -132,7 +132,7 @@ export function TabLinks({
         t.soon ? (
           <span key={t.href} className={cn(TAB_BASE, TAB_SOON, tabClassName)}>
             {t.label}
-            <span className="ml-1.5 text-[10px] text-ink-4">soon</span>
+            <span className="ml-1.5 text-[11px] text-ink-3">soon</span>
           </span>
         ) : (
           <Link

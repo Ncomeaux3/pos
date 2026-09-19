@@ -226,8 +226,9 @@ export function LineChart({
         <div className="flex justify-between text-[11px] text-ink-3">
           {days
             .filter((unused, i) => i % Math.max(1, Math.round(days.length / 6)) === 0)
-            .map((d) => (
-              <span key={d.date} className="num">
+            .map((d, i) => (
+              // Six labels ran together at 360px; every other one hides below sm.
+              <span key={d.date} className={cn('num', i % 2 === 1 && 'hidden sm:inline')}>
                 {shortDate(d.date)}
               </span>
             ))}

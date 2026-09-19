@@ -118,7 +118,7 @@ export function GroceryDrawer({
           <div key={recipe.id}>
             <div className="flex items-baseline justify-between border-b border-rule-2 pb-1.5">
               <span className="text-[13px] text-ink">{recipe.name}</span>
-              <span className="num text-[10px] text-ink-3">
+              <span className="num text-[11px] text-ink-3">
                 {n}× · serves {recipe.servings}
               </span>
             </div>
@@ -138,7 +138,7 @@ export function GroceryDrawer({
                       <span aria-hidden className={cn('size-3 shrink-0 border rounded-full', on ? 'border-brand bg-brand' : 'border-ink-3')} />
                       <span className={cn('text-[13px]', on ? 'text-ink-3 line-through' : 'text-ink')}>{ing.item}</span>
                     </span>
-                    <span className="num shrink-0 text-[10px] text-ink-3">
+                    <span className="num shrink-0 text-[11px] text-ink-3">
                       {ing.quantity}
                       {n > 1 && recipe.servings === 1 && ing.quantity ? ` × ${n}` : ''}
                     </span>

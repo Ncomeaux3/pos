@@ -24,7 +24,7 @@ export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overr
   const deletedCount = groups.reduce((n, g) => n + g.skills.filter((s) => s.deleted).length, 0)
 
   return (
-    <div className="flex max-w-[860px] flex-col gap-3.5" aria-busy={pending}>
+    <div className="flex max-w-[1040px] flex-col gap-3.5" aria-busy={pending}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-[13px] text-ink-3">
           Every skill a task, note, or workout can link to. Rename inline; delete what you won&apos;t
@@ -75,7 +75,7 @@ export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overr
                       if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
                     }}
                     className={cn(
-                      'h-11 min-w-0 rounded-lg border border-transparent bg-transparent px-2 text-[16px] outline-none focus-visible:border-action focus-visible:bg-bg sm:h-8 sm:text-[13px]',
+                      'h-11 min-w-0 rounded-lg border border-transparent bg-transparent px-2 text-[16px] outline-none focus-visible:border-action focus-visible:bg-bg focus-visible:shadow-[0_0_0_3px_var(--accent-soft)] sm:h-8 sm:text-[13px]',
                       skill.deleted ? 'text-ink-3 line-through' : 'text-ink',
                     )}
                   />
@@ -107,7 +107,7 @@ export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overr
                             ),
                           )
                         }
-                        className="num min-h-11 w-auto max-w-[220px] truncate rounded-none px-1 py-0 text-[12px] text-ink-3 sm:min-h-0"
+                        className="num min-h-11 w-auto whitespace-normal rounded-none px-1 py-0 text-left text-[12px] text-ink-3 sm:min-h-0"
                       />
                     )}
                   </span>

@@ -64,7 +64,7 @@ export function PageHeader({
         * a screen has one heading either way. */}
       <div className="flex min-h-11 items-center gap-2 md:hidden">
         <BackControl />
-        <h1 className="min-w-0 flex-1 truncate text-[24px] font-semibold leading-none tracking-[-0.022em] text-ink">
+        <h1 className="line-clamp-3 min-w-0 flex-1 text-[24px] font-semibold leading-[1.1] tracking-[-0.022em] text-ink">
           {title}
         </h1>
         {/* One action top right. A module with no phone pass keeps its
@@ -75,15 +75,17 @@ export function PageHeader({
         )}
       </div>
 
-      <div className="-mt-3 hidden h-10 items-center gap-x-4 md:flex">
-        <Eyebrow dot={dot}>{eyebrow}</Eyebrow>
+      <div className="-mt-3 hidden min-h-10 flex-wrap items-center gap-x-4 gap-y-2 md:flex">
+        <Eyebrow dot={dot} className="whitespace-nowrap">
+          {eyebrow}
+        </Eyebrow>
         {search && (
           <BandSearch
             className="ml-auto"
             placeholder={searchPlaceholder ?? (typeof title === 'string' ? `Search ${title.toLowerCase()}` : undefined)}
           />
         )}
-        {status && <div className={cn('flex items-center gap-3', !search && 'ml-auto')}>{status}</div>}
+        {status && <div className="ml-auto flex shrink-0 items-center gap-3 whitespace-nowrap">{status}</div>}
       </div>
 
       {hideTitle ? (

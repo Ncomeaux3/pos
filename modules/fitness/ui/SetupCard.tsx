@@ -49,7 +49,7 @@ export function SetupCard({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2.5">
               <span className="text-[15px] text-ink">Strava</span>
-              <Chip className="px-2 py-[3px] text-[10px]">OAuth2</Chip>
+              <Chip className="px-2 py-[3px] text-[11px]">OAuth2</Chip>
               <StatusChip tone="warn">Required</StatusChip>
             </div>
             <p className="mt-[5px] text-[12px] text-ink-3">

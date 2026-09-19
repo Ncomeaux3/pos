@@ -1,5 +1,8 @@
 # Skill Tree to the artboard
 
+Superseded for styling on 2026-09-19 by the Holon redesign (docs/plans/holon-product-redesign.md, section 4): colour, type, radii, surfaces and control shapes now come from the Holon design contract and the shared components in `components/pos/`. This plan still governs what each screen shows and how it is laid out.
+
+
 ## Context
 
 Screen four of the fidelity pass (method: docs/plans/weekly-review-fidelity.md). `POS Skill Tree.dc.html` captured at 1440x900 (default, a leaf selected, a branch selected, light) into `/private/tmp/pos-handoff-sources/skills/`. The app's screen already has the constellation, the character block, the four digest columns, the radar, the detail panel with its 90-day bars, events, children and drag-to-reassign (the 2026-09-10 rework). What differs is geometry and chrome: the artboard is two flush halves split by one rule under a 56px band, with the character and the attribute pips overlaid on the night sky and the hints and legend in its corners; the app draws two cards with gaps under a header that carries a summary line, keeps Reset view inside the canvas, and opens with nothing selected.

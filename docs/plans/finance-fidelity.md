@@ -1,5 +1,8 @@
 # Finance to the artboard
 
+Superseded for styling on 2026-09-19 by the Holon redesign (docs/plans/holon-product-redesign.md, section 4): colour, type, radii, surfaces and control shapes now come from the Holon design contract and the shared components in `components/pos/`. This plan still governs what each screen shows and how it is laid out.
+
+
 ## Context
 
 Screen three of the fidelity pass (method: docs/plans/weekly-review-fidelity.md). `POS Finance.dc.html` captured at 1440 (page at 900 and 1240 tall, the three drawers, light) into `/private/tmp/pos-handoff-sources/finance/`. The artboard is one overview page: header band, title block, a four-cell KPI strip, then a two-column grid (Accounts over the Net worth chart; Upcoming over Budgets), with three drawers at 520px (an account's transactions, a budget's transactions with its limit, and Budget limits with an alert-threshold slider). The app's Overview already has this anatomy and its drawers; what differs is a five-tab row the artboard does not have, row densities and copy shape in every card, the drawer's chrome and width, the limits drawer (absent), and a fixed 80% threshold.

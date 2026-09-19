@@ -136,7 +136,7 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
         <div className="mt-3 flex flex-wrap gap-1.5">
           <ScopeChip href={`/search${query ? `?q=${encodeURIComponent(query)}` : ''}`} active={!scope}>
             Everything
-            {query && <span className="num ml-1.5 text-[10px] opacity-70">{all.length}</span>}
+            {query && <span className="num ml-1.5 text-[11px] opacity-70">{all.length}</span>}
           </ScopeChip>
           {chipModules.map((m) => (
             <ScopeChip
@@ -145,7 +145,7 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
               active={scope === m.id}
             >
               {m.nav.label}
-              {query && <span className="num ml-1.5 text-[10px] opacity-70">{counts.get(m.id)}</span>}
+              {query && <span className="num ml-1.5 text-[11px] opacity-70">{counts.get(m.id)}</span>}
             </ScopeChip>
           ))}
         </div>
@@ -186,7 +186,7 @@ function ScopeChip({
     <Link
       href={href}
       className={cn(
-        'inline-flex items-center border px-2.5 py-[5px] text-[12px] leading-none transition-colors duration-150 rounded-full',
+        'inline-flex h-11 items-center border px-3 text-[12.5px] leading-none transition-colors duration-150 rounded-full sm:h-[34px] sm:px-2.5 sm:text-[12px]',
         active ? 'border-ink bg-ink text-bg' : 'border-rule-2 text-ink-3 hover:border-ink hover:text-ink',
       )}
     >

@@ -12,9 +12,12 @@ Brain, Ideas and Skills on the shared controls, #83) are merged into `holon`;
 Phase 5 (Finance KPIs as a MetricStrip, Health rebuilt on rows, chips, cards
 and the TabBar, Fitness strings and buttons, #86) is merged; Phase 6 is two
 PRs, the first (Meals, Travel, Home & Property and Insurance on the shared
-controls, #88) merged, the second (Review, Weekly review, Notifications,
-Settings, Agent log on the shared controls) open; Phase 7 (release
-validation and handoff) follows.
+controls, #88) and the second (Review, Weekly review, Notifications,
+Settings, Agent log, #91) merged; `main` merged into `holon` (#92). Phase 7
+(release validation: shared-component a11y fixes, the six-width visual pass,
+the keyboard and zoom audit, the docs) is the open PR into `holon`; after it
+merges, one merge-commit PR takes `holon` to `main` and the owner merges it
+under the release step. Two owner checks stay on the phone (OWNER-TODO 23).
 Decisions are in decisions/log.md under 2026-09-18 and 2026-09-19. v1.1 below
 is complete except Phase 11's owner step.
 

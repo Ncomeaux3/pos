@@ -147,7 +147,7 @@ export function Sidebar({
               {g.label && (
                 <div
                   className={cn(
-                    'label overflow-hidden px-5 text-[11.5px] text-ink-4 transition-[height,opacity] duration-200',
+                    'label overflow-hidden px-5 text-[11.5px] text-ink-3 transition-[height,opacity] duration-200',
                     collapsed ? 'h-2 opacity-0' : 'h-4',
                   )}
                 >

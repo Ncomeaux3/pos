@@ -188,13 +188,17 @@ export function Insurance({ data }: { data: InsuranceData }) {
                 key={policy.id}
                 selected={open?.id === policy.id}
                 onClick={() => setParams({ policy: policy.id, edit: null }, { push: true })}
+                // Below lg: the name and the status chip share the first line
+                // and premium, expiry and reminder flow under them. DataRow's
+                // own reflow gave a five-cell row no room for the premium.
+                className="max-lg:flex max-lg:flex-wrap max-lg:items-center max-lg:gap-x-3 max-lg:gap-y-1.5"
               >
-                <span className="flex min-w-0 items-center gap-3">
+                <span className="flex min-w-0 items-center gap-3 max-lg:order-1 max-lg:shrink max-lg:grow max-lg:basis-[60%]">
                   <Eyebrow className="w-14 shrink-0">{cap(policy.kind)}</Eyebrow>
                   <span className="min-w-0">
                     <span
                       className={cn(
-                        'block truncate text-[14px] leading-[1.35]',
+                        'line-clamp-2 text-[14px] leading-[1.35]',
                         policy.status === 'active' ? 'text-ink' : 'text-ink-3',
                       )}
                     >
@@ -205,11 +209,11 @@ export function Insurance({ data }: { data: InsuranceData }) {
                     </span>
                   </span>
                 </span>
-                <span className="num whitespace-nowrap text-[13px] text-ink">
+                <span className="num whitespace-nowrap text-[13px] text-ink max-lg:order-3">
                   {money(policy.premiumCents)}
-                  <span className="text-[10px] text-ink-3"> {cadenceTag(policy.cadence)}</span>
+                  <span className="text-[11px] text-ink-3"> {cadenceTag(policy.cadence)}</span>
                 </span>
-                <span className="min-w-0">
+                <span className="min-w-0 max-lg:order-4">
                   <span className={cn('num block whitespace-nowrap text-[13px]', EXPIRY_TEXT[status])}>
                     {daysLabel(policy.expiresOn, data.todayIso)}
                   </span>
@@ -219,10 +223,10 @@ export function Insurance({ data }: { data: InsuranceData }) {
                     </span>
                   )}
                 </span>
-                <span className="whitespace-nowrap text-[12px] text-ink-3">
+                <span className="whitespace-nowrap text-[12px] text-ink-3 max-lg:order-5">
                   {leadsLabel(policy.reminderLeads)}
                 </span>
-                <StatusPill policy={policy} todayIso={data.todayIso} className="w-[88px] justify-center" />
+                <StatusPill policy={policy} todayIso={data.todayIso} className="w-[88px] justify-center max-lg:order-2" />
               </DataRow>
             )
           })

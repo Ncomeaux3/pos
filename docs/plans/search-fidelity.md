@@ -1,5 +1,8 @@
 # Search to the artboard
 
+Superseded for styling on 2026-09-19 by the Holon redesign (docs/plans/holon-product-redesign.md, section 4): colour, type, radii, surfaces and control shapes now come from the Holon design contract and the shared components in `components/pos/`. This plan still governs what each screen shows and how it is laid out.
+
+
 ## Context
 
 Screen seventeen of the fidelity pass (method: docs/plans/weekly-review-fidelity.md). `POS Search.dc.html` captured at 1440 into `/private/tmp/pos-handoff-sources/search/` (empty, results for "amex", the preview drawer, the quick search palette, results in light). The other session has Notifications, Agent Log, Onboarding and Login; Search lives in `app/(app)/search/`, `core/search.ts` (one additive field) and `components/pos/CommandPalette.tsx`, none of which that batch touches.

@@ -77,7 +77,7 @@ export function PasskeyButton() {
       >
         {busy ? 'Waiting for the passkey' : 'Sign in with a passkey'}
       </ActionButton>
-      {error && <p className="label text-[10px] tracking-[0.1em] text-bad">{error}</p>}
+      {error && <p className="label text-bad">{error}</p>}
     </div>
   )
 }

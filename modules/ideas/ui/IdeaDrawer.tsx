@@ -244,7 +244,7 @@ function View({
             {idea.related.map((n) => (
               <Link key={n.title} href="/brain" className="flex justify-between gap-2.5 border-b border-rule py-2 text-[12px] text-ink hover:text-brand">
                 <span className="min-w-0 truncate">{n.title}</span>
-                <span className="num shrink-0 text-[10px] text-ink-4">note · {Math.round(n.similarity * 100)}%</span>
+                <span className="num shrink-0 text-[11px] text-ink-3">note · {Math.round(n.similarity * 100)}%</span>
               </Link>
             ))}
           </div>

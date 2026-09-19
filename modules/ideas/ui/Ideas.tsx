@@ -364,13 +364,13 @@ function IdeaCard({
           ))}
         </div>
       )}
-      <div className={cn('t-caption mt-2.5 flex justify-between', idea.stale ? 'text-warn' : 'text-ink-4')}>
+      <div className={cn('t-caption mt-2.5 flex justify-between', idea.stale ? 'text-warn' : 'text-ink-3')}>
         <span>
           {idea.stale ? 'Stale · ' : ''}
           {idea.daysInStage}d in stage
         </span>
         {idea.related.length > 0 && (
-          <span className="text-ink-4">
+          <span className="text-ink-3">
             {idea.related.length} {idea.related.length === 1 ? 'note' : 'notes'}
           </span>
         )}

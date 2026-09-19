@@ -3,18 +3,19 @@
 import { useTransition } from 'react'
 import {
   ActionButton,
-  BandSearch,
   Card,
   CardHead,
   EmptyState,
+  Eyebrow,
+  MetricStrip,
+  MetricTile,
+  PageHeader,
   Row,
   RowList,
-  SearchButton,
   StatusChip,
   useToast,
   type SkillLink,
 } from '@/components/pos'
-import { BackControl } from '@/components/pos/BackControl'
 import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
 import { deleteTrip, setTripStatus, type ActionResult } from './actions'
@@ -170,75 +171,78 @@ export function Travel({ data }: { data: TravelData }) {
 
   return (
     <>
-      <header className="-mx-[18px] -mt-[18px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 md:-mx-7 md:-mt-7 md:h-14 md:flex-nowrap md:px-7 md:py-0">
-        <BackControl />
-        <span className="eyebrow shrink-0 whitespace-nowrap text-ink-3">
-          Travel <span className="text-ink-4">/</span> Trips
-        </span>
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-4">
-          <SearchButton className="md:hidden" />
-          <BandSearch className="hidden min-w-[160px] flex-1 md:flex" placeholder="Search travel" />
-          <span className="eyebrow hidden shrink-0 whitespace-nowrap text-ink-3 md:inline-flex">
-            <span className="status-dot" data-tone={upcoming.length > 0 ? 'brand' : 'idle'} aria-hidden />
+      <PageHeader
+        eyebrow={
+          <>
+            Travel <span className="text-ink-4">/</span> Trips
+          </>
+        }
+        title="Travel"
+        lede="Upcoming trips in blue, past in grey, wishlist dotted. Drag to rotate, scroll to zoom, tap a pin to open it, double-click to fly in."
+        status={
+          <Eyebrow dot={upcoming.length > 0 ? 'brand' : 'idle'} className="whitespace-nowrap">
             {upcoming.length} upcoming · {nightsAway} nights away
-          </span>
-        </div>
-      </header>
+          </Eyebrow>
+        }
+        actions={
+          <>
+            <ActionButton onClick={() => setParams({ new: 'wish', trip: null }, { push: true })}>Add to wishlist</ActionButton>
+            <ActionButton variant="solid" size="xl" onClick={() => setParams({ new: 'trip', trip: null }, { push: true })}>
+              New trip <span aria-hidden="true">&rarr;</span>
+            </ActionButton>
+          </>
+        }
+        phoneAction={
+          <>
+            <ActionButton size="pill" aria-label="Add to wishlist" onClick={() => setParams({ new: 'wish', trip: null }, { push: true })}>
+              Wishlist
+            </ActionButton>
+            <ActionButton size="pill" variant="solid" onClick={() => setParams({ new: 'trip', trip: null }, { push: true })}>
+              New trip
+            </ActionButton>
+          </>
+        }
+      />
 
-      {/* The loyalty strip: one cell per program, the balance with its move
-        * since the last entry, and Manage on the last cell. */}
+      {/* The loyalty strip: one tile per program, the balance with its move
+        * since the last entry, and Manage on the last tile. Under the header
+        * now rather than between the band and the title. */}
       {data.loyalty.length > 0 && (
-        <div
-          data-testid="travel-loyalty"
-          className="-mx-[18px] grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-px border-b border-rule bg-rule md:-mx-7"
-        >
+        <MetricStrip data-testid="travel-loyalty" className="mt-[18px]">
           {data.loyalty.map((l, i) => {
             const delta = l.previousBalance === null ? null : l.balance - l.previousBalance
+            const last = i === data.loyalty.length - 1
             return (
-              <div key={l.id} className="flex min-w-0 flex-col gap-0.5 bg-bg px-5 py-2.5">
-                <span className="flex justify-between gap-2 truncate text-[11px] text-ink-3">
-                  <span className="truncate">{l.name}</span>
-                  {i === data.loyalty.length - 1 && (
-                    <ActionButton
-                      size="sm"
-                      variant="quiet"
-                      className="-my-2 -mr-2 shrink-0"
-                      onClick={() => setParams({ loyalty: '1' }, { push: true })}
-                    >
-                      Manage →
-                    </ActionButton>
-                  )}
-                </span>
-                <span className="num whitespace-nowrap text-[14px] text-ink">
-                  {l.balance.toLocaleString('en-US')}
-                  {delta !== null && delta !== 0 && (
-                    <span className={cn('ml-1 text-[10px]', delta > 0 ? 'text-ok' : 'text-bad')}>
-                      {delta > 0 ? '+' : ''}
-                      {delta.toLocaleString('en-US')}
-                    </span>
-                  )}
-                </span>
-              </div>
+              <MetricTile
+                key={l.id}
+                size="sm"
+                label={
+                  <span className="flex min-w-0 flex-wrap items-center justify-between gap-x-2">
+                    <span className="min-w-0">{l.name}</span>
+                    {last && (
+                      <ActionButton
+                        size="sm"
+                        variant="quiet"
+                        className="-my-2 -mr-2 shrink-0"
+                        onClick={() => setParams({ loyalty: '1' }, { push: true })}
+                      >
+                        Manage →
+                      </ActionButton>
+                    )}
+                  </span>
+                }
+                value={l.balance.toLocaleString('en-US')}
+                delta={
+                  delta !== null && delta !== 0
+                    ? `${delta > 0 ? '+' : ''}${delta.toLocaleString('en-US')}`
+                    : undefined
+                }
+                deltaTone={delta !== null && delta < 0 ? 'bad' : 'ok'}
+              />
             )
           })}
-        </div>
+        </MetricStrip>
       )}
-
-      <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-[28px] font-normal leading-none tracking-[-0.03em] text-ink">Travel</h1>
-          <p className="mt-2 hidden text-[13px] text-ink-3 md:block">
-            Upcoming trips in blue, past in grey, wishlist dotted. Drag to rotate, scroll to zoom,
-            tap a pin to open it, double-click to fly in.
-          </p>
-        </div>
-        <div className="flex shrink-0 gap-2">
-          <ActionButton onClick={() => setParams({ new: 'wish', trip: null }, { push: true })}>Add to wishlist</ActionButton>
-          <ActionButton variant="solid" size="xl" className="h-11 gap-2 px-3.5 text-[13px] md:h-[51px] md:px-[22px] md:text-[15px]" onClick={() => setParams({ new: 'trip', trip: null }, { push: true })}>
-            New trip <span aria-hidden="true">&rarr;</span>
-          </ActionButton>
-        </div>
-      </div>
 
       <div data-testid="travel-globe" className="relative mt-[18px] h-[clamp(240px,38vh,420px)] border border-rule bg-bg-elev rounded-[18px]">
         <Globe
@@ -302,7 +306,7 @@ export function Travel({ data }: { data: TravelData }) {
                       {t.startsOn && (
                         <span className="num shrink-0 text-[18px] font-light leading-none text-action">
                           {daysUntil(t.startsOn, today)}
-                          <span className="text-[10px] text-ink-3"> d</span>
+                          <span className="text-[11px] text-ink-3"> d</span>
                         </span>
                       )}
                     </div>
@@ -325,7 +329,7 @@ export function Travel({ data }: { data: TravelData }) {
                     </div>
                     {next && (
                       <div className="mt-2.5 truncate border-t border-rule pt-2.5 text-[12px] text-ink-2">
-                        <span className="text-ink-4">Next · </span>
+                        <span className="text-ink-3">Next · </span>
                         {next}
                       </div>
                     )}

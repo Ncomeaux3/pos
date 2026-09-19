@@ -112,7 +112,7 @@ export function Brain({ data }: { data: BrainData }) {
 
   return (
     <>
-      <header className="-mx-[18px] -mt-[18px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 md:-mx-7 md:-mt-7 md:h-14 md:flex-nowrap md:px-7 md:py-0">
+      <header className="-mx-[18px] -mt-[18px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 md:-mx-7 md:-mt-7 md:px-7 lg:h-14 lg:flex-nowrap lg:py-0">
         <BackControl />
         <span className="eyebrow shrink-0 whitespace-nowrap text-ink-3">
           Second Brain <span className="text-ink-4">/</span> {crumb}
@@ -173,7 +173,7 @@ export function Brain({ data }: { data: BrainData }) {
       </div>
 
       <div className="-mx-[18px] -mb-[18px] flex flex-wrap items-stretch md:-mx-7 md:-mb-7 md:min-h-[calc(100dvh-106px)]">
-        <section className="flex min-w-0 flex-[1_1_280px] flex-col border-b border-rule md:max-w-[380px] md:border-b-0 md:border-r">
+        <section className="flex min-w-0 flex-[1_1_280px] flex-col border-b border-rule lg:max-w-[380px] lg:border-b-0 lg:border-r">
           <div className="flex items-baseline justify-between gap-2.5 border-b border-rule px-4 pb-2.5 pt-3.5">
             <span className="truncate text-[14px] text-ink">{listTitle}</span>
             <span className="num whitespace-nowrap text-[11px] text-ink-3">
