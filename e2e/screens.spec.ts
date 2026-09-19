@@ -2147,7 +2147,7 @@ test('second brain, the inbox holds a draft beside its source', async ({ page })
     await expect(page.getByText(/^\d+ notes$/)).toBeVisible()
   }
   await expect(page.getByRole('button', { name: /^Ingest/ })).toBeVisible()
-  const folders = page.getByTestId('brain-folders').getByRole('button')
+  const folders = page.getByTestId('brain-folders').getByRole('radio')
   await expect(folders).toHaveText(
     [/^Inbox/, /^Reading list/, /^articles/, /^books/, /^videos/, /^notes/, /^projects/, /^people/, /^daily/],
   )
@@ -2179,7 +2179,7 @@ test('second brain, a URL can be read into a draft', async ({ page }) => {
 
   const drawer = page.getByRole('dialog')
   await expect(drawer.getByText(/^Second Brain\s*\/\s*Ingest$/)).toBeVisible()
-  await expect(drawer.getByTestId('brain-ingest-kinds').getByRole('button')).toHaveText([
+  await expect(drawer.getByTestId('brain-ingest-kinds').getByRole('radio')).toHaveText([
     'URL',
     'YouTube',
     'Book',
@@ -2224,10 +2224,10 @@ test('second brain, the reading list is what was finished', async ({ page }) => 
 
   // Adding a book or an article here means it was read, so every accepted one
   // carries the date it was accepted and there is no button to press.
-  await expect(page.getByText('Reading list', { exact: true }).nth(1)).toBeVisible()
+  await expect(page.getByText('Reading list', { exact: true })).toBeVisible()
   await expect(page.getByText(/^\d+ finished$/)).toBeVisible()
   const row = page.getByRole('button', { name: /Designing Data-Intensive Applications, ch\. 5/ })
-  await expect(row).toContainText(/FINISHED · \w{3} \d+/)
+  await expect(row).toContainText(/Finished · \w{3} \d+/)
   await expect(page.getByRole('button', { name: /Mark finished/ })).toHaveCount(0)
 
   await shoot(page, 'second-brain-reading')
@@ -2243,7 +2243,7 @@ test('second brain, accepting a draft moves it into the vault', async ({ page })
   await page.goto('/brain?folder=article')
   const row = page.getByRole('button', { name: /Postgres full text search, briefly/ })
   await expect(row).toBeVisible()
-  await expect(row).toContainText(/FINISHED · \w{3} \d+/)
+  await expect(row).toContainText(/Finished · \w{3} \d+/)
   await expect(page.getByRole('button', { name: 'Send back to the inbox' })).toHaveCount(0)
 })
 
@@ -2252,7 +2252,7 @@ test('second brain, accepting a draft moves it into the vault', async ({ page })
 test('second brain, the capture box saves a note and shows related while typing', async ({ page }) => {
   await page.goto('/brain')
   const box = page.getByTestId('brain-capture')
-  await expect(page.getByTestId('brain-hubs').getByRole('button', { name: /^Unfiled/ })).toBeVisible()
+  await expect(page.getByTestId('brain-hubs').getByRole('radio', { name: /^Unfiled/ })).toBeVisible()
 
   const title = `Captured ${Date.now()}`
   await box.getByRole('textbox', { name: 'Capture' }).fill(`${title}\nHybrid search over notes.`)
@@ -2952,14 +2952,14 @@ test('ideas, four stage columns with the scores on every card', async ({ page })
   // Quick wins first. Voice capture is cheap and high impact; the card carries
   // the quadrant, both scores and how long it has sat in its stage.
   const voice = page.locator('article').filter({ hasText: 'Voice capture for tasks' })
-  await expect(voice.getByText('QUICK WIN')).toBeVisible()
-  await expect(voice.getByText('IMPACT')).toBeVisible()
-  await expect(voice.getByText('EFFORT')).toBeVisible()
+  await expect(voice.getByText('Quick win')).toBeVisible()
+  await expect(voice.getByText('Impact')).toBeVisible()
+  await expect(voice.getByText('Effort')).toBeVisible()
   await expect(voice.getByText(/\d+d in stage/)).toBeVisible()
   await expect(voice.getByText('#voice')).toBeVisible()
 
   // Sitting still for two months is named on the card, not decided for you.
-  await expect(page.getByText(/STALE · \d+d in stage/)).toBeVisible()
+  await expect(page.getByText(/Stale · \d+d in stage/)).toBeVisible()
 
   await shoot(page, 'ideas')
 })
@@ -2972,7 +2972,7 @@ test('ideas, the capture line reads tags and scores', async ({ page }) => {
   await expect(page.getByText('Captured. Pocket receipt scanner')).toBeVisible()
 
   const card = page.locator('article').filter({ hasText: 'Pocket receipt scanner' })
-  await expect(card.getByText('QUICK WIN')).toBeVisible()
+  await expect(card.getByText('Quick win')).toBeVisible()
   await expect(card.getByText('#capture')).toBeVisible()
 
   // And Delete takes a capture that was never an idea away again.
@@ -2987,7 +2987,7 @@ test('ideas, the effort and impact matrix places every live idea', async ({ page
   await page.goto('/ideas')
   await page.waitForLoadState('networkidle')
 
-  await page.getByRole('button', { name: 'Effort × impact' }).click()
+  await page.getByRole('tab', { name: 'Effort × impact' }).click()
   await expect(page).toHaveURL(/view=matrix/)
 
   // The corners are named for what they mean, and an idea sits in the corner
@@ -3310,7 +3310,7 @@ test('ideas, research shows its sources and what it cost', async ({ page }) => {
   // The verdict, how sure it says it is, and the bill, because a run spends
   // real money and an idea board is where it is tempting to press it forty
   // times.
-  await expect(page.getByText('park', { exact: true })).toBeVisible()
+  await expect(page.getByText('Park', { exact: true })).toBeVisible()
   await expect(page.getByText('55% confident')).toBeVisible()
   await expect(page.getByText(/4 searches, 0.06 dollars/)).toBeVisible()
 

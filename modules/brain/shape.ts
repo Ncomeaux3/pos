@@ -52,11 +52,11 @@ export function byLine(links: { by: 'rule' | 'model' | 'manual' }[]): string {
     .join(' · ')
 }
 
-/** The Source card's meta: "URL · 1,840 WORDS", "YOUTUBE · 300 WORDS", "MANUAL · BOOK". */
+/** The Source card's meta: "URL · 1,840 words", "YouTube · 300 words", "Manual · book". */
 export function sourceMeta(note: { sourceUrl: string; sourceText: string; kind: string }): string {
-  if (!note.sourceUrl) return `MANUAL · ${note.kind.toUpperCase()}`
-  const from = /youtu\.?be/.test(note.sourceUrl) ? 'YOUTUBE' : 'URL'
-  return `${from} · ${wordCount(note.sourceText).toLocaleString('en-US')} WORDS`
+  if (!note.sourceUrl) return `Manual · ${note.kind}`
+  const from = /youtu\.?be/.test(note.sourceUrl) ? 'YouTube' : 'URL'
+  return `${from} · ${wordCount(note.sourceText).toLocaleString('en-US')} words`
 }
 
 export const KINDS = ['article', 'book', 'video', 'note', 'project', 'person', 'daily'] as const
@@ -69,9 +69,7 @@ export function folderLabel(kind: string): string {
   return `${kind}s`
 }
 
-/** "AUG 12": the date a book or article was accepted, which is when it was finished. */
+/** "Aug 12": the date a book or article was accepted, which is when it was finished. */
 export function finishedOn(iso: string): string {
-  return new Date(iso)
-    .toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    .toUpperCase()
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }

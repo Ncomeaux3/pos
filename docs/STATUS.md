@@ -6,10 +6,12 @@ in a fresh session; the paragraph below names the plan that comes next.
 **Current plan: docs/plans/holon-product-redesign.md** (2026-09-18). The
 app is being rebranded and redesigned as Holon on the integration branch
 `holon`; phase PRs target it and one final PR lands on `main`. Production keeps
-the old brand until then. Phases 0 (mockups, #74), 1 (foundations, #76) and 2
-(shell, #79) are merged into `holon`; Phase 3 (Today recomposed, task and goal
-rows) is the open PR; Phases 4 to 7 follow. Decisions are in decisions/log.md
-under 2026-09-18. v1.1 below is complete except Phase 11's owner step.
+the old brand until then. Phases 0 (mockups, #74), 1 (foundations, #76), 2
+(shell, #79) and 3 (Today recomposed, task and goal rows, #82) are merged into
+`holon`; Phase 4 (Second Brain, Ideas and Skills on the shared controls, cards
+and chips; Constellation untouched) is the open PR; Phases 5 to 7 follow.
+Decisions are in decisions/log.md under 2026-09-18 and 2026-09-19. v1.1 below
+is complete except Phase 11's owner step.
 
 **Next plan: docs/plans/pos-v1-1.md** (2026-09-14, from /adopt-repo). Twelve
 phases from the owner's first week of live use: diagnosis and small bugs, the

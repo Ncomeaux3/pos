@@ -221,11 +221,11 @@ Files: dashboard page/Bento/DashboardTiles/Inbox and `modules/tasks/ui`, `module
 Exit: create/edit/complete a task, navigate its project/goal, arrange dashboard, refresh and reload successfully on phone and desktop. Switching local task views adds no RSC request.
 
 ### Phase 4: knowledge and progress
-Complexity: medium. Depends on Phase 3.
+Complexity: medium. Depends on Phase 3. Done 2026-09-19: brain, ideas and skills on the shared controls, cards and chips; the e2e copy moved with the marks.
 Files: `modules/brain/ui`, `modules/ideas/ui`, `modules/skills/ui`.
-- [ ] Refine capture, hubs, note reading and related-record placement.
-- [ ] Apply consistent idea research states and skill selection/detail panels.
-- [ ] Reduce decorative chart/constellation noise only where it improves readability, preserving gestures and data.
+- [x] Refine capture, hubs, note reading and related-record placement. (One filter band, folders and hubs as the shared pill group; note rows in the Row shape with Draft and Finished as status chips; capture textarea and every drawer field on `fieldClass`; Source and Draft summary as cards, the summary ringed in the action colour; the note's skills, backlinks, related and vault cells as cards; `sourceMeta` and `finishedOn` sentence case.)
+- [x] Apply consistent idea research states and skill selection/detail panels. (Ideas' `ghost`/`mini`/`field` rebuilt from the button system and `fieldClass`; the level pickers and the ingest kind picker are `PillGroup` and the view switch is `TabBar` as on Tasks; idea cards, the similar-ideas band, the Agent and Research boxes are `Card`; quadrant, verdict, Pending and Agent marks are `StatusChip` in sentence case; stage, impact and effort as a `MetricStrip`. Skills: Reset view on `ActionButton`, the stat grid a `MetricStrip`, children and events in the Row shape inside `RowList`, the four summary columns one strip flush on the phone and inset from md.)
+- [x] Reduce decorative chart/constellation noise only where it improves readability, preserving gestures and data. (Constellation.tsx untouched by the owner's answer in section 2; the chrome around it, column heads in ink rather than the brand colour, is what calmed.)
 Exit: text/URL/file capture, note reading, idea research states and skill navigation remain usable, including long content and reduced motion.
 
 ### Phase 5: finance, health and fitness

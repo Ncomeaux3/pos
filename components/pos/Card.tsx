@@ -8,15 +8,18 @@ export function Card({
   children,
   className,
   selected,
+  as: Tag = 'div',
   ...rest
 }: ComponentProps<'div'> & {
   children: ReactNode
   className?: string
   /** 1px accent border plus soft fill. Never opacity. */
   selected?: boolean
+  /** `article` when the card is one record in a list, as the idea cards are. */
+  as?: 'div' | 'article'
 }) {
   return (
-    <div
+    <Tag
       {...rest}
       className={cn(
         'glass rounded-[18px] px-5 py-4',
@@ -25,7 +28,7 @@ export function Card({
       )}
     >
       {children}
-    </div>
+    </Tag>
   )
 }
 

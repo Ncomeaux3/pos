@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ActionButton, Eyebrow, SkillPicker, useToast } from '@/components/pos'
+import { ActionButton, Card, Eyebrow, SkillPicker, StatusChip, useToast } from '@/components/pos'
+import { actionButtonBase, actionButtonSizes, actionButtonVariants } from '@/components/pos/Button'
+import { fieldClass } from '@/components/pos/field'
 import { cn } from '@/lib/utils'
 import { ago, byLine, finishedOn, folderLabel, sourceMeta, subLine, wordCount } from '../shape'
 import { blocks } from '../wikilinks'
@@ -12,12 +14,9 @@ import { isFinished, type BrainHub, type BrainNote, type SetParams } from './Bra
 // The right pane of POS Second Brain.dc.html: a draft beside the text it was
 // drawn from, or a note with its skills, backlinks and vault cell.
 
-// 44px on a phone, the artboard's 30 from md up: the shell's touch rule.
-const MINI =
-  'min-h-11 whitespace-nowrap border border-rule-2 px-2.5 py-[5px] text-[11px] text-ink-3 transition-colors duration-150 md:min-h-0 rounded-full'
-const CELL = 'border border-rule px-3.5 py-3 rounded-[18px]'
-const CHIP =
-  'label inline-flex items-center gap-1.5 border border-rule-2 px-[7px] py-[2px] text-[10px] tracking-[0.08em] text-ink-2 rounded-full'
+// The small pill from the button system: 44px on a phone, 24 from sm up.
+const MINI = cn(actionButtonBase, actionButtonSizes.sm, actionButtonVariants.outline)
+const MINI_ACCENT = cn(actionButtonBase, actionButtonSizes.sm, actionButtonVariants.brand)
 
 type Run = (action: () => Promise<ActionResult>, ok?: string) => void
 
@@ -98,10 +97,10 @@ export function NotePane({
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
-            <button type="button" onClick={discard} className={cn(MINI, 'hover:border-bad hover:text-bad')}>
+            <button type="button" onClick={discard} className={cn(MINI, 'hover:text-bad')}>
               Discard
             </button>
-            <button type="button" onClick={toggleEdit} className={cn(MINI, 'hover:border-ink hover:text-ink')}>
+            <button type="button" onClick={toggleEdit} className={MINI}>
               {editLabel}
             </button>
             <ActionButton variant="solid" className="h-9 gap-2 px-3.5 text-[13px]" onClick={accept}>
@@ -111,21 +110,22 @@ export function NotePane({
         </div>
 
         <div className="grid flex-1 grid-cols-[repeat(auto-fit,minmax(min(100%,320px),1fr))] gap-3.5 px-6 pb-6 pt-4">
-          <div className="flex min-h-[280px] flex-col border border-rule bg-bg-elev rounded-[18px]">
+          <Card className="flex min-h-[280px] flex-col overflow-hidden p-0">
             <div className="flex justify-between gap-2 border-b border-rule px-3.5 py-2.5">
               <Eyebrow>Source</Eyebrow>
-              <span className="num text-[10px] text-ink-3">{sourceMeta(note)}</span>
+              <span className="num text-[12px] text-ink-3">{sourceMeta(note)}</span>
             </div>
             <p className="overflow-auto whitespace-pre-wrap p-3.5 text-[13px] leading-[1.65] text-ink-2">
               {note.sourceText || 'No source text was kept for this draft.'}
             </p>
-          </div>
-          <div className="flex min-h-[280px] flex-col border border-brand bg-bg-elev rounded-[18px]">
+          </Card>
+          {/* The action ring says this is the pane the buttons act on. */}
+          <Card className="flex min-h-[280px] flex-col overflow-hidden p-0 ring-1 ring-action">
             <div className="flex justify-between gap-2 border-b border-rule px-3.5 py-2.5">
               <Eyebrow>Draft summary</Eyebrow>
-              <span className="num text-[10px] text-ink-3">
-                {note.sourceUrl && note.body ? 'HAIKU · ' : ''}
-                {wordCount(note.body)} WORDS
+              <span className="num text-[12px] text-ink-3">
+                {note.sourceUrl && note.body ? 'Haiku · ' : ''}
+                {wordCount(note.body)} words
               </span>
             </div>
             {editing ? (
@@ -133,7 +133,7 @@ export function NotePane({
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 aria-label={`Draft of ${note.title}`}
-                className="flex-1 resize-none bg-bg p-3.5 text-[13px] leading-[1.65] text-ink outline-none"
+                className="flex-1 resize-none bg-field p-3.5 text-[13px] leading-[1.65] text-ink outline-none"
               />
             ) : note.body ? (
               <p className="flex-1 overflow-auto whitespace-pre-wrap p-3.5 text-[13px] leading-[1.65] text-ink">
@@ -149,7 +149,7 @@ export function NotePane({
               <Eyebrow className="mr-1">Skills</Eyebrow>
               {skills}
             </div>
-          </div>
+          </Card>
         </div>
       </>
     )
@@ -173,12 +173,12 @@ export function NotePane({
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           {isFinished(note) && (
-            <span className="label text-[10px] tracking-[0.08em] text-ok">FINISHED · {finishedOn(note.updatedAt)}</span>
+            <StatusChip tone="ok">Finished · {finishedOn(note.updatedAt)}</StatusChip>
           )}
           {inVault ? (
             <span className="text-[11px] text-ink-4">A file in the vault. Edit it there.</span>
           ) : (
-            <button type="button" onClick={toggleEdit} className={cn(MINI, 'hover:border-ink hover:text-ink')}>
+            <button type="button" onClick={toggleEdit} className={MINI}>
               {editLabel}
             </button>
           )}
@@ -186,7 +186,7 @@ export function NotePane({
             <button
               type="button"
               onClick={save}
-              className={cn(MINI, 'border-brand text-ink hover:bg-brand hover:text-bg')}
+              className={MINI_ACCENT}
             >
               Save
             </button>
@@ -201,7 +201,7 @@ export function NotePane({
         {hubsEditing ? (
           <>
             {hubs.map((h) => (
-              <label key={h.id} className={cn(CHIP, 'min-h-11 cursor-pointer md:min-h-0', picked.includes(h.id) && 'border-ink text-ink')}>
+              <label key={h.id} className={cn(picked.includes(h.id) ? MINI_ACCENT : MINI, 'cursor-pointer')}>
                 <input
                   type="checkbox"
                   checked={picked.includes(h.id)}
@@ -219,7 +219,7 @@ export function NotePane({
                 run(() => setNoteHubs(note.id, picked), 'Filed')
                 setHubsEditing(false)
               }}
-              className={cn(MINI, 'border-brand text-ink hover:bg-brand hover:text-bg')}
+              className={MINI_ACCENT}
             >
               Save
             </button>
@@ -228,7 +228,7 @@ export function NotePane({
           <>
             {note.hubs.length === 0 && <span className="text-[11px] text-ink-4">Unfiled</span>}
             {note.hubs.map((h) => (
-              <button key={h.id} type="button" onClick={() => setParams({ folder: `hub:${hubs.find((x) => x.id === h.id)?.slug ?? ''}`, note: null })} className={CHIP}>
+              <button key={h.id} type="button" onClick={() => setParams({ folder: `hub:${hubs.find((x) => x.id === h.id)?.slug ?? ''}`, note: null })} className={MINI}>
                 {h.name}
               </button>
             ))}
@@ -239,13 +239,13 @@ export function NotePane({
                   setPicked(note.hubs.map((h) => h.id))
                   setHubsEditing(true)
                 }}
-                className={cn(MINI, 'hover:border-ink hover:text-ink')}
+                className={MINI}
               >
                 Edit
               </button>
             )}
             {note.hubs.length > 0 && (
-              <span className="label ml-auto text-[9px] tracking-[0.08em] text-ink-4">{byLine(note.hubs)}</span>
+              <span className="label ml-auto text-ink-4">{byLine(note.hubs)}</span>
             )}
           </>
         )}
@@ -270,7 +270,7 @@ export function NotePane({
           onChange={(e) => setBody(e.target.value)}
           rows={14}
           aria-label={`Body of ${note.title}`}
-          className="w-full resize-y border border-brand bg-bg-elev p-4 text-[14px] leading-[1.7] text-ink outline-none"
+          className={cn(fieldClass, 'resize-y p-4 text-[14px] leading-[1.7] md:text-[14px]')}
         />
       ) : (
         <div className="flex max-w-[720px] flex-col gap-2.5 text-[14px] leading-[1.7] text-ink">
@@ -304,11 +304,11 @@ export function NotePane({
       )}
 
       <div className="grid max-w-[720px] grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))] gap-3.5">
-        <div className={CELL}>
+        <Card>
           <Eyebrow>Linked skills</Eyebrow>
           <div className="mt-2">{skills}</div>
-        </div>
-        <div className={CELL}>
+        </Card>
+        <Card>
           <Eyebrow>Backlinks</Eyebrow>
           <div className="mt-1.5 flex flex-col">
             {note.backlinks.map((b) => (
@@ -323,8 +323,8 @@ export function NotePane({
             ))}
             {note.backlinks.length === 0 && <span className="text-[12px] text-ink-4">None yet</span>}
           </div>
-        </div>
-        <div className={CELL}>
+        </Card>
+        <Card>
           <Eyebrow>Related</Eyebrow>
           <div className="mt-1.5 flex flex-col">
             {(related ?? []).map((r) => (
@@ -340,8 +340,8 @@ export function NotePane({
             ))}
             {(related === null || related.length === 0) && <span className="text-[12px] text-ink-4">None yet</span>}
           </div>
-        </div>
-        <div className={CELL}>
+        </Card>
+        <Card>
           <Eyebrow>Vault</Eyebrow>
           <div className="mt-1.5">
             {inVault ? (
@@ -355,9 +355,9 @@ export function NotePane({
               <span className="text-[12px] text-ink-4">Not in the vault. Nothing here writes to it.</span>
             )}
           </div>
-        </div>
+        </Card>
         {note.unresolved.length > 0 && (
-          <div className={CELL}>
+          <Card>
             <Eyebrow>Links to write</Eyebrow>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {note.unresolved.map((slug) => (
@@ -365,13 +365,13 @@ export function NotePane({
                   key={slug}
                   type="button"
                   onClick={() => run(() => startFromLink(slug), `Started ${slug}`)}
-                  className={cn(MINI, 'hover:border-ink hover:text-ink')}
+                  className={MINI}
                 >
                   {slug.replace(/-/g, ' ')}
                 </button>
               ))}
             </div>
-          </div>
+          </Card>
         )}
       </div>
     </div>

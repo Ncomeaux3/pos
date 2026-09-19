@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ActionButton, Eyebrow, useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
+import { fieldClass } from '@/components/pos/field'
 import type { Related } from '../related'
 import { captureFile, captureText, ingestFromUrl, relatedForDraft } from './actions'
 import type { BrainNote, SetParams } from './Brain'
@@ -120,7 +121,7 @@ export function CaptureBox({ notes, setParams }: { notes: BrainNote[]; setParams
         disabled={running}
         aria-label="Capture"
         placeholder="A thought, a link, what you worked on…"
-        className="w-full resize-y border border-rule-2 bg-bg px-3 py-[9px] text-[13px] leading-[1.6] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand"
+        className={cn(fieldClass, 'resize-y leading-[1.6]')}
       />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-4">
@@ -128,14 +129,15 @@ export function CaptureBox({ notes, setParams }: { notes: BrainNote[]; setParams
             <input type="checkbox" checked={worked} onChange={(e) => setWorked(e.target.checked)} className="accent-brand" />
             Worked on
           </label>
-          <button
-            type="button"
+          <ActionButton
+            variant="quiet"
+            size="sm"
+            className="text-[12px]"
             disabled={running}
             onClick={() => fileInput.current?.click()}
-            className="min-h-11 text-[12px] text-ink-3 transition-colors duration-150 hover:text-brand disabled:opacity-50 md:min-h-0"
           >
             + Attach
-          </button>
+          </ActionButton>
           <input
             ref={fileInput}
             type="file"
@@ -175,7 +177,7 @@ export function CaptureBox({ notes, setParams }: { notes: BrainNote[]; setParams
                 className="flex min-h-11 items-baseline justify-between gap-2 border-b border-rule py-1.5 text-left text-[12px] text-ink-2 transition-colors duration-150 hover:text-ok md:min-h-0"
               >
                 <span className="min-w-0 truncate">{r.title}</span>
-                <span className="label shrink-0 text-[9px] tracking-[0.08em] text-ink-4">{hubNames(r.id)}</span>
+                <span className="label shrink-0 text-ink-4">{hubNames(r.id)}</span>
               </button>
             ))
           )}
