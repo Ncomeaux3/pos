@@ -470,7 +470,7 @@ function Card({
       <div className="mt-3 grid grid-cols-[1fr_auto] items-end gap-3">
         <div className="min-w-0">
           <p className="t-caption text-ink-3">{goal.rule}</p>
-          <p className="t-caption mt-1 truncate text-ink-3">
+          <p className="t-caption mt-1 text-ink-3">
             Deadline <span className="text-ink-2">{formatDate(goal.deadline, todayIso)}</span> ·{' '}
             <span className="text-ink-2">
               {p.daysLeft >= 0 ? `${p.daysLeft} days left` : `${-p.daysLeft} days over`}

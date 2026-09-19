@@ -162,7 +162,7 @@ function View({
         <div className="glass grid grid-cols-3 gap-px overflow-hidden rounded-[18px] [&>*]:shadow-[-1px_-1px_0_var(--rule)]">
           <Cell label="Now" value={formatValue(p.current, goal.kind, goal.unit)} />
           <Cell label="Target" value={formatValue(goal.targetValue, goal.kind, goal.unit)} />
-          <Cell label="Days left" value={p.daysLeft >= 0 ? `${p.daysLeft} days left` : `${-p.daysLeft} days over`} />
+          <Cell label={p.daysLeft >= 0 ? 'Days left' : 'Days over'} value={String(Math.abs(p.daysLeft))} />
         </div>
 
         <div className="flex flex-col gap-2 border border-rule px-3.5 py-3 rounded-[18px]">

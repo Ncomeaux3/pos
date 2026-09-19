@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { Card, Chip, EmptyState, PaceBar, PageHeader, Row, RowList, StatusDot } from '@/components/pos'
+import { Card, EmptyState, PaceBar, PageHeader, Row, RowList, StatusDot } from '@/components/pos'
 import { db } from '@/core/db'
 import { Bento, ArrangeToggle, type Tile } from './Bento'
 import { SevenDays } from './DashboardTiles'
@@ -40,7 +40,8 @@ async function nextSevenDays(
 
   return (await upcoming())
     .flatMap((c) => c.items.map((i) => ({ ...i, module: c.module })))
-    .flatMap((i) => (i.at && i.at >= todayIso && i.at < until ? [{ ...i, at: i.at }] : []))
+    // From tomorrow: today's own work is the section beside this one.
+    .flatMap((i) => (i.at && i.at > todayIso && i.at < until ? [{ ...i, at: i.at }] : []))
     .sort((a, b) => a.at.localeCompare(b.at))
     .slice(0, 6)
 }
@@ -368,12 +369,25 @@ export default async function DashboardPage() {
               }))}
             />
           )}
+          {/* The nightly summary's alerts, as rows like the rest: a fact and
+            * its detail, nothing to press, since each names something the
+            * band or the system line already lets you act on. */}
           {alerts.length > 0 && (
-            <div className="mt-3 flex flex-wrap items-center gap-2 px-1">
+            <div className="mt-2 flex flex-col">
               {alerts.map((a) => (
-                <Chip key={a.title} tone={a.tone === 'bad' ? 'bad' : a.tone === 'ok' ? 'ok' : 'warn'}>
-                  {a.title}
-                </Chip>
+                <div
+                  key={a.title}
+                  className="flex items-start gap-3 border-t border-[color-mix(in_srgb,var(--sand)_45%,transparent)] px-1 py-2.5 first:border-t-0"
+                >
+                  <span
+                    className={cn('mt-[7px] size-2 shrink-0 rounded-full', a.tone === 'bad' ? 'bg-bad' : a.tone === 'ok' ? 'bg-ok' : 'bg-warn')}
+                    aria-hidden
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[14.5px] font-medium leading-[1.35] text-ink">{a.title}</span>
+                    {a.detail && <span className="t-caption mt-0.5 block text-ink-3">{a.detail}</span>}
+                  </span>
+                </div>
               ))}
             </div>
           )}
@@ -431,15 +445,18 @@ export default async function DashboardPage() {
 
       {/* The system's own line, last: discoverable, and below every piece of
         * personal work. The run's own clock, in the owner's zone. */}
-      <p className="mt-8 flex flex-wrap items-center gap-x-1.5 gap-y-1 px-1 t-caption text-ink-3">
-        <StatusDot tone={failed.length > 0 ? 'bad' : latest ? 'ok' : 'idle'} />
+      <p className="mt-8 px-1 t-caption text-ink-3">
+        <StatusDot
+          tone={failed.length > 0 ? 'bad' : latest ? 'ok' : 'idle'}
+          className="mr-2 inline-block align-middle"
+        />
         <span>
           {latest
             ? `Nightly summary ran at ${clockIn(new Date(latest.runAt), settings.timezone)} ${zoneAbbrIn(settings.timezone)}, ${failed.length > 0 ? `${failed.length} job${failed.length === 1 ? '' : 's'} failed` : 'all jobs ok'}.`
             : 'No run yet.'}{' '}
           Model spend this month {money(spendCents)}
           {capCents > 0 ? ` of ${money(capCents)}` : ''}.
-        </span>
+        </span>{' '}
         <Link href="/agent-log" className="text-action hover:underline">
           Agent log
         </Link>

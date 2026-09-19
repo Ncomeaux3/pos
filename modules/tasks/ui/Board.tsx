@@ -1,6 +1,6 @@
 'use client'
 
-import { Check, Filter, Plus } from 'lucide-react'
+import { AlarmClock, Check, Filter, Plus } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useMemo, useOptimistic, useState, useTransition } from 'react'
 import { ActionButton, EmptyState, PillGroup, RowList, StatusChip, useToast } from '@/components/pos'
@@ -583,14 +583,19 @@ function Row({
                 <span className={cn('num font-medium', priorityColor(task.priority))}>{task.priority}</span>
               )}
               <span>{task.projectName ?? 'No project'}</span>
-              {/* Overdue is the due label itself in the risk colour, not a second mark. */}
-              <span className={cn('num', overdue && 'font-medium text-bad')}>
-                {dueLabel(task.dueInDays, today)}
-                {task.dueAt ? ` · ${task.dueAt}` : ''}
-              </span>
+              {/* Overdue is the due label itself in the risk colour, not a second
+                * mark. A task due today with no time says nothing here: the
+                * column it sits in already says today. */}
+              {(task.dueInDays !== 0 || task.dueAt) && (
+                <span className={cn('num', overdue && 'font-medium text-bad')}>
+                  {task.dueInDays === 0 ? task.dueAt : dueLabel(task.dueInDays, today)}
+                  {task.dueInDays !== 0 && task.dueAt ? ` · ${task.dueAt}` : ''}
+                </span>
+              )}
               {remind && (
-                <span title="Reminder" className="num text-ink-4">
-                  ⏰ {remind.toLowerCase()}
+                <span title="Reminder" className="num inline-flex items-center gap-1 text-ink-3">
+                  <AlarmClock size={12} aria-hidden />
+                  {remind.toLowerCase()}
                 </span>
               )}
             </span>

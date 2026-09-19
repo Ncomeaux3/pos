@@ -76,7 +76,7 @@ export function Calendar({
       {/* Below md the seven columns share the pane: two letter heads, short
         * cells, a dot per task. From md up the grid is the artboard's 560px. */}
       <div className="overflow-x-auto">
-        <div className="border border-rule md:min-w-[560px] rounded-[18px]">
+        <div className="overflow-hidden rounded-[18px] border border-rule md:min-w-[560px]">
           <div className="grid grid-cols-7 gap-px bg-rule">
             {DOWS.map((d) => (
               <span key={d} className="label bg-bg-elev px-1 py-1 text-ink-3 md:px-2.5 md:py-2">
@@ -111,13 +111,13 @@ export function Calendar({
                     <span
                       className={cn(
                         'num text-[11px]',
-                        isToday ? 'text-ok' : past ? 'text-ink-4' : 'text-ink-3',
+                        isToday ? 'font-semibold text-action' : past ? 'text-ink-4' : 'text-ink-3',
                       )}
                     >
                       {String(day).padStart(2, '0')}
                     </span>
                     {items.length > 3 && (
-                      <span className="num text-[9px] text-ink-4">+{items.length - 3}</span>
+                      <span className="num text-[11px] font-medium text-ink-3">+{items.length - 3}</span>
                     )}
                   </div>
 

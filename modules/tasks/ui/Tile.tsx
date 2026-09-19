@@ -21,9 +21,10 @@ export function TasksTile({ payload }: { payload: Record<string, unknown> }) {
   const upcoming = d.upcoming ?? []
   const due = d.dueToday ?? 0
   const overdue = d.overdue ?? 0
-  // The digest is written nightly, so its rows are dated against that day;
-  // the earliest row is today unless nothing was due.
-  const today = upcoming[0]?.dueOn ?? ''
+  // The date the digest dated its rows against: the nightly's day, or this
+  // minute's, since every write recomputes it. A digest from before the
+  // field existed listed nothing overdue, so its first row is the day.
+  const today = d.today ?? upcoming[0]?.dueOn ?? ''
 
   const [ticked, setTicked] = useState<string[]>([])
   const [pending, start] = useTransition()
@@ -46,8 +47,8 @@ export function TasksTile({ payload }: { payload: Record<string, unknown> }) {
 
   return (
     <RowList>
-      {upcoming.slice(0, 5).map((t) => {
-        const on = ticked.includes(t.id)
+      {upcoming.map((t) => {
+        const on = t.status === 'done' || ticked.includes(t.id)
         const tag = tagFor(t, today)
         return (
           <div
@@ -82,7 +83,9 @@ export function TasksTile({ payload }: { payload: Record<string, unknown> }) {
             <span
               className={cn(
                 'num shrink-0 pt-0.5 text-[12.5px]',
-                tag.accent ? 'font-medium text-action' : 'text-ink-3',
+                tag.tone === 'action' && 'font-medium text-action',
+                tag.tone === 'bad' && 'font-medium text-bad',
+                !tag.tone && 'text-ink-3',
               )}
             >
               {tag.text}
@@ -95,21 +98,23 @@ export function TasksTile({ payload }: { payload: Record<string, unknown> }) {
 }
 
 /**
- * The one mark on the right of a row: an agent's task says so, a task due
- * later says when, a task with an estimate says how long, and the rest say
- * the priority.
+ * The one mark on the right of a row: a finished task says done, an agent's
+ * task says review, an overdue one says so, a task due later says when, a
+ * task with an estimate says how long, and the rest say the priority.
  */
 function tagFor(
   t: { priority: string; dueOn: string; estimateMinutes?: number | null; status?: string },
   today: string,
-): { text: string; accent: boolean } {
-  if (t.status === 'review') return { text: 'Review', accent: true }
+): { text: string; tone?: 'action' | 'bad' } {
+  if (t.status === 'done') return { text: 'done' }
+  if (t.status === 'review') return { text: 'Review', tone: 'action' }
+  if (t.dueOn < today) return { text: 'Overdue', tone: 'bad' }
   if (t.dueOn > today) {
     const d = new Date(`${t.dueOn}T12:00:00`)
-    return { text: `${MONTHS[d.getMonth()]} ${d.getDate()}`, accent: false }
+    return { text: `${MONTHS[d.getMonth()]} ${d.getDate()}` }
   }
-  if (t.estimateMinutes) return { text: hoursLabel(t.estimateMinutes), accent: false }
-  return { text: t.priority, accent: false }
+  if (t.estimateMinutes) return { text: hoursLabel(t.estimateMinutes) }
+  return { text: t.priority }
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']

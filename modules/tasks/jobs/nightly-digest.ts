@@ -12,7 +12,13 @@ export type TasksDigest = {
   awaitingReview: number
   /** Overdue tasks the nightly roll has already moved at least twice. */
   rolledTwice: number
-  /** The next five, with what the tile prints beside each: project, estimate, review state. */
+  /** The owner's date the rows below were dated against, YYYY-MM-DD. */
+  today: string
+  /**
+   * Today's work: what is overdue or due today, then what was finished
+   * today, then the next dated tasks, six rows in all. The Today page
+   * draws these with what sits beside each: project, estimate, review state.
+   */
   upcoming: {
     id: string
     title: string
@@ -64,12 +70,15 @@ export async function nightlyDigest(): Promise<TasksDigest> {
             t.estimated_minutes as "estimateMinutes", t.status
        from tasks.task t
        left join tasks.project p on p.id = t.project_id
-      where t.status in ('open', 'review') and t.due_on is not null and t.due_on >= core.today()
-      order by t.due_on, t.priority
-      limit 5`,
+      where (t.status in ('open', 'review') and t.due_on is not null)
+         or (t.status = 'done' and t.completed_at >= core.today())
+      order by t.due_on > core.today(), t.status = 'done', t.due_on, t.priority
+      limit 6`,
   )
+  const { rows: [{ today }] } = await db().query<{ today: string }>(`select core.today()::text as today`)
 
   return {
+    today,
     dueToday: Number(counts.due_today),
     overdue: Number(counts.overdue),
     plannedMinutes: Number(counts.planned_minutes),
