@@ -107,7 +107,7 @@ describe('next12Months', () => {
   it('starts at this month and always runs twelve', () => {
     const months = next12Months(jobs, '2026-09-08')
     expect(months).toHaveLength(12)
-    expect(months[0]).toMatchObject({ key: '2026-09', label: 'SEP 26', isCurrent: true })
+    expect(months[0]).toMatchObject({ key: '2026-09', label: 'Sep 26', isCurrent: true })
     expect(months[11].key).toBe('2027-08')
   })
 
@@ -131,7 +131,7 @@ describe('next12Months', () => {
 
 describe('labels for the screen', () => {
   it('writes the selected month with its full year', () => {
-    expect(monthLabelLong('2026-09')).toBe('SEP 2026')
+    expect(monthLabelLong('2026-09')).toBe('Sep 2026')
   })
 
   it('names an interval the way a person says it', () => {
@@ -150,7 +150,7 @@ describe('labels for the screen', () => {
   })
 
   it('dates a log row and a vendor the way the drawer and the rail read them', () => {
-    expect(logDate('2026-09-05')).toBe('05 SEP 26')
+    expect(logDate('2026-09-05')).toBe('05 Sep 26')
     expect(monthYear('2026-07-12')).toBe('Jul 2026')
   })
 })

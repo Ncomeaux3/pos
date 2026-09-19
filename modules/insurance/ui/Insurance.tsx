@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils'
 import {
   annualCents,
   cadenceTag,
+  cap,
   daysLabel,
   daysUntil,
   leadsLabel,
@@ -78,6 +79,18 @@ export function Insurance({ data }: { data: InsuranceData }) {
           <Eyebrow dot={urgent ? 'bad' : soon.length > 0 ? 'warn' : 'ok'} className="whitespace-nowrap">
             {active.length} policies · {soon.length} expiring soon
           </Eyebrow>
+        }
+        // Two actions on the phone row squeezed the h1 to "Insuran…": the
+        // phone gets the pair at pill size with the shorter word, same names.
+        phoneAction={
+          <>
+            <ActionButton size="pill" aria-label="Upload PDF" onClick={() => setParams({ upload: '1' }, { push: true })}>
+              Upload
+            </ActionButton>
+            <ActionButton size="pill" variant="solid" onClick={() => setParams({ policy: 'new', edit: '1' }, { push: true })}>
+              Add policy
+            </ActionButton>
+          </>
         }
         actions={
           <>
@@ -177,9 +190,7 @@ export function Insurance({ data }: { data: InsuranceData }) {
                 onClick={() => setParams({ policy: policy.id, edit: null }, { push: true })}
               >
                 <span className="flex min-w-0 items-center gap-3">
-                  <span className="label w-11 shrink-0 text-[9px] tracking-[0.08em] text-ink-4">
-                    {policy.kind.toUpperCase()}
-                  </span>
+                  <Eyebrow className="w-14 shrink-0">{cap(policy.kind)}</Eyebrow>
                   <span className="min-w-0">
                     <span
                       className={cn(

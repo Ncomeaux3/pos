@@ -1,11 +1,24 @@
 'use client'
 
 import { useRef, useState, useTransition } from 'react'
-import { ActionButton, Eyebrow, Overlay, SkillPicker, StatusChip, Switch, useToast, type SkillLink } from '@/components/pos'
+import {
+  ActionButton,
+  Card,
+  Eyebrow,
+  Overlay,
+  PillGroup,
+  SkillPicker,
+  StatusChip,
+  Switch,
+  fieldClass,
+  useToast,
+  type SkillLink,
+} from '@/components/pos'
 import { cn } from '@/lib/utils'
 import {
   CADENCE_LABELS,
   annualCents,
+  cap,
   daysLabel,
   daysUntil,
   leadsLabel,
@@ -28,12 +41,6 @@ const KINDS = [
 const CADENCES: Cadence[] = ['monthly', 'quarterly', 'semiannual', 'annual']
 
 const LEADS = [60, 30, 14, 7, 0]
-
-/** The artboard's input: `--bg`, 1px rule-2, 13px, `padding 9px 12px`, accent on focus. */
-const field =
-  'w-full rounded-md border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand'
-
-const card = 'border border-rule px-3.5 py-3 rounded-[18px]'
 
 const CHANNEL_NAMES: Record<string, string> = { push: 'push', email: 'email', inapp: 'in-app' }
 
@@ -87,23 +94,20 @@ const EXPIRY_TONE = {
 } as const
 
 const PILL: Record<PolicyStatus, string> = {
-  expired: 'EXPIRED',
-  'renew-now': 'RENEW NOW',
-  expiring: 'EXPIRING',
-  active: 'ACTIVE',
-  undated: 'NO DATE',
+  expired: 'Expired',
+  'renew-now': 'Renew now',
+  expiring: 'Expiring',
+  active: 'Active',
+  undated: 'No date',
 }
 
-/** The 9px outline pill the table and the drawer share. */
+/** The state chip the table and the drawer share. */
 export function StatusPill({ policy, todayIso, className }: { policy: Policy; todayIso: string; className?: string }) {
   const status = policyStatus(policy.expiresOn, todayIso)
   const closed = policy.status !== 'active'
   return (
-    <StatusChip
-      tone={closed ? 'quiet' : EXPIRY_TONE[status]}
-      className={cn('px-1.5 py-0.5 text-[9px] tracking-[0.08em]', className)}
-    >
-      {closed ? policy.status.toUpperCase() : PILL[status]}
+    <StatusChip tone={closed ? 'quiet' : EXPIRY_TONE[status]} className={className}>
+      {closed ? cap(policy.status) : PILL[status]}
     </StatusChip>
   )
 }
@@ -167,11 +171,7 @@ function PolicyView({
         <>
           <span className="flex items-start justify-between gap-3">
             <span className="min-w-0">
-              {/* The artboard's kind sits in a 24px line box: the 9px mono
-                * inherits the drawer's 16px line height. */}
-              <span className="label block text-[9px] leading-6 tracking-[0.08em] text-ink-4">
-                {policy.kind.toUpperCase()}
-              </span>
+              <Eyebrow className="block">{cap(policy.kind)}</Eyebrow>
               <span className="mt-1.5 block text-[22px] leading-[1.2]">{policy.name}</span>
               <span className="mt-1.5 block text-[12px] leading-[1.5] tracking-normal text-ink-3">{policy.carrier}</span>
             </span>
@@ -190,12 +190,10 @@ function PolicyView({
                 else setRevealed(result.number)
               })
             }
-            className="num mt-2.5 inline-flex items-center gap-2.5 rounded-md border border-rule-2 px-2.5 py-1.5 text-[12px] leading-[1.6] tracking-[0.04em] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink"
+            className="num mt-2.5 inline-flex min-h-11 items-center gap-2.5 rounded-xl border border-glass-line bg-glass-strong px-3 py-1.5 text-[13px] leading-[1.6] tracking-[0.04em] text-ink transition-colors duration-150 hover:bg-bg-elev sm:min-h-9"
           >
             {revealed ?? policy.maskedNumber}
-            <span className="label text-[9px] tracking-[0.08em] text-ink-4">
-              {revealed !== null ? 'HIDE' : 'REVEAL'}
-            </span>
+            <span className="text-[12px] font-medium text-ink-3">{revealed !== null ? 'Hide' : 'Reveal'}</span>
           </button>
         </>
       }
@@ -219,17 +217,16 @@ function PolicyView({
               </ActionButton>
             )}
           </div>
-          <button
-            type="button"
+          <ActionButton
+            variant="danger"
             onClick={() => {
               if (window.confirm(`Delete ${policy.name} and its documents?`)) {
                 run(() => deletePolicy(policy.id), 'Policy deleted', onClose)
               }
             }}
-            className="text-[13px] text-ink-3 transition-colors duration-150 hover:text-bad"
           >
             Delete
-          </button>
+          </ActionButton>
         </>
       }
     >
@@ -252,12 +249,12 @@ function PolicyView({
         </div>
 
         {policy.expiresOn && (
-          <div className={card}>
+          <Card>
             <div className="flex items-baseline justify-between gap-3">
               <Eyebrow>Payment schedule</Eyebrow>
-              <span className="label text-[10px] tracking-[0.08em] text-ink-3">
-                {policy.postToFinance ? 'MARKED FOR FINANCE' : 'NOT MARKED'}
-              </span>
+              <StatusChip tone={policy.postToFinance ? 'brand' : 'quiet'}>
+                {policy.postToFinance ? 'Marked for Finance' : 'Not marked'}
+              </StatusChip>
             </div>
             <div className="mt-1.5 flex flex-col">
               {paymentSchedule(policy.expiresOn, policy.cadence, data.todayIso).map((p, i) => {
@@ -272,10 +269,10 @@ function PolicyView({
                 )
               })}
             </div>
-          </div>
+          </Card>
         )}
 
-        <div className={card}>
+        <Card>
           <div className="flex items-baseline justify-between gap-3">
             <Eyebrow>Renewal reminders</Eyebrow>
             <span className="text-[11px] text-ink-3">{leadsLabel(policy.reminderLeads)}</span>
@@ -298,23 +295,19 @@ function PolicyView({
                 <span className="absolute left-0 top-1 h-[15px] w-px bg-ink" />
               </div>
               <div className="flex justify-between text-[10px] text-ink-4">
-                <span>TODAY</span>
+                <span>Today</span>
                 <span>{shortDate(policy.expiresOn!, data.todayIso)}</span>
               </div>
             </>
           )}
-        </div>
+        </Card>
 
         <div>
           <div className="flex items-baseline justify-between gap-3">
             <Eyebrow>Documents</Eyebrow>
-            <button
-              type="button"
-              onClick={() => fileInput.current?.click()}
-              className="text-[11px] text-ink-3 transition-colors duration-150 hover:text-brand"
-            >
+            <ActionButton size="sm" onClick={() => fileInput.current?.click()}>
               + Attach PDF
-            </button>
+            </ActionButton>
             <input
               ref={fileInput}
               type="file"
@@ -366,7 +359,7 @@ function PolicyView({
           </div>
         </div>
 
-        <div className={card}>
+        <Card>
           <Eyebrow>Agent</Eyebrow>
           {policy.agentName || policy.agentContact ? (
             <>
@@ -378,16 +371,16 @@ function PolicyView({
           ) : (
             <div className="mt-1.5 text-[12px] text-ink-4">No agent on file</div>
           )}
-        </div>
+        </Card>
 
-        <div className={card}>
+        <Card>
           <Eyebrow>Linked skills</Eyebrow>
           {policy.entityRef ? (
             <SkillPicker entityRef={policy.entityRef} links={policy.skills} skills={data.skills} className="mt-2" />
           ) : (
             <p className="mt-2 text-[12px] text-ink-4">Nothing matched yet.</p>
           )}
-        </div>
+        </Card>
       </div>
     </Overlay>
   )
@@ -499,28 +492,28 @@ function PolicyForm({
               value={form.name}
               placeholder="e.g. 2019 Civic · full coverage"
               onChange={(e) => set({ name: e.target.value })}
-              className={field}
+              className={fieldClass}
             />
           </Field>
           <Field label="Type">
-            <select aria-label="Type" value={form.kind} onChange={(e) => set({ kind: e.target.value })} className={field}>
+            <select aria-label="Type" value={form.kind} onChange={(e) => set({ kind: e.target.value })} className={fieldClass}>
               {KINDS.map((k) => (
                 <option key={k} value={k}>
-                  {k[0].toUpperCase() + k.slice(1)}
+                  {cap(k)}
                 </option>
               ))}
             </select>
           </Field>
           <Field label="Carrier">
-            <input aria-label="Carrier" value={form.carrier} onChange={(e) => set({ carrier: e.target.value })} className={field} />
+            <input aria-label="Carrier" value={form.carrier} onChange={(e) => set({ carrier: e.target.value })} className={fieldClass} />
           </Field>
           <Field label="Policy number">
             <input
               aria-label="Policy number"
               value={form.policyNumber}
-              placeholder={policy ? 'leave blank to keep the one on file' : ''}
+              placeholder={policy ? 'Leave blank to keep the one on file' : ''}
               onChange={(e) => set({ policyNumber: e.target.value })}
-              className={cn(field, 'num')}
+              className={cn(fieldClass, 'num')}
             />
           </Field>
           <Field label="Expires">
@@ -529,7 +522,7 @@ function PolicyForm({
               aria-label="Expires"
               value={form.expiresOn}
               onChange={(e) => set({ expiresOn: e.target.value })}
-              className={cn(field, 'num')}
+              className={cn(fieldClass, 'num')}
             />
           </Field>
           <Field label="Premium">
@@ -539,7 +532,7 @@ function PolicyForm({
               value={form.premium}
               placeholder="$"
               onChange={(e) => set({ premium: e.target.value })}
-              className={cn(field, 'num')}
+              className={cn(fieldClass, 'num')}
             />
           </Field>
           <Field label="Billed">
@@ -547,7 +540,7 @@ function PolicyForm({
               aria-label="Billed"
               value={form.cadence}
               onChange={(e) => set({ cadence: e.target.value as Cadence })}
-              className={field}
+              className={fieldClass}
             >
               {CADENCES.map((c) => (
                 <option key={c} value={c}>
@@ -563,7 +556,7 @@ function PolicyForm({
               value={form.deductible}
               placeholder="$"
               onChange={(e) => set({ deductible: e.target.value })}
-              className={cn(field, 'num')}
+              className={cn(fieldClass, 'num')}
             />
           </Field>
           <Field label="Coverage limits">
@@ -572,46 +565,37 @@ function PolicyForm({
               value={form.limits}
               placeholder="100/300/100"
               onChange={(e) => set({ limits: e.target.value })}
-              className={cn(field, 'num')}
+              className={cn(fieldClass, 'num')}
             />
           </Field>
           <Field label="Agent · contact" className="col-span-2">
             <div className="grid grid-cols-2 gap-3">
-              <input aria-label="Agent" value={form.agentName} placeholder="Name" onChange={(e) => set({ agentName: e.target.value })} className={field} />
-              <input aria-label="Agent contact" value={form.agentContact} placeholder="Phone · email" onChange={(e) => set({ agentContact: e.target.value })} className={field} />
+              <input aria-label="Agent" value={form.agentName} placeholder="Name" onChange={(e) => set({ agentName: e.target.value })} className={fieldClass} />
+              <input aria-label="Agent contact" value={form.agentContact} placeholder="Phone · email" onChange={(e) => set({ agentContact: e.target.value })} className={fieldClass} />
             </div>
           </Field>
         </div>
 
-        <div className={cn(card, 'flex flex-col gap-2.5')}>
+        <Card className="flex flex-col gap-2.5">
           <div className="flex items-center justify-between gap-2.5">
             <div>
               <div className="text-[13px]">Renewal reminders</div>
               <div className="text-[11px] text-ink-3">
                 {channels
-                  ? `${channels.map((c) => CHANNEL_NAMES[c] ?? c).join(' + ').replace(/^./, (c) => c.toUpperCase())}, per your Settings › Notifications`
+                  ? `${cap(channels.map((c) => CHANNEL_NAMES[c] ?? c).join(' + '))}, per your Settings › Notifications`
                   : 'Reminders are off in Notifications.'}
               </div>
             </div>
-            <div className="flex gap-1">
-              {LEADS.map((l) => {
-                const on = form.leads.includes(l)
-                return (
-                  <button
-                    key={l}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => set({ leads: on ? form.leads.filter((x) => x !== l) : [...form.leads, l] })}
-                    className={cn(
-                      'whitespace-nowrap rounded-md border px-[7px] py-[3px] text-[10px] transition-colors duration-150',
-                      on ? 'border-ink bg-ink text-bg' : 'border-rule-2 text-ink-3 hover:text-ink',
-                    )}
-                  >
-                    {l === 0 ? 'day of' : `${l}d`}
-                  </button>
-                )
-              })}
-            </div>
+            <PillGroup
+              multiple
+              label="Leads"
+              options={LEADS.map((l) => ({ value: String(l), label: l === 0 ? 'Day of' : `${l}d` }))}
+              value={form.leads.map(String)}
+              onChange={(v) => {
+                const l = Number(v)
+                set({ leads: form.leads.includes(l) ? form.leads.filter((x) => x !== l) : [...form.leads, l] })
+              }}
+            />
           </div>
           <div className="flex items-center justify-between gap-2.5 border-t border-rule pt-2.5">
             <div>
@@ -624,7 +608,7 @@ function PolicyForm({
               onChange={(postToFinance) => set({ postToFinance })}
             />
           </div>
-        </div>
+        </Card>
       </div>
     </Overlay>
   )
