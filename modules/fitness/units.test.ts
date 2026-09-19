@@ -30,9 +30,19 @@ describe('mass', () => {
 })
 
 describe('distance', () => {
-  it('switches to kilometres when that is the readable number', () => {
-    expect(distance(820)).toBe('820 m')
-    expect(distance(5100)).toBe('5.1 km')
+  it('reads in miles, because the owner reads imperial', () => {
+    // 5,100 m is the 5 km run Health Auto Export sent as 3.17 mi.
+    expect(distance(5100)).toBe('3.2 mi')
+    expect(distance(1609.344)).toBe('1.0 mi')
+  })
+
+  it('switches to feet under a tenth of a mile', () => {
+    expect(distance(100)).toBe('328 ft')
+  })
+
+  it('still renders metric when asked for it', () => {
+    expect(distance(820, 'km')).toBe('820 m')
+    expect(distance(5100, 'km')).toBe('5.1 km')
   })
 
   it('says nothing for a workout that covered no ground', () => {
@@ -48,16 +58,22 @@ describe('duration', () => {
 })
 
 describe('pace', () => {
-  it('is minutes and seconds per kilometre', () => {
+  it('is minutes and seconds per mile', () => {
+    // 5,100 m is 3.17 mi, and 51 minutes over it is 16:06/mi.
+    expect(pace(5100, 3060)).toBe('16:06/mi')
+    // 6,400 m is 3.98 mi, and 50 minutes over it is 12:34/mi.
+    expect(pace(6400, 3000)).toBe('12:34/mi')
+  })
+
+  it('still renders metric when asked for it', () => {
     // 5.1 km in 51 minutes is 10:00/km.
-    expect(pace(5100, 3060)).toBe('10:00/km')
-    // 6.4 km in 50 minutes is 7:49/km.
-    expect(pace(6400, 3000)).toBe('7:49/km')
+    expect(pace(5100, 3060, 'km')).toBe('10:00/km')
   })
 
   it('never produces a time ending in sixty seconds', () => {
-    // Naive rounding of 479.6 seconds per km gives 7:60, which is not a time.
-    expect(pace(1000, 479.6)).toBe('8:00/km')
+    // Naive rounding of 479.6 seconds per mile gives 7:60, which is not a time.
+    expect(pace(1609.344, 479.6)).toBe('8:00/mi')
+    expect(pace(1000, 479.6, 'km')).toBe('8:00/km')
   })
 
   it('says nothing when there is no distance to divide by', () => {
