@@ -89,7 +89,8 @@ export function toReadings(payload: unknown): { metrics: BodyMetric[]; workouts:
       kind: toKind(name),
       startedAt: start,
       durationS: Math.round(minutes * 60),
-      distanceM: miles !== null ? Math.round(miles * METRES_PER_MI) : km !== null ? Math.round(km * 1000) : 0,
+      // To the centimetre, which is what the distance column keeps.
+      distanceM: miles !== null ? Math.round(miles * METRES_PER_MI * 100) / 100 : km !== null ? Math.round(km * 100000) / 100 : 0,
       avgHr: avgHr !== null ? Math.round(avgHr) : null,
       detail: kcal !== null ? `${Math.round(kcal)} kcal` : '',
     })

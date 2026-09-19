@@ -56,6 +56,9 @@ const METRES_PER_MI = 1609.344
 const METRES_PER_YD = 0.9144
 const KJ_PER_KCAL = 4.184
 
+/** Metres to the centimetre, which is what the distance column keeps. */
+const cm = (metres: number) => Math.round(metres * 100) / 100
+
 // A night longer than this is a phantom session, not sleep: 10 of 225 Eight
 // Sleep nights in the 2026-09-19 export had every field over 14 hours. It is
 // skipped, so the day is a gap rather than a spike on the trend.
@@ -276,7 +279,7 @@ export function toWorkouts(payload: unknown): Workout[] {
       kind: toKind(name),
       startedAt,
       durationS: Math.round(duration),
-      distanceM: metres === null ? 0 : Math.round(metres),
+      distanceM: metres === null ? 0 : cm(metres),
       avgHr: hr ? Math.round(hr.qty) : null,
       detail: burned ? `${Math.round(energy(burned.qty, burned.units))} kcal` : '',
     })
