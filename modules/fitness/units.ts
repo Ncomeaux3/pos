@@ -134,11 +134,12 @@ export function hoursLabel(minutes: number): string {
   return `${Math.floor(minutes / 60)}H ${String(minutes % 60).padStart(2, '0')}M`
 }
 
-/** "8 STRAVA · 2 BY HAND": where the rows shown came from. Zeros are left out. */
+/** "8 STRAVA · 3 APPLE HEALTH · 2 BY HAND": where the rows shown came from. Zeros are left out. */
 export function sourcesLabel(rows: { source: string }[]): string {
   const strava = rows.filter((r) => r.source === 'strava').length
-  const hand = rows.length - strava
-  return [strava > 0 && `${strava} STRAVA`, hand > 0 && `${hand} BY HAND`]
+  const apple = rows.filter((r) => r.source === 'health_auto_export' || r.source === 'apple_shortcuts').length
+  const hand = rows.length - strava - apple
+  return [strava > 0 && `${strava} STRAVA`, apple > 0 && `${apple} APPLE HEALTH`, hand > 0 && `${hand} BY HAND`]
     .filter(Boolean)
     .join(' · ')
 }

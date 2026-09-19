@@ -75,6 +75,10 @@ describe('matchByRules', () => {
     expect(rules('ran a 5k')).toContain('endurance')
   })
 
+  it("places Apple's strength workout name by rule, not by the nightly model", () => {
+    expect(rules('Traditional Strength Training')).toEqual(['strength'])
+  })
+
   it('can return several skills for one piece of text', () => {
     const hits = rules('Wrote a postgres migration and deployed it to vercel')
     expect(hits).toEqual(expect.arrayContaining(['sql', 'cloud']))
