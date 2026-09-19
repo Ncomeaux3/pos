@@ -95,6 +95,19 @@ describe('toBodyMetrics', () => {
       { kind: 'sleep_minutes', measuredOn: '2026-06-23', value: 450 },
     ])
   })
+
+  it('converts kilojoules to kilocalories and takes anything else as kilocalories', () => {
+    const energy = (units: string, q: number) =>
+      toBodyMetrics({ data: { metrics: [metric('active_energy', units, [{ qty: q, date: at('2026-09-11') }])] } })[0]
+        .value
+
+    // 2,563.7 kJ is the same 613 kcal the kcal payload sends.
+    expect(energy('kJ', 2563.7)).toBe(613)
+    expect(energy('kcal', 612.7)).toBe(613)
+    // A units string that does not read is kilocalories, not a dropped day:
+    // that is what Apple Health stores and what every export has sent.
+    expect(energy('', 612.7)).toBe(613)
+  })
 })
 
 describe('toWorkouts', () => {
@@ -167,5 +180,13 @@ describe('toWorkouts', () => {
         detail: '',
       },
     ])
+  })
+
+  it("reads a workout's energy in the units it arrived in", () => {
+    const detail = (activeEnergyBurned: { qty: number; units: string }) =>
+      toWorkouts({ data: { workouts: [{ ...run, activeEnergyBurned }] } })[0].detail
+
+    expect(detail({ qty: 1465.2, units: 'kJ' })).toBe('350 kcal')
+    expect(detail({ qty: 350.2, units: 'kcal' })).toBe('350 kcal')
   })
 })

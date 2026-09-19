@@ -53,6 +53,7 @@ export type Workout = {
 
 const GRAMS_PER_LB = 453.59237
 const METRES_PER_MI = 1609.344
+const KJ_PER_KCAL = 4.184
 
 /**
  * A total is summed across the day's points, because the app can be set to
@@ -133,6 +134,20 @@ const length = (q: number, units: string) => {
   return u.startsWith('mi') ? q * METRES_PER_MI : u.startsWith('km') ? q * 1000 : u === 'm' ? q : null
 }
 
+/**
+ * Energy as kilocalories, whatever the phone is set to send.
+ *
+ * Unlike mass and length this does not skip what it cannot read: kilocalories
+ * are what Apple Health stores and what every US export has sent, so a missing
+ * or unrecognised units string is taken as kcal rather than dropping the day's
+ * energy. Only kilojoules are converted, because only kilojoules are wrong by
+ * a factor rather than wrong by a name.
+ */
+const energy = (q: number, units: string) => {
+  const u = units.toLowerCase()
+  return u === 'kj' || u.startsWith('kilojoule') ? q / KJ_PER_KCAL : q
+}
+
 const byName: Record<string, Translate> = {
   // The docs spell it with an ampersand; the older spelling is what an
   // unofficial client reads. Both land on weight.
@@ -155,7 +170,7 @@ const byName: Record<string, Translate> = {
     return { kind: 'sleep_minutes', measuredOn, value }
   },
   step_count: simple('steps', identity),
-  active_energy: simple('active_energy', identity),
+  active_energy: simple('active_energy', energy),
   apple_exercise_time: simple('exercise_minutes', identity),
   // The count of hours stood, not `apple_stand_time`, which is minutes
   // (99 for 11 hours in the 2026-09-18 export) and is left unmapped.
@@ -239,7 +254,7 @@ export function toWorkouts(payload: unknown): Workout[] {
     const distance = quantity(w.distance)
     const metres = distance ? length(distance.qty, distance.units) : null
     const hr = quantity((w.heartRate as { avg?: unknown } | undefined)?.avg)
-    const energy = quantity(w.activeEnergyBurned)
+    const burned = quantity(w.activeEnergyBurned)
 
     out.push({
       externalId,
@@ -249,7 +264,7 @@ export function toWorkouts(payload: unknown): Workout[] {
       durationS: Math.round(duration),
       distanceM: metres === null ? 0 : Math.round(metres),
       avgHr: hr ? Math.round(hr.qty) : null,
-      detail: energy ? `${Math.round(energy.qty)} kcal` : '',
+      detail: burned ? `${Math.round(energy(burned.qty, burned.units))} kcal` : '',
     })
   }
   return out

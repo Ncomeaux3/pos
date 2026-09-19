@@ -3,12 +3,16 @@
 // the browser bundle.
 //
 // Everything is stored unit free and integer: grams for mass, metres for
-// distance, seconds for time. Pounds and kilograms are a rendering decision,
-// and storing either one makes the other lossy.
+// distance, seconds for time. Pounds and miles are a rendering decision, and
+// storing either system makes the other lossy. Imperial is what these
+// functions render by default, because the owner reads imperial.
 
 const GRAMS_PER_POUND = 453.59237
+const METRES_PER_MILE = 1609.344
+const METRES_PER_FOOT = 0.3048
 
 export type MassUnit = 'lb' | 'kg'
+export type DistanceUnit = 'mi' | 'km'
 
 /** "315 lb", "142.5 kg". Rounded to the increment the unit is actually loaded in. */
 export function mass(grams: number, unit: MassUnit = 'lb'): string {
@@ -23,11 +27,25 @@ export function mass(grams: number, unit: MassUnit = 'lb'): string {
 export const toGrams = (value: number, unit: MassUnit): number =>
   Math.round(unit === 'kg' ? value * 1000 : value * GRAMS_PER_POUND)
 
-/** "5.1 km", "820 m". Metres until a kilometre is the more readable number. */
-export function distance(metres: number): string {
+/**
+ * "3.17 mi", "410 ft". Feet until a mile is the more readable number.
+ *
+ * Miles are the default because the owner is in the US and every source the
+ * app reads from (Apple Health, Strava) is set to imperial there. Metres stay
+ * the stored unit: the conversion belongs here, once, and not in the column.
+ */
+export function distance(metres: number, unit: DistanceUnit = 'mi'): string {
   if (metres === 0) return ''
-  if (metres < 1000) return `${metres} m`
-  return `${(metres / 1000).toFixed(1)} km`
+  if (unit === 'km') {
+    return metres < 1000 ? `${Math.round(metres)} m` : `${(metres / 1000).toFixed(1)} km`
+  }
+  // A tenth of a mile is where the decimals stop saying anything useful.
+  if (metres < METRES_PER_MILE / 10) {
+    return `${Math.round(metres / METRES_PER_FOOT).toLocaleString('en-US')} ft`
+  }
+  // Two decimals, as every run tracker shows a distance: 3.2 and 3.24 are a
+  // hundred and thirty yards apart, which is a lap of a track.
+  return `${(metres / METRES_PER_MILE).toFixed(2)} mi`
 }
 
 /** "58m", "1h 02m". What a workout duration reads as in a list. */
@@ -38,18 +56,19 @@ export function duration(seconds: number): string {
 }
 
 /**
- * Pace, as minutes and seconds per kilometre.
+ * Pace, as minutes and seconds per mile.
  *
  * The one number a runner actually reads, and it is a ratio of two stored
  * values rather than a stored value, so it can never disagree with them.
  */
-export function pace(metres: number, seconds: number): string {
+export function pace(metres: number, seconds: number, unit: DistanceUnit = 'mi'): string {
   if (metres < 100 || seconds <= 0) return ''
-  const secondsPerKm = seconds / (metres / 1000)
-  const m = Math.floor(secondsPerKm / 60)
-  const s = Math.round(secondsPerKm % 60)
+  const per = unit === 'km' ? 1000 : METRES_PER_MILE
+  const secondsPer = seconds / (metres / per)
+  const m = Math.floor(secondsPer / 60)
+  const s = Math.round(secondsPer % 60)
   // 9:60 is what naive rounding produces, and it is not a time.
-  return s === 60 ? `${m + 1}:00/km` : `${m}:${String(s).padStart(2, '0')}/km`
+  return s === 60 ? `${m + 1}:00/${unit}` : `${m}:${String(s).padStart(2, '0')}/${unit}`
 }
 
 export type SetLike = { reps: number; weightG: number }

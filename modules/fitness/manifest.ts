@@ -306,11 +306,11 @@ export default defineModule({
 
       const count = Number(current.n)
       const minutes = Math.round(Number(current.secs) / 60)
-      const km = Number(current.metres) / 1000
+      const miles = Number(current.metres) / 1609.344
       const parts = [
         minutes < 60 ? `${minutes}m` : minutes % 60 === 0 ? `${minutes / 60}h` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`,
       ]
-      if (km >= 0.1) parts.push(`${km.toFixed(1)} km`)
+      if (miles >= 0.1) parts.push(`${miles.toFixed(2)} mi`)
 
       return [
         {
