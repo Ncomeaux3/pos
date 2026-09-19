@@ -53,7 +53,13 @@ export type Workout = {
 
 const GRAMS_PER_LB = 453.59237
 const METRES_PER_MI = 1609.344
+const METRES_PER_YD = 0.9144
 const KJ_PER_KCAL = 4.184
+
+// A night longer than this is a phantom session, not sleep: 10 of 225 Eight
+// Sleep nights in the 2026-09-19 export had every field over 14 hours. It is
+// skipped, so the day is a gap rather than a spike on the trend.
+const MAX_NIGHT_MIN = 14 * 60
 
 /**
  * A total is summed across the day's points, because the app can be set to
@@ -131,7 +137,11 @@ const mass = (q: number, units: string) => {
 
 const length = (q: number, units: string) => {
   const u = units.toLowerCase()
-  return u.startsWith('mi') ? q * METRES_PER_MI : u.startsWith('km') ? q * 1000 : u === 'm' ? q : null
+  if (u.startsWith('mi')) return q * METRES_PER_MI
+  if (u.startsWith('km')) return q * 1000
+  // Pool swims arrive in yards (2026-09-19 export).
+  if (u.startsWith('yd')) return q * METRES_PER_YD
+  return u === 'm' ? q : null
 }
 
 /**
@@ -156,17 +166,21 @@ const byName: Record<string, Translate> = {
   resting_heart_rate: simple('resting_hr', identity),
   heart_rate_variability: simple('hrv', identity),
   body_fat_percentage: simple('body_fat', tenths),
-  // The night is the span from sleepStart to sleepEnd, dated by the morning
-  // it ended so it belongs to the day you woke up. Not the app's summed hours:
-  // a source that writes overlapping records (Eight Sleep, seen 2026-09-18)
-  // makes `totalSleep` two to three times the night. A point without the span
-  // reads its hours, `totalSleep` first, then the older `asleep`.
+  // The night is dated by the morning it ended so it belongs to the day you
+  // woke up. Its length is the smaller of the span from sleepStart to sleepEnd
+  // and the app's summed hours (`totalSleep`, then the older `asleep`),
+  // because Eight Sleep gets each one wrong on different nights: overlapping
+  // records make the hours two to three times the night (2026-09-18), and a
+  // session that ends in the afternoon makes the span 13 to 20 hours while
+  // the hours read right (6 nights in the 2026-09-19 export). A point with
+  // only one of the two reads that one.
   sleep_analysis: (point) => {
     const measuredOn = day(point.sleepEnd) ?? day(point.date)
     const span = minutesBetween(point.sleepStart, point.sleepEnd)
     const hours = qty(point, 'totalSleep') ?? qty(point, 'asleep')
-    const value = span ?? (hours === null ? null : hours * 60)
-    if (!measuredOn || value === null) return null
+    const summed = hours === null ? null : hours * 60
+    const value = span === null ? summed : summed === null ? span : Math.min(span, summed)
+    if (!measuredOn || value === null || value > MAX_NIGHT_MIN) return null
     return { kind: 'sleep_minutes', measuredOn, value }
   },
   step_count: simple('steps', identity),

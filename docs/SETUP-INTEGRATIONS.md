@@ -300,9 +300,8 @@ comes from a manual export and one script run:
    summed, time in bed, and the minutes the webhook would store for that day.
    Two points under one date is worth knowing about, because the day keeps the
    last of them, so an afternoon nap can outrank the night it shares a date
-   with. Nights over 12 hours are listed at the end with their point count: more
-   than one point is the day keeping the wrong one, a single point is a span
-   that really is that long.
+   with. The nights the webhook would skip (over 14 hours in every field) are
+   listed at the end with their span and summed hours.
 
 ### What happens next
 
@@ -323,9 +322,12 @@ word rules the Strava sync uses (Running is a run, Cycling a ride, Traditional
 Strength Training strength, Yoga other). Distance, average heart rate and
 active energy are optional; routes and per-second series are not stored.
 
-Sleep is the span from the app's `sleepStart` to `sleepEnd`, not its summed
-hours: a source that writes overlapping records (Eight Sleep) makes the sum
-two to three times the night. If a metric you enabled does not appear on
+Sleep is the smaller of the span from the app's `sleepStart` to `sleepEnd`
+and its summed hours: Eight Sleep's overlapping records make the sum two to
+three times the night, and a session it ends in the afternoon makes the span
+13 to 20 hours. A night over 14 hours in both is skipped, so the day is a gap
+rather than a spike. Pool swim distance arrives in yards and is converted to
+metres like miles and kilometres. If a metric you enabled does not appear on
 Fitness > Body, the row in `core.request_log` for the route will show the post
 arrived, and the payload name needs matching to the table's kinds.
 

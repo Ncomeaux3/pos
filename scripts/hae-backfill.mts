@@ -22,10 +22,6 @@ const PAUSE_MS = 1_500
 const USAGE =
   'usage: HAE_SECRET=... pnpm exec tsx scripts/hae-backfill.mts <export.json> [--url <url>] [--dry-run] [--sleep]'
 
-// Printing only. A night longer than this is worth a look; nothing is dropped
-// or clamped by it and no stored value depends on it.
-const LONG_NIGHT_MIN = 12 * 60
-
 function options(): Options {
   try {
     return parseArgs(process.argv.slice(2), DEFAULT_URL)
@@ -77,15 +73,20 @@ if (sleep) {
     )
   }
 
-  const long = nights.filter((night) => night.storedMin !== null && night.storedMin > LONG_NIGHT_MIN)
+  // The webhook skips a night it cannot read or that is over its cap, so a
+  // stored '-' beside readable points is a night the app will not have.
+  const skipped = nights.filter((night) => night.storedMin === null)
   console.log(
-    long.length === 0
-      ? `\nNo night stores more than ${hm(LONG_NIGHT_MIN)}.`
-      : `\n${long.length} over ${hm(LONG_NIGHT_MIN)}: ${long
-          .map((night) => `${night.day} ${hm(night.storedMin)} (${night.points.length} pt)`)
-          .join(', ')}` +
-          '\nMore than one point on such a day means the day kept the last of them;' +
-          '\none point means the span itself is that long.',
+    skipped.length === 0
+      ? '\nEvery night stores.'
+      : `\n${skipped.length} skipped: ${skipped
+          .map(
+            (night) =>
+              `${night.day} (${night.points
+                .map((point) => `${clock(point.start)} to ${clock(point.end)}, total ${hm(point.totalSleepMin)}`)
+                .join('; ')})`,
+          )
+          .join(', ')}`,
   )
   process.exit(0)
 }
