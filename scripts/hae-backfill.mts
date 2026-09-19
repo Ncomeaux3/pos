@@ -7,29 +7,96 @@
 // limits, and the pause keeps under the app's 60 requests a minute.
 //
 //   HAE_SECRET=<secret from the Connections card> \
-//   pnpm exec tsx scripts/hae-backfill.mts <export.json> [--url <webhook url>] [--dry-run]
+//   pnpm exec tsx scripts/hae-backfill.mts <export.json> [--url <webhook url>] [--dry-run] [--sleep]
 //
 // The URL defaults to production. --dry-run prints the requests and sends
-// nothing.
+// nothing. --sleep prints the export's nights and sends nothing: each one's
+// span beside the hours the app summed and the minutes the webhook would
+// store, which is how a night that reads wrong gets found in the file.
 
 import { readFileSync } from 'node:fs'
-import { chunk } from './hae-backfill-lib'
+import { chunk, parseArgs, sleepReport, type Options } from './hae-backfill-lib'
 
 const DEFAULT_URL = 'https://pos-gilt-rho.vercel.app/api/integrations/health_auto_export/webhook'
 const PAUSE_MS = 1_500
+const USAGE =
+  'usage: HAE_SECRET=... pnpm exec tsx scripts/hae-backfill.mts <export.json> [--url <url>] [--dry-run] [--sleep]'
 
-const args = process.argv.slice(2)
-const file = args.find((a) => !a.startsWith('--'))
-const url = args.includes('--url') ? args[args.indexOf('--url') + 1] : DEFAULT_URL
-const dryRun = args.includes('--dry-run')
+// Printing only. A night longer than this is worth a look; nothing is dropped
+// or clamped by it and no stored value depends on it.
+const LONG_NIGHT_MIN = 12 * 60
+
+function options(): Options {
+  try {
+    return parseArgs(process.argv.slice(2), DEFAULT_URL)
+  } catch (error) {
+    console.error(`${(error as Error).message}\n${USAGE}`)
+    process.exit(1)
+  }
+}
+
+const { file, url, dryRun, sleep } = options()
+const payload = JSON.parse(readFileSync(file, 'utf8'))
+
+/** `2026-06-22 00:37:00 -0500` to `00:37`. */
+const clock = (stamp: string) => (stamp.length >= 16 ? stamp.slice(11, 16) : stamp || '-')
+const hm = (min: number | null) =>
+  min === null ? '-' : `${Math.floor(min / 60)}h${String(Math.round(min % 60)).padStart(2, '0')}m`
+
+const WIDTHS = [12, 5, 8, 8, 9, 9, 9, 9]
+const line = (cells: string[]) =>
+  cells.map((cell, i) => (i === 0 ? cell.padEnd(WIDTHS[i]) : cell.padStart(WIDTHS[i]))).join('')
+
+if (sleep) {
+  const nights = sleepReport(payload)
+  if (nights.length === 0) {
+    console.log('No sleep_analysis points in this export.')
+    process.exit(0)
+  }
+  const days = nights.map((night) => night.day).filter((day) => day !== '?')
+  const range = days.length ? `, ${days[0]} to ${days[days.length - 1]}` : ''
+  console.log(`${nights.length} nights${range}. Nothing is sent.\n`)
+  console.log(line(['day', 'pts', 'start', 'end', 'own', 'total', 'inBed', 'stored']))
+
+  for (const night of nights) {
+    // The day, its count and the stored value belong to the night, so they
+    // print once; the columns either side of them are per point.
+    night.points.forEach((point, i) =>
+      console.log(
+        line([
+          i === 0 ? night.day : '',
+          i === 0 ? String(night.points.length) : '',
+          clock(point.start),
+          clock(point.end),
+          hm(point.ownMin),
+          hm(point.totalSleepMin),
+          hm(point.inBedMin),
+          i === 0 ? hm(night.storedMin) : '',
+        ]),
+      ),
+    )
+  }
+
+  const long = nights.filter((night) => night.storedMin !== null && night.storedMin > LONG_NIGHT_MIN)
+  console.log(
+    long.length === 0
+      ? `\nNo night stores more than ${hm(LONG_NIGHT_MIN)}.`
+      : `\n${long.length} over ${hm(LONG_NIGHT_MIN)}: ${long
+          .map((night) => `${night.day} ${hm(night.storedMin)} (${night.points.length} pt)`)
+          .join(', ')}` +
+          '\nMore than one point on such a day means the day kept the last of them;' +
+          '\none point means the span itself is that long.',
+  )
+  process.exit(0)
+}
+
 const secret = process.env.HAE_SECRET
-
-if (!file || (!secret && !dryRun)) {
-  console.error('usage: HAE_SECRET=... pnpm exec tsx scripts/hae-backfill.mts <export.json> [--url <url>] [--dry-run]')
+if (!secret && !dryRun) {
+  console.error(`HAE_SECRET is not set\n${USAGE}`)
   process.exit(1)
 }
 
-const requests = chunk(JSON.parse(readFileSync(file, 'utf8')))
+const requests = chunk(payload)
 for (const [i, body] of requests.entries()) {
   const text = JSON.stringify(body)
   const what = body.data.metrics

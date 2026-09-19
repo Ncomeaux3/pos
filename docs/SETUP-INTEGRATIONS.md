@@ -286,6 +286,24 @@ comes from a manual export and one script run:
    limit. It stops at the first non-200 and prints the body. Rows upsert, so
    running it twice is safe, and a workout earns its XP once.
 
+   The export file goes anywhere among the flags, and a flag the script does
+   not know stops it rather than being ignored, so a typed `--dryrun` cannot
+   become a live post.
+
+3. Before a first backfill, read the nights the export carries:
+
+   ```
+   pnpm exec tsx scripts/hae-backfill.mts ~/Downloads/<export>.json --sleep
+   ```
+
+   It sends nothing. One line per sleep point: the span, the hours the app
+   summed, time in bed, and the minutes the webhook would store for that day.
+   Two points under one date is worth knowing about, because the day keeps the
+   last of them, so an afternoon nap can outrank the night it shares a date
+   with. Nights over 12 hours are listed at the end with their point count: more
+   than one point is the day keeping the wrong one, a single point is a span
+   that really is that long.
+
 ### What happens next
 
 Each post goes through `/api/integrations/health_auto_export/webhook`. The
