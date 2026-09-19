@@ -45,6 +45,11 @@ describe('distance', () => {
     expect(distance(5100, 'km')).toBe('5.1 km')
   })
 
+  it('reads a pool swim in yards', () => {
+    // 700 yd, as the pool measures it and Apple Health sent it.
+    expect(distance(640.08, 'yd')).toBe('700 yd')
+  })
+
   it('says nothing for a workout that covered no ground', () => {
     expect(distance(0)).toBe('')
   })
@@ -68,6 +73,11 @@ describe('pace', () => {
   it('still renders metric when asked for it', () => {
     // 5.1 km in 51 minutes is 10:00/km.
     expect(pace(5100, 3060, 'km')).toBe('10:00/km')
+  })
+
+  it('paces a swim per hundred yards', () => {
+    // 700 yd in 20:25 is 2:55 per 100 yd.
+    expect(pace(640.08, 1225, 'yd')).toBe('2:55/100yd')
   })
 
   it('never produces a time ending in sixty seconds', () => {

@@ -11,8 +11,13 @@ const GRAMS_PER_POUND = 453.59237
 const METRES_PER_MILE = 1609.344
 const METRES_PER_FOOT = 0.3048
 
+/** Rows per page of the workout list; the screen asks for another page at a time. */
+export const WORKOUT_PAGE = 40
+const METRES_PER_YARD = 0.9144
+
 export type MassUnit = 'lb' | 'kg'
-export type DistanceUnit = 'mi' | 'km'
+/** Yards are for pool swims: the pool is 25 yd and the swim is counted in lengths of it. */
+export type DistanceUnit = 'mi' | 'km' | 'yd'
 
 /** "315 lb", "142.5 kg". Rounded to the increment the unit is actually loaded in. */
 export function mass(grams: number, unit: MassUnit = 'lb'): string {
@@ -36,6 +41,7 @@ export const toGrams = (value: number, unit: MassUnit): number =>
  */
 export function distance(metres: number, unit: DistanceUnit = 'mi'): string {
   if (metres === 0) return ''
+  if (unit === 'yd') return `${Math.round(metres / METRES_PER_YARD).toLocaleString('en-US')} yd`
   if (unit === 'km') {
     return metres < 1000 ? `${Math.round(metres)} m` : `${(metres / 1000).toFixed(1)} km`
   }
@@ -63,12 +69,14 @@ export function duration(seconds: number): string {
  */
 export function pace(metres: number, seconds: number, unit: DistanceUnit = 'mi'): string {
   if (metres < 100 || seconds <= 0) return ''
-  const per = unit === 'km' ? 1000 : METRES_PER_MILE
+  // Swimmers pace per hundred yards, not per mile.
+  const per = unit === 'km' ? 1000 : unit === 'yd' ? 100 * METRES_PER_YARD : METRES_PER_MILE
+  const label = unit === 'yd' ? '100yd' : unit
   const secondsPer = seconds / (metres / per)
   const m = Math.floor(secondsPer / 60)
   const s = Math.round(secondsPer % 60)
   // 9:60 is what naive rounding produces, and it is not a time.
-  return s === 60 ? `${m + 1}:00/${unit}` : `${m}:${String(s).padStart(2, '0')}/${unit}`
+  return s === 60 ? `${m + 1}:00/${label}` : `${m}:${String(s).padStart(2, '0')}/${label}`
 }
 
 export type SetLike = { reps: number; weightG: number }
