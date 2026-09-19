@@ -2758,8 +2758,8 @@ test('health, a weight posted to the Apple webhook shows on the page', async ({ 
   // The secret lives in core.connections and the card is the one place it is
   // shown, so the test reads it where the owner would.
   await page.goto('/settings/connections')
-  const card = page.locator('div.border').filter({ has: page.getByText('Health Auto Export', { exact: true }) }).first()
-  await card.getByRole('button', { name: 'REVEAL' }).click()
+  const card = page.locator('div.glass').filter({ has: page.getByText('Health Auto Export', { exact: true }) }).first()
+  await card.getByRole('button', { name: 'Reveal' }).click()
   const secret = (await card.locator('span.flex-1.break-all').textContent())?.trim() ?? ''
   expect(secret.length).toBeGreaterThan(10)
 
