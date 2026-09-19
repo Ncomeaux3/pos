@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useTransition } from 'react'
-import { ActionButton, Chip, Eyebrow, useToast } from '@/components/pos'
+import { ActionButton, Chip, Eyebrow, StatusChip, useToast } from '@/components/pos'
 import { syncFitness } from './sync'
 
 /**
@@ -50,7 +50,7 @@ export function SetupCard({
             <div className="flex items-center gap-2.5">
               <span className="text-[15px] text-ink">Strava</span>
               <Chip className="px-2 py-[3px] text-[10px]">OAuth2</Chip>
-              <span className="num text-[10px] tracking-[0.06em] text-ink-4">REQUIRED</span>
+              <StatusChip tone="warn">Required</StatusChip>
             </div>
             <p className="mt-[5px] text-[12px] text-ink-3">
               Workouts, duration, distance, heart rate. Scope{' '}
@@ -58,8 +58,9 @@ export function SetupCard({
               <span className="num">profile:read_all</span>.
             </p>
             {connected && (
-              <p className="num mt-2.5 text-[11px] text-ok">
-                CONNECTED{detail ? ` · ${detail}` : ''}
+              <p className="mt-2.5 flex items-center gap-1.5">
+                <StatusChip tone="ok">Connected</StatusChip>
+                {detail && <span className="num text-[11px] text-ink-3">{detail}</span>}
               </p>
             )}
           </div>

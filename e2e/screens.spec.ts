@@ -1865,7 +1865,7 @@ test('finance, net worth and the budget pace marks', async ({ page }) => {
       .first()
       .evaluate((el) => getComputedStyle(el).padding)
     // Rows sit inside the grouped surface with a 16px inset; the overview keeps
-    // its 9px row height (`overviewRow`) until Phase 5 restyles Finance.
+    // its 9px row height (`overviewRow`): a dense table stays dense (Holon plan, section 4).
     expect(rowPadding).toBe('9px 16px')
     await expect(page.getByRole('button', { name: /edit limits/i })).toBeVisible()
   }
@@ -2731,12 +2731,12 @@ test('health, one page with the artboard\'s panes and the status in the band', a
 
   // Body weight belongs to Fitness and the tile says so; clinical readings show
   // where they came from, and a delta only against a real previous reading.
-  await expect(page.getByText('FITNESS', { exact: true })).toBeVisible()
+  await expect(page.getByText('lb · from Fitness', { exact: true })).toBeVisible()
   await expect(page.getByText('118/74')).toBeVisible()
-  await expect(page.getByText(/-8 · since \w{3} \d{4}/)).toBeVisible()
+  await expect(page.getByText(/-8 · since \w{3} \d{4} · lab/)).toBeVisible()
 
-  // Appointments as month-day cards with the status tag; Upcoming and History
-  // are pills, not a page tab.
+  // Appointments as rows with the status chip; Upcoming and History are the
+  // shared TabBar.
   await expect(page.getByRole('tab', { name: 'Upcoming' })).toBeVisible()
   const physical = page.getByRole('button', { name: /Annual physical/ }).first()
   await expect(physical).toBeVisible()
@@ -2746,8 +2746,8 @@ test('health, one page with the artboard\'s panes and the status in the band', a
   await page.getByRole('tab', { name: 'Upcoming' }).click()
 
   // Records carry their type, date and whether a file is behind them.
-  await expect(page.getByText('RECORD', { exact: true })).toBeVisible()
-  await expect(page.getByText('NO FILE').first()).toBeVisible()
+  await expect(page.getByText('Vision', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('No file').first()).toBeVisible()
 
   await shoot(page, 'health')
 })
@@ -2771,7 +2771,7 @@ test('health, a weight posted to the Apple webhook shows on the page', async ({ 
   expect(res.status()).toBe(200)
 
   await page.goto('/health')
-  const weight = page.locator('div.border').filter({ has: page.getByText('FITNESS', { exact: true }) })
+  const weight = page.getByText('lb · from Fitness', { exact: true }).locator('..')
   await expect(weight.getByText('178', { exact: true })).toBeVisible()
 
   // And the Fitness band now says when Apple data last arrived.
@@ -2785,11 +2785,14 @@ test('health, the rail says what is owed with the app\'s own actions', async ({ 
 
   // Never is its own state, not folded into overdue: a screening you have
   // never had is a different conversation from one you are late for.
-  await expect(page.getByText('NEVER DONE', { exact: true })).toBeVisible()
-  // A screening whose appointment is booked reads SCHEDULED and opens it.
-  await expect(page.getByText('SCHEDULED').first()).toBeVisible()
+  // The chip, not the card's caption, which also reads "Never done".
+  await expect(
+    page.locator('article').filter({ hasText: 'Never done' }).locator('span').filter({ hasText: /^Never done$/ }).first(),
+  ).toBeVisible()
+  // A screening whose appointment is booked reads Scheduled and opens it.
+  await expect(page.getByText('Scheduled', { exact: true }).first()).toBeVisible()
   await page.getByRole('button', { name: 'View appointment' }).first().click()
-  await expect(page.getByRole('dialog').getByText('PREP', { exact: true })).toBeVisible()
+  await expect(page.getByRole('dialog').getByText('Prep', { exact: true })).toBeVisible()
   await expect(page.getByRole('dialog').getByText(/Fast twelve hours/)).toBeVisible()
   await expect(page).toHaveURL(/appt=/)
   await shoot(page, 'health-drawer')
@@ -2820,7 +2823,7 @@ test('health, log a visit files a past date under records', async ({ page }) => 
   const drawer = page.getByRole('dialog')
   await drawer.getByRole('radio', { name: 'Lab' }).click()
   await drawer.getByPlaceholder('Annual physical').fill('Ferritin')
-  await drawer.getByLabel('DATE').fill('2026-06-01')
+  await drawer.getByLabel('Date').fill('2026-06-01')
   await drawer.getByPlaceholder('$40 copay').fill('$12')
   await expect(drawer.getByText('Past date: this files under Records.')).toBeVisible()
   await drawer.getByRole('button', { name: 'Save entry' }).click()

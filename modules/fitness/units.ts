@@ -92,34 +92,34 @@ export function load(workouts: { kind: string; durationS: number }[]): number {
   )
 }
 
-/** "TODAY", "YESTERDAY", then "SEP 04": when a set happened, for a tile's sub-line. */
+/** "Today", "Yesterday", then "Sep 04": when a set happened, for a tile's sub-line. */
 export function whenLabel(iso: string, todayIso: string): string {
   const day = iso.slice(0, 10)
   const today = new Date(`${todayIso}T00:00:00Z`)
   const days = Math.round((today.getTime() - new Date(`${day}T00:00:00Z`).getTime()) / 86_400_000)
-  if (days === 0) return 'TODAY'
-  if (days === 1) return 'YESTERDAY'
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Yesterday'
   return monthDay(day)
 }
 
-const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-/** "SEP 04" from a date or timestamp string. */
+/** "Sep 04" from a date or timestamp string. */
 export function monthDay(iso: string): string {
   return `${MONTHS[Number(iso.slice(5, 7)) - 1]} ${iso.slice(8, 10)}`
 }
 
-/** "2H 41M", "51M": the week's training time as the tile sub-line prints it. */
+/** "2h 41m", "51m": the week's training time as the tile sub-line prints it. */
 export function hoursLabel(minutes: number): string {
-  if (minutes < 60) return `${minutes}M`
-  return `${Math.floor(minutes / 60)}H ${String(minutes % 60).padStart(2, '0')}M`
+  if (minutes < 60) return `${minutes}m`
+  return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`
 }
 
-/** "8 STRAVA · 2 BY HAND": where the rows shown came from. Zeros are left out. */
+/** "8 Strava · 2 by hand": where the rows shown came from. Zeros are left out. */
 export function sourcesLabel(rows: { source: string }[]): string {
   const strava = rows.filter((r) => r.source === 'strava').length
   const hand = rows.length - strava
-  return [strava > 0 && `${strava} STRAVA`, hand > 0 && `${hand} BY HAND`]
+  return [strava > 0 && `${strava} Strava`, hand > 0 && `${hand} by hand`]
     .filter(Boolean)
     .join(' · ')
 }
