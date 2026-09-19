@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { ActionButton, Eyebrow, Overlay, SkillPicker } from '@/components/pos'
+import { ActionButton, Card, Chip, Eyebrow, MetricStrip, Overlay, PillGroup, SkillPicker, StatusChip, type ChipTone } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { quadrant, type Level } from '../quadrant'
 import { deleteIdea, draftTask, researchIdea, saveIdea, type ActionResult, type IdeaInput } from './actions'
@@ -12,7 +12,6 @@ import {
   QuadrantPill,
   STAGES,
   field,
-  ghost,
   mini,
   miniAccent,
   type Idea,
@@ -95,20 +94,17 @@ function View({
       }
       footer={
         <>
-          <button type="button" onClick={onEdit} className={ghost}>
-            Edit
-          </button>
-          <button
-            type="button"
+          <ActionButton onClick={onEdit}>Edit</ActionButton>
+          <ActionButton
+            variant="danger"
             onClick={() => {
               if (!window.confirm(`Delete "${idea.title}"? Killing keeps it; this does not.`)) return
               onRun(() => deleteIdea(idea.id), 'Deleted')
               onClose()
             }}
-            className="text-[13px] text-ink-3 transition-colors duration-150 hover:text-bad"
           >
             Delete
-          </button>
+          </ActionButton>
         </>
       }
     >
@@ -122,36 +118,36 @@ function View({
           {idea.tags.length > 0 && (
             <div className="mt-2.5 flex flex-wrap gap-1.5">
               {idea.tags.map((t) => (
-                <span key={t} className="num border border-rule px-1.5 py-0.5 text-[10px] text-ink-3 rounded-full">
+                <Chip key={t} tone="quiet" className="num">
                   #{t}
-                </span>
+                </Chip>
               ))}
             </div>
           )}
         </div>
 
-        <div className="grid grid-cols-3 gap-px border border-rule bg-rule rounded-[18px]">
-          <div className="bg-bg px-3 py-2.5">
+        <MetricStrip className="grid-cols-3 sm:grid-cols-3">
+          <div className="px-3 py-2.5">
             <Eyebrow>Stage</Eyebrow>
             <div className={cn('mt-1.5 text-[14px]', stage.className)}>{stage.label}</div>
-            <div className={cn('num mt-0.5 text-[10px]', idea.stale ? 'text-warn' : 'text-ink-4')}>
-              {idea.stale ? 'STALE · ' : ''}
+            <div className={cn('num t-caption mt-0.5', idea.stale ? 'text-warn' : 'text-ink-4')}>
+              {idea.stale ? 'Stale · ' : ''}
               {idea.daysInStage}d in stage
             </div>
           </div>
-          <div className="bg-bg px-3 py-2.5">
+          <div className="px-3 py-2.5">
             <Eyebrow>Impact</Eyebrow>
             <div className="mt-1.5 flex items-center gap-2 text-[14px] text-ink">
               {LEVEL_TEXT[idea.impact]} <LevelBar level={idea.impact} tone="brand" />
             </div>
           </div>
-          <div className="bg-bg px-3 py-2.5">
+          <div className="px-3 py-2.5">
             <Eyebrow>Effort</Eyebrow>
             <div className="mt-1.5 flex items-center gap-2 text-[14px] text-ink">
               {LEVEL_TEXT[idea.effort]} <LevelBar level={idea.effort} tone="ink" />
             </div>
           </div>
-        </div>
+        </MetricStrip>
 
         <div className="flex flex-wrap items-center gap-1.5">
           <Eyebrow className="mr-1">Move to</Eyebrow>
@@ -176,7 +172,7 @@ function View({
           </div>
         )}
 
-        <div className="flex flex-col gap-2.5 border border-rule px-3.5 py-3 rounded-[18px]">
+        <Card className="flex flex-col gap-2.5 px-3.5 py-3">
           <div className="flex items-baseline justify-between">
             <Eyebrow className="text-brand">Agent</Eyebrow>
             <span className="text-[11px] text-ink-3">drafts land in Review</span>
@@ -199,15 +195,15 @@ function View({
             </button>
           </div>
           {idea.draftTitle && (
-            <div className="border-t border-rule pt-2.5 text-[12px] leading-[1.5] text-ink-2">
-              <span className="num text-[9px] tracking-[0.08em] text-warn">PENDING · </span>
+            <div className="flex flex-wrap items-center gap-1.5 border-t border-rule pt-2.5 text-[12px] leading-[1.5] text-ink-2">
+              <StatusChip tone="warn">Pending</StatusChip>
               {idea.draftTitle}{' '}
               <Link href="/tasks?view=review" className="text-ink-3 hover:text-ink">
                 Review →
               </Link>
             </div>
           )}
-        </div>
+        </Card>
 
         <ResearchCard idea={idea} run={research} onRun={(depth) => onRun(() => researchIdea(idea.id, depth), 'Researched. The card says what it found and what it cost.')} />
 
@@ -258,11 +254,11 @@ function View({
   )
 }
 
-const VERDICT_CLASS: Record<string, string> = {
-  build: 'text-brand border-brand',
-  park: 'text-warn border-warn',
-  drop: 'text-bad border-bad',
-  unclear: 'text-ink-3 border-ink-3',
+const VERDICT_TONE: Record<string, ChipTone> = {
+  build: 'brand',
+  park: 'warn',
+  drop: 'bad',
+  unclear: 'quiet',
 }
 
 /**
@@ -282,7 +278,7 @@ function ResearchCard({
   onRun: (depth: 'quick' | 'deep') => void
 }) {
   return (
-    <div className="flex flex-col gap-2.5 border border-rule px-3.5 py-3 rounded-[18px]">
+    <Card className="flex flex-col gap-2.5 px-3.5 py-3">
       <div className="flex items-baseline justify-between">
         <Eyebrow>Research</Eyebrow>
         <span className="num text-[11px] text-ink-3">{run === null ? 'never run' : `${run.depth} · ${run.ranOn}`}</span>
@@ -301,9 +297,9 @@ function ResearchCard({
       {run?.status === 'ok' && (
         <div className="flex flex-col gap-2.5">
           <div className="flex flex-wrap items-center gap-2">
-            <span className={cn('num border px-1.5 py-0.5 text-[9px] tracking-[0.08em] uppercase rounded-full', VERDICT_CLASS[run.verdict] ?? VERDICT_CLASS.unclear)}>
-              {run.verdict}
-            </span>
+            <StatusChip tone={VERDICT_TONE[run.verdict] ?? 'quiet'}>
+              {run.verdict.charAt(0).toUpperCase() + run.verdict.slice(1)}
+            </StatusChip>
             <span className="num text-[11px] text-ink-3">
               {run.confidence === null ? 'no confidence given' : `${Math.round(run.confidence * 100)}% confident`}
             </span>
@@ -360,7 +356,7 @@ function ResearchCard({
         cap in Settings, which stops research first when it runs out.
         {idea.stage === 'killed' && ' Researching something you killed is allowed; sometimes that is how it comes back.'}
       </p>
-    </div>
+    </Card>
   )
 }
 
@@ -378,23 +374,12 @@ function Segment({
   return (
     <div className="flex flex-col gap-1.5">
       <Eyebrow>{label}</Eyebrow>
-      <div role="radiogroup" aria-label={label} className="flex border border-rule-2 rounded-[18px]">
-        {LEVELS.map((l) => (
-          <button
-            key={l}
-            type="button"
-            role="radio"
-            aria-checked={value === l}
-            onClick={() => onChange(l)}
-            className={cn(
-              'flex-1 border-r border-rule-2 py-2 text-[12px] transition-colors duration-150 last:border-r-0',
-              value === l ? 'bg-ink text-bg' : 'text-ink-3 hover:text-ink',
-            )}
-          >
-            {LEVEL_TEXT[l]}
-          </button>
-        ))}
-      </div>
+      <PillGroup
+        label={label}
+        value={String(value)}
+        onChange={(v) => onChange(Number(v) as Level)}
+        options={LEVELS.map((l) => ({ value: String(l), label: LEVEL_TEXT[l] }))}
+      />
     </div>
   )
 }
@@ -516,7 +501,7 @@ function Form({
           <Eyebrow>Tags</Eyebrow>
           <input value={d.tags} onChange={set('tags')} placeholder="saas, b2b, hardware" className={cn(field, 'num')} />
         </label>
-        <div className="border border-rule px-3.5 py-3 rounded-[18px]">
+        <Card className="px-3.5 py-3">
           <div className="flex items-baseline justify-between">
             <Eyebrow>Skills · linked</Eyebrow>
             <span className="text-[11px] text-ink-3">from title, pitch and tags · corrected on the Skill tree</span>
@@ -526,13 +511,13 @@ function Form({
               <span className="text-[12px] text-ink-4">{idea ? 'Nothing matched yet.' : 'Classified when it is saved.'}</span>
             ) : (
               idea.skills.map((s) => (
-                <span key={s.id} className="num border border-rule-2 px-2 py-[3px] text-[11px] tracking-[0.06em] text-ink-2 uppercase rounded-full">
+                <Chip key={s.id} tone="brand">
                   {s.name}
-                </span>
+                </Chip>
               ))
             )}
           </div>
-        </div>
+        </Card>
       </form>
     </Overlay>
   )
