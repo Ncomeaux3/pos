@@ -2446,10 +2446,10 @@ test('travel, cents per point uses only numbers you supply', async ({ page }) =>
 
   // 64000 cents over 35000 points is 1.83 cents each, which is worth using.
   await expect(page.getByText('1.83c')).toBeVisible()
-  await expect(page.getByText('worth using points')).toBeVisible()
+  await expect(page.getByText('Worth using points')).toBeVisible()
 
   await page.getByLabel('Points required').fill('60000')
-  await expect(page.getByText('pay cash', { exact: true })).toBeVisible()
+  await expect(page.getByText('Pay cash', { exact: true })).toBeVisible()
   await shoot(page, 'travel-loyalty')
 })
 
@@ -2851,9 +2851,9 @@ test('meals, a plan is not a log', async ({ page }) => {
   await expect(tabs).toHaveText([/^Week/, /^Recipes/])
 
   // Monday to Sunday as columns, slots as rows, a totals row under them.
-  await expect(page.getByText('MON', { exact: true })).toBeVisible()
-  await expect(page.getByText('SUN', { exact: true })).toBeVisible()
-  await expect(page.getByText('TOTAL', { exact: true })).toBeVisible()
+  await expect(page.getByText('Mon', { exact: true })).toBeVisible()
+  await expect(page.getByText('Sun', { exact: true })).toBeVisible()
+  await expect(page.getByText('Total', { exact: true })).toBeVisible()
 
   // Today: what was eaten, against the one target the app has. A plan is not
   // a log until the meal is ticked.
@@ -2897,7 +2897,7 @@ test('meals, an imported recipe waits in the inbox', async ({ page }) => {
 
   // A draft is a card at the top of the grid, tagged, with the decision on it.
   await expect(page.getByText('Sheet pan salmon')).toBeVisible()
-  await expect(page.getByText('draft', { exact: true })).toBeVisible()
+  await expect(page.getByText('Draft', { exact: true })).toBeVisible()
 
   // A pasted URL is read for its Recipe JSON-LD. A private address is refused
   // before anything is fetched: the fetch runs from inside the deployment.
@@ -2910,7 +2910,7 @@ test('meals, an imported recipe waits in the inbox', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Accept', exact: true }).first().click()
   await expect(page.getByText('Added to the library')).toBeVisible()
-  await expect(page.getByText('draft', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Draft', { exact: true })).toHaveCount(0)
 
   // The filter is in the URL. Favourites is the one that is not a tag.
   await page.goto('/meals?tab=recipes&tag=favorites')
@@ -3025,7 +3025,7 @@ test('ideas, the drawer shows the stage, the moves and the Agent card', async ({
 
 test('home, the calendar is worked out from the history', async ({ page }) => {
   await page.goto('/home')
-  await expect(page.getByRole('heading', { name: 'Home & assets' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Home & Property' })).toBeVisible()
 
   // The band: the crumb on the left, the month's summary with its dot on the
   // right, and the page's one primary in the title block.
@@ -3038,24 +3038,24 @@ test('home, the calendar is worked out from the history', async ({ page }) => {
   await expect(page.getByText('$743,140')).toHaveCount(0)
 
   // Every asset kind as a card: kind, state, name, the two cells.
-  await expect(page.getByRole('button', { name: /^PROPERTY.*2412 Example Street/ })).toBeVisible()
-  await expect(page.getByRole('button', { name: /^VEHICLE.*OVERDUE.*2021 pickup/ })).toBeVisible()
-  await expect(page.getByText('VALUE', { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('ANNUAL COST', { exact: true }).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Property.*2412 Example Street/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Vehicle.*Overdue.*2021 pickup/ })).toBeVisible()
+  await expect(page.getByText('Value', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Annual cost', { exact: true }).first()).toBeVisible()
 
   // The oil change was last done seven months ago on a six month interval, so
   // it is overdue. Nothing stored that: it falls out of the interval and the
   // date it was last done.
   await expect(page.getByText('Oil change and rotation').first()).toBeVisible()
-  await expect(page.getByText('OVERDUE', { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('DUE NOW', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Overdue', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Due now', { exact: true }).first()).toBeVisible()
 
   // Twelve months, including the empty ones, because an empty month is
   // information. The selected month is written out in full under them.
-  await expect(page.getByRole('button', { name: /^[A-Z]{3} \d\d /  })).toHaveCount(12)
-  await expect(page.getByText(/^[A-Z]{3} \d{4}$/).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: /^[A-Z][a-z]{2} \d\d / })).toHaveCount(12)
+  await expect(page.getByText(/^[A-Z][a-z]{2} \d{4}$/).first()).toBeVisible()
 
-  await expect(page.getByText('COVER · EXPIRES · FILE')).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Roof workmanship.*10 yr labour/ })).toBeVisible()
 
   await shoot(page, 'home')
 })
@@ -3076,7 +3076,7 @@ test('home, a warranty with no expiry is not a missing date', async ({ page }) =
 
   const deed = page.getByRole('button', { name: /^Deed, survey and permits/ })
   await expect(deed).toBeVisible()
-  await expect(page.getByText('NO EXPIRY', { exact: true })).toBeVisible()
+  await expect(page.getByText('No expiry', { exact: true })).toBeVisible()
 
   // And the drawer carries the paperwork rather than a judgement about it.
   await deed.click()
@@ -3107,11 +3107,11 @@ test('home, logging service moves the schedule it belongs to', async ({ page }) 
   await expect(page.getByText(/The next one lands 3 months out/)).toBeVisible()
   await page.getByRole('button', { name: 'Save service' }).click()
 
-  await expect(page.getByText(/Next one scheduled for [A-Z]{3} \d{4}/)).toBeVisible()
+  await expect(page.getByText(/Next one scheduled for [A-Z][a-z]{2} \d{4}/)).toBeVisible()
 
   // One schedule, not a second one beside it: logging a job that is already on
   // the calendar moves the row it belongs to.
-  const month = page.getByRole('button', { name: /^[A-Z]{3} \d\d / }).nth(3)
+  const month = page.getByRole('button', { name: /^[A-Z][a-z]{2} \d\d / }).nth(3)
   await month.click()
   await expect(page.getByText('Gutter clean before the autumn')).toHaveCount(1)
 })
@@ -3133,9 +3133,9 @@ test('insurance, sorted by what expires first with numbers masked', async ({ pag
   // inside the Policy cell, so the row's text starts with it.
   const rows = page.getByRole('button', { name: /Lemonade|Apple|Progressive/ })
   await expect(rows.first()).toContainText('Lemonade')
-  await expect(rows.first()).toHaveText(/^RENTERS/)
+  await expect(rows.first()).toHaveText(/^Renters/)
   await expect(rows.first()).toContainText(/\d+ days/)
-  await expect(rows.first()).toContainText('EXPIRING')
+  await expect(rows.first()).toContainText('Expiring')
 
   await shoot(page, 'insurance')
 })
@@ -3149,10 +3149,10 @@ test('insurance, a policy number is revealed only when asked for', async ({ page
   // The drawer is in the URL, so it survives the reloads.
   await expect(page).toHaveURL(/policy=/)
   await shoot(page, 'insurance-drawer')
-  await dialog.getByRole('button', { name: /REVEAL/ }).click()
+  await dialog.getByRole('button', { name: /Reveal/ }).click()
   await expect(dialog.getByText('LMD-48211-7730')).toBeVisible()
 
-  await dialog.getByRole('button', { name: /HIDE/ }).click()
+  await dialog.getByRole('button', { name: /Hide/ }).click()
   await expect(page.getByText('LMD-48211-7730')).toHaveCount(0)
 
   // The rest of the drawer, as the artboard draws it.

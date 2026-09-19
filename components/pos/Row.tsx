@@ -62,6 +62,9 @@ export function Row({
         onKeyDown={
           interactive
             ? (e) => {
+                // A button in `right` handles its own keys; only the row
+                // itself, when focused, opens on Enter or Space.
+                if (e.target !== e.currentTarget) return
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault()
                   onClick?.()

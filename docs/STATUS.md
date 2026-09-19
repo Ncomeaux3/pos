@@ -10,8 +10,10 @@ the old brand until then. Phases 0 (mockups, #74), 1 (foundations, #76), 2
 (shell, #79), 3 (Today recomposed, task and goal rows, #82) and 4 (Second
 Brain, Ideas and Skills on the shared controls, #83) are merged into `holon`;
 Phase 5 (Finance KPIs as a MetricStrip, Health rebuilt on rows, chips, cards
-and the TabBar, Fitness strings and buttons) is the open PR; Phases 6 and 7
-follow.
+and the TabBar, Fitness strings and buttons, #86) is merged; Phase 6 is two
+PRs, the first (Meals, Travel, Home & Property and Insurance on the shared
+controls) open, the second (Review, Weekly review, Notifications, Settings,
+Agent log) next; Phase 7 follows.
 Decisions are in decisions/log.md under 2026-09-18 and 2026-09-19. v1.1 below
 is complete except Phase 11's owner step.
 

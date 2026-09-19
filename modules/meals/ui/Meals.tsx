@@ -1,14 +1,20 @@
 'use client'
 
 import Link from 'next/link'
-import { Fragment, useEffect, useState, useTransition, type ReactNode } from 'react'
+import { Fragment, useEffect, useState, useTransition } from 'react'
 import {
   ActionButton,
   BandSearch,
+  Card,
+  Chip,
   Eyebrow,
+  MetricStrip,
+  MetricTile,
   PillGroup,
   SearchButton,
+  StatusChip,
   StatusDot,
+  fieldClass,
   useToast,
   type SkillLink,
 } from '@/components/pos'
@@ -76,14 +82,6 @@ export const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 /** The whole recipe's cost is stored; a serving of it is what a slot costs. */
 export const costOf = (recipe: Recipe | undefined, servings: number) =>
   recipe ? Math.round((recipe.costCents / recipe.servings) * servings) : 0
-
-// The artboard's three button sizes: the ghost, its accent twin, and the mini.
-export const GHOST =
-  'shrink-0 whitespace-nowrap border border-rule-2 px-3 py-2 text-[12px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full'
-export const GHOST_ACCENT =
-  'shrink-0 whitespace-nowrap border border-brand px-3 py-2 text-[12px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg rounded-full'
-export const MINI =
-  'shrink-0 whitespace-nowrap border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full'
 
 export function Meals({ data }: { data: MealsData }) {
   const { params, set: setParams } = useSearchState()
@@ -193,9 +191,9 @@ export function Meals({ data }: { data: MealsData }) {
           </p>
         </div>
         <div className="flex shrink-0 gap-2">
-          <button type="button" onClick={() => setParams({ drawer: 'grocery' }, { push: true })} className={GHOST}>
-            Grocery list <span className="num ml-1.5 text-[10px] text-ink-4">{groceryCount}</span>
-          </button>
+          <ActionButton onClick={() => setParams({ drawer: 'grocery' }, { push: true })}>
+            Grocery list <span className="num text-[11px] text-ink-3">{groceryCount}</span>
+          </ActionButton>
           <ActionButton
             variant="solid"
             size="xl"
@@ -221,13 +219,13 @@ export function Meals({ data }: { data: MealsData }) {
         end={
           tab === 'week' && (
             <div className="flex items-center gap-1 pb-2">
-              <button type="button" aria-label="Previous week" className={MINI} onClick={() => setParams({ week: offset - 1 === 0 ? null : String(offset - 1) })}>
+              <ActionButton size="sm" aria-label="Previous week" onClick={() => setParams({ week: offset - 1 === 0 ? null : String(offset - 1) })}>
                 ←
-              </button>
+              </ActionButton>
               <span className="num min-w-[150px] text-center text-[11px] text-ink-3">{weekLabel}</span>
-              <button type="button" aria-label="Next week" className={MINI} onClick={() => setParams({ week: offset + 1 === 0 ? null : String(offset + 1) })}>
+              <ActionButton size="sm" aria-label="Next week" onClick={() => setParams({ week: offset + 1 === 0 ? null : String(offset + 1) })}>
                 →
-              </button>
+              </ActionButton>
             </div>
           )
         }
@@ -235,41 +233,31 @@ export function Meals({ data }: { data: MealsData }) {
         {tab === 'week' && (
           <div className="mt-[18px] space-y-[18px]">
             {thisWeek && (
-              <section className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-5 gap-y-3 border border-brand px-4 py-3 rounded-[18px]">
-                <Eyebrow className="text-brand">
-                  Today · {DAYS[todayIdx].toUpperCase()} {shortDate(data.todayIso).toUpperCase()}
+              <section className="glass grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-5 gap-y-3 rounded-[18px] px-4 py-3 ring-1 ring-action">
+                <Eyebrow className="text-action">
+                  Today · {DAYS[todayIdx]} {shortDate(data.todayIso)}
                 </Eyebrow>
                 <div className="flex flex-wrap items-center gap-2">
-                  {SLOTS.map((s, i) => {
-                    const entry = todayEntries[i]
-                    return (
-                      <button
-                        key={s}
-                        type="button"
-                        disabled={!entry}
-                        onClick={() => entry && run(() => markEaten(entry.id, !entry.eaten))}
-                        className={cn(
-                          'inline-flex items-center gap-2 border px-2.5 py-[5px] text-[12px] transition-colors duration-150 rounded-full',
-                          entry?.eaten ? 'border-brand' : 'border-rule-2',
-                          entry ? 'text-ink hover:border-ink' : 'text-ink-4',
-                        )}
-                      >
-                        <span
-                          aria-hidden
-                          className={cn(
-                            'size-3 shrink-0 border text-center text-[9px] leading-[10px] text-bg rounded-full',
-                            entry?.eaten ? 'border-brand bg-brand' : 'border-ink-3',
-                          )}
-                        >
-                          {entry?.eaten ? '✓' : ''}
-                        </span>
-                        {cap(s)} · {entry ? entry.label || 'Something' : 'nothing planned'}
-                      </button>
-                    )
-                  })}
+                  <PillGroup
+                    multiple
+                    label="Eaten today"
+                    options={SLOTS.map((s, i) => {
+                      const entry = todayEntries[i]
+                      return {
+                        value: s,
+                        label: `${cap(s)} · ${entry ? entry.label || 'Something' : 'nothing planned'}`,
+                        disabled: !entry,
+                      }
+                    })}
+                    value={SLOTS.filter((_, i) => todayEntries[i]?.eaten)}
+                    onChange={(s) => {
+                      const entry = todayEntries[SLOTS.indexOf(s)]
+                      if (entry) run(() => markEaten(entry.id, !entry.eaten))
+                    }}
+                  />
                   {firstEmptyToday && (
                     <form
-                      className="flex min-w-0 max-w-full gap-1"
+                      className="flex w-full min-w-0 max-w-[340px] gap-1"
                       onSubmit={(e) => {
                         e.preventDefault()
                         const label = adhoc.trim()
@@ -282,11 +270,11 @@ export function Meals({ data }: { data: MealsData }) {
                         value={adhoc}
                         onChange={(e) => setAdhoc(e.target.value)}
                         placeholder="Ate something else? e.g. burrito"
-                        className="w-[280px] min-w-0 max-w-full border border-rule-2 bg-bg px-2.5 py-1.5 text-[12px] text-ink outline-none focus:border-brand"
+                        className={cn(fieldClass, 'min-w-0 flex-1 py-1.5')}
                       />
-                      <button type="submit" className={MINI}>
+                      <ActionButton type="submit" size="sm" className="self-center">
                         Log
-                      </button>
+                      </ActionButton>
                     </form>
                   )}
                 </div>
@@ -332,9 +320,9 @@ export function Meals({ data }: { data: MealsData }) {
                 {week.map((iso, i) => {
                   const isToday = iso === data.todayIso
                   return (
-                    <div key={iso} className={cn('flex flex-col border-t-2 bg-bg px-2 py-2.5', isToday ? 'border-brand' : 'border-transparent')}>
-                      <span className={cn('num text-[9px] uppercase tracking-[0.08em]', isToday ? 'text-brand' : 'text-ink-2')}>{DAYS[i].toUpperCase()}</span>
-                      <span className={cn('mt-0.5 text-[14px]', isToday ? 'text-brand' : 'text-ink-2')}>{dateOf(iso).getDate()}</span>
+                    <div key={iso} className={cn('flex flex-col border-t-2 bg-bg px-2 py-2.5', isToday ? 'border-action' : 'border-transparent')}>
+                      <span className={cn('label', isToday ? 'text-action' : 'text-ink-3')}>{DAYS[i]}</span>
+                      <span className={cn('mt-0.5 text-[14px]', isToday ? 'text-action' : 'text-ink-2')}>{dateOf(iso).getDate()}</span>
                     </div>
                   )
                 })}
@@ -342,7 +330,7 @@ export function Meals({ data }: { data: MealsData }) {
                 {SLOTS.map((slot) => (
                   <Fragment key={slot}>
                     <div className="flex items-center bg-bg px-2 py-2.5">
-                      <Eyebrow>{slot.toUpperCase()}</Eyebrow>
+                      <Eyebrow>{cap(slot)}</Eyebrow>
                     </div>
                     {week.map((iso) => {
                       const entry = entryAt(iso, slot)
@@ -370,7 +358,7 @@ export function Meals({ data }: { data: MealsData }) {
                               }
                               className={cn(
                                 'h-full cursor-grab border bg-bg-elev px-[9px] py-2 transition-colors duration-150 hover:border-rule-2 rounded-[18px]',
-                                entry.eaten ? 'border-brand' : 'border-rule',
+                                entry.eaten ? 'border-action' : 'border-rule',
                                 past && !entry.eaten && 'opacity-55',
                               )}
                             >
@@ -388,8 +376,8 @@ export function Meals({ data }: { data: MealsData }) {
                                     run(() => markEaten(entry.id, !entry.eaten))
                                   }}
                                   className={cn(
-                                    'size-4 shrink-0 border text-[10px] leading-[14px] text-bg transition-colors hover:border-ink rounded-full',
-                                    entry.eaten ? 'border-brand bg-brand' : 'border-rule-2',
+                                    'grid size-6 shrink-0 place-items-center rounded-full border text-[10px] text-bg transition-colors hover:border-ink sm:size-4 sm:leading-[14px]',
+                                    entry.eaten ? 'border-action bg-action text-action-fg' : 'border-rule-2',
                                   )}
                                 >
                                   {entry.eaten ? '✓' : ''}
@@ -397,7 +385,7 @@ export function Meals({ data }: { data: MealsData }) {
                               </div>
                               <div className="num mt-1.5 flex flex-wrap gap-1.5 text-[9.5px] text-ink-3">
                                 <span>{entry.macros ? Math.round(entry.macros.kcal * entry.servings) : 0} kcal</span>
-                                <span className="text-brand">{entry.macros ? Math.round(entry.macros.protein * entry.servings) : 0}p</span>
+                                <span className="text-action">{entry.macros ? Math.round(entry.macros.protein * entry.servings) : 0}p</span>
                                 <span>{recipe?.timeMinutes ?? 0}m</span>
                                 <span>{money(costOf(recipe, entry.servings))}</span>
                               </div>
@@ -407,7 +395,7 @@ export function Meals({ data }: { data: MealsData }) {
                               type="button"
                               aria-label="Plan a meal"
                               onClick={() => setParams({ pick: `${iso}:${slot}` }, { push: true })}
-                              className="h-full min-h-16 w-full border border-dashed border-rule text-[16px] text-ink-4 transition-colors duration-150 hover:border-brand hover:text-brand rounded-full"
+                              className="h-full min-h-16 w-full border border-dashed border-rule text-[16px] text-ink-4 transition-colors duration-150 hover:border-action hover:text-action rounded-full"
                             >
                               +
                             </button>
@@ -419,7 +407,7 @@ export function Meals({ data }: { data: MealsData }) {
                 ))}
 
                 <div className="flex items-center bg-bg px-2 py-2.5">
-                  <Eyebrow>TOTAL</Eyebrow>
+                  <Eyebrow>Total</Eyebrow>
                 </div>
                 {days.map((d, i) => (
                   <div key={week[i]} className="flex flex-col gap-[5px] bg-bg px-2 py-2.5">
@@ -444,12 +432,17 @@ export function Meals({ data }: { data: MealsData }) {
               </div>
             </div>
 
-            <section className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))] gap-px border border-rule bg-rule rounded-[18px]">
-              <WeekCell
+            <MetricStrip>
+              <MetricTile
+                size="sm"
                 label="Week · kcal / day"
-                value={avg('kcal').toLocaleString('en-US')}
-                suffix={target === null ? undefined : ` / ${target.toLocaleString('en-US')}`}
-                note={
+                value={
+                  <>
+                    {avg('kcal').toLocaleString('en-US')}
+                    {target !== null && <span className="text-[12px] font-normal text-ink-3"> / {target.toLocaleString('en-US')}</span>}
+                  </>
+                }
+                delta={
                   target === null ? (
                     'No estimate: Fitness has no body weight'
                   ) : (
@@ -461,33 +454,32 @@ export function Meals({ data }: { data: MealsData }) {
                   )
                 }
               />
-              <WeekCell label="Week · protein / day" value={`${avg('protein')}g`} note="per planned day" />
-              <WeekCell label="Week · cost" value={money(weekCost)} note={`${money(Math.round(weekCost / 7))} per day`} />
-              <WeekCell label="Cooked" value={String(cooked)} suffix=" meals" note={`${inWeek.length} planned`} />
-            </section>
+              <MetricTile size="sm" label="Week · protein / day" value={`${avg('protein')}g`} delta="per planned day" />
+              <MetricTile size="sm" label="Week · cost" value={money(weekCost)} delta={`${money(Math.round(weekCost / 7))} per day`} />
+              <MetricTile
+                size="sm"
+                label="Cooked"
+                value={
+                  <>
+                    {cooked}
+                    <span className="text-[12px] font-normal text-ink-3"> meals</span>
+                  </>
+                }
+                delta={`${inWeek.length} planned`}
+              />
+            </MetricStrip>
           </div>
         )}
 
         {tab === 'recipes' && (
           <div className="mt-[18px] space-y-3.5">
             <div className="flex flex-wrap items-center gap-2">
-              {['All', 'favorites', ...tags].map((t) => {
-                const on = tag === t
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => setParams({ tag: t === 'All' ? null : t })}
-                    className={cn(
-                      'label rounded-full border px-[9px] py-[3px] text-[11px] uppercase tracking-[0.08em] transition-colors duration-150',
-                      on ? 'border-ink bg-ink text-bg' : 'border-rule-2 text-ink-3 hover:text-ink',
-                    )}
-                  >
-                    {t === 'favorites' ? '★ favorites' : t}
-                  </button>
-                )
-              })}
+              <PillGroup
+                label="Recipe tags"
+                value={tag}
+                onChange={(t) => setParams({ tag: t === 'All' ? null : t })}
+                options={['All', 'favorites', ...tags].map((t) => ({ value: t, label: t === 'favorites' ? '★ favorites' : t }))}
+              />
               <form
                 className="ml-auto flex min-w-0 max-w-full gap-1"
                 onSubmit={(e) => {
@@ -510,27 +502,28 @@ export function Meals({ data }: { data: MealsData }) {
                   value={ingestUrl}
                   onChange={(e) => setIngestUrl(e.target.value)}
                   placeholder="Paste a recipe URL to ingest"
-                  className="w-[260px] min-w-0 max-w-full border border-rule-2 bg-bg-elev px-2.5 py-[7px] text-[12px] text-ink outline-none focus:border-brand"
+                  className={cn(fieldClass, 'w-[260px] max-w-full py-1.5')}
                 />
-                <button
-                  type="submit"
-                  disabled={ingesting}
-                  className={cn(MINI, 'border-brand text-ink hover:bg-brand hover:text-bg disabled:text-ink-4')}
-                >
+                <ActionButton type="submit" size="sm" variant="accent" disabled={ingesting} className="self-center">
                   {ingesting ? 'Ingesting…' : 'Ingest'}
-                </button>
+                </ActionButton>
               </form>
             </div>
 
             <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,240px),1fr))] gap-3">
               {shown.map((r) => (
-                <div
+                <Card
                   key={r.id}
                   role="button"
                   tabIndex={0}
                   onClick={() => setParams({ recipe: r.id, slot: null }, { push: true })}
-                  onKeyDown={(e) => e.key === 'Enter' && setParams({ recipe: r.id, slot: null }, { push: true })}
-                  className="min-w-0 cursor-pointer border border-rule bg-bg-elev px-4 py-3.5 text-left transition-colors duration-200 hover:border-rule-2 rounded-[18px]"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setParams({ recipe: r.id, slot: null }, { push: true })
+                    }
+                  }}
+                  className="min-w-0 cursor-pointer px-4 py-3.5 text-left transition-colors duration-200 hover:bg-glass-strong"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <span className="min-w-0 text-[14.5px] leading-[1.3] tracking-[-0.01em]">{r.name}</span>
@@ -542,33 +535,33 @@ export function Meals({ data }: { data: MealsData }) {
                         e.stopPropagation()
                         run(() => setFavourite(r.id, !r.favourite))
                       }}
-                      className={cn('num shrink-0 text-[12px]', r.favourite ? 'text-brand' : 'text-ink-4')}
+                      className={cn('num -m-2 shrink-0 p-2 text-[14px]', r.favourite ? 'text-action' : 'text-ink-3')}
                     >
                       {r.favourite ? '★' : '☆'}
                     </button>
                   </div>
                   <div className="num mt-2 flex flex-wrap gap-2 text-[10px] text-ink-3">
                     <span>{r.macros.kcal} kcal</span>
-                    <span className="text-brand">{r.macros.protein}g protein</span>
+                    <span className="text-action">{r.macros.protein}g protein</span>
                     <span>{r.timeMinutes} min</span>
                     <span>{money(costOf(r, 1))}/serving</span>
                   </div>
                   <div className="mt-2.5 flex flex-wrap gap-1">
-                    {r.status === 'draft' && <span className="num border border-warn/60 px-[5px] py-px text-[9.5px] text-warn rounded-full">draft</span>}
+                    {r.status === 'draft' && <StatusChip tone="warn">Draft</StatusChip>}
                     {r.tags.map((t) => (
-                      <span key={t} className="num border border-rule px-[5px] py-px text-[9.5px] text-ink-3 rounded-full">
+                      <Chip key={t} tone="quiet">
                         {t}
-                      </span>
+                      </Chip>
                     ))}
                   </div>
                   {r.status === 'draft' ? (
                     <DraftActions id={r.id} run={run} className="mt-2.5" />
                   ) : (
                     <div className="mt-2.5 text-[10.5px] text-ink-4">
-                      {usage(r.id) ? `${usage(r.id)}× this week` : 'not planned this week'}
+                      {usage(r.id) ? `${usage(r.id)}× this week` : 'Not planned this week'}
                     </div>
                   )}
-                </div>
+                </Card>
               ))}
             </div>
           </div>
@@ -601,19 +594,6 @@ export function Meals({ data }: { data: MealsData }) {
   )
 }
 
-function WeekCell({ label, value, suffix, note }: { label: string; value: string; suffix?: string; note: ReactNode }) {
-  return (
-    <div className="bg-bg px-[18px] py-3.5">
-      <Eyebrow>{label}</Eyebrow>
-      <div className="num mt-2 text-[22px] font-light leading-none text-ink">
-        {value}
-        {suffix && <span className="text-[11px] text-ink-3">{suffix}</span>}
-      </div>
-      <div className="mt-1 text-[11px] text-ink-3">{note}</div>
-    </div>
-  )
-}
-
 /** Accept or discard an imported recipe: on its card and in its drawer. */
 export function DraftActions({
   id,
@@ -626,12 +606,12 @@ export function DraftActions({
 }) {
   return (
     <div className={cn('flex gap-1.5', className)} onClick={(e) => e.stopPropagation()}>
-      <button type="button" className={cn(MINI, 'border-brand text-ink')} onClick={() => run(() => decideRecipe(id, true), 'Added to the library')}>
+      <ActionButton size="sm" variant="accent" onClick={() => run(() => decideRecipe(id, true), 'Added to the library')}>
         Accept
-      </button>
-      <button type="button" className={MINI} onClick={() => run(() => decideRecipe(id, false), 'Discarded')}>
+      </ActionButton>
+      <ActionButton size="sm" onClick={() => run(() => decideRecipe(id, false), 'Discarded')}>
         Discard
-      </button>
+      </ActionButton>
     </div>
   )
 }
@@ -752,7 +732,7 @@ function CookMode({
           <Eyebrow>Ingredients</Eyebrow>
           {scaled.map((i) => (
             <p key={i.item} className="text-[15px] leading-snug text-ink-2">
-              <span className={cn('num', i.scaled && factor !== 1 && 'text-brand')}>{i.text}</span>
+              <span className={cn('num', i.scaled && factor !== 1 && 'text-action')}>{i.text}</span>
               {i.text ? ' ' : ''}
               {i.item}
             </p>
