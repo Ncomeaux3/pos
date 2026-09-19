@@ -1,6 +1,7 @@
 import { db } from '@/core/db'
 import { listSkillLinks, type SkillChip } from '@/core/skill-links'
 import { getDigest } from '@/core/digests'
+import { WORKOUT_PAGE } from './units'
 
 // Reads for the screen and the digest. The units and the derived numbers live
 // in ./units.ts, which has no imports and can be pulled into a client.
@@ -41,7 +42,7 @@ export type WorkoutFilter = {
 export async function listWorkouts(filter: WorkoutFilter = {}): Promise<WorkoutRow[]> {
   const { rows } = await db().query<WorkoutRow>(
     `select w.id, w.name, w.detail, w.kind, w.source, w.started_at, w.duration_s,
-            w.distance_m, w.avg_hr,
+            w.distance_m::float8 as distance_m, w.avg_hr,
             (select count(*)::text from fitness.set_entry s where s.workout_id = w.id)
               as set_count,
             b.weight_g::text as best_weight_g, b.reps as best_reps, b.name as best_exercise
@@ -64,7 +65,7 @@ export async function listWorkouts(filter: WorkoutFilter = {}): Promise<WorkoutR
               (select value #>> '{}' from core.settings where key = 'timezone'), 'UTC'))::date <= $5::date)
       order by w.started_at desc
       limit $1`,
-    [filter.limit ?? 40, filter.kind ?? null, filter.source ?? null, filter.from ?? null, filter.to ?? null],
+    [filter.limit ?? WORKOUT_PAGE, filter.kind ?? null, filter.source ?? null, filter.from ?? null, filter.to ?? null],
   )
   return rows
 }
@@ -322,7 +323,10 @@ export async function fitnessGoal(): Promise<FitnessGoal | null> {
   const goal = attention.find((g) =>
     goalLinks.get((g as FitnessGoal & { id: string }).id)?.skills.some((s) => workoutSkills.has(s.id)),
   )
+  // One decimal, the way Goals prints a value: a weight converted from grams
+  // arrives as 190.99968546644905 otherwise.
+  const tenth = (n: number) => Math.round(n * 10) / 10
   return goal
-    ? { title: goal.title, status: goal.status, percent: goal.percent, current: goal.current, target: goal.target }
+    ? { title: goal.title, status: goal.status, percent: goal.percent, current: tenth(goal.current), target: tenth(goal.target) }
     : null
 }

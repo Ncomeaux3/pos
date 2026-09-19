@@ -12,7 +12,9 @@ describe('toBodyMetrics', () => {
           metric('step_count', 'count', [{ qty: 9412.4, date: at('2026-09-11') }]),
           metric('active_energy', 'kcal', [{ qty: 612.7, date: at('2026-09-11') }]),
           metric('apple_exercise_time', 'min', [{ qty: 42, date: at('2026-09-11') }]),
-          metric('apple_stand_time', 'hr', [{ qty: 11, date: at('2026-09-11') }]),
+          metric('apple_stand_hour', 'count', [{ qty: 11, date: at('2026-09-11') }]),
+          // Minutes stood, a different metric; it must not add to the hours.
+          metric('apple_stand_time', 'min', [{ qty: 99, date: at('2026-09-11') }]),
           metric('vo2_max', 'mL/min·kg', [{ qty: 41.3, date: at('2026-09-11') }]),
           metric('blood_oxygen_saturation', '%', [{ qty: 97.6, date: at('2026-09-11') }]),
           metric('respiratory_rate', 'count/min', [{ qty: 14.5, date: at('2026-09-11') }]),
@@ -65,6 +67,89 @@ describe('toBodyMetrics', () => {
       { kind: 'blood_oxygen', measuredOn: '2026-09-11', value: 980 },
     ])
   })
+
+  // From a real export (2026-09-18): Eight Sleep's overlapping records make
+  // the app's summed hours two to three times the night. The span between
+  // sleepStart and sleepEnd is the night, dated by the morning it ended.
+  it('reads sleep as the span from sleepStart to sleepEnd, not the summed hours', () => {
+    const rows = toBodyMetrics({
+      data: {
+        metrics: [
+          metric('sleep_analysis', 'hr', [
+            {
+              date: '2026-06-22 00:00:00 -0500',
+              sleepStart: '2026-06-22 00:37:00 -0500',
+              sleepEnd: '2026-06-22 10:09:00 -0500',
+              totalSleep: 26.766666666666666,
+              inBed: 27.400000000000006,
+              asleep: 0,
+            },
+            // The older shape without a span still reads its hours.
+            { date: '2026-06-23 00:00:00 -0500', asleep: 7.5 },
+          ]),
+        ],
+      },
+    })
+    expect(rows).toEqual([
+      { kind: 'sleep_minutes', measuredOn: '2026-06-22', value: 572 },
+      { kind: 'sleep_minutes', measuredOn: '2026-06-23', value: 450 },
+    ])
+  })
+
+  // From the 2026-09-19 export: 17 Eight Sleep sessions ended in the afternoon
+  // (22:52 to 17:09) with a plausible totalSleep, so the span was 13 to 20
+  // hours and the hours were right. The smaller of the two is the night.
+  it('takes the smaller of the span and the summed hours', () => {
+    const rows = toBodyMetrics({
+      data: {
+        metrics: [
+          metric('sleep_analysis', 'hr', [
+            {
+              date: '2026-09-13 00:00:00 -0500',
+              sleepStart: '2026-09-12 22:52:00 -0500',
+              sleepEnd: '2026-09-13 17:09:30 -0500',
+              totalSleep: 7.091666666666667,
+              asleep: 0,
+            },
+          ]),
+        ],
+      },
+    })
+    expect(rows).toEqual([{ kind: 'sleep_minutes', measuredOn: '2026-09-13', value: 426 }])
+  })
+
+  // Same export: 11 nights had the span and the hours both over 12 hours.
+  it('skips a night whose best reading is over 14 hours', () => {
+    const rows = toBodyMetrics({
+      data: {
+        metrics: [
+          metric('sleep_analysis', 'hr', [
+            {
+              date: '2026-02-18 00:00:00 -0600',
+              sleepStart: '2026-02-17 23:16:00 -0600',
+              sleepEnd: '2026-02-18 14:44:00 -0600',
+              totalSleep: 15.666666666666666,
+              asleep: 0,
+            },
+          ]),
+        ],
+      },
+    })
+    expect(rows).toEqual([])
+  })
+
+  it('converts kilojoules to kilocalories and takes anything else as kilocalories', () => {
+    const energy = (units: string, q: number) =>
+      toBodyMetrics({ data: { metrics: [metric('active_energy', units, [{ qty: q, date: at('2026-09-11') }])] } })[0]
+        .value
+
+    // 2,563.7 kJ is the same 613 kcal the kcal payload sends.
+    expect(energy('kJ', 2563.7)).toBe(613)
+    expect(energy('kcal', 612.7)).toBe(613)
+    // A units string that does not read is kilocalories, not a dropped day:
+    // that is what Apple Health stores and what every export has sent.
+    expect(energy('', 612.7)).toBe(613)
+  })
 })
 
 describe('toWorkouts', () => {
@@ -87,7 +172,7 @@ describe('toWorkouts', () => {
         kind: 'run',
         startedAt: '2026-09-11 07:00:00 -0500',
         durationS: 1800,
-        distanceM: 5633,
+        distanceM: 5632.7,
         avgHr: 151,
         detail: '350 kcal',
       },
@@ -114,11 +199,12 @@ describe('toWorkouts', () => {
     ).toEqual(['strength', 'strength', 'strength', 'run', 'ride', 'swim', 'walk', 'walk', 'other'])
   })
 
-  it('converts km, tolerates missing optionals, and skips what has no id, start or duration', () => {
+  it('converts km and yards, tolerates missing optionals, and skips what has no id, start or duration', () => {
     const rows = toWorkouts({
       data: {
         workouts: [
           { id: 'a', name: 'Cycling', start: run.start, end: run.end, duration: 3600, distance: { qty: 20, units: 'km' } },
+          { id: 'b', name: 'Pool Swim', start: run.start, end: run.end, duration: 1800, distance: { qty: 700, units: 'yd' } },
           { name: 'Legacy v1', start: run.start, end: run.end, totalEnergy: { qty: 1 } },
           { id: 'c', name: 'No start', duration: 60 },
           { id: 'd', name: 'Bad date', start: '11/09/2026', duration: 60 },
@@ -136,6 +222,24 @@ describe('toWorkouts', () => {
         avgHr: null,
         detail: '',
       },
+      {
+        externalId: 'b',
+        name: 'Pool Swim',
+        kind: 'swim',
+        startedAt: run.start,
+        durationS: 1800,
+        distanceM: 640.08,
+        avgHr: null,
+        detail: '',
+      },
     ])
+  })
+
+  it("reads a workout's energy in the units it arrived in", () => {
+    const detail = (activeEnergyBurned: { qty: number; units: string }) =>
+      toWorkouts({ data: { workouts: [{ ...run, activeEnergyBurned }] } })[0].detail
+
+    expect(detail({ qty: 1465.2, units: 'kJ' })).toBe('350 kcal')
+    expect(detail({ qty: 350.2, units: 'kcal' })).toBe('350 kcal')
   })
 })

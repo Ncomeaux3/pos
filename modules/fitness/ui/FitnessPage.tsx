@@ -87,6 +87,7 @@ export default async function FitnessPage() {
 
   const data: FitnessData = {
     workouts,
+    total: span.count,
     weekWorkouts: week.length,
     weekMinutes: Math.round(week.reduce((sum, w) => sum + w.duration_s, 0) / 60),
     weekLoad: load(week.map((w) => ({ kind: w.kind, durationS: w.duration_s }))),

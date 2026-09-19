@@ -62,7 +62,7 @@ export async function store(a: Activity): Promise<void> {
       toKind(a.sport_type),
       a.start_date,
       Math.round(a.moving_time),
-      Math.round(a.distance),
+      Math.round(a.distance * 100) / 100,
       // Out of range readings exist and the column has a check constraint, so
       // a bad strap reading stores as no reading rather than failing the run.
       a.average_heartrate && a.average_heartrate >= 20 && a.average_heartrate <= 260

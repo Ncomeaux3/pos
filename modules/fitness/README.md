@@ -5,15 +5,19 @@ Workouts, sets, and body metrics. Screen 09 of the design bundle.
 ## Units are a rendering decision
 
 Everything is stored unit free and integer: **grams** for mass, **metres** for
-distance, **seconds** for time. Pounds and kilograms are both a rendering
-choice, and storing either one makes the other lossy.
+distance, **seconds** for time. Pounds and miles are a rendering choice, and
+storing either system makes the other lossy. The providers convert on the way
+in: Health Auto Export and the Shortcut both send whatever the phone is set to,
+and their clients turn lb, kg, mi and km into grams and metres.
 
-`units.ts` is the only file that knows about pounds, and it is tested. Two cases
-worth knowing:
+`units.ts` is the only file that knows about pounds and miles, and it is tested.
+**It renders imperial by default**, because the owner reads imperial. `mass`,
+`distance` and `pace` each take an optional unit for the metric reading. Two
+cases worth knowing:
 
 **Pace is derived, never stored.** It is a ratio of the distance and the
 duration, so it cannot disagree with them. The test pins that it never produces
-`7:60/km`, which is what naive rounding gives and is not a time.
+`7:60/mi`, which is what naive rounding gives and is not a time.
 
 **Best set is by weight, then reps.** 315 for five beats 315 for three, and both
 beat 275 for ten. There is no one rep max estimate anywhere: that would be a

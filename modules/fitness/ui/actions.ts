@@ -77,5 +77,8 @@ export async function readWorkouts(filter: WorkoutFilter): Promise<ScreenWorkout
     source: filter.source,
     from: filter.from && ISO_DAY.test(filter.from) ? filter.from : undefined,
     to: filter.to && ISO_DAY.test(filter.to) ? filter.to : undefined,
+    // Show more asks for a longer list, never an unbounded one.
+    limit:
+      Number.isInteger(filter.limit) && filter.limit! > 0 ? Math.min(filter.limit!, 1000) : undefined,
   })
 }

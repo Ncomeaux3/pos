@@ -28,7 +28,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-15 (Phase 11). Branch `main`, production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-18 (Health Auto Export backfill, #75). Branch `main`, production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -84,10 +84,38 @@ beside Strava's clock. The demo seed writes 14 weight readings over 40 days.
 Four e2e tests: Trends counts 10 of 30 and 14 of 90 recorded, the filter
 narrows and survives a reload, the plan drawer adds a day and removes it, and
 a weight posted to the Health Auto Export webhook (secret read from the
-Connections card) shows on `/health` and moves the band's Apple line. Still
-open: the owner step, one real Health Auto Export export as the
-`client.test.ts` fixture; `core.request_log` holds no body, so it will come
-from the app's share sheet. Phase 12 (hardening) is the last v1.1 phase.
+Connections card) shows on `/health` and moves the band's Apple line. Health
+Auto Export connected by the owner 2026-09-18, and the same day a 90-day manual
+export (2026-06-20 to 2026-09-18) went through `scripts/hae-backfill.mts` (#75):
+the app's REST automation cannot send a custom range, so history is a manual
+export posted a month per request with workout series stripped. The real
+payload corrected two guesses: sleep is the `sleepStart` to `sleepEnd` span
+(Eight Sleep's overlapping records made `totalSleep` two to three times the
+night) and stand hours read `apple_stand_hour`, not `apple_stand_time`
+(minutes). Verified on production: 39 workouts, steps and sleep unbroken over
+90 days. Known: two zero rows from earlier tests (weight, body fat) and the
+fitness goal tile printing its value unrounded. Phase 12 (hardening) is the
+last v1.1 phase.
+
+**Health Auto Export backfill, argument handling and a sleep report**
+(2026-09-18, branch `claude/review-merge-open-prs-ccceog`). Two fixes to what
+PR #75 shipped. `scripts/hae-backfill.mts` parsed its arguments by taking the
+first token that did not begin with `--`, so `--url <url> export.json` read the
+URL as the export file, and a misspelled `--dryrun` was ignored and the export
+went to production for real; `parseArgs` in the lib now consumes `--url`'s value
+and refuses a flag it does not know. `--sleep` prints every sleep point in an
+export with its span, the hours the app summed, time in bed and the minutes the
+webhook would store for that day, and sends nothing. It runs `toBodyMetrics`
+itself, so it prints what would be stored rather than a second implementation of
+it. Still open, and the reason the report exists: the real export's nights ran
+297 to 1098 minutes, and 1098 is 18.3 hours. The report names the cause, because
+a day carrying two sleep points keeps the last of them, so an afternoon nap can
+outrank the night it shares a date with, while a single point means the span
+itself is that long. Resolved 2026-09-19 against the nine-month export
+(2026-01-01 to 2026-09-19, 58 metrics, 217 workouts): every mapped metric
+arrived in the units the parser expects; sleep now stores the smaller of the
+span and the summed hours and skips a night over 14 h in both (10 of 225
+nights, all Eight Sleep); pool swims arrive in yards and were stored as 0 m.
 
 **v1.1 Phase 7b, skill picker, remaining drawers** (2026-09-15, branch
 `phase-7b-skill-picker-rest`). The same `SkillPicker` block on the trip,
@@ -129,8 +157,8 @@ causes: `PullToRefresh` listens on `document`, `useEdgeBack` on `window`, and
 their midpoint, 4 px slop, no pointer capture so a star tap still selects.
 `pinch()` in `modules/skills/ui/view.ts` is unit tested (scale, midpoint held,
 clamp, identity when the fingers share a point). The mobile e2e covers the
-one-finger half. Not verified: the pinch itself on a real phone (Playwright
-cannot send two touches) and the ui-verifier pass at 402 and 1440.
+one-finger half. Pinch confirmed on the owner's phone 2026-09-18 (Playwright cannot
+send two touches). Not verified: the ui-verifier pass at 402 and 1440.
 
 **v1.1 Phase 6, goals, projects, tasks** (2026-09-15, branch
 `phase-6-projects-goals`). `tasks.project.goal_ref` (migration
