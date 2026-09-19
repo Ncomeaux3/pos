@@ -22,7 +22,7 @@ import { fieldClass } from '@/components/pos/field'
 import { useSearchState } from '@/components/pos/searchState'
 import type { Day } from '@/core/series'
 import { cn } from '@/lib/utils'
-import { distance, duration, mass, pace, sourcesLabel } from '../units'
+import { WORKOUT_PAGE, distance, duration, mass, pace, sourcesLabel } from '../units'
 import { readMetricSeries, readWorkouts } from './actions'
 import { PlanDrawer } from './PlanDrawer'
 
@@ -30,6 +30,8 @@ import { PlanDrawer } from './PlanDrawer'
 // it survives a refresh and can be linked to.
 
 export type FitnessData = {
+  /** Every workout on file; `workouts` is the first page of them. */
+  total: number
   workouts: {
     id: string
     name: string
@@ -91,10 +93,11 @@ const right = (label: string) => (
  * stored numbers rather than a stored one, so it can never disagree with them.
  */
 function detailOf(w: FitnessData['workouts'][number]): string {
+  const unit = w.kind === 'swim' ? 'yd' : 'mi'
   return [
     w.detail,
     w.best ? `${w.best.exercise} ${mass(w.best.weightG)} × ${w.best.reps}` : '',
-    w.distanceM > 0 ? `${distance(w.distanceM)} at ${pace(w.distanceM, w.durationS)}` : '',
+    w.distanceM > 0 ? `${distance(w.distanceM, unit)} at ${pace(w.distanceM, w.durationS, unit)}` : '',
     w.avgHr ? `${w.avgHr} bpm` : '',
   ]
     .filter(Boolean)
@@ -169,7 +172,7 @@ const SOURCE_LABELS: Record<string, string> = {
   demo: 'Demo',
 }
 
-type Filter = { kind?: string; source?: string; from?: string; to?: string }
+type Filter = { kind?: string; source?: string; from?: string; to?: string; limit?: number }
 
 /** The four filter keys the URL may carry, dropped when empty. */
 const filterOf = (params: URLSearchParams): Filter =>
@@ -188,11 +191,15 @@ export function Fitness({ data }: { data: FitnessData }) {
   // The filter lives in the URL and the rows it selects come from one server
   // action, like the Trends ranges: the page renders the unfiltered list, and
   // a load that arrives with a filter already set fetches once on mount.
+  // Show more raises the limit a page at a time; a filter change puts it back.
   const filter = filterOf(params)
   const filtering = Object.keys(filter).length > 0
+  const [limit, setLimit] = useState(WORKOUT_PAGE)
   const [filtered, setFiltered] = useState<FitnessData['workouts'] | null>(null)
-  const fetchRows = (next: Filter) =>
-    start(async () => setFiltered(Object.keys(next).length > 0 ? await readWorkouts(next) : null))
+  const fetchRows = (next: Filter, rows = WORKOUT_PAGE) =>
+    start(async () =>
+      setFiltered(Object.keys(next).length > 0 || rows > WORKOUT_PAGE ? await readWorkouts({ ...next, limit: rows }) : null),
+    )
   useEffect(() => {
     if (filtering) fetchRows(filter)
     // Once, on mount: later changes go through setFilter.
@@ -202,9 +209,15 @@ export function Fitness({ data }: { data: FitnessData }) {
     const next = { ...filter, ...patch }
     for (const k of Object.keys(next) as (keyof Filter)[]) if (!next[k]) delete next[k]
     setParams(Object.fromEntries((['kind', 'source', 'from', 'to'] as const).map((k) => [k, next[k] ?? null])), { local: true })
+    setLimit(WORKOUT_PAGE)
     fetchRows(next)
   }
-  const rows = filtering && filtered !== null ? filtered : data.workouts
+  const showMore = () => {
+    const next = limit + WORKOUT_PAGE
+    setLimit(next)
+    fetchRows(filter, next)
+  }
+  const rows = filtered ?? data.workouts
   const kinds = [...new Set(data.workouts.map((w) => w.kind))]
   const sources = [...new Set(data.workouts.map((w) => w.source))]
 
@@ -236,7 +249,7 @@ export function Fitness({ data }: { data: FitnessData }) {
         value={tab}
         onChange={setTab}
         tabs={[
-          { value: 'workouts', label: 'Workouts', count: data.workouts.length },
+          { value: 'workouts', label: 'Workouts', count: data.total },
           { value: 'exercises', label: 'Exercises', count: data.exercises.length },
           { value: 'body', label: 'Body', count: data.metrics.length },
           { value: 'trends', label: 'Trends' },
@@ -347,6 +360,14 @@ export function Fitness({ data }: { data: FitnessData }) {
                   </Fragment>
                 ))}
               </DataTable>
+            )}
+            {/* A full page means there may be another; a short one is the end. */}
+            {rows.length >= limit && (
+              <div className="mt-3 flex justify-center">
+                <ActionButton size="sm" variant="quiet" onClick={showMore} disabled={pending}>
+                  {pending ? 'Loading' : filtering ? 'Show more' : `Show more · ${rows.length} of ${data.total}`}
+                </ActionButton>
+              </div>
             )}
           </Card>
         ))}

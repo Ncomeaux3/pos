@@ -1,6 +1,7 @@
 import { db } from '@/core/db'
 import { listSkillLinks, type SkillChip } from '@/core/skill-links'
 import { getDigest } from '@/core/digests'
+import { WORKOUT_PAGE } from './units'
 
 // Reads for the screen and the digest. The units and the derived numbers live
 // in ./units.ts, which has no imports and can be pulled into a client.
@@ -64,7 +65,7 @@ export async function listWorkouts(filter: WorkoutFilter = {}): Promise<WorkoutR
               (select value #>> '{}' from core.settings where key = 'timezone'), 'UTC'))::date <= $5::date)
       order by w.started_at desc
       limit $1`,
-    [filter.limit ?? 40, filter.kind ?? null, filter.source ?? null, filter.from ?? null, filter.to ?? null],
+    [filter.limit ?? WORKOUT_PAGE, filter.kind ?? null, filter.source ?? null, filter.from ?? null, filter.to ?? null],
   )
   return rows
 }
