@@ -3,7 +3,8 @@
 import { useState, useTransition } from 'react'
 import { ActionButton, EmptyState, Eyebrow, StatusDot, useToast } from '@/components/pos'
 import type { DotTone } from '@/components/pos'
-import { readAlert, readAllAlerts } from './actions'
+import { useOptimisticAction } from '@/components/pos/useOptimisticAction'
+import { readAlert, readAllAlerts, type ActionResult } from './actions'
 
 export type AlertItem = {
   id: string
@@ -21,10 +22,17 @@ export type AlertItem = {
  * faded: the design's rule is that a de-emphasised row keeps full opacity so its
  * text and any button inside stay readable.
  */
-export function AlertCentre({ alerts }: { alerts: AlertItem[] }) {
+export function AlertCentre({ alerts: initialAlerts }: { alerts: AlertItem[] }) {
   const [showHistory, setShowHistory] = useState(true)
   const [, start] = useTransition()
   const toast = useToast()
+
+  // Mark all read is a list-wide flip, the same shape as Board's task-done
+  // reducer; the per-row Read button below stays as it is for now (phase 3a).
+  const [alerts, runAll] = useOptimisticAction<AlertItem[], void, ActionResult>(
+    initialAlerts,
+    (state) => state.map((a) => ({ ...a, read: true })),
+  )
 
   const unread = alerts.filter((a) => !a.read)
   const history = alerts.filter((a) => a.read)
@@ -42,7 +50,7 @@ export function AlertCentre({ alerts }: { alerts: AlertItem[] }) {
           Alert centre · {unread.length} unread
         </Eyebrow>
         <div className="flex gap-2">
-          <ActionButton disabled={unread.length === 0} onClick={() => run(readAllAlerts)}>
+          <ActionButton disabled={unread.length === 0} onClick={() => runAll(undefined, readAllAlerts)}>
             Mark all read
           </ActionButton>
           <ActionButton onClick={() => setShowHistory(!showHistory)}>
