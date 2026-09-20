@@ -15,9 +15,9 @@ vi.mock('next/navigation', () => ({
   },
 }))
 
-const getUser = vi.fn()
+const getClaims = vi.fn()
 vi.mock('./db', () => ({
-  serverClient: async () => ({ auth: { getUser } }),
+  serverClient: async () => ({ auth: { getClaims } }),
 }))
 
 describe('ownerVerdict', () => {
@@ -55,16 +55,16 @@ describe('ownerVerdict', () => {
 
 describe('requireOwner', () => {
   beforeEach(() => {
-    getUser.mockReset()
+    getClaims.mockReset()
     process.env.OWNER_EMAIL = OWNER
   })
 
   const signedInAs = (email: string | null) =>
-    getUser.mockResolvedValue({ data: { user: email ? { id: 'u1', email } : null } })
+    getClaims.mockResolvedValue({ data: email ? { claims: { email } } : null })
 
-  it('returns the owner when the session belongs to them', async () => {
+  it('resolves when the session belongs to the owner', async () => {
     signedInAs(OWNER)
-    await expect(requireOwner()).resolves.toMatchObject({ email: OWNER })
+    await expect(requireOwner()).resolves.toBeUndefined()
   })
 
   it('sends another signed in address to the rejection page', async () => {

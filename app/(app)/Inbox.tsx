@@ -27,7 +27,7 @@ export function WarningList({
 }) {
   const [gone, setGone] = useState<string[]>([])
   const [asking, setAsking] = useState<string | null>(null)
-  const [pending, start] = useTransition()
+  const [, start] = useTransition()
   const toast = useToast()
 
   // Optimistic, and it stays gone: the row is removed here the moment the
@@ -78,10 +78,10 @@ export function WarningList({
           <span className="ml-auto flex shrink-0 gap-1.5">
             {asking === w.id ? (
               <>
-                <ActionButton size="sm" disabled={pending} onClick={() => act(w.id, () => snoozeAlert(w.id, 1))}>
+                <ActionButton size="sm" onClick={() => act(w.id, () => snoozeAlert(w.id, 1))}>
                   1d
                 </ActionButton>
-                <ActionButton size="sm" disabled={pending} onClick={() => act(w.id, () => snoozeAlert(w.id, 7))}>
+                <ActionButton size="sm" onClick={() => act(w.id, () => snoozeAlert(w.id, 7))}>
                   7d
                 </ActionButton>
               </>
@@ -94,7 +94,6 @@ export function WarningList({
                   size="sm"
                   variant="quiet"
                   aria-label={`Dismiss ${w.title}`}
-                  disabled={pending}
                   onClick={() => act(w.id, () => readAlert(w.id))}
                 >
                   Dismiss
@@ -119,7 +118,7 @@ export function ProposalList({
   const [gone, setGone] = useState<string[]>([])
   const [editing, setEditing] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
-  const [pending, start] = useTransition()
+  const [, start] = useTransition()
   const toast = useToast()
 
   const act = (id: string, run: () => Promise<{ ok: true } | { ok: false; error: string }>) => {
@@ -178,7 +177,6 @@ export function ProposalList({
             <ActionButton
               size="sm"
               variant="brand"
-              disabled={pending}
               onClick={() =>
                 act(p.id, () =>
                   approveProposal(
@@ -205,7 +203,6 @@ export function ProposalList({
             <ActionButton
               size="sm"
               variant="quiet"
-              disabled={pending}
               onClick={() => act(p.id, () => dismissProposal(p.id))}
             >
               Dismiss

@@ -16,9 +16,11 @@ export const SIZE = {
   pill: 'h-11 px-[13px] text-[12.5px] sm:h-[34px]',
 } as const
 
-const GLASS =
-  'border-glass-line bg-glass-strong text-ink shadow-[inset_0_1px_0_var(--glass-edge),var(--lift)] ' +
-  'backdrop-blur-md backdrop-saturate-[180%] hover:bg-bg-elev'
+// No backdrop-blur here: bg-glass-strong is already ~80% opaque, and this is
+// the one glass surface that sits on every tap (Snooze, Dismiss, Approve...).
+// A blur layer under active:scale-[.97] is a recomposite on every press; the
+// cards, lists and tab bar keep theirs, since those don't move on a tap.
+const GLASS = 'border-glass-line bg-glass-strong text-ink shadow-[inset_0_1px_0_var(--glass-edge),var(--lift)] hover:bg-bg-elev'
 
 export const VARIANT = {
   /** The default: a glass pill. Arrange, Upload PDF, Edit limits. */

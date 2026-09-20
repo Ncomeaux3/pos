@@ -4,24 +4,13 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireOwner } from '@/core/auth'
 import { setSetting, type Settings } from '@/core/settings'
-import { setSidebarCollapsed, setTheme, type Theme } from '@/core/theme'
 
 // Server actions are standalone POST endpoints addressed by id, so the (app)
 // layout does not run for them and each one authenticates on its own.
-
-const themeSchema = z.enum(['light', 'dark', 'system'])
-
-export async function setThemeAction(theme: Theme) {
-  await requireOwner()
-  await setTheme(themeSchema.parse(theme))
-  revalidatePath('/', 'layout')
-}
-
-export async function toggleSidebar(collapsed: boolean) {
-  await requireOwner()
-  await setSidebarCollapsed(collapsed)
-  revalidatePath('/', 'layout')
-}
+//
+// Theme and sidebar collapse used to be actions here; they moved to
+// core/theme-client.ts, which writes the cookie and the DOM directly, so
+// those two display preferences change with no server round trip.
 
 // Tile ids are module ids and the core tile names, all short and lowercase;
 // anything else is not a layout and is refused rather than stored.

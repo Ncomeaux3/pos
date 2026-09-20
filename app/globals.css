@@ -40,6 +40,8 @@
 :root {
   color-scheme: light dark;
 
+  /* The status bar and Dynamic Island in standalone mode; zero in a browser tab. */
+  --inset-t: env(safe-area-inset-top, 0px);
   /* The phone's home indicator, with a floor for browsers that report zero. */
   --inset-b: max(env(safe-area-inset-bottom), 12px);
   /* The tab bar: 1px rule, 8px top, 56px buttons, the inset. Everything that must clear
@@ -312,17 +314,16 @@ html {
   }
 
   /* One orchestrated reveal when a screen loads: the top-level blocks rise
-   * 6px and fade in, 40ms apart. Plays on navigation because the route's
-   * children remount; nothing else on a page moves by itself. */
+   * 6px and fade in, 20ms apart, capped at 80ms so content is fully in within
+   * a fifth of a second. Plays on navigation because the route's children
+   * remount; nothing else on a page moves by itself. */
   .reveal > * {
-    animation: rise 360ms var(--ease) both;
+    animation: rise 180ms var(--ease) both;
   }
-  .reveal > :nth-child(2) { animation-delay: 40ms; }
-  .reveal > :nth-child(3) { animation-delay: 80ms; }
-  .reveal > :nth-child(4) { animation-delay: 120ms; }
-  .reveal > :nth-child(5) { animation-delay: 160ms; }
-  .reveal > :nth-child(6) { animation-delay: 200ms; }
-  .reveal > :nth-child(n + 7) { animation-delay: 240ms; }
+  .reveal > :nth-child(2) { animation-delay: 20ms; }
+  .reveal > :nth-child(3) { animation-delay: 40ms; }
+  .reveal > :nth-child(4) { animation-delay: 60ms; }
+  .reveal > :nth-child(n + 5) { animation-delay: 80ms; }
   @keyframes rise {
     from {
       opacity: 0;
