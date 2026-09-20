@@ -250,18 +250,25 @@ API to call from a server.
    the inbound URL and a secret, each with a Copy button.
 2. In the app, **Automations > New > REST API**. Paste the URL. Add a header
    named `x-pos-secret` with the secret as its value (the app's REST automation
-   supports custom headers, per its help pages). Format JSON.
-3. Enable Workouts (export version 2, the app's recommended one; the legacy
-   v1 shape has no id and writes nothing) and the metrics: Body Mass, Resting
-   Heart Rate, Heart Rate Variability, Body Fat Percentage, Sleep Analysis,
-   Step Count, Active Energy, Apple Exercise Time, Apple Stand Hour, VO2 Max,
-   Blood Oxygen Saturation, Respiratory Rate, Flights Climbed, Walking +
-   Running Distance, Walking Heart Rate Average, Heart Rate (the names as a
-   real export sends them, checked 2026-09-18). Anything else is accepted and
-   ignored.
-4. Schedule daily, aggregated by day. Hourly buckets also work: a total such
-   as steps is summed across the day's buckets, a level such as blood oxygen
-   keeps the last reading. Run it once by hand.
+   supports custom headers, per its help pages). Format JSON. Data type
+   **Health Metrics**, with: Body Mass, Resting Heart Rate, Heart Rate
+   Variability, Body Fat Percentage, Sleep Analysis, Step Count, Active
+   Energy, Apple Exercise Time, Apple Stand Hour, VO2 Max, Blood Oxygen
+   Saturation, Respiratory Rate, Flights Climbed, Walking + Running Distance,
+   Walking Heart Rate Average, Heart Rate (the names as a real export sends
+   them, checked 2026-09-18). Anything else is accepted and ignored.
+3. A second automation for workouts, because each REST automation sends one
+   data type (help.healthyapps.dev, checked 2026-09-20; a metrics automation
+   alone left a run unsynced). Same URL and header. Data type **Workouts**,
+   export version 2 (the legacy v1 shape has no id and writes nothing),
+   Include Workout Metrics on for heart rate and calories, Include Route Data
+   off (GPS routes make the payload large and nothing reads them).
+4. Schedule both daily, the metrics one aggregated by day. Hourly buckets
+   also work: a total such as steps is summed across the day's buckets, a
+   level such as blood oxygen keeps the last reading. Run each once by hand.
+   Rotating the secret on the card means pasting the new value into both
+   automations; the app keeps headers per automation, and a stale one is a
+   silent 401 (found 2026-09-20 after three days of it).
 5. Back on the card, Test. It reads "Last payload received {date}" once the
    first post has landed.
 
@@ -272,7 +279,7 @@ previous seven days (help.healthyapps.dev, checked 2026-09-18). Older data
 comes from a manual export and one script run:
 
 1. In the app, **Manual Export**: Custom range (say 2026-01-01 to today),
-   Time Grouping Days, JSON, the same metrics and Workouts as the automation.
+   Time Grouping Days, JSON, the same metrics as the first automation plus Workouts (a manual export can combine both).
    Share the file to this machine (AirDrop, Files).
 2. On the card, Reveal the secret, then:
 
