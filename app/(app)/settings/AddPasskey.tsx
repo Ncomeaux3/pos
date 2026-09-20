@@ -60,10 +60,14 @@ export function AddPasskey() {
       // nothing about the authenticator. A rename that fails leaves the
       // passkey usable under the plain name, so it is not an error.
       if (data?.id) {
-        await client.auth.passkey.update({
-          passkeyId: data.id,
-          friendlyName: deviceLabel(navigator.userAgent),
-        })
+        try {
+          await client.auth.passkey.update({
+            passkeyId: data.id,
+            friendlyName: deviceLabel(navigator.userAgent),
+          })
+        } catch {
+          // Still added, still usable, just unnamed.
+        }
       }
       toast('Passkey added. This device can sign in with it now.')
       router.refresh()

@@ -28,8 +28,8 @@ Order: bugs, then look and forms, then data pulls, then Calendar and integration
 
 | Phase | Goal | Complexity | Parallel-safe with | Depends on | Status | PR |
 |---|---|---|---|---|---|---|
-| 0 Housekeeping and baseline tag | main pulled, branches pruned, STATUS rewritten, package.json 1.1.0 and tag v1.1.0, SPEC v1.2 amendments | low | all | none | | |
-| 1a Diagnose: nightly digest and passkey | Both explained with production evidence and fixed | medium | 1b, 2 | 0 | | |
+| 0 Housekeeping and baseline tag | main pulled, branches pruned, STATUS rewritten, package.json 1.1.0 and tag v1.1.0, SPEC v1.2 amendments | low | all | none | Done 2026-09-20 | #100 |
+| 1a Diagnose: nightly digest and passkey | Both explained with production evidence and fixed | medium | 1b, 2 | 0 | PR open 2026-09-20: digest was a stale core.jobs row for the deleted notes module, pruned nightly now; passkey autofill, named passkeys, local CSP | |
 | 1b Reported module bugs | Budget percent and colours, 30d column, Health insurance by type, phantom skill event, travel date icon and suggestion re-pop, Projects select speed | medium | 1a, 2 | 0 | | |
 | 2 Errors tab and diagnostics | Agent log Errors tab, client_errors table, Settings diagnostics card | medium | 1a, 1b | 0 | | |
 | 3a Look: mockup gate | Today and one drawer, before and after, light and dark, owner approves | low | 2 | 1b | | |
@@ -97,6 +97,8 @@ Complexity: medium. Files: `core/orchestrator.ts`, `core/jobs.ts`, the failing m
 - [x] e2e: virtual-authenticator sign-in passes; login form submits on Enter.
 
 Exit: STATUS.md names the digest cause; Agent log shows green after Run now; passkey e2e green.
+
+Found while building (2026-09-20): the cause was a `core.jobs` row that outlived its job, not a job failing; `pruneStaleJobs` in the `prune` stage (now before `orchestrate`) removes such rows. The CSP blocked the local GoTrue origin, so the passkey ceremony had never run against a dev server; fixed in next.config.ts. GoTrue answers an unknown credential with `webauthn_verification_failed`, not `webauthn_credential_not_found`. Chromium's virtual authenticator answers a conditional-mediation request on load, so button tests turn it off. Later phases: Phase 2's Errors tab should read `core.job_runs` (per run), never `core.jobs`, for the same reason; the owner's Mac passkey report is still owed and may change the passkey card copy.
 
 ## Phase 1b: reported module bugs
 

@@ -888,6 +888,21 @@ test('login, a passkey the server does not hold is told to use the code', async 
   await expect(page).toHaveURL(/\/login/)
 })
 
+test('login, a press with no passkey on the device says nothing', async ({ page, context }) => {
+  await context.clearCookies()
+  await virtualAuthenticator(page, { conditional: false })
+
+  // The browser's own sheet is dismissed or finds nothing (NotAllowedError),
+  // which is the owner's call and not a failure to report. The button comes
+  // back and the email form is untouched.
+  await page.goto('/login')
+  const button = page.getByRole('button', { name: /sign in with a passkey/i })
+  await button.click()
+  await expect(button).toBeEnabled()
+  await expect(page.locator('p.text-bad')).toHaveCount(0)
+  await expect(page).toHaveURL(/\/login/)
+})
+
 test('a passkey made in Settings signs in from the login page', async ({ page, context }) => {
   await virtualAuthenticator(page, { conditional: true })
 
@@ -917,7 +932,10 @@ test('a passkey made in Settings signs in from the login page', async ({ page, c
   await expect(page).toHaveURL(/\/$/)
 
   // Leave the local project as it was found. Every run would otherwise add
-  // one more passkey to the owner until the account's cap refuses.
+  // one more passkey to the owner until the account's cap refuses. The rows
+  // carry no id and GoTrue's list order is unspecified, so on a laptop whose
+  // local owner already holds a passkey made by Chrome this removes one of
+  // the same name; the local project holds none and CI's database is fresh.
   await page.goto('/settings')
   await rows
     .first()

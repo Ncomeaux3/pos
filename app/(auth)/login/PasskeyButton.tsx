@@ -111,15 +111,20 @@ export function PasskeyButton() {
     if (!supported) return
     const controller = new AbortController()
     conditional.current = controller
-    void conditionalSignIn(browserClient(), controller.signal).then((outcome) => {
-      if (controller.signal.aborted) return
-      if (outcome === undefined) {
-        router.refresh()
-        router.replace('/')
-      } else if (outcome !== null) {
-        setError(messageFor(outcome))
-      }
-    })
+    void conditionalSignIn(browserClient(), controller.signal).then(
+      (outcome) => {
+        if (controller.signal.aborted) return
+        if (outcome === undefined) {
+          router.refresh()
+          router.replace('/')
+        } else if (outcome !== null) {
+          setError(messageFor(outcome))
+        }
+      },
+      // supabase-js rethrows anything that is not an AuthError (a network
+      // failure, say). Unprompted, so not shown; the button is still there.
+      () => {},
+    )
     return () => controller.abort()
   }, [supported, router])
 
