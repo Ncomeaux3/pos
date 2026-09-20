@@ -38,7 +38,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-20 (Holon released, v1.2 plan written). Branch `main`, production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-20 (v1.2 Phase 1a: digest and passkey diagnosed). Branch `main`, production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -63,6 +63,52 @@ and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
 ## Done
+
+**v1.2 Phase 1a: the nightly digest and the passkey, diagnosed** (2026-09-20,
+branch `phase-1a-digest-passkey`). Two causes, both from evidence.
+
+The digest. Every nightly email from 2026-09-16 to 2026-09-20 (six, in the
+owner's inbox from `onboarding@resend.dev`) carries one alert:
+`notes.nightly_digest failed. Check the Agent Log and retry it.` No such job
+exists: the notes stub module was deleted in v1.1 Phase 2 (#56, merged
+2026-09-15 12:52 UTC) and its migration `20260915060000_notes_drop.sql`
+deletes the module's `core.jobs` rows. The 09-15 emails show the order of
+events: the 09:02 cron run failed on `brain.*` (migrations behind the code,
+the db push gate's origin) and `core.digests`; a Run now at 12:14 UTC, on the
+build still deployed before #56 merged, ran the notes job against the schema
+the push had already dropped, and `runJob`'s upsert wrote
+`notes.nightly_digest = failed` back. Nothing has run that job since, so the
+row never changed, and `buildSummary` reads every `core.jobs` row with
+`last_status = 'failed'` as a live failure. The dashboard's corner line
+counted it the same way. Not a job failing: a row that outlived its job.
+Fix at the cause: the nightly `prune` stage now also deletes `core.jobs`
+rows for jobs nothing registers (`pruneStaleJobs` in core/jobs.ts, module
+manifests plus the six core stages), and runs before `orchestrate` so the
+first run after deploy is already clean. The corner line reads the last
+`core.job_runs` row ("Nightly ran at 04:12 CDT, partial, 2 of 14 jobs
+failed") rather than the standing state of every job, which is what Settings
+already did. After this deploys: press Run now once; the alert is gone from
+that run on.
+
+The passkey. Not reproduced on the owner's Mac (no report text yet), but the
+local stack showed two things. The passkey ceremony had never run against a
+dev server: the CSP `connect-src` allowed `*.supabase.co` only, so the
+browser refused `http://127.0.0.1:54321` (fixed in next.config.ts from
+`NEXT_PUBLIC_SUPABASE_URL`; production unchanged). And GoTrue's answer to a
+credential the project does not hold is `webauthn_verification_failed`
+("Credential verification failed"), not the `webauthn_credential_not_found`
+the button was mapping, so the raw message was what the button showed for a
+passkey removed in Settings or made against another project. Built
+regardless of the Mac's cause: the login page offers a synced passkey in
+the email field (`autocomplete="username webauthn"` and a conditional
+mediation `navigator.credentials.get`, through GoTrue's two-step API with the
+WebAuthn Level 3 JSON methods), the button names the refusal, and a passkey
+made in Settings is named after the browser that made it ("Safari on
+iPhone"), the only record Supabase keeps of where one came from. Three e2e
+tests drive Chromium's virtual authenticator over CDP through both sign-in
+paths and the refusal. Enter already submits the email form (asserted);
+the code field keeps not submitting on a digit count, by the 2026-09-14
+decision.
 
 **Apple Health, nine months in, and what the data surfaced** (2026-09-19,
 five small PRs off main, each merged the same morning). The owner's manual

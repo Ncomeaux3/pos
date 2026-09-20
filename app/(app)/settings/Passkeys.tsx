@@ -40,8 +40,8 @@ export async function Passkeys() {
                   title={passkey.friendly_name || 'Passkey'}
                   meta={
                     passkey.last_used_at
-                      ? `added ${day(passkey.created_at)} · last used ${day(passkey.last_used_at)}`
-                      : `added ${day(passkey.created_at)} · not used yet`
+                      ? `made ${day(passkey.created_at)} · last used ${day(passkey.last_used_at)}`
+                      : `made ${day(passkey.created_at)} · not used yet`
                   }
                   right={<ForgetPasskey id={passkey.id} />}
                 />
@@ -58,7 +58,10 @@ export async function Passkeys() {
       )}
 
       <p className="t-caption text-ink-3">
-        A passkey is bound to the domain it was created on. Moving Holon to another domain makes
+        Each one is named after the browser that made it. A passkey kept in iCloud Keychain or a
+        password manager follows the account, so it also signs in from the other devices that
+        share it; the sign in page offers it in the email field. A passkey is bound to the domain
+        it was created on. Moving Holon to another domain makes
         every passkey here unusable and each one has to be added again, so add them after the
         domain is settled. The email code is the way back in if a device is lost.
       </p>
