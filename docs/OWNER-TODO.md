@@ -83,7 +83,7 @@ connected, because each needs an account only you have.
       fine-grained token with Contents: Read-only on that one repo. The client
       has no write path, so a write scope would be pure downside. Connect on
       Settings; Test names the repo and its markdown count.
-- [ ] **13. SimpleFIN**, about $1.50 a month. Subscribe at bridge.simplefin.org,
+- [x] **13. SimpleFIN**, about $1.50 a month. Connected by you before 2026-09-20 (verify: the date is not recorded; the Connections card shows it). Subscribe at bridge.simplefin.org,
       connect your banks there, paste the setup token. The token is claimed
       once and cannot be reclaimed, so the claim happens on save; Test only
       reads and is safe to repeat.
@@ -204,6 +204,29 @@ in it is easy to get wrong in a way that looks like a bug six days later.
       without a sideways wobble; a pull on a sheet's handle closes it. If
       the old icon shows after a reinstall, the phone cached the manifest:
       remove the app, clear the site in Safari settings, add it again.
+
+## v1.2, in the order the phases need them (docs/plans/pos-v1-2.md)
+
+- [ ] **24. Make the iCloud calendars public and paste their URLs**, free,
+      5 minutes, before Phase 7b. Calendar.app, right click a calendar,
+      Get Info, tick Public Calendar, copy the `webcal://` URL, paste it into
+      the ICS card in Settings > Connections. One URL per calendar. A public
+      calendar is readable by anyone with the URL, so use it for the ones you
+      would put on a shared screen and skip the rest.
+- [ ] **25. Install the Reminders Shortcut**, free, 10 minutes, before Phase
+      7b. The exact Shortcut steps land in docs/SETUP-INTEGRATIONS.md with the
+      phase; it posts your open reminders to the app's webhook with a shared
+      secret from the Connections card.
+- [ ] **26. USDA FoodData Central key**, free, 2 minutes, before Phase 12.
+      api.data.gov, request a key with your email, paste it into the USDA
+      card in Settings > Connections.
+- [ ] **27. Run "Pull 90 days" on Finance** after Phase 5a deploys and
+      compare one account's transaction count with the bank's own list for
+      the same window. Tell me the two numbers.
+- [ ] **28. Label three emails `POS` in Gmail** after Phase 7c deploys (a
+      reservation, a bill, an invite) and check the proposals on Review.
+- Step 22 (Google Cloud project) moves up: it is needed before Phase 7a, not
+  v2 phase 5, and gains the Calendar read scope beside Gmail's.
 
 ## Decisions I would like from you
 

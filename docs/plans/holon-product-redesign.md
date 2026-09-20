@@ -263,7 +263,7 @@ Complexity: medium. Depends on all earlier phases.
 - [ ] Validate PWA install/update, splash, icon readability and theme changes on the owner's phone. (Owner step, OWNER-TODO 23: manifest, icons, splash and service worker verified in the repo by the prod audit; the device check is yours.)
 - [x] Run regressions, compare performance to baseline and resolve material regressions. (Full Playwright on both projects: 221 passed, the two known laptop reds; client JS 1668 kB in 37 chunks against the 1704 kB Phase 0 baseline, 2% smaller; TTFB compared on the preview against production in the PR.)
 - [x] Update design contract, screenshots, `docs/STATUS.md` and durable decisions; mark old visual specs superseded for styling only. (Section 4 "As shipped"; SPEC.md's styling paragraph; ARCHITECTURE.md's frontend row; the readiness table rows 1, 4 and 7; one superseded-for-styling line on the 23 fidelity plans and design-build.md; decisions under Holon phase 7; the CI screenshot artifacts refresh on the merge.)
-- [ ] Review preview, merge through normal workflow, then deploy under the separately authorized release process. (The `holon` to `main` merge PR carries the rollback recipe; the owner merges.)
+- [x] Review preview, merge through normal workflow, then deploy under the separately authorized release process. (Merged to `main` as edcb1ad, #95, 2026-09-20, and deployed; the PR carries the rollback recipe.)
 Exit: complete evidence and rollback instructions, no known critical navigation/data/auth/accessibility failures.
 
 ## 9. Validation and acceptance

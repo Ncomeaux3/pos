@@ -47,6 +47,10 @@ v2, all 2026-09-14, from the spec review; the sixteen entries are in decisions/l
 - Runner topology, ledger shape, integration extension, cost cap, plan location, no in-app chat, first integrations, voice out, secret store and queue, the default permission level, sync scope, start order, Gmail's scope and OAuth posture, and an empty auto-approve table. Fourteen answers from the owner.
 - Two corrections made after them: phase 0's three outbound clients are SimpleFIN, the vault and Strava (Apple Health is inbound), and phase 1 adds `integrations/fixture/` so the ledger has a write verb to prove itself against.
 
+v1.2, all 2026-09-20, from the post-Holon interview; the fifteen entries are in decisions/log.md, the amendments in docs/SPEC.md and the plan in docs/plans/pos-v1-2.md:
+
+- Order (bugs, look and forms, Finance data, Calendar and integrations, features, release); read-only feeds; Calendar as a module with a manifest seam; category kinds with transfers out and credits netted; trip spend from linked transactions; USDA and paste-to-draft for Meals; Apple Health as the fitness source; recurrence as a rule on the task; semver with tags and GitHub Releases; the look stays Holon behind a mockup gate; an Errors tab and no Sentry; three Finance corner views; Home add and edit over existing tools; Health keeps its tab with health-type policies only; required-field errors and Enter to submit everywhere.
+
 ## Production readiness
 
 From the prod-auditor report of 2026-09-14 (8 present, 5 partial, 0 absent, no critical findings); the five partial rows and the rotation row closed by v1.1 phase 12 on 2026-09-15. Every row is decided, scheduled to a phase of docs/plans/pos-v1-1.md, or not needed with a reason.
