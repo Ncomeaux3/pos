@@ -43,12 +43,7 @@ export function RunLog({
   )
   const [, start] = useTransition()
   const toast = useToast()
-
-  const run = (action: () => Promise<ActionResult>, ok: string) =>
-    start(async () => {
-      const result = await action()
-      toast(result.ok ? ok : result.error)
-    })
+  const [undoneOverride, setUndoneOverride] = useState<Record<string, boolean>>({})
 
   // Retry's own toast names the real outcome rather than a fixed word, the
   // same way Run now does, since a rerun can fail again.
@@ -170,68 +165,96 @@ export function RunLog({
                       </p>
                     )}
 
-                    {r.entries.map((e) => (
-                      <div
-                        key={e.id}
-                        className={cn(
-                          'space-y-3 border-b border-rule px-4 py-3.5 last:border-b-0',
-                          e.undone ? 'bg-transparent' : 'bg-bg-elev',
-                        )}
-                      >
-                        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-                          <div className="min-w-0 flex-1 basis-[220px] space-y-1">
-                            <div className="flex flex-wrap items-baseline gap-x-2.5">
-                              <span className={cn('label', e.undone ? 'text-ink-3' : 'text-ok')}>
-                                {e.moduleLabel}
-                              </span>
-                              <span className="t-caption text-ink-3">{e.kind}</span>
-                              <span className="t-caption num text-ink-3">{e.time}</span>
-                            </div>
-                            {/* Struck through when reverted, so the log reads as
-                                a history rather than as current state. */}
-                            <p
-                              className={cn(
-                                't-body',
-                                e.undone ? 'text-ink-3 line-through' : 'text-ink',
-                              )}
-                            >
-                              {e.title}
-                            </p>
-                            <p className="t-caption text-ink-3">{e.reason}</p>
-                          </div>
-
-                          <div className="flex shrink-0 items-center gap-2">
-                            {e.canUndo && (
-                              <ActionButton
-                                className="border-warn/60 text-warn hover:border-warn"
-                                onClick={() =>
-                                  run(
-                                    () => undo(e.id),
-                                    'Put back. The rule that made it is paused for seven days.',
-                                  )
-                                }
+                    {r.entries.map((e) => {
+                      // Struck through the moment Undo or Redo is pressed,
+                      // reverted with a toast on failure, same shape as
+                      // Inbox.tsx's act() with a boolean instead of a list.
+                      // Once overridden, canUndo/canRedo follow the optimistic
+                      // undone value too, so the button swaps with the strike,
+                      // rather than a stale Undo staying clickable a beat.
+                      const overridden = e.id in undoneOverride
+                      const undone = overridden ? undoneOverride[e.id] : e.undone
+                      const canUndo = overridden ? !undone : e.canUndo
+                      const canRedo = overridden ? undone : e.canRedo
+                      const flip = (
+                        action: () => Promise<ActionResult>,
+                        next: boolean,
+                        ok: string,
+                      ) => {
+                        setUndoneOverride((o) => ({ ...o, [e.id]: next }))
+                        start(async () => {
+                          const result = await action()
+                          if (result.ok) toast(ok)
+                          else {
+                            setUndoneOverride((o) => ({ ...o, [e.id]: !next }))
+                            toast(result.error)
+                          }
+                        })
+                      }
+                      return (
+                        <div
+                          key={e.id}
+                          className={cn(
+                            'space-y-3 border-b border-rule px-4 py-3.5 last:border-b-0',
+                            undone ? 'bg-transparent' : 'bg-bg-elev',
+                          )}
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+                            <div className="min-w-0 flex-1 basis-[220px] space-y-1">
+                              <div className="flex flex-wrap items-baseline gap-x-2.5">
+                                <span className={cn('label', undone ? 'text-ink-3' : 'text-ok')}>
+                                  {e.moduleLabel}
+                                </span>
+                                <span className="t-caption text-ink-3">{e.kind}</span>
+                                <span className="t-caption num text-ink-3">{e.time}</span>
+                              </div>
+                              {/* Struck through when reverted, so the log reads as
+                                  a history rather than as current state. */}
+                              <p
+                                className={cn(
+                                  't-body',
+                                  undone ? 'text-ink-3 line-through' : 'text-ink',
+                                )}
                               >
-                                Undo
-                              </ActionButton>
-                            )}
-                            {e.canRedo && (
-                              <ActionButton onClick={() => run(() => redo(e.id), 'Re-applied.')}>
-                                Redo
-                              </ActionButton>
-                            )}
-                          </div>
-                        </div>
+                                {e.title}
+                              </p>
+                              <p className="t-caption text-ink-3">{e.reason}</p>
+                            </div>
 
-                        <DiffList
-                          undone={e.undone}
-                          diffs={e.diff.map((d) => ({
-                            field: d.field,
-                            before: d.before === null ? null : String(d.before),
-                            after: d.after === null ? null : String(d.after),
-                          }))}
-                        />
-                      </div>
-                    ))}
+                            <div className="flex shrink-0 items-center gap-2">
+                              {canUndo && (
+                                <ActionButton
+                                  className="border-warn/60 text-warn hover:border-warn"
+                                  onClick={() =>
+                                    flip(
+                                      () => undo(e.id),
+                                      true,
+                                      'Put back. The rule that made it is paused for seven days.',
+                                    )
+                                  }
+                                >
+                                  Undo
+                                </ActionButton>
+                              )}
+                              {canRedo && (
+                                <ActionButton onClick={() => flip(() => redo(e.id), false, 'Re-applied.')}>
+                                  Redo
+                                </ActionButton>
+                              )}
+                            </div>
+                          </div>
+
+                          <DiffList
+                            undone={undone}
+                            diffs={e.diff.map((d) => ({
+                              field: d.field,
+                              before: d.before === null ? null : String(d.before),
+                              after: d.after === null ? null : String(d.after),
+                            }))}
+                          />
+                        </div>
+                      )
+                    })}
 
                     {r.jobs
                       .filter((j) => j.status === 'failed')

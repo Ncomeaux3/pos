@@ -26,7 +26,21 @@ export function AlertCentre({ alerts }: { alerts: AlertItem[] }) {
   const [, start] = useTransition()
   const toast = useToast()
 
-  const unread = alerts.filter((a) => !a.read)
+  // The per-row Read button leaves the row the moment it's pressed, same
+  // shape as Inbox.tsx's act(): optimistic, reverted with a toast on failure.
+  const [gone, setGone] = useState<string[]>([])
+  const read = (id: string) => {
+    setGone((g) => [...g, id])
+    start(async () => {
+      const result = await readAlert(id)
+      if (!result.ok) {
+        setGone((g) => g.filter((x) => x !== id))
+        toast(result.error)
+      }
+    })
+  }
+
+  const unread = alerts.filter((a) => !a.read && !gone.includes(a.id))
   const history = alerts.filter((a) => a.read)
 
   const run = (action: () => Promise<{ ok: boolean; error?: string }>) =>
@@ -73,7 +87,7 @@ export function AlertCentre({ alerts }: { alerts: AlertItem[] }) {
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <span className="t-caption num text-ink-3">{a.time}</span>
-                <ActionButton onClick={() => run(() => readAlert(a.id))}>Read</ActionButton>
+                <ActionButton onClick={() => read(a.id)}>Read</ActionButton>
               </div>
             </div>
           ))}

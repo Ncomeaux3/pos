@@ -42,6 +42,21 @@ export function Devices({
   const [busy, setBusy] = useState(false)
   const toast = useToast()
 
+  // Forget leaves the row the moment it's pressed, same shape as
+  // Inbox.tsx's act(): optimistic, reverted with a toast on failure.
+  const [gone, setGone] = useState<string[]>([])
+  const forget = (id: string) => {
+    setGone((g) => [...g, id])
+    start(async () => {
+      const result = await forgetDevice(id)
+      if (!result.ok) {
+        setGone((g) => g.filter((x) => x !== id))
+        toast(result.error)
+      }
+    })
+  }
+  const shown = devices.filter((d) => !gone.includes(d.id))
+
   // Push needs a service worker and a Notification API. Deciding that on the
   // server would be a guess about a browser we cannot see, so the button is
   // rendered after hydration and the server and client agree on the first pass.
@@ -83,7 +98,7 @@ export function Devices({
 
   return (
     <Card className="space-y-3">
-      <CardHead label="Devices" meta={`${devices.length} subscribed`} />
+      <CardHead label="Devices" meta={`${shown.length} subscribed`} />
 
       {vapidPublicKey === null ? (
         <p className="t-caption text-ink-3">
@@ -93,14 +108,14 @@ export function Devices({
         </p>
       ) : (
         <>
-          {devices.length === 0 ? (
+          {shown.length === 0 ? (
             <p className="t-caption text-ink-3">
               No device is subscribed, so nothing is pushed. Email and the alert centre are
               unaffected.
             </p>
           ) : (
             <RowList>
-              {devices.map((device) => (
+              {shown.map((device) => (
                 <Row
                   key={device.id}
                   title={device.label || 'This browser'}
@@ -116,16 +131,7 @@ export function Devices({
                           {device.failures} failed
                         </span>
                       )}
-                      <ActionButton
-                        onClick={() =>
-                          start(async () => {
-                            const result = await forgetDevice(device.id)
-                            toast(result.ok ? 'Device forgotten.' : result.error)
-                          })
-                        }
-                      >
-                        Forget
-                      </ActionButton>
+                      <ActionButton onClick={() => forget(device.id)}>Forget</ActionButton>
                     </>
                   }
                 />
