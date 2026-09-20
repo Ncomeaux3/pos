@@ -2,17 +2,20 @@ import type { ReactNode } from 'react'
 import { MetricStrip, MetricTile, PageHeader, SyncBand } from '@/components/pos'
 import { getConnectionStatuses } from '@/core/integrations'
 import { getSkillNames } from '@/core/modules'
-import { listSkillLinks } from '@/core/skill-links'
 import { listProposals } from '@/core/proposals'
 import { syncState } from '@/core/sync'
+import { spine } from '@/core/series'
+import { getSettings } from '@/core/settings'
 import { ownerToday } from '@/core/today'
 import {
   activePlan,
   fitnessGoal,
+  lastArrived,
   latestMetrics,
   listExercises,
   listPlanItems,
-  listWorkouts,
+  metricSeries,
+  screenWorkouts,
   thisWeek,
   workoutSpan,
 } from '../data'
@@ -26,6 +29,13 @@ const GOAL_TONE: Record<string, string> = {
   at_risk: 'text-warn',
   on_track: 'text-ok',
   done: 'text-ok',
+}
+
+const GOAL_LABEL: Record<string, string> = {
+  stalled: 'Stalled',
+  at_risk: 'At risk',
+  on_track: 'On track',
+  done: 'Done',
 }
 
 /**
@@ -48,9 +58,9 @@ const Sub = ({ children }: { children: string }) => (
 )
 
 export default async function FitnessPage() {
-  const [workouts, week, metrics, exercises, plan, pending, sync, span, skills, goal, todayIso, connections, names] =
+  const [workouts, week, metrics, exercises, plan, pending, sync, span, goal, todayIso, connections, names, arrived, weightSeries, settings] =
     await Promise.all([
-      listWorkouts(),
+      screenWorkouts(),
       thisWeek(),
       latestMetrics(),
       listExercises(),
@@ -58,40 +68,29 @@ export default async function FitnessPage() {
       listProposals('pending'),
       syncState('fitness'),
       workoutSpan(),
-      listSkillLinks('fitness', 'workout'),
       fitnessGoal(),
       ownerToday(),
       getConnectionStatuses(),
       getSkillNames(),
+      lastArrived(),
+      // Weight is the Trends tab's default and the one metric worth a round
+      // trip before its kind is known; another first kind costs one more below.
+      metricSeries('weight', 30),
+      getSettings(),
     ])
 
   const items = plan ? await listPlanItems(plan.id) : []
 
+  const trendKind = metrics.some((m) => m.kind === 'weight') ? 'weight' : (metrics[0]?.kind ?? null)
+  const trend =
+    trendKind === null
+      ? null
+      : { kind: trendKind, days: spine(trendKind === 'weight' ? weightSeries : await metricSeries(trendKind, 30), 30, todayIso) }
+
   const data: FitnessData = {
-    workouts: workouts.map((w) => ({
-      id: w.id,
-      name: w.name,
-      detail: w.detail,
-      kind: w.kind,
-      startedAt: new Date(w.started_at).toISOString(),
-      source: w.source,
-      // Names through the tree module's seam; an id with no name stays an id.
-      skills: (skills.get(w.id)?.skills ?? []).map((s) => s.name),
-      entityRef: skills.get(w.id)?.entityRef ?? null,
-      links: skills.get(w.id)?.skills ?? [],
-      durationS: w.duration_s,
-      distanceM: w.distance_m,
-      avgHr: w.avg_hr,
-      setCount: Number(w.set_count),
-      best:
-        w.best_weight_g === null || w.best_reps === null
-          ? null
-          : {
-              exercise: w.best_exercise ?? '',
-              weightG: Number(w.best_weight_g),
-              reps: w.best_reps,
-            },
-    })),
+    timeZone: settings.timezone,
+    workouts,
+    total: span.count,
     weekWorkouts: week.length,
     weekMinutes: Math.round(week.reduce((sum, w) => sum + w.duration_s, 0) / 60),
     weekLoad: load(week.map((w) => ({ kind: w.kind, durationS: w.duration_s }))),
@@ -100,6 +99,7 @@ export default async function FitnessPage() {
       value: Number(m.value),
       measuredOn: m.measured_on,
     })),
+    trend,
     exercises: exercises.map((e) => ({ id: e.id, name: e.name, sets: Number(e.sets) })),
     plan:
       plan === null
@@ -149,6 +149,8 @@ export default async function FitnessPage() {
             at={sync.at}
             status={sync.status}
             connected={sync.connected}
+            arrived={arrived}
+            timeZone={settings.timezone}
             onSync={syncFitness}
           />
         }
@@ -160,6 +162,7 @@ export default async function FitnessPage() {
             at={sync.at}
             status={sync.status}
             connected={sync.connected}
+            timeZone={settings.timezone}
             onSync={syncFitness}
           />
         }
@@ -169,12 +172,12 @@ export default async function FitnessPage() {
         lede="Workouts, what they came to, and the body metrics behind them. The coach reads the week and proposes plan changes into Review; nothing here changes the plan itself."
         actions={
           // Only once there is a span to state. A live page reached on
-          // readings alone has no first year, and "0 WORKOUTS · → TODAY" is
+          // readings alone has no first year, and "0 workouts · → today" is
           // not a fact about anything.
           state === 'live' &&
           span.count > 0 && (
-            <span className="num text-[11px] tracking-[0.08em] text-ink-3">
-              {span.count} WORKOUTS · {span.firstYear} → TODAY
+            <span className="num text-[11px] text-ink-3">
+              {span.count} workouts · {span.firstYear} → today
             </span>
           )
         }
@@ -197,7 +200,7 @@ export default async function FitnessPage() {
                   <Num>
                     {data.weekWorkouts} <Unit>workouts</Unit>
                   </Num>
-                  <Sub>{`${hoursLabel(data.weekMinutes)} · LOAD ${data.weekLoad}`}</Sub>
+                  <Sub>{`${hoursLabel(data.weekMinutes)} · load ${data.weekLoad}`}</Sub>
                 </>
               }
             />
@@ -212,14 +215,14 @@ export default async function FitnessPage() {
                       {mass(heaviest.best!.weightG).replace(' lb', '')}{' '}
                       <Unit>{`×${heaviest.best!.reps}`}</Unit>
                     </Num>
-                    <Sub>{`${whenLabel(heaviest.startedAt, todayIso)} · ${heaviest.name.toUpperCase()}`}</Sub>
+                    <Sub>{`${whenLabel(heaviest.startedAt, todayIso)} · ${heaviest.name}`}</Sub>
                   </>
                 ) : (
                   <>
                     <Num>
                       <span className="text-ink-3">--</span>
                     </Num>
-                    <Sub>NOTHING LIFTED YET</Sub>
+                    <Sub>Nothing lifted yet</Sub>
                   </>
                 )
               }
@@ -235,14 +238,14 @@ export default async function FitnessPage() {
                       <span className={GOAL_TONE[goal.status] ?? ''}>{goal.current}</span>{' '}
                       <Unit>{`/ ${goal.target}`}</Unit>
                     </Num>
-                    <Sub>{`${goal.status.replace('_', ' ').toUpperCase()} · ${goal.percent}%`}</Sub>
+                    <Sub>{`${GOAL_LABEL[goal.status] ?? goal.status} · ${goal.percent}%`}</Sub>
                   </>
                 ) : (
                   <>
                     <Num>
                       <span className="text-ink-3">--</span>
                     </Num>
-                    <Sub>NO FITNESS GOAL</Sub>
+                    <Sub>No fitness goal</Sub>
                   </>
                 )
               }
@@ -257,14 +260,14 @@ export default async function FitnessPage() {
                     <Num>
                       {mass(weight.value).replace(' lb', '')} <Unit>lb</Unit>
                     </Num>
-                    <Sub>{`MEASURED ${monthDay(weight.measuredOn)}`}</Sub>
+                    <Sub>{`Measured ${monthDay(weight.measuredOn)}`}</Sub>
                   </>
                 ) : (
                   <>
                     <Num>
                       <span className="text-ink-3">--</span>
                     </Num>
-                    <Sub>NO READINGS YET</Sub>
+                    <Sub>No readings yet</Sub>
                   </>
                 )
               }

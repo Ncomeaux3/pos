@@ -1,36 +1,30 @@
 import { getModules } from './modules'
 import { getSetting } from './settings'
+import type { NavGroup, NavItem } from './nav-groups'
 
-// One nav list, used by the sidebar and by the mobile tab bar, so the two can
-// never disagree about what exists or what order it is in.
+export { NAV_GROUPS, type NavGroup, type NavItem } from './nav-groups'
 
-export type NavItem = {
-  href: string
-  label: string
-  /** The two character mono index the design prints before each label. */
-  code: string
-}
+// One nav list, used by the sidebar, the phone tab bar, Browse and the
+// palette, so none of them can disagree about what exists or where it sits.
 
 /**
- * The rail's order, from PosSidebar.dc.html. Module ids, not labels: the label
- * and the route still come from the manifest, this only says where a module
- * sits. An enabled module that is not named here is not on the rail at all,
- * because the artboard draws exactly these thirteen and the numbering is what
- * the eye reads. It keeps its route and its place in the command palette.
+ * The rail's order and grouping, by module id: the label and the route still
+ * come from the manifest. An enabled module that is not named here files
+ * under Life after these, so nothing enabled is off the rail.
  */
-const RAIL = [
-  'finance',
-  'skills',
-  'tasks',
-  'goals',
-  'brain',
-  'insurance',
-  'ideas',
-  'fitness',
-  'health',
-  'home',
-  'meals',
-  'travel',
+const RAIL: [string, NavGroup][] = [
+  ['tasks', 'plan'],
+  ['goals', 'plan'],
+  ['skills', 'plan'],
+  ['brain', 'knowledge'],
+  ['ideas', 'knowledge'],
+  ['finance', 'life'],
+  ['health', 'life'],
+  ['fitness', 'life'],
+  ['meals', 'life'],
+  ['travel', 'life'],
+  ['home', 'life'],
+  ['insurance', 'life'],
 ]
 
 async function enabledModules() {
@@ -38,43 +32,40 @@ async function enabledModules() {
   return getModules().filter((m) => enabled === null || enabled.includes(m.id))
 }
 
-/**
- * Dashboard, then every enabled module in the artboard's order, then Review.
- * The index is positional rather than stored, so disabling a module renumbers
- * the list instead of leaving a hole.
- */
+/** Today, then every enabled module in rail order with its group, then Review. */
 export async function getNav(): Promise<NavItem[]> {
   const modules = await enabledModules()
-  const onRail = RAIL.flatMap((id) => modules.filter((m) => m.id === id))
-
-  const main: Omit<NavItem, 'code'>[] = [
-    { href: '/', label: 'Dashboard' },
-    ...onRail.map((m) => ({ href: `/${m.id}`, label: m.nav.label })),
-  ]
+  const placed = RAIL.flatMap(([id, group]) =>
+    modules.filter((m) => m.id === id).map((m) => ({ href: `/${m.id}`, label: m.nav.label, group })),
+  )
+  const rest = modules
+    .filter((m) => !RAIL.some(([id]) => id === m.id))
+    .map((m) => ({ href: `/${m.id}`, label: m.nav.label, group: 'life' as const }))
 
   return [
-    ...main.map((item, i) => ({ ...item, code: String(i + 1).padStart(2, '0') })),
-    { href: '/review', label: 'Review', code: 'RV' },
+    { href: '/', label: 'Today', group: 'today' },
+    ...placed,
+    ...rest,
+    { href: '/review', label: 'Review', group: 'review' },
   ]
 }
 
 /**
- * Enabled modules with no row on the rail. The command palette lists these
- * after the rail and the footer, so nothing enabled is more than a keystroke
- * away even when the artboard has no place for it.
+ * Enabled modules with no row named in RAIL. They are on the rail under Life
+ * regardless; this is for callers that list the named rail apart from them.
  */
 export async function getOffRailNav(): Promise<NavItem[]> {
   const modules = await enabledModules()
   return modules
-    .filter((m) => !RAIL.includes(m.id))
-    .map((m) => ({ href: `/${m.id}`, label: m.nav.label, code: '··' }))
+    .filter((m) => !RAIL.some(([id]) => id === m.id))
+    .map((m) => ({ href: `/${m.id}`, label: m.nav.label, group: 'life' as const }))
 }
 
 /** The sidebar footer. The phone reaches these through Browse and the palette. */
 export const NAV_FOOTER: NavItem[] = [
-  { href: '/search', label: 'Search', code: '⌘K' },
-  { href: '/weekly-review', label: 'Weekly review', code: 'WK' },
-  { href: '/notifications', label: 'Notifications', code: 'ALT' },
-  { href: '/agent-log', label: 'Agent log', code: 'LOG' },
-  { href: '/settings', label: 'Settings', code: 'SET' },
+  { href: '/search', label: 'Search', group: 'utilities' },
+  { href: '/weekly-review', label: 'Weekly review', group: 'review' },
+  { href: '/notifications', label: 'Notifications', group: 'utilities' },
+  { href: '/agent-log', label: 'Agent log', group: 'utilities' },
+  { href: '/settings', label: 'Settings', group: 'utilities' },
 ]

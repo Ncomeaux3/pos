@@ -77,11 +77,12 @@ export function loadLabel(minutes: number): string {
   return rest === 0 ? `${hours}h` : `${hours}h ${rest}m`
 }
 
-/** "4.2h", "45m", "". The artboard's column load, hours to one decimal. */
+/** "4.2 h", "45 min", "". A column's load, hours to one decimal, spelled as the mockup has it. */
 export function hoursLabel(minutes: number): string {
   if (minutes === 0) return ''
-  if (minutes < 60) return `${minutes}m`
-  return `${(minutes / 60).toFixed(1)}h`
+  if (minutes < 60) return `${minutes} min`
+  const hours = minutes / 60
+  return `${Number.isInteger(hours) ? hours : hours.toFixed(1)} h`
 }
 
 /**
@@ -129,7 +130,7 @@ export function columnsFor(
       empty: spec.empty,
       tone: spec.tone,
       tasks: list,
-      meta: load ? `${list.length} · ${load}` : String(list.length),
+      meta: `${list.length} ${list.length === 1 ? 'task' : 'tasks'}${load ? `, about ${load}` : ''}`,
     }
   }
 

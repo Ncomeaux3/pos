@@ -13,17 +13,17 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data.json()
   } catch {
-    payload = { title: 'ComeauxVerse', body: event.data.text(), url: '/' }
+    payload = { title: 'Holon', body: event.data.text(), url: '/' }
   }
 
   event.waitUntil(
-    self.registration.showNotification(payload.title || 'ComeauxVerse', {
+    self.registration.showNotification(payload.title || 'Holon', {
       body: payload.body || '',
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
+      icon: '/brand/holon-app-dark-192.png',
+      badge: '/brand/holon-app-dark-192.png',
       // One tag, so a second notification replaces the first rather than
       // stacking. The digest is one message a day by design.
-      tag: 'pos-digest',
+      tag: 'holon-digest',
       renotify: true,
       data: { url: payload.url || '/' },
     }),

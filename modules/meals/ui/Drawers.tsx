@@ -1,16 +1,13 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
-import { Eyebrow, Overlay, SkillPicker } from '@/components/pos'
+import { useState } from 'react'
+import { ActionButton, Chip, Eyebrow, MetricStrip, MetricTile, Overlay, Row, RowList, SkillPicker, StatusChip } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { markEaten, planMeal, setFavourite, type ActionResult } from './actions'
 import {
   cap,
   costOf,
   DraftActions,
-  GHOST,
-  GHOST_ACCENT,
-  MINI,
   money,
   SLOTS,
   type Entry,
@@ -20,7 +17,7 @@ import {
 
 type Run = (action: () => Promise<ActionResult>, ok?: string) => void
 
-const DOW = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 /**
  * Pick a recipe for an empty slot: favourites, then what is tagged for the
@@ -51,26 +48,19 @@ export function PickDrawer({
             {DOW[new Date(`${onDate}T12:00:00`).getDay()]} · {cap(slot)} · favorites first, then by protein
           </p>
         </div>
-        <div className="flex flex-col">
+        <RowList>
           {list.map((r) => (
-            <button
+            <Row
               key={r.id}
-              type="button"
+              title={`${r.favourite ? '★' : '·'} ${r.name}`}
+              date={`${r.macros.kcal} kcal · ${r.macros.protein}p · ${r.timeMinutes}m`}
               onClick={() => {
                 run(() => planMeal(onDate, slot, r.id))
                 onClose()
               }}
-              className="grid grid-cols-[1fr_auto] gap-2.5 border-b border-rule py-2.5 text-left text-ink transition-colors hover:text-brand"
-            >
-              <span className="min-w-0 text-[13px]">
-                {r.favourite ? '★' : '·'} {r.name}
-              </span>
-              <span className="num whitespace-nowrap text-[10px] text-ink-3">
-                {r.macros.kcal} kcal · {r.macros.protein}p · {r.timeMinutes}m
-              </span>
-            </button>
+            />
           ))}
-        </div>
+        </RowList>
       </div>
     </Overlay>
   )
@@ -112,13 +102,13 @@ export function GroceryDrawer({
               {items} items · {done} checked · est. {money(weekCost)}
             </p>
           </div>
-          <button type="button" className={MINI} onClick={() => setChecked({})}>
+          <ActionButton size="sm" onClick={() => setChecked({})}>
             Uncheck all
-          </button>
+          </ActionButton>
         </div>
 
         {groups.length === 0 && (
-          <div className="border border-dashed border-rule-2 p-[30px] text-center">
+          <div className="border border-dashed border-rule-2 p-[30px] text-center rounded-[18px]">
             <p className="num text-[22px] font-light text-ink">Nothing planned</p>
             <p className="mt-1.5 text-[12px] text-ink-3">Plan a meal and its ingredients appear here.</p>
           </div>
@@ -128,7 +118,7 @@ export function GroceryDrawer({
           <div key={recipe.id}>
             <div className="flex items-baseline justify-between border-b border-rule-2 pb-1.5">
               <span className="text-[13px] text-ink">{recipe.name}</span>
-              <span className="num text-[10px] text-ink-3">
+              <span className="num text-[11px] text-ink-3">
                 {n}× · serves {recipe.servings}
               </span>
             </div>
@@ -145,10 +135,10 @@ export function GroceryDrawer({
                     className="flex items-center justify-between gap-2.5 border-b border-rule py-[7px] text-left"
                   >
                     <span className="flex min-w-0 items-center gap-2.5">
-                      <span aria-hidden className={cn('size-3 shrink-0 border', on ? 'border-brand bg-brand' : 'border-ink-3')} />
+                      <span aria-hidden className={cn('size-3 shrink-0 border rounded-full', on ? 'border-brand bg-brand' : 'border-ink-3')} />
                       <span className={cn('text-[13px]', on ? 'text-ink-3 line-through' : 'text-ink')}>{ing.item}</span>
                     </span>
-                    <span className="num shrink-0 text-[10px] text-ink-3">
+                    <span className="num shrink-0 text-[11px] text-ink-3">
                       {ing.quantity}
                       {n > 1 && recipe.servings === 1 && ing.quantity ? ` × ${n}` : ''}
                     </span>
@@ -221,32 +211,31 @@ export function RecipeDrawer({
         ) : entry ? (
           <>
             <div className="flex gap-2">
-              <button type="button" className={GHOST_ACCENT} onClick={() => run(() => markEaten(entry.id, !entry.eaten))}>
+              <ActionButton variant="accent" onClick={() => run(() => markEaten(entry.id, !entry.eaten))}>
                 {entry.eaten ? 'Eaten ✓ · undo' : 'Mark eaten'}
-              </button>
-              <button type="button" className={GHOST} onClick={() => setParams({ recipe: null, slot: null, pick: `${entry.onDate}:${entry.slot}` })}>
+              </ActionButton>
+              <ActionButton onClick={() => setParams({ recipe: null, slot: null, pick: `${entry.onDate}:${entry.slot}` })}>
                 Swap
-              </button>
-              <button type="button" className={GHOST} onClick={() => setParams({ cook: recipe.id, step: '0', recipe: null, slot: null })}>
+              </ActionButton>
+              <ActionButton onClick={() => setParams({ cook: recipe.id, step: '0', recipe: null, slot: null })}>
                 Cook
-              </button>
+              </ActionButton>
             </div>
-            <button
-              type="button"
-              className="text-[13px] text-ink-3 transition-colors hover:text-bad"
+            <ActionButton
+              variant="danger"
               onClick={() => {
                 run(() => planMeal(entry.onDate, entry.slot as Slot, null))
                 onClose()
               }}
             >
               Remove from plan
-            </button>
+            </ActionButton>
           </>
         ) : (
           <>
-            <button type="button" className={GHOST} onClick={() => setParams({ cook: recipe.id, step: '0', recipe: null, slot: null })}>
+            <ActionButton onClick={() => setParams({ cook: recipe.id, step: '0', recipe: null, slot: null })}>
               Cook
-            </button>
+            </ActionButton>
             <span className="text-[11px] text-ink-4">Use &quot;Add to&quot; above to plan it this week.</span>
           </>
         )
@@ -256,20 +245,20 @@ export function RecipeDrawer({
         <div>
           <div className="flex items-start justify-between gap-3">
             <h2 className="text-[22px] font-normal leading-[1.2] tracking-[-0.03em] text-ink">{recipe.name}</h2>
-            <button
-              type="button"
+            <ActionButton
+              size="sm"
               onClick={() => run(() => setFavourite(recipe.id, !recipe.favourite))}
-              className={cn('num shrink-0 border border-rule-2 px-2 py-1 text-[12px] transition-colors hover:border-ink', recipe.favourite ? 'text-brand' : 'text-ink-3')}
+              className={cn('num', recipe.favourite ? 'text-brand' : 'text-ink-3')}
             >
               {recipe.favourite ? '★ Favorite' : '☆ Add favorite'}
-            </button>
+            </ActionButton>
           </div>
           <div className="mt-2.5 flex flex-wrap gap-1.5">
-            {draft && <span className="num border border-warn/60 px-1.5 py-0.5 text-[10px] text-warn">draft</span>}
+            {draft && <StatusChip tone="warn">Draft</StatusChip>}
             {recipe.tags.map((t) => (
-              <span key={t} className="num border border-rule px-1.5 py-0.5 text-[10px] text-ink-3">
+              <Chip key={t} tone="quiet">
                 {t}
-              </span>
+              </Chip>
             ))}
           </div>
           {recipe.sourceUrl && (
@@ -284,21 +273,31 @@ export function RecipeDrawer({
           )}
         </div>
 
-        <div className="grid grid-cols-4 gap-px border border-rule bg-rule">
-          <Cell label="kcal">{recipe.macros.kcal}</Cell>
-          <Cell label="Protein" className="text-brand">
-            {recipe.macros.protein}g
-          </Cell>
-          <Cell label="Carbs · fat">
-            {recipe.macros.carbs}
-            <Unit>g</Unit> · {recipe.macros.fat}
-            <Unit>g</Unit>
-          </Cell>
-          <Cell label="Time · cost">
-            {recipe.timeMinutes}
-            <Unit>m</Unit> · {money(costOf(recipe, 1))}
-          </Cell>
-        </div>
+        <MetricStrip className="grid-cols-2 sm:grid-cols-4">
+          <MetricTile size="sm" label="kcal" value={recipe.macros.kcal} />
+          <MetricTile size="sm" label="Protein" value={`${recipe.macros.protein}g`} className="[&>p]:text-brand" />
+          <MetricTile
+            size="sm"
+            label="Carbs · fat"
+            value={
+              <>
+                {recipe.macros.carbs}
+                <Unit>g</Unit> · {recipe.macros.fat}
+                <Unit>g</Unit>
+              </>
+            }
+          />
+          <MetricTile
+            size="sm"
+            label="Time · cost"
+            value={
+              <>
+                {recipe.timeMinutes}
+                <Unit>m</Unit> · {money(costOf(recipe, 1))}
+              </>
+            }
+          />
+        </MetricStrip>
 
         <div className="flex flex-wrap items-center justify-between gap-2.5">
           <span className="text-[12px] text-ink-3">Serves {recipe.servings} · per-serving values</span>
@@ -306,9 +305,9 @@ export function RecipeDrawer({
             <div className="flex flex-wrap items-center gap-1.5">
               <Eyebrow>Add to</Eyebrow>
               {addTo.map((s) => (
-                <button key={s} type="button" className={MINI} onClick={() => nextOpen(s)}>
+                <ActionButton key={s} size="sm" onClick={() => nextOpen(s)}>
                   Next open {s}
-                </button>
+                </ActionButton>
               ))}
             </div>
           )}
@@ -352,15 +351,6 @@ export function RecipeDrawer({
         )}
       </div>
     </Overlay>
-  )
-}
-
-function Cell({ label, className, children }: { label: string; className?: string; children: ReactNode }) {
-  return (
-    <div className="bg-bg px-3 py-2.5">
-      <Eyebrow>{label}</Eyebrow>
-      <div className={cn('num mt-1.5 text-[18px] font-light leading-none text-ink', className)}>{children}</div>
-    </div>
   )
 }
 

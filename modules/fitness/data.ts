@@ -1,6 +1,7 @@
 import { db } from '@/core/db'
-import { listSkillLinks } from '@/core/skill-links'
+import { listSkillLinks, type SkillChip } from '@/core/skill-links'
 import { getDigest } from '@/core/digests'
+import { WORKOUT_PAGE } from './units'
 
 // Reads for the screen and the digest. The units and the derived numbers live
 // in ./units.ts, which has no imports and can be pulled into a client.
@@ -21,17 +22,27 @@ export type WorkoutRow = {
   best_exercise: string | null
 }
 
+export type WorkoutFilter = {
+  kind?: string
+  source?: string
+  /** YYYY-MM-DD, inclusive, in the owner's day. */
+  from?: string
+  to?: string
+  limit?: number
+}
+
 /**
  * Workouts, newest first, each with its heaviest set.
  *
  * The best set is picked in SQL with distinct on rather than by loading every
  * set into memory: a year of lifting is thousands of rows and the list only
- * ever shows one line per workout.
+ * ever shows one line per workout. An empty filter is the screen's default
+ * list; a null parameter is a clause that does not apply.
  */
-export async function listWorkouts(limit = 40): Promise<WorkoutRow[]> {
+export async function listWorkouts(filter: WorkoutFilter = {}): Promise<WorkoutRow[]> {
   const { rows } = await db().query<WorkoutRow>(
     `select w.id, w.name, w.detail, w.kind, w.source, w.started_at, w.duration_s,
-            w.distance_m, w.avg_hr,
+            w.distance_m::float8 as distance_m, w.avg_hr,
             (select count(*)::text from fitness.set_entry s where s.workout_id = w.id)
               as set_count,
             b.weight_g::text as best_weight_g, b.reps as best_reps, b.name as best_exercise
@@ -44,11 +55,66 @@ export async function listWorkouts(limit = 40): Promise<WorkoutRow[]> {
           order by s.weight_g desc, s.reps desc
           limit 1
        ) b on true
+      where ($2::text is null or w.kind = $2)
+        and ($3::text is null or w.source = $3)
+        -- On the owner's calendar: a 21:00 Central run is tomorrow in UTC,
+        -- and the row's date is drawn in the owner's zone.
+        and ($4::date is null or (w.started_at at time zone coalesce(
+              (select value #>> '{}' from core.settings where key = 'timezone'), 'UTC'))::date >= $4::date)
+        and ($5::date is null or (w.started_at at time zone coalesce(
+              (select value #>> '{}' from core.settings where key = 'timezone'), 'UTC'))::date <= $5::date)
       order by w.started_at desc
       limit $1`,
-    [limit],
+    [filter.limit ?? WORKOUT_PAGE, filter.kind ?? null, filter.source ?? null, filter.from ?? null, filter.to ?? null],
   )
   return rows
+}
+
+export type ScreenWorkout = {
+  id: string
+  name: string
+  detail: string
+  kind: string
+  source: string
+  /** Skill names from the classifier's links, most confident first. The row shows the first. */
+  skills: string[]
+  entityRef: string | null
+  links: SkillChip[]
+  startedAt: string
+  durationS: number
+  distanceM: number
+  avgHr: number | null
+  setCount: number
+  best: { exercise: string; weightG: number; reps: number } | null
+}
+
+/**
+ * The workout list as the screen holds it, links included. One mapping for
+ * the page's first render and the filter row's refetch, so the two cannot
+ * drift.
+ */
+export async function screenWorkouts(filter: WorkoutFilter = {}): Promise<ScreenWorkout[]> {
+  const [rows, links] = await Promise.all([listWorkouts(filter), listSkillLinks('fitness', 'workout')])
+  return rows.map((w) => ({
+    id: w.id,
+    name: w.name,
+    detail: w.detail,
+    kind: w.kind,
+    startedAt: new Date(w.started_at).toISOString(),
+    source: w.source,
+    // Names through the tree module's seam; an id with no name stays an id.
+    skills: (links.get(w.id)?.skills ?? []).map((s) => s.name),
+    entityRef: links.get(w.id)?.entityRef ?? null,
+    links: links.get(w.id)?.skills ?? [],
+    durationS: w.duration_s,
+    distanceM: w.distance_m,
+    avgHr: w.avg_hr,
+    setCount: Number(w.set_count),
+    best:
+      w.best_weight_g === null || w.best_reps === null
+        ? null
+        : { exercise: w.best_exercise ?? '', weightG: Number(w.best_weight_g), reps: w.best_reps },
+  }))
 }
 
 /** Every set of one exercise, heaviest first. The personal best list. */
@@ -89,6 +155,39 @@ export async function latestMetrics(): Promise<
       order by kind, measured_on desc`,
   )
   return rows
+}
+
+/**
+ * One reading a day of one metric over the last `days` days, oldest first,
+ * for spine() to put on a date axis. The unit is the kind's stored unit.
+ */
+export async function metricSeries(
+  kind: string,
+  days: number,
+): Promise<{ on_date: string; cents: number }[]> {
+  const { rows } = await db().query<{ on_date: string; cents: string }>(
+    `select measured_on::text as on_date, value::text as cents
+       from fitness.body_metric
+      where kind = $1 and measured_on > core.today() - $2::int
+      order by measured_on`,
+    [kind, days],
+  )
+  return rows.map((r) => ({ on_date: r.on_date, cents: Number(r.cents) }))
+}
+
+/**
+ * When Apple data last arrived: the newest accepted payload on either phone
+ * side route, Health Auto Export or the Shortcut. Read from the request log
+ * rather than the rows' created_at, which an upsert of the same day keeps.
+ */
+export async function lastArrived(): Promise<string | null> {
+  const { rows } = await db().query<{ at: Date | null }>(
+    `select max(occurred_at) as at from core.request_log
+      where status = 200 and route in (
+        '/api/integrations/health_auto_export/webhook',
+        '/api/integrations/apple_shortcuts/webhook')`,
+  )
+  return rows[0]?.at ? new Date(rows[0].at).toISOString() : null
 }
 
 /** Workouts in the last seven days, for the load and XP figures. */
@@ -224,7 +323,10 @@ export async function fitnessGoal(): Promise<FitnessGoal | null> {
   const goal = attention.find((g) =>
     goalLinks.get((g as FitnessGoal & { id: string }).id)?.skills.some((s) => workoutSkills.has(s.id)),
   )
+  // One decimal, the way Goals prints a value: a weight converted from grams
+  // arrives as 190.99968546644905 otherwise.
+  const tenth = (n: number) => Math.round(n * 10) / 10
   return goal
-    ? { title: goal.title, status: goal.status, percent: goal.percent, current: goal.current, target: goal.target }
+    ? { title: goal.title, status: goal.status, percent: goal.percent, current: tenth(goal.current), target: tenth(goal.target) }
     : null
 }

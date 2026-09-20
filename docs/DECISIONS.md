@@ -39,30 +39,36 @@ v1.1, all 2026-09-14, from the /adopt-repo interview; reasons in decisions/log.m
 - Phone for the iOS splash image: iPhone 16 Pro Max (440 x 956 points at 3x).
 - Date inputs stay native `<input type="date">` everywhere; no picker library.
 - Vercel functions stay in iad1 beside the owner; pdx1 measured slower on the whole. The database region is the remaining lever and is an owner decision. (2026-09-15)
+- Branch protection requires `migrations` as well as `check` and `screens`, so the db push gate blocks a merge rather than advising. Enforced for admins; no required reviews, no up-to-date rule (solo). (2026-09-15)
+- The storage buckets are mirrored by the backup workflow, not only documented: the readiness row said add them to the dump. Two more repo secrets, `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF`. (2026-09-15)
 
 v2, all 2026-09-14, from the spec review; the sixteen entries are in decisions/log.md, the spec in docs/SPEC-v2.md and the plan in docs/plans/v2-agent-layer.md:
 
 - Runner topology, ledger shape, integration extension, cost cap, plan location, no in-app chat, first integrations, voice out, secret store and queue, the default permission level, sync scope, start order, Gmail's scope and OAuth posture, and an empty auto-approve table. Fourteen answers from the owner.
 - Two corrections made after them: phase 0's three outbound clients are SimpleFIN, the vault and Strava (Apple Health is inbound), and phase 1 adds `integrations/fixture/` so the ledger has a write verb to prove itself against.
 
+v1.2, all 2026-09-20, from the post-Holon interview; the fifteen entries are in decisions/log.md, the amendments in docs/SPEC.md and the plan in docs/plans/pos-v1-2.md:
+
+- Order (bugs, look and forms, Finance data, Calendar and integrations, features, release); read-only feeds; Calendar as a module with a manifest seam; category kinds with transfers out and credits netted; trip spend from linked transactions; USDA and paste-to-draft for Meals; Apple Health as the fitness source; recurrence as a rule on the task; semver with tags and GitHub Releases; the look stays Holon behind a mockup gate; an Errors tab and no Sentry; three Finance corner views; Home add and edit over existing tools; Health keeps its tab with health-type policies only; required-field errors and Enter to submit everywhere.
+
 ## Production readiness
 
-From the prod-auditor report of 2026-09-14 (8 present, 5 partial, 0 absent, no critical findings). Every row is decided, scheduled to a phase of docs/plans/pos-v1-1.md, or not needed with a reason.
+From the prod-auditor report of 2026-09-14 (8 present, 5 partial, 0 absent, no critical findings); the five partial rows and the rotation row closed by v1.1 phase 12 on 2026-09-15. Every row is decided, scheduled to a phase of docs/plans/pos-v1-1.md, or not needed with a reason.
 
 | Layer | Decision | Phase | Notes |
 |---|---|---|---|
-| 1. Frontend | Present | | `pnpm build` and a served /login check in CI; tokens in app/globals.css; Playwright at 1440 and 402 |
+| 1. Frontend | Present | | `pnpm build` and a served /login check in CI; the Holon token set in app/globals.css with `light-dark()`, Geist self-hosted under app/fonts (OFL, 40 KB), theme in the `pos_theme` cookie (lax, one year, not httpOnly, a display preference); Playwright at 1440 and 402; client JS 1668 kB on 2026-09-19 against the 1704 kB pre-redesign baseline |
 | 2. APIs and backend logic | Present | | zod on every route, `{ error }` JSON, refusal tests in core/*.test.ts |
 | 3. Database and storage | Present | | 30 migrations, replayed into pos_test by CI |
-| 4. Auth and permissions | Present | | proxy.ts, requireOwner(), bearer on /api/mcp and /api/cron, passkeys |
+| 4. Auth and permissions | Present | | proxy.ts (matcher excludes `brand/`, the icons moved there from `icons/`), requireOwner(), bearer on /api/mcp and /api/cron, passkeys |
 | 5. Hosting and deployment | Present | | Vercel git integration, previews per branch, rollback in docs/SETUP-SUPABASE.md section 7 |
-| 6. Cloud and compute | Partial | 12 | maxDuration only on the cron; add to MCP, webhook, OAuth routes |
-| 7. CI/CD and version control | Partial | 12 | CI runs but is not a merge gate; repo is public now so branch protection should be available |
-| 8. Security and data access | Partial | 12 | .env gitignored, CSP, dependabot; add `pnpm audit` to CI |
+| 6. Cloud and compute | Present | 12 | maxDuration on the cron (300), MCP (60), webhook and both OAuth routes (30) |
+| 7. CI/CD and version control | Present | 12 | Branch protection on main requires `check`, `screens` and `migrations`, enforced for admins, since 2026-09-15; the served-login smoke grep in ci.yml reads the input's `w-full rounded-xl` class and moves with it |
+| 8. Security and data access | Present | 12 | .env gitignored, CSP, dependabot, `pnpm audit --prod --audit-level=high` in the check job |
 | 9. Rate limiting | Present | | core/ratelimit.ts, 60 per minute per IP, 429 with retry-after |
 | 10. Caching and CDN | Present | | Request-scoped React cache() on settings, today and skill names since Phase 3; no TTL caches by decision, single user and freshness wins |
 | 11. Load balancing and scaling | Present | | Pooler in transaction mode; pool max 8 per instance, measured against 4 on 2026-09-15 |
-| 12. Observability and logs | Partial | 12 | core.request_log, core.jobs, digest email on failure. Add error.tsx and global-error.tsx. Not needed: Sentry or another error tracker, by the cost cap and single user |
-| 13. Availability and recovery | Present | 12 | Nightly pg_dump to pos-backups, restore drilled 2026-09-08; add the storage bucket to the dump |
+| 12. Observability and logs | Present | 12 | core.request_log, core.jobs, digest email on failure, error.tsx and global-error.tsx showing the digest. Not needed: Sentry or another error tracker, by the cost cap and single user |
+| 13. Availability and recovery | Present | 12 | Nightly pg_dump to pos-backups, restore drilled 2026-09-08; every storage bucket mirrored beside the dumps since 2026-09-15, restore drilled locally |
 | Cost ceiling | $0 to $10 a month, llm_soft_cap_cents 1000 enforced in core/llm.ts | 11 | Health Auto Export Premium adds $1.99 a month |
-| Secrets rotation | Absent | 12 | One paragraph in docs/SETUP-SUPABASE.md: who rotates each secret, where, and what it breaks |
+| Secrets rotation | Present | 12 | docs/SETUP-SUPABASE.md, Rotating a secret: each secret, where it is set, what rotating it breaks |

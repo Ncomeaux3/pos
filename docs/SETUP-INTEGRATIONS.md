@@ -250,20 +250,65 @@ API to call from a server.
    the inbound URL and a secret, each with a Copy button.
 2. In the app, **Automations > New > REST API**. Paste the URL. Add a header
    named `x-pos-secret` with the secret as its value (the app's REST automation
-   supports custom headers, per its help pages). Format JSON.
-3. Enable Workouts (export version 2, the app's recommended one; the legacy
-   v1 shape has no id and writes nothing) and the metrics: Body Mass, Resting
-   Heart Rate, Heart Rate Variability, Body Fat Percentage, Sleep Analysis,
-   Step Count, Active Energy, Apple Exercise Time, Apple Stand Time, VO2 Max,
-   Blood Oxygen Saturation, Respiratory Rate, Flights Climbed, Walking +
-   Running Distance, Walking Heart Rate Average, Heart Rate (verify: these
-   are the names on the app's supported-data list, not checked in the app
-   itself). Anything else is accepted and ignored.
-4. Schedule daily, aggregated by day. Hourly buckets also work: a total such
-   as steps is summed across the day's buckets, a level such as blood oxygen
-   keeps the last reading. Run it once by hand.
+   supports custom headers, per its help pages). Format JSON. Data type
+   **Health Metrics**, with: Body Mass, Resting Heart Rate, Heart Rate
+   Variability, Body Fat Percentage, Sleep Analysis, Step Count, Active
+   Energy, Apple Exercise Time, Apple Stand Hour, VO2 Max, Blood Oxygen
+   Saturation, Respiratory Rate, Flights Climbed, Walking + Running Distance,
+   Walking Heart Rate Average, Heart Rate (the names as a real export sends
+   them, checked 2026-09-18). Anything else is accepted and ignored.
+3. A second automation for workouts, because each REST automation sends one
+   data type (help.healthyapps.dev, checked 2026-09-20; a metrics automation
+   alone left a run unsynced). Same URL and header. Data type **Workouts**,
+   export version 2 (the legacy v1 shape has no id and writes nothing),
+   Include Workout Metrics on for heart rate and calories, Include Route Data
+   off (GPS routes make the payload large and nothing reads them).
+4. Schedule both daily, the metrics one aggregated by day. Hourly buckets
+   also work: a total such as steps is summed across the day's buckets, a
+   level such as blood oxygen keeps the last reading. Run each once by hand.
+   Rotating the secret on the card means pasting the new value into both
+   automations; the app keeps headers per automation, and a stale one is a
+   silent 401 (found 2026-09-20 after three days of it).
 5. Back on the card, Test. It reads "Last payload received {date}" once the
    first post has landed.
+
+### Backfill history
+
+The REST automation cannot send a custom date range: its periods stop at the
+previous seven days (help.healthyapps.dev, checked 2026-09-18). Older data
+comes from a manual export and one script run:
+
+1. In the app, **Manual Export**: Custom range (say 2026-01-01 to today),
+   Time Grouping Days, JSON, the same metrics as the first automation plus Workouts (a manual export can combine both).
+   Share the file to this machine (AirDrop, Files).
+2. On the card, Reveal the secret, then:
+
+   ```
+   HAE_SECRET=<secret> pnpm exec tsx scripts/hae-backfill.mts ~/Downloads/<export>.json
+   ```
+
+   Add `--dry-run` first to see the requests without sending. The script posts
+   one request per month plus the workouts twenty at a time, 1.5 s apart, so
+   each stays under the function's body and time limits and the app's rate
+   limit. It stops at the first non-200 and prints the body. Rows upsert, so
+   running it twice is safe, and a workout earns its XP once.
+
+   The export file goes anywhere among the flags, and a flag the script does
+   not know stops it rather than being ignored, so a typed `--dryrun` cannot
+   become a live post.
+
+3. Before a first backfill, read the nights the export carries:
+
+   ```
+   pnpm exec tsx scripts/hae-backfill.mts ~/Downloads/<export>.json --sleep
+   ```
+
+   It sends nothing. One line per sleep point: the span, the hours the app
+   summed, time in bed, and the minutes the webhook would store for that day.
+   Two points under one date is worth knowing about, because the day keeps the
+   last of them, so an afternoon nap can outrank the night it shares a date
+   with. The nights the webhook would skip (over 14 hours in every field) are
+   listed at the end with their span and summed hours.
 
 ### What happens next
 
@@ -284,11 +329,14 @@ word rules the Strava sync uses (Running is a run, Cycling a ride, Traditional
 Strength Training strength, Yoga other). Distance, average heart rate and
 active energy are optional; routes and per-second series are not stored.
 
-The metric identifier strings the app sends are marked verify in
-`integrations/health_auto_export/client.ts` until one real export has been
-seen. If a metric you enabled does not appear on Fitness > Body, the row in
-`core.request_log` for the route will show the post arrived, and the payload
-name needs matching to the table's kinds.
+Sleep is the smaller of the span from the app's `sleepStart` to `sleepEnd`
+and its summed hours: Eight Sleep's overlapping records make the sum two to
+three times the night, and a session it ends in the afternoon makes the span
+13 to 20 hours. A night over 14 hours in both is skipped, so the day is a gap
+rather than a spike. Pool swim distance arrives in yards and is converted to
+metres like miles and kilometres. If a metric you enabled does not appear on
+Fitness > Body, the row in `core.request_log` for the route will show the post
+arrived, and the payload name needs matching to the table's kinds.
 
 ---
 

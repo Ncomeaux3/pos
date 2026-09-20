@@ -1,5 +1,6 @@
 import { PageHeader, SyncBand } from '@/components/pos'
 import { syncState } from '@/core/sync'
+import { getSettings } from '@/core/settings'
 import { ownerToday } from '@/core/today'
 import {
   categorySpend,
@@ -10,7 +11,7 @@ import {
   upcomingCharges,
 } from '../data'
 import { monthPace } from '../money'
-import { spine } from '../series'
+import { spine } from '@/core/series'
 import { Finance, type FinanceData } from './Finance'
 import { syncFinance } from './sync'
 
@@ -23,7 +24,7 @@ function bandDate(iso: string): string {
 }
 
 export default async function FinancePage() {
-  const [accounts, series, spend, upcoming, transactions, todayIso, sync, alertThreshold] =
+  const [accounts, series, spend, upcoming, transactions, todayIso, sync, alertThreshold, settings] =
     await Promise.all([
       listAccounts(),
       netWorthSeries(30),
@@ -33,6 +34,7 @@ export default async function FinancePage() {
       ownerToday(),
       syncState('finance'),
       getAlertThreshold(),
+      getSettings(),
     ])
 
   const netWorth = accounts.reduce((sum, a) => sum + Number(a.balance_cents), 0)
@@ -119,6 +121,7 @@ export default async function FinancePage() {
       at={sync.at}
       status={sync.status}
       connected={sync.connected}
+      timeZone={settings.timezone}
       onSync={syncFinance}
     />
   )
@@ -135,7 +138,7 @@ export default async function FinancePage() {
         lede="Balances, upcoming charges, and budgets. Synced nightly, amounts in USD."
         // A reading, not a button, so it stays off the phone's action slot.
         actions={
-          <span className="label hidden text-[11px] tracking-[0.08em] text-ink-3 md:inline">
+          <span className="label hidden text-ink-3 md:inline">
             {bandDate(todayIso)} · {data.accounts.length} accounts · {hot} {hot === 1 ? 'flag' : 'flags'}
           </span>
         }

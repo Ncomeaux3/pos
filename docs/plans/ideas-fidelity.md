@@ -1,5 +1,8 @@
 # Ideas to the artboard
 
+Superseded for styling on 2026-09-19 by the Holon redesign (docs/plans/holon-product-redesign.md, section 4): colour, type, radii, surfaces and control shapes now come from the Holon design contract and the shared components in `components/pos/`. This plan still governs what each screen shows and how it is laid out.
+
+
 ## Context
 
 Screen eight of the fidelity pass (method: docs/plans/weekly-review-fidelity.md). `POS Ideas.dc.html` captured at 1440 into `/private/tmp/pos-handoff-sources/ideas/` (board dark and light, matrix, the view drawer, the edit drawer). Insurance, Meals and Second Brain are in flight in another session's worktrees; this pass stays inside `modules/ideas/` plus one migration, one line in `e2e/seed.mts`, and its own e2e tests.

@@ -1,5 +1,8 @@
 # Mobile re-check at 402 against PosPhone
 
+Superseded for styling on 2026-09-19 by the Holon redesign (docs/plans/holon-product-redesign.md, section 4): colour, type, radii, surfaces and control shapes now come from the Holon design contract and the shared components in `components/pos/`. This plan still governs what each screen shows and how it is laid out.
+
+
 ## Context
 
 The 2026-09-10 phone pass (`fcdd7b5`, `b83dff0`) set the shell rules from `PosPhone.dc.html`: 18px body padding, 56px tab row on the 26px inset, no lede, tab rows scroll, KPIs two up. Since then twelve screens were rebuilt on the desktop (Tasks, Goals, Ideas, Health, Settings, Search here; Second Brain, Insurance, Meals, Home, Fitness, Review in the other session), so the phone was re-audited. A script measured every route at 402x874 (padding, lede, tab rows, horizontal overflow) and the shots were read by eye; captures in `/private/tmp/pos-handoff-sources/mobile/`.

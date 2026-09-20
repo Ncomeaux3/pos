@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ActionButton, Eyebrow, Overlay, useToast } from '@/components/pos'
+import { ActionButton, Eyebrow, Overlay, fieldClass, useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { saveHub } from './actions'
 import type { BrainHub, SetParams } from './Brain'
@@ -9,9 +9,6 @@ import type { BrainHub, SetParams } from './Brain'
 // The hub form, in the Ingest drawer's shape. A hub is a name and the words
 // that file a note into it; nothing else. Rules run again on save, so a new
 // keyword picks up what was already unfiled.
-
-const FIELD =
-  'w-full border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand'
 
 export function HubDrawer({ hub, setParams }: { hub: BrainHub | null; setParams: SetParams }) {
   const toast = useToast()
@@ -68,7 +65,7 @@ export function HubDrawer({ hub, setParams }: { hub: BrainHub | null; setParams:
       >
         <label className="flex flex-col gap-1.5">
           <Eyebrow>Name</Eyebrow>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Hybrid search" className={FIELD} />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Hybrid search" className={fieldClass} />
         </label>
         <label className="flex flex-col gap-1.5">
           <Eyebrow>Keywords · comma separated</Eyebrow>
@@ -77,7 +74,7 @@ export function HubDrawer({ hub, setParams }: { hub: BrainHub | null; setParams:
             onChange={(e) => setKeywords(e.target.value)}
             rows={3}
             placeholder="hybrid search, pgvector, embeddings"
-            className={cn(FIELD, 'resize-y leading-[1.6]')}
+            className={cn(fieldClass, 'resize-y leading-[1.6]')}
           />
         </label>
       </form>

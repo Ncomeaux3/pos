@@ -10,6 +10,15 @@ point-in-time recovery.
 the session mode pooler, gzips it, and commits it to the private `pos-backups`
 repository under `dumps/`. Thirty days are kept.
 
+The same run mirrors every storage bucket into `storage/<bucket>/` in that
+repository (insurance PDFs, health records: whatever `core/files.ts` has
+uploaded). This is a mirror, not a dated snapshot: each run overwrites in
+place and a file deleted from a bucket stays in the mirror. It needs two more
+repository secrets on `pos`: `SUPABASE_ACCESS_TOKEN` (a personal access token
+from the Supabase dashboard, Account > Access Tokens) and
+`SUPABASE_PROJECT_REF` (the ref in the dashboard URL). The workflow fails
+before dumping anything if either is missing.
+
 The pooler on port 5432 is not an arbitrary choice. GitHub runners are IPv4
 only and the direct database host is IPv6 only, and transaction mode on 6543
 does not give `pg_dump` the session semantics it needs.
@@ -19,6 +28,15 @@ does not give `pg_dump` the session semantics it needs.
 ```bash
 git clone git@github.com:<owner>/pos-backups.git
 gunzip -c pos-backups/dumps/pos-YYYY-MM-DD.sql.gz | psql "$DATABASE_URL"
+```
+
+Storage comes back with the CLI, one bucket at a time. The upload creates a
+missing bucket (drilled against the local stack on 2026-09-15), but as a
+public one is the thing to check: `core/files.ts` wants every bucket private,
+so set that in the dashboard if the CLI made it.
+
+```bash
+supabase storage cp -r pos-backups/storage/insurance ss:///insurance --experimental --linked
 ```
 
 Into a database that already has content, drop it first. `--no-owner` and
@@ -36,9 +54,8 @@ gunzip -c dumps/pos-YYYY-MM-DD.sql.gz | psql "$DATABASE_URL"
 - **Anything since the last dump.** Up to 24 hours.
 - **Auth users.** The dump covers the application schemas. Run `pnpm setup` after
   restoring to recreate the owner user.
-- **Storage objects.** Files in the per-module buckets are not in a `pg_dump`.
-  Health records and insurance PDFs would need Supabase's own storage backup.
-  Accepted for now; the row that points at a file survives, the file may not.
+- **Storage objects since the last mirror.** Up to 24 hours, like the rows.
+  Before 2026-09-15 the buckets were not backed up at all.
 
 ## Drill
 

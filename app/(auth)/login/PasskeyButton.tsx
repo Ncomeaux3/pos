@@ -25,7 +25,7 @@ function messageFor(error: unknown): string | null {
     return 'Passkeys are not switched on for this install yet. Use the code.'
   }
   if (code === 'webauthn_credential_not_found') {
-    return 'This device has no passkey for POS. Sign in with the code, then add one in Settings.'
+    return 'This device has no passkey for Holon. Sign in with the code, then add one in Settings.'
   }
   return error instanceof Error ? error.message : 'That did not work. Use the code.'
 }
@@ -77,7 +77,7 @@ export function PasskeyButton() {
       >
         {busy ? 'Waiting for the passkey' : 'Sign in with a passkey'}
       </ActionButton>
-      {error && <p className="label text-[10px] tracking-[0.1em] text-bad">{error}</p>}
+      {error && <p className="label text-bad">{error}</p>}
     </div>
   )
 }

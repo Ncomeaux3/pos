@@ -13,6 +13,18 @@ jobs:
     timeout-minutes: 15
 
     steps:
+      - name: Check backup secrets
+        env:
+          PGURL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_REPO_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          test -n "$PGURL" || { echo "BACKUP_DATABASE_URL is not set"; exit 1; }
+          test -n "$BACKUP_REPO_TOKEN" || { echo "BACKUP_REPO_TOKEN is not set"; exit 1; }
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "SUPABASE_ACCESS_TOKEN is not set"; exit 1; }
+          test -n "$REF" || { echo "SUPABASE_PROJECT_REF is not set"; exit 1; }
+
       - name: Install a matching pg_dump
         run: |
           sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
@@ -28,11 +40,28 @@ jobs:
           # session semantics it needs.
           PGURL: ${{ secrets.BACKUP_DATABASE_URL }}
         run: |
-          test -n "$PGURL" || { echo "BACKUP_DATABASE_URL is not set"; exit 1; }
           mkdir -p out
           pg_dump "$PGURL" --no-owner --no-privileges \
             | gzip -9 > "out/pos-$(date -u +%Y-%m-%d).sql.gz"
           ls -lh out/
+
+      # The per-module storage buckets (insurance PDFs, health records) are not
+      # in a pg_dump. The CLI mirrors every bucket into the same repo, beside
+      # the dumps. ss:/// with no bucket is all of them. A file deleted from a
+      # bucket stays in the mirror; nothing prunes it, which for a backup is
+      # the right way round.
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.117.0
+
+      - name: Mirror storage
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          mkdir -p out/storage
+          supabase storage cp -r ss:/// out/storage --experimental --project-ref "$REF"
+          find out/storage -type f | wc -l
 
       - name: Checkout the backup repo
         uses: actions/checkout@v7
@@ -44,13 +73,14 @@ jobs:
       - name: Commit, and drop anything older than thirty days
         working-directory: backups
         run: |
-          mkdir -p dumps
+          mkdir -p dumps storage
           cp ../out/*.sql.gz dumps/
+          cp -r ../out/storage/. storage/
           find dumps -name '*.sql.gz' -mtime +30 -delete
 
           git config user.name 'pos-backup'
           git config user.email 'pos-backup@users.noreply.github.com'
-          git add dumps
+          git add dumps storage
           # An unchanged tree means the dump was identical, which is not a
           # failure worth a red run.
           git diff --staged --quiet || git commit -m "Backup $(date -u +%Y-%m-%d)"

@@ -3,7 +3,11 @@ import { getCredentials, getIntegration, secretMatches } from '@/core/integratio
 import { withLog } from '@/core/log'
 import { getModules } from '@/core/modules'
 
-export const SECRET_HEADER = 'x-pos-secret'
+// One Health Auto Export post can be hundreds of points, but writeReadings
+// batches them.
+export const maxDuration = 30
+
+const SECRET_HEADER = 'x-pos-secret'
 
 /**
  * Inbound only. Unauthenticated by session on purpose: the caller is a phone

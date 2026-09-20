@@ -45,8 +45,8 @@ export function Segments<T extends string>({
   return (
     <>
       {end ? (
-        <div className={cn('flex flex-wrap items-end justify-between gap-2 border-b border-rule', className)}>
-          <TabBar tabs={tabs} value={value} onChange={onChange} label={label} className="border-b-0" tabClassName={tabClassName} />
+        <div className={cn('flex flex-wrap items-center justify-between gap-2', className)}>
+          <TabBar tabs={tabs} value={value} onChange={onChange} label={label} tabClassName={tabClassName} />
           {end}
         </div>
       ) : (

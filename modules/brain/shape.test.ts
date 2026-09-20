@@ -40,9 +40,9 @@ describe('byLine', () => {
 
 describe('sourceMeta', () => {
   it('names where the source text came from', () => {
-    expect(sourceMeta({ sourceUrl: 'https://youtube.com/watch?v=x', sourceText: 'a b c d', kind: 'video' })).toBe('YOUTUBE · 4 WORDS')
-    expect(sourceMeta({ sourceUrl: 'https://example.com', sourceText: 'a b', kind: 'article' })).toBe('URL · 2 WORDS')
-    expect(sourceMeta({ sourceUrl: '', sourceText: 'a', kind: 'book' })).toBe('MANUAL · BOOK')
+    expect(sourceMeta({ sourceUrl: 'https://youtube.com/watch?v=x', sourceText: 'a b c d', kind: 'video' })).toBe('YouTube · 4 words')
+    expect(sourceMeta({ sourceUrl: 'https://example.com', sourceText: 'a b', kind: 'article' })).toBe('URL · 2 words')
+    expect(sourceMeta({ sourceUrl: '', sourceText: 'a', kind: 'book' })).toBe('Manual · book')
   })
 })
 
@@ -53,6 +53,6 @@ describe('labels', () => {
     expect(folderLabel('daily')).toBe('daily')
   })
   it('writes the finished date as the artboard does', () => {
-    expect(finishedOn('2026-08-12T10:00:00Z')).toBe('AUG 12')
+    expect(finishedOn('2026-08-12T10:00:00Z')).toBe('Aug 12')
   })
 })

@@ -11,7 +11,7 @@ import {
   upcomingCharges,
 } from '../data'
 import { percent } from '../money'
-import { spine } from '../series'
+import { spine } from '@/core/series'
 
 export type FinanceDigest = {
   netWorthCents: number

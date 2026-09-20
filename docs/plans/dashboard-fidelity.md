@@ -1,5 +1,8 @@
 # Dashboard to the artboard
 
+Superseded for styling on 2026-09-19 by the Holon redesign (docs/plans/holon-product-redesign.md, section 4): colour, type, radii, surfaces and control shapes now come from the Holon design contract and the shared components in `components/pos/`. This plan still governs what each screen shows and how it is laid out.
+
+
 ## Context
 
 Screen two of the fidelity pass (method and decisions: docs/plans/weekly-review-fidelity.md). `POS Dashboard.dc.html` was captured this session at 1440 in dark, light and arrange mode into `/private/tmp/pos-handoff-sources/dashboard/`. The artboard is nine tiles in a fixed default order on a three-column grid under a 56px header and a headline block; the app has the same header, headline block, grid and arrange mode, and its tile internals already follow the artboard's shapes loosely, but it draws eighteen tiles in digest order, its headline is the alerts sentence, and every tile is off the artboard by copy, right-hand metadata and a few measurements.

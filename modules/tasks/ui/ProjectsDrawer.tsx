@@ -66,12 +66,15 @@ export function ProjectsDrawer({
         </ActionButton>
       </form>
 
-      <div className="mt-4 flex flex-col gap-px border border-rule bg-rule">
+      <div className="glass mt-4 flex flex-col overflow-hidden rounded-[18px]">
         {projects.length === 0 && (
-          <p className="bg-bg px-3 py-4 text-[12px] text-ink-4">No projects yet.</p>
+          <p className="t-caption px-4 py-4 text-ink-4">No projects yet.</p>
         )}
         {projects.map((p) => (
-          <div key={p.id} className="flex flex-col gap-2 bg-bg px-3 py-2.5">
+          <div
+            key={p.id}
+            className="relative flex flex-col gap-2 px-4 py-3 before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-rule first:before:hidden"
+          >
             <InlineEdit
               value={p.name}
               label={`${p.name} name`}
@@ -111,7 +114,7 @@ export function ProjectsDrawer({
           </div>
         ))}
       </div>
-      <p className="mt-3 text-[11px] leading-[1.5] text-ink-2">
+      <p className="t-caption mt-3 text-ink-3">
         A task in a project counts toward its goal unless the task names its own.
       </p>
     </Overlay>

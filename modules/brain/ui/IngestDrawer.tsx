@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ActionButton, Eyebrow, Overlay, useToast } from '@/components/pos'
+import { ActionButton, Card, Eyebrow, Overlay, PillGroup, fieldClass, useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { KINDS, folderLabel } from '../shape'
 import { ingestFromUrl, saveNote } from './actions'
@@ -11,9 +11,6 @@ import type { SetParams } from './Brain'
 // spend one Haiku call and land in the inbox as a draft; Book and Note are the
 // owner's own words and save straight to their folder. PDF is not built: there
 // is no extractor and the Node runtime cannot run one.
-
-const FIELD =
-  'w-full border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand'
 
 type Kind = 'url' | 'youtube' | 'book' | 'note'
 
@@ -95,20 +92,13 @@ export function IngestDrawer({ setParams }: { setParams: SetParams }) {
           void submit()
         }}
       >
-        <div data-testid="brain-ingest-kinds" className="grid grid-cols-4 gap-px border border-rule bg-rule">
-          {(Object.keys(KIND_LABEL) as Kind[]).map((k) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => pick(k)}
-              className={cn(
-                'min-h-11 px-1.5 py-[9px] text-[12px] transition-colors duration-150 md:min-h-0',
-                kind === k ? 'bg-ink text-bg' : 'bg-bg text-ink-3 hover:text-ink',
-              )}
-            >
-              {KIND_LABEL[k]}
-            </button>
-          ))}
+        <div data-testid="brain-ingest-kinds">
+          <PillGroup
+            options={(Object.keys(KIND_LABEL) as Kind[]).map((k) => ({ value: k, label: KIND_LABEL[k] }))}
+            value={kind}
+            onChange={pick}
+            label="Kind"
+          />
         </div>
 
         {fromUrl ? (
@@ -120,7 +110,7 @@ export function IngestDrawer({ setParams }: { setParams: SetParams }) {
                 onChange={(e) => setUrl(e.target.value)}
                 disabled={running}
                 placeholder={kind === 'youtube' ? 'https://youtube.com/watch?v=…' : 'https://…'}
-                className={cn(FIELD, 'code')}
+                className={cn(fieldClass, 'code')}
               />
             </label>
             <p className="text-[12px] leading-[1.5] text-ink-3">
@@ -137,7 +127,7 @@ export function IngestDrawer({ setParams }: { setParams: SetParams }) {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder={kind === 'book' ? 'Designing Data-Intensive Applications · Kleppmann' : 'What is it about?'}
-                className={FIELD}
+                className={fieldClass}
               />
             </label>
             <label className="flex flex-col gap-1.5">
@@ -147,7 +137,7 @@ export function IngestDrawer({ setParams }: { setParams: SetParams }) {
                 onChange={(e) => setNotes(e.target.value)}
                 rows={6}
                 placeholder="Key ideas, quotes, what changed your mind…"
-                className={cn(FIELD, 'resize-y leading-[1.6]')}
+                className={cn(fieldClass, 'resize-y leading-[1.6]')}
               />
             </label>
           </>
@@ -155,7 +145,7 @@ export function IngestDrawer({ setParams }: { setParams: SetParams }) {
 
         <label className="flex flex-col gap-1.5 sm:w-[calc(50%-6px)]">
           <Eyebrow>Folder</Eyebrow>
-          <select value={folder} onChange={(e) => setFolder(e.target.value)} className={FIELD}>
+          <select value={folder} onChange={(e) => setFolder(e.target.value)} className={fieldClass}>
             {KINDS.map((k) => (
               <option key={k} value={k}>
                 {folderLabel(k)}
@@ -165,10 +155,10 @@ export function IngestDrawer({ setParams }: { setParams: SetParams }) {
         </label>
 
         {running && (
-          <div className="flex items-center gap-2.5 border border-brand px-3.5 py-3 text-[12px] text-ink">
+          <Card selected className="flex items-center gap-2.5 px-3.5 py-3 text-[12px]">
             <span className="status-dot" aria-hidden />
             Reading, drafting, classifying · a few seconds
-          </div>
+          </Card>
         )}
       </form>
     </Overlay>

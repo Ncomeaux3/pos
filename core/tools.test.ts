@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
 import { callTool, shouldGuard } from './tools'
 
@@ -56,6 +56,14 @@ describe('callTool and the digest', () => {
   beforeEach(async () => {
     await db().query(`delete from core.digests where module = 'ideas'`)
     await db().query('delete from core.settings')
+  })
+  // The write leaves an idea, its registry row and its event behind, and
+  // core/events.test.ts counts events; the file order follows cached
+  // durations, so it failed only on a laptop that had run the suite before.
+  afterAll(async () => {
+    await db().query(`delete from core.events where module = 'ideas'`)
+    await db().query(`delete from core.entities where module = 'ideas'`)
+    await db().query(`delete from ideas.idea where title = 'Digest follows the write'`)
   })
 
   async function newestIdeasDigest(): Promise<Date | null> {

@@ -3,15 +3,14 @@ import { cn } from '@/lib/utils'
 
 /**
  * The column headed table: Insurance, Finance accounts and upcoming, Home,
- * Health, Meals and Travel all draw one. It is not a Card. The prototypes sit
- * it flush on the page ground with hairline dividers and a tracked uppercase
- * header row, and wrapping it in a bordered box is what made those screens
- * read as a stack of panels instead of a ledger.
+ * Health, Meals and Travel all draw one. One glass surface with a label row
+ * and inset hairlines between rows.
  *
- * Grid rather than <table>, and the template only applies from `md` up. Below
- * that every cell stacks, which keeps the design rule that a row has to reflow
- * at 300px: a real table cannot, and neither can a grid track that is always
- * on.
+ * Grid rather than <table>, and the template only applies from `lg` up (768
+ * gave five columns about 700px and truncated every name). Below
+ * that the first cell (usually the date or the name) and the last (usually the
+ * amount) share one line and the cells between wrap under, which keeps the
+ * design rule that a row has to reflow at 300px.
  */
 export function DataTable({
   head,
@@ -29,20 +28,19 @@ export function DataTable({
   return (
     <div
       style={{ ['--cols' as string]: cols }}
-      className={cn('w-full overflow-x-auto', className)}
+      className={cn('glass w-full overflow-hidden rounded-[18px]', className)}
     >
       {/* No table/row/columnheader roles: they only mean anything inside a
           real table role, and half a table's ARIA is worse than none. The
           header is a visual key, and each row below is a button when it opens
           something, which is the thing a reader actually needs to operate. */}
-      {/* The artboards' column key: 11px at 0.08em on a 7px row over rule-2. */}
       <div
         aria-hidden
         data-table-head
-        className="hidden border-b border-rule-2 py-[7px] md:grid md:grid-cols-[var(--cols)] md:gap-x-4"
+        className="hidden border-b border-rule px-4 pb-2 pt-3 lg:grid lg:grid-cols-[var(--cols)] lg:gap-x-4"
       >
         {head.map((h, i) => (
-          <span key={i} className="label text-[11px] tracking-[0.08em] text-ink-3">
+          <span key={i} className="label text-ink-3">
             {h}
           </span>
         ))}
@@ -91,9 +89,16 @@ export function DataRow({
       }
       style={style}
       className={cn(
-        'flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-rule py-3.5 transition-colors duration-150 md:grid md:grid-cols-[var(--cols)]',
-        interactive && 'cursor-pointer hover:bg-bg-elev',
-        selected && 'border-brand bg-brand-soft',
+        'relative px-4 py-3 transition-colors duration-150 ease-[var(--ease)]',
+        'before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-rule first:before:hidden [[data-table-head]+&]:before:hidden',
+        // Phone: first and last cells share the top line, the rest wrap under.
+        'max-lg:grid max-lg:grid-cols-[auto_minmax(0,1fr)_auto] max-lg:gap-x-3 max-lg:gap-y-1',
+        'max-lg:[&>*:first-child]:col-start-1 max-lg:[&>*:first-child]:row-start-1',
+        'max-lg:[&>*:last-child]:col-start-3 max-lg:[&>*:last-child]:row-start-1 max-lg:[&>*:last-child]:text-right',
+        'max-lg:[&>*:not(:first-child):not(:last-child)]:col-start-2',
+        'lg:grid lg:grid-cols-[var(--cols)] lg:items-center lg:gap-x-4',
+        interactive && 'cursor-pointer hover:bg-glass-strong',
+        selected && 'bg-brand-soft before:hidden [&+*]:before:hidden',
         className,
       )}
     >

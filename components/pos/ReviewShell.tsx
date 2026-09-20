@@ -83,7 +83,7 @@ export function ReviewShell({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
-          <span className="label text-[10px] tracking-[0.12em] text-ink-3">{duration}</span>
+          <span className="label text-ink-3">{duration}</span>
           {themeToggle}
         </div>
       </header>
@@ -100,7 +100,7 @@ export function ReviewShell({
 
       <div className="flex justify-center px-[18px] md:px-7 pb-11 pt-10">
         <div className="w-full max-w-[760px]">
-          <p className="label text-[11px] tracking-[0.16em] text-brand">{kicker}</p>
+          <p className="label text-action">{kicker}</p>
           <h2 className="mt-4 text-pretty text-[clamp(26px,3vw,38px)] font-normal leading-[1.08] tracking-[-0.03em] text-ink">
             {title}
           </h2>
@@ -132,7 +132,7 @@ export function ReviewShell({
           {/* Six dashes, not a percentage bar. Clickable, because the steps are
               and a reader who can see where they are should be able to go
               there. */}
-          <nav aria-label="Review steps" className="mt-[26px] flex flex-wrap gap-1.5">
+          <nav aria-label="Review steps" className="mt-[14px] flex flex-wrap gap-1.5 sm:mt-[26px]">
             {steps.map((s, i) => (
               <button
                 key={s.key}
@@ -142,9 +142,11 @@ export function ReviewShell({
                 // Numbered, so "Close" the step and "Close the week" the
                 // button are distinguishable to anyone driving by name.
                 aria-label={`${String(i + 1).padStart(2, '0')} ${s.name}`}
+                // The dash is drawn by the pseudo element; the button itself
+                // is 44px tall on touch so a thumb can land on it.
                 className={cn(
-                  'h-[3px] w-[34px] transition-colors duration-150',
-                  i === index ? 'bg-brand' : i < index ? 'bg-ink-4' : 'bg-rule-2 hover:bg-ink-4',
+                  'relative h-11 w-[34px] before:absolute before:inset-x-0 before:top-1/2 before:h-[3px] before:-translate-y-1/2 before:transition-colors before:duration-150 before:content-[""] sm:h-3',
+                  i === index ? 'before:bg-brand' : i < index ? 'before:bg-ink-4' : 'before:bg-rule-2 hover:before:bg-ink-4',
                 )}
               />
             ))}
@@ -163,7 +165,7 @@ export function ReviewShell({
  * button beside them.
  */
 export const reviewField =
-  'h-11 min-w-0 border border-rule-2 bg-transparent px-[13px] text-[14px] text-ink ' +
+  'h-11 min-w-0 border border-rule-2 bg-transparent px-[13px] text-[14px] text-ink rounded-full ' +
   'outline-none placeholder:text-ink-4 focus-visible:border-brand'
 
 /**
@@ -183,7 +185,7 @@ export function GlanceCard({
   tone?: 'brand' | 'warn' | 'bad' | 'quiet'
 }) {
   return (
-    <div className="border border-rule-2 bg-bg-elev p-4">
+    <div className="border border-rule-2 bg-bg-elev p-4 rounded-[18px]">
       <span className="block text-[11px] leading-none text-ink-3">{label}</span>
       <span className="num mt-[9px] block text-[26px] font-light leading-none tracking-[-0.02em] text-ink">
         {value}
@@ -191,14 +193,14 @@ export function GlanceCard({
       {delta && (
         <span
           className={cn(
-            'mt-1.5 block text-[10px] leading-none',
+            'mt-1.5 block text-[12px] leading-none',
             tone === 'warn'
               ? 'text-warn'
               : tone === 'bad'
                 ? 'text-bad'
                 : tone === 'quiet'
                   ? 'text-ink-3'
-                  : 'text-brand',
+                  : 'text-action',
           )}
         >
           {delta}
@@ -247,7 +249,7 @@ export function ReviewRow({
       aria-pressed={selected}
       aria-label={label}
       className={cn(
-        'flex w-full flex-wrap items-center gap-x-3.5 gap-y-3 border px-4 py-[15px] text-left',
+        'flex w-full flex-wrap items-center gap-x-3.5 gap-y-3 border px-4 py-[15px] text-left rounded-full',
         'transition-colors duration-150 active:scale-[.985]',
         selected ? 'border-brand bg-brand-soft' : 'border-rule-2 bg-bg-elev hover:border-ink-4',
       )}
@@ -256,7 +258,7 @@ export function ReviewRow({
       <span className="min-w-0 flex-[1_1_200px]">
         <span className="block text-[15px] text-ink">{title}</span>
         {meta && (
-          <span className="mt-1 block text-[11px] uppercase tracking-[0.06em] text-ink-3">{meta}</span>
+          <span className="mt-1 block text-[11px] text-ink-3">{meta}</span>
         )}
       </span>
       {right}

@@ -1,6 +1,6 @@
 'use client'
 
-import { Eyebrow, Overlay } from '@/components/pos'
+import { MetricStrip, MetricTile, Overlay } from '@/components/pos'
 import type { TravelData } from './Travel'
 
 // A grey pin whose trip is gone, or never was: the place as itself. Every
@@ -13,18 +13,10 @@ export function PlaceDrawer({ place, onClose }: { place: TravelData['places'][nu
     : 'no date'
   return (
     <Overlay open onClose={onClose} eyebrow="Travel / Places" title={place.name} lede={place.country || undefined} narrow>
-      <div className="grid grid-cols-2 gap-px border border-rule bg-rule">
-        <div className="bg-bg px-3 py-2.5">
-          <Eyebrow>Visited</Eyebrow>
-          <div className="mt-1 text-[15px] text-ink">{visited}</div>
-        </div>
-        <div className="bg-bg px-3 py-2.5">
-          <Eyebrow>Where</Eyebrow>
-          <div className="mt-1 text-[15px] text-ink">
-            {place.lat.toFixed(2)}, {place.lon.toFixed(2)}
-          </div>
-        </div>
-      </div>
+      <MetricStrip>
+        <MetricTile size="sm" label="Visited" value={visited} />
+        <MetricTile size="sm" label="Where" value={`${place.lat.toFixed(2)}, ${place.lon.toFixed(2)}`} />
+      </MetricStrip>
       <p className="mt-3.5 text-[12px] text-ink-4">This place is not part of a trip.</p>
     </Overlay>
   )

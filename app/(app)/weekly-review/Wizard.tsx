@@ -7,11 +7,14 @@ import {
   EmptyState,
   Eyebrow,
   GlanceCard,
+  PillGroup,
   ReviewNote,
   ReviewRow,
   ReviewShell,
   reviewField,
+  StatusChip,
   useToast,
+  type ChipTone,
 } from '@/components/pos'
 import { useSearchState } from '@/components/pos/searchState'
 import { parseNumber } from '@/core/numbers'
@@ -31,7 +34,7 @@ import {
   type StepKey,
 } from '@/core/reviews-shape'
 import { cn } from '@/lib/utils'
-import { toggleTheme } from '../shell-actions'
+import { ThemeSwitch } from '@/components/pos/ThemeSwitch'
 import { close, save } from './actions'
 
 // Six steps over one set of answers. Every step writes into the same object and
@@ -288,15 +291,7 @@ export function Wizard({ data }: { data: WeekData }) {
       // The artboard's band has the theme button beside the duration, and
       // the sidebar has its own row; both go through the same setting.
       // 38px, the artboard's control height on desktop; 44 on a phone.
-      themeToggle={
-        <button
-          type="button"
-          onClick={() => start(() => toggleTheme(data.theme))}
-          className="label min-h-11 border border-rule-2 px-3.5 text-[11px] uppercase tracking-[0.12em] text-ink-2 transition-colors duration-150 hover:text-ink md:min-h-[38px]"
-        >
-          {data.theme === 'dark' ? 'Dark' : 'Light'}
-        </button>
-      }
+      themeToggle={<ThemeSwitch theme={data.theme} />}
       onBack={index > 0 ? () => setStep(STEPS[index - 1].key) : undefined}
       onNext={index === STEPS.length - 1 ? finish : () => setStep(STEPS[index + 1].key)}
       nextLabel={
@@ -365,7 +360,7 @@ export function Wizard({ data }: { data: WeekData }) {
                   <span
                     aria-hidden
                     className={cn(
-                      'size-4 shrink-0 border',
+                      'size-4 shrink-0 border rounded-full',
                       on ? 'border-brand bg-brand' : 'border-ink-3',
                     )}
                   />
@@ -375,10 +370,7 @@ export function Wizard({ data }: { data: WeekData }) {
                 right={
                   win.tag && (
                     <span
-                      className={cn(
-                        'label shrink-0 text-[10px]',
-                        on ? 'text-brand' : 'text-ink-3',
-                      )}
+                      className={cn('label shrink-0', on ? 'text-action' : 'text-ink-3')}
                     >
                       {win.tag}
                     </span>
@@ -396,10 +388,10 @@ export function Wizard({ data }: { data: WeekData }) {
               selected
               label={`Remove ${win}`}
               onClick={() => patch({ ownWins: answers.ownWins.filter((unused, j) => j !== i) })}
-              mark={<span aria-hidden className="size-4 shrink-0 border border-brand bg-brand" />}
+              mark={<span aria-hidden className="size-4 shrink-0 border border-brand bg-brand rounded-full" />}
               title={win}
               meta="Yours"
-              right={<span className="label shrink-0 text-[10px] text-ink-3">Remove</span>}
+              right={<span className="label shrink-0 text-ink-3">Remove</span>}
             />
           ))}
 
@@ -445,7 +437,7 @@ export function Wizard({ data }: { data: WeekData }) {
                   <div
                     key={miss.id}
                     className={cn(
-                      'border bg-bg-elev px-4 py-[15px]',
+                      'border bg-bg-elev px-4 py-[15px] rounded-[18px]',
                       action ? 'border-brand' : 'border-rule-2',
                     )}
                   >
@@ -465,38 +457,24 @@ export function Wizard({ data }: { data: WeekData }) {
                         </span>
                       </span>
 
-                      <span
-                        role="radiogroup"
-                        aria-label={`What happens to ${miss.title}`}
-                        className="flex shrink-0 flex-wrap gap-1.5"
-                      >
-                        {ACTIONS.map((a) => (
-                          <button
-                            key={a.value}
-                            type="button"
-                            role="radio"
-                            aria-checked={action === a.value}
-                            onClick={() => {
-                              // Clicking the chosen one again unsets it, which
-                              // is how the artboard behaves. Deleted rather
-                              // than set to undefined: the count of decisions
-                              // still owed is the count of keys.
-                              const next = { ...answers.missActions }
-                              if (action === a.value) delete next[miss.id]
-                              else next[miss.id] = a.value
-                              patch({ missActions: next })
-                            }}
-                            className={cn(
-                              'h-11 border px-3 text-[12px] transition-colors duration-150 active:scale-[.985] sm:h-8',
-                              action === a.value
-                                ? 'border-brand bg-brand-soft text-ink'
-                                : 'border-rule-2 text-ink-3 hover:text-ink',
-                            )}
-                          >
-                            {a.label}
-                          </button>
-                        ))}
-                      </span>
+                      <PillGroup
+                        label={`What happens to ${miss.title}`}
+                        options={ACTIONS}
+                        // An empty set rather than a blank value: nothing is
+                        // chosen until the owner picks.
+                        value={action ? [action] : []}
+                        onChange={(a) => {
+                          // Clicking the chosen one again unsets it, which
+                          // is how the artboard behaves. Deleted rather
+                          // than set to undefined: the count of decisions
+                          // still owed is the count of keys.
+                          const next = { ...answers.missActions }
+                          if (action === a) delete next[miss.id]
+                          else next[miss.id] = a
+                          patch({ missActions: next })
+                        }}
+                        className="shrink-0"
+                      />
                     </div>
 
                     {/* Carrying something needs no explanation. Dropping it or
@@ -534,12 +512,8 @@ export function Wizard({ data }: { data: WeekData }) {
             </EmptyState>
           ) : (
             data.checks.map((check) => {
-              const tone =
-                check.status === 'at_risk'
-                  ? 'text-warn'
-                  : check.status === 'stalled'
-                    ? 'text-bad'
-                    : 'text-brand'
+              const tone: ChipTone =
+                check.status === 'at_risk' ? 'warn' : check.status === 'stalled' ? 'bad' : 'brand'
               const bar =
                 check.status === 'at_risk'
                   ? 'bg-warn'
@@ -548,7 +522,7 @@ export function Wizard({ data }: { data: WeekData }) {
                     : 'bg-brand'
 
               return (
-                <div key={check.id} className="border border-rule-2 bg-bg-elev p-4">
+                <div key={check.id} className="border border-rule-2 bg-bg-elev p-4 rounded-[18px]">
                   <div className="flex flex-wrap items-baseline gap-x-3.5 gap-y-2.5">
                     <span className="min-w-0 flex-[1_1_220px]">
                       <span className="block text-[15px] text-ink">{check.title}</span>
@@ -557,9 +531,9 @@ export function Wizard({ data }: { data: WeekData }) {
                       </span>
                     </span>
                     {check.status && (
-                      <span className={cn('label shrink-0 text-[10px] tracking-[0.1em]', tone)}>
+                      <StatusChip tone={tone} className="shrink-0">
                         {STATUS_LABELS[check.status]}
-                      </span>
+                      </StatusChip>
                     )}
                   </div>
 
@@ -581,9 +555,9 @@ export function Wizard({ data }: { data: WeekData }) {
                       {check.movement !== null && check.movement !== undefined && (
                         <span
                           className={cn(
-                            'shrink-0 text-[10px]',
+                            't-caption shrink-0',
                             check.movement > 0
-                              ? 'text-brand'
+                              ? 'text-action'
                               : check.movement === 0
                                 ? 'text-ink-3'
                                 : 'text-bad',
@@ -611,9 +585,7 @@ export function Wizard({ data }: { data: WeekData }) {
                         className={cn(reviewField, 'flex-[1_1_240px]')}
                       />
                       {check.unit && (
-                        <span className="label self-center text-[10px] text-ink-3">
-                          {check.unit}
-                        </span>
+                        <span className="label self-center text-ink-3">{check.unit}</span>
                       )}
                     </div>
                   )}
@@ -635,7 +607,7 @@ export function Wizard({ data }: { data: WeekData }) {
             <span
               className={cn(
                 'num text-[11px]',
-                answers.picks.length >= MAX_PICKS ? 'text-brand' : 'text-ink-3',
+                answers.picks.length >= MAX_PICKS ? 'text-action' : 'text-ink-3',
               )}
             >
               {answers.picks.length} of {MAX_PICKS} picked
@@ -676,7 +648,7 @@ export function Wizard({ data }: { data: WeekData }) {
                       <span
                         aria-hidden
                         className={cn(
-                          'grid size-6 shrink-0 place-items-center border text-[10px]',
+                          'grid size-6 shrink-0 place-items-center border text-[11px] rounded-full',
                           on ? 'border-brand bg-brand text-white' : 'border-rule-2 text-ink-3',
                         )}
                       >
@@ -687,7 +659,7 @@ export function Wizard({ data }: { data: WeekData }) {
                     meta={item.meta}
                     right={
                       estimate(item.estimateMinutes) && (
-                        <span className="num shrink-0 text-[10px] text-ink-3">
+                        <span className="t-caption num shrink-0 text-ink-3">
                           {estimate(item.estimateMinutes)}
                         </span>
                       )
@@ -699,9 +671,7 @@ export function Wizard({ data }: { data: WeekData }) {
           )}
 
           <label className="mt-[22px] block">
-            <span className="label text-[10px] tracking-[0.12em] text-ink-3">
-              One sentence on next week
-            </span>
+            <span className="label text-ink-3">One sentence on next week</span>
             <input
               defaultValue={answers.intent}
               onBlur={(e) => patch({ intent: e.target.value })}
@@ -718,10 +688,10 @@ export function Wizard({ data }: { data: WeekData }) {
           {/* The note as it will be written, before it is written. The server
               renders these same blocks, so nothing is filed that was not read
               here first. */}
-          <div className="border border-rule-2 bg-bg-elev p-5">
+          <div className="border border-rule-2 bg-bg-elev p-5 rounded-[18px]">
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <Eyebrow>Week {data.weekNumber} note</Eyebrow>
-              <span className="label text-[10px] tracking-[0.12em] text-ink-3">
+              <span className="t-caption text-ink-3">
                 {data.noteTarget ? `Saves to ${data.noteTarget}` : 'Kept on the review'}
               </span>
             </div>
@@ -729,7 +699,7 @@ export function Wizard({ data }: { data: WeekData }) {
             <div className="mt-4 flex flex-col gap-3.5">
               {noteBlocks(answers, context).map((block) => (
                 <div key={block.head}>
-                  <p className="label text-[9px] tracking-[0.12em] text-brand">{block.head}</p>
+                  <p className="label text-action">{block.head}</p>
                   {block.lines.length === 0 ? (
                     <p className="py-[7px] text-[12px] text-ink-3">{block.empty}</p>
                   ) : (
@@ -753,9 +723,9 @@ export function Wizard({ data }: { data: WeekData }) {
             {outcomes.map((outcome) => (
               <div
                 key={outcome.tag}
-                className="min-w-0 flex-[1_1_200px] border border-rule-2 bg-bg p-3.5"
+                className="min-w-0 flex-[1_1_200px] border border-rule-2 bg-bg p-3.5 rounded-[18px]"
               >
-                <p className="label text-[9px] tracking-[0.12em] text-brand">{outcome.tag}</p>
+                <p className="label text-action">{outcome.tag}</p>
                 <p className="mt-2 text-[13px] leading-[1.5] text-ink-2">{outcome.text}</p>
               </div>
             ))}

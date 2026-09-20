@@ -83,7 +83,7 @@ connected, because each needs an account only you have.
       fine-grained token with Contents: Read-only on that one repo. The client
       has no write path, so a write scope would be pure downside. Connect on
       Settings; Test names the repo and its markdown count.
-- [ ] **13. SimpleFIN**, about $1.50 a month. Subscribe at bridge.simplefin.org,
+- [x] **13. SimpleFIN**, about $1.50 a month. Connected by you before 2026-09-20 (verify: the date is not recorded; the Connections card shows it). Subscribe at bridge.simplefin.org,
       connect your banks there, paste the setup token. The token is claimed
       once and cannot be reclaimed, so the claim happens on save; Test only
       reads and is safe to repeat.
@@ -99,15 +99,18 @@ Two sources are built and live in production (PRs #17, #18, #19, all
       Body, then add the rest of the keys. Then the daily 7:00 AM automation.
       Tell me what the run returns; the one place the recipe may not match
       your iOS is the Request Body control in Get Contents of URL.
-- [ ] **15. Workouts.** Native Shortcuts cannot read them (checked on your
+- [x] **15. Workouts.** Connected 2026-09-18 and 90 days backfilled the same day (docs/SETUP-INTEGRATIONS.md, Backfill history). Native Shortcuts cannot read them (checked on your
       phone 2026-09-13: Find Health Samples has no Workouts type). When you
       want workouts in POS: Health Auto Export, Premium for one month ($1.99),
       its webhook is already built and tested. Copy the URL and secret from
       its Connections card into the app's REST automation as the
       `x-pos-secret` header, enable Workouts (export version 2), run once,
-      cancel the subscription after if you like. Or say the word and I plan a
-      native iOS companion app (exact, but a new codebase and a $99 a year
-      developer account).
+      cancel the subscription after if you like. Also export the same payload
+      to a file (the app's share sheet) and drop it in the chat: the request
+      log keeps no body, and that JSON is the fixture Phase 11 left open for
+      `integrations/health_auto_export/client.test.ts`. Or say the word and I
+      plan a native iOS companion app (exact, but a new codebase and a $99 a
+      year developer account).
 
 ## Left over from the first run
 
@@ -186,6 +189,44 @@ in it is easy to get wrong in a way that looks like a bug six days later.
       Every claim here is marked verify. Google's documentation domains were
       blocked by the proxy when this was researched, so it rests on secondary
       sources. Check the console before trusting the 7-day figure.
+
+## Holon release, on your phone (after the `holon` to `main` merge)
+
+- [ ] **23. Check the installed app on the phone**, about 10 minutes, once. The
+      redesign was verified in a desktop browser at phone width, not on the
+      device, so these are the checks only a phone can make. Open the Home
+      Screen app (or reinstall it if the icon or name did not update): the
+      icon is the Holon knot on charcoal and the splash the kit one; the app follows the
+      phone's light or dark setting until you pick one in the rail footer;
+      the tab bar clears the home indicator; a drawer's footer stays above
+      the keyboard when a field inside it is focused (Tasks, new task; Meals,
+      log a meal); the Today page, the tasks board and a task drawer scroll
+      without a sideways wobble; a pull on a sheet's handle closes it. If
+      the old icon shows after a reinstall, the phone cached the manifest:
+      remove the app, clear the site in Safari settings, add it again.
+
+## v1.2, in the order the phases need them (docs/plans/pos-v1-2.md)
+
+- [ ] **24. Make the iCloud calendars public and paste their URLs**, free,
+      5 minutes, before Phase 7b. Calendar.app, right click a calendar,
+      Get Info, tick Public Calendar, copy the `webcal://` URL, paste it into
+      the ICS card in Settings > Connections. One URL per calendar. A public
+      calendar is readable by anyone with the URL, so use it for the ones you
+      would put on a shared screen and skip the rest.
+- [ ] **25. Install the Reminders Shortcut**, free, 10 minutes, before Phase
+      7b. The exact Shortcut steps land in docs/SETUP-INTEGRATIONS.md with the
+      phase; it posts your open reminders to the app's webhook with a shared
+      secret from the Connections card.
+- [ ] **26. USDA FoodData Central key**, free, 2 minutes, before Phase 12.
+      api.data.gov, request a key with your email, paste it into the USDA
+      card in Settings > Connections.
+- [ ] **27. Run "Pull 90 days" on Finance** after Phase 5a deploys and
+      compare one account's transaction count with the bank's own list for
+      the same window. Tell me the two numbers.
+- [ ] **28. Label three emails `POS` in Gmail** after Phase 7c deploys (a
+      reservation, a bill, an invite) and check the proposals on Review.
+- Step 22 (Google Cloud project) moves up: it is needed before Phase 7a, not
+  v2 phase 5, and gains the Calendar read scope beside Gmail's.
 
 ## Decisions I would like from you
 

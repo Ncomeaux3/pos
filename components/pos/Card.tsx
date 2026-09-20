@@ -2,32 +2,33 @@ import type { ComponentProps, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { Eyebrow, type DotTone } from './text'
 
-/** 1px rule-2 on bg-elev, 16px vertical and 20px horizontal padding, no radius.
- * The container for everything. The padding is measured off the prototypes,
- * which run `16px 20px`; a flat 16px was squeezing every card's contents
- * against its border. */
+/** A glass surface with an 18px radius and `16px 20px` padding: the container
+ * for a summary or a form, never for a single row. */
 export function Card({
   children,
   className,
   selected,
+  as: Tag = 'div',
   ...rest
 }: ComponentProps<'div'> & {
   children: ReactNode
   className?: string
   /** 1px accent border plus soft fill. Never opacity. */
   selected?: boolean
+  /** `article` when the card is one record in a list, as the idea cards are. */
+  as?: 'div' | 'article'
 }) {
   return (
-    <div
+    <Tag
       {...rest}
       className={cn(
-        'border bg-bg-elev px-5 py-4',
-        selected ? 'border-brand bg-brand-soft' : 'border-rule-2',
+        'glass rounded-[18px] px-5 py-4',
+        selected && 'bg-brand-soft ring-1 ring-action',
         className,
       )}
     >
       {children}
-    </div>
+    </Tag>
   )
 }
 
@@ -51,9 +52,7 @@ export function CardHead({
     <div className={cn('flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1', className)}>
       <Eyebrow dot={dot}>{label}</Eyebrow>
       {meta && (
-        <span className={cn('text-[11px] text-ink-3', !plainMeta && 'label tracking-[0.1em]')}>
-          {meta}
-        </span>
+        <span className={cn('text-[12px] text-ink-3', !plainMeta && 'label')}>{meta}</span>
       )}
     </div>
   )
@@ -69,25 +68,27 @@ const DELTA: Record<DeltaTone, string> = {
 }
 
 /**
- * The KPI strip: one bordered container whose cells are divided by hairlines,
- * not a row of separate cards with gaps between them. Every prototype that
- * carries KPIs draws them joined, and the 1px `gap` over a `--rule-2` ground is
- * what makes the dividers survive wrapping, which `divide-x` does not.
+ * The KPI strip: one glass surface whose cells are divided by hairlines, not a
+ * row of separate cards with gaps between them. The 1px `gap` over the rule
+ * colour is what makes the dividers survive wrapping, which `divide-x` does not.
  */
 export function MetricStrip({
   children,
   className,
-}: {
+  ...rest
+}: ComponentProps<'div'> & {
   children: ReactNode
   className?: string
 }) {
   return (
     <div
+      {...rest}
       className={cn(
         // Two up on a phone. One per row put a 34px number in a full width
         // block and pushed everything else off the screen; the phone artboard
         // lays its KPIs out `1fr 1fr` and steps the numbers down to 24.
-        'grid grid-cols-2 gap-px border border-rule-2 bg-rule-2 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,170px),1fr))]',
+        'glass grid grid-cols-2 gap-px overflow-hidden rounded-[18px] sm:grid-cols-[repeat(auto-fit,minmax(min(100%,170px),1fr))]',
+        '[&>*]:shadow-[-1px_-1px_0_var(--rule)]',
         className,
       )}
     >
@@ -111,6 +112,8 @@ export function MetricStrip({
  * on a screen and how loud it is belongs to the screen.
  */
 const METRIC_SIZE = {
+  /** A short string rather than a number: a cron line, "Ok · 04:00 · 12 jobs". */
+  xs: 'text-[14px] font-medium',
   sm: 'text-[24px]',
   md: 'text-[24px] sm:text-[30px]',
   lg: 'text-[24px] sm:text-[34px]',
@@ -121,6 +124,7 @@ export function MetricTile({
   value,
   delta,
   deltaTone = 'quiet',
+  valueTone,
   size = 'md',
   className,
   children,
@@ -129,17 +133,20 @@ export function MetricTile({
   value: ReactNode
   delta?: ReactNode
   deltaTone?: DeltaTone
+  /** Colours the number itself, as Finance's 30-day change and a stalled goal read. */
+  valueTone?: Exclude<DeltaTone, 'quiet'>
   size?: keyof typeof METRIC_SIZE
   className?: string
   /** A sparkline or bar, rendered under the delta. */
   children?: ReactNode
 }) {
   return (
-    <div className={cn('flex flex-col gap-2 bg-bg-elev px-4 py-3.5 sm:px-5 sm:py-4', className)}>
+    <div className={cn('flex flex-col gap-2 px-4 py-3.5 sm:px-5 sm:py-4', className)}>
       <Eyebrow>{label}</Eyebrow>
       <p
         className={cn(
-          'num font-light tracking-[-0.02em] text-ink',
+          'num font-semibold tracking-[-0.025em]',
+          valueTone ? DELTA[valueTone] : 'text-ink',
           METRIC_SIZE[size],
           // After the size: tailwind-merge drops a leading-* that precedes a
           // text size, since Tailwind's own sizes carry a line-height.
@@ -149,7 +156,7 @@ export function MetricTile({
         {value}
       </p>
       {delta && (
-        <p className={cn('label text-[10px] tracking-[0.1em]', DELTA[deltaTone])}>{delta}</p>
+        <p className={cn('text-[12px]', DELTA[deltaTone])}>{delta}</p>
       )}
       {children}
     </div>

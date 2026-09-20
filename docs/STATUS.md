@@ -3,9 +3,32 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session; the paragraph below names the plan that comes next.
 
-**Queued after v1.1: docs/plans/skills-v2.md** (2026-09-15, six phases from the owner's Skill Tree rewrite in docs/SKILLS.md: the nine-attribute tree, per-event XP snapshots, projects, challenges and achievements, the digest, the screen). Not started.
+**Current plan: docs/plans/pos-v1-2.md** (2026-09-20). Sixteen phases from
+the owner's first day on Holon: the digest and passkey diagnosed, the reported
+module bugs, an Errors tab, an affordance and contrast pass behind a mockup
+gate, required-field errors and keyboard submit, Finance re-pulled with
+transfer and credit categories and three new views, a Calendar module fed by
+every module and by Google, Apple and Gmail read-only, recurring tasks,
+manual entry on every module, and a semver release with notes. Decisions in
+decisions/log.md under 2026-09-20. docs/plans/fitness-workout-detail.md
+(approved #98) runs inside its Phase 8 slot as its own two PRs. Version
+scheme starts here: `package.json` is 1.1.0 and today's main is tagged
+v1.1.0 after this PR merges; this plan ships v1.2.0.
 
-**Next plan: docs/plans/pos-v1-1.md** (2026-09-14, from /adopt-repo). Twelve
+**Holon shipped 2026-09-20.** docs/plans/holon-product-redesign.md, Phases 0
+to 7 (#74, #76, #79, #82, #83, #86, #88, #91, #93, with `main` synced in by
+#92 and #94), released to `main` as merge commit edcb1ad (#95) and deployed.
+After it on `main`: #97 (Health Auto Export needs two automations), #98 (the
+fitness plan), #99 (the collapsed rail centres its icons and the theme
+control fits). One owner check stays on the phone (OWNER-TODO 23).
+docs/plans/phone-polish.md (2026-09-14) is done: all five items are in the
+code (`aria-labelledby` from the eyebrow in Overlay, `phoneLimit` in Inbox,
+`md:min-w` on the Tasks Calendar, `max-md:bottom` on the globe legend, the
+trip drawer footer on `ink-2`). v1.1 below is complete.
+
+**Queued after v1.2: docs/plans/skills-v2.md** (2026-09-15, six phases from the owner's Skill Tree rewrite in docs/SKILLS.md: the nine-attribute tree, per-event XP snapshots, projects, challenges and achievements, the digest, the screen). Not started.
+
+**Previous plan: docs/plans/pos-v1-1.md** (2026-09-14, from /adopt-repo). Twelve
 phases from the owner's first week of live use: diagnosis and small bugs, the
 notes stub deleted, server and client speed, dashboard layout and freshness,
 goals > projects > tasks, the skill picker, skill tree gestures, travel
@@ -15,7 +38,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-15 (Phase 7b). Branch `main`, production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-20 (Holon released, v1.2 plan written). Branch `main`, production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -40,6 +63,94 @@ and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
 ## Done
+
+**Apple Health, nine months in, and what the data surfaced** (2026-09-19,
+five small PRs off main, each merged the same morning). The owner's manual
+Health Auto Export of 2026-01-01 to 2026-09-19 (64 MB, 58 metrics, 217
+workouts) went through `scripts/hae-backfill.mts` twice: once after #84 and
+again after #89. Every mapped metric arrived in the units the parser expects.
+#84: sleep stores the smaller of the `sleepStart` to `sleepEnd` span and the
+summed hours and skips a night over 14 h in both (Eight Sleep inflates each
+on different nights; 10 of 225 skipped), and pool swims arrive in yards.
+#85: the Recent workouts head counts Apple Health rows as APPLE HEALTH
+rather than BY HAND, a trend whose readings never go below zero keeps its
+axis at zero, and `strength` joins the Strength keywords so Apple's
+"Traditional Strength Training" places by rule. #87: the workout list pages
+by 40 with Show more and the tab badge counts every workout; swims read in
+yards with pace per 100 yd. #89: `distance_m` is `numeric(10,2)` (a 625 yd
+swim read as 626 from whole metres), pushed by the owner before the merge.
+Then this branch: `SyncBand`'s clocks and the workout list's dates were
+formatted in the renderer's zone, which on Vercel is UTC, so the band said
+"arrived 16:44" for an 11:44 arrival and a load that hydrated differently
+logged React #418; both now take the owner's timezone from `core.settings`
+through `core/clock.ts`, a pure module a client component can import. Two
+stale sleep rows from the 09-18 import (nights the new rule skips, so the
+upsert never touched them) were deleted by hand in the dashboard SQL editor.
+Verified on production after each merge: 217 workouts, steps high 32,193,
+swims 600 to 750 yd exact, sleep 365-day high 13h39m.
+
+**v1.1 Phase 12, hardening** (2026-09-15, branch `phase-12-hardening`). The
+last v1.1 phase; the plan is complete once its PR merges. `app/error.tsx` and
+`app/global-error.tsx` show the headline, Next's digest and a Try again over
+`retry()`. The `check` CI job runs `pnpm audit --prod --audit-level=high`
+after install. Main is protected: `check`, `screens` and `migrations` must be
+green, admins included, so GitHub refuses a red merge where the rule was
+manual before. `maxDuration` is 60 on the MCP route and 30 on the webhook and
+both OAuth routes. `backup.yml` mirrors every storage bucket into
+`storage/` of pos-backups beside the dumps, which needs two repo secrets the
+owner adds, `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF`; the first
+04:10 UTC run after that proves it. docs/RESTORE.md carries the restore
+command (drilled against the local stack) and docs/SETUP-SUPABASE.md a
+Rotating a secret table. After this: OWNER-TODO steps 12 to 16, then
+docs/plans/skills-v2.md.
+
+**v1.1 Phase 11, fitness** (2026-09-15, branch `phase-11-fitness`). The
+net worth chart's drawing is now `components/pos/LineChart.tsx` (its own
+client file, the crosshair needs state) over `spine()` in `core/series.ts`,
+with `NetWorthChart` a wrapper that passes the money formatters. Fitness gains
+a Trends tab (metric select, 30/90/365, weight's thirty days rendered with the
+page and the rest through `readMetricSeries`), a filter row on Workouts
+(kind, source, from, to; the URL written locally, the rows from
+`readWorkouts` over the same `screenWorkouts()` the page renders from), a
+`PlanDrawer` over `write_plan` through `callTool` (New plan on the empty
+state, Edit on the card head; item notes carried, not edited), and the band's
+"Apple data last arrived <when>" from `core.request_log` on its own line
+beside Strava's clock. The demo seed writes 14 weight readings over 40 days.
+Four e2e tests: Trends counts 10 of 30 and 14 of 90 recorded, the filter
+narrows and survives a reload, the plan drawer adds a day and removes it, and
+a weight posted to the Health Auto Export webhook (secret read from the
+Connections card) shows on `/health` and moves the band's Apple line. Health
+Auto Export connected by the owner 2026-09-18, and the same day a 90-day manual
+export (2026-06-20 to 2026-09-18) went through `scripts/hae-backfill.mts` (#75):
+the app's REST automation cannot send a custom range, so history is a manual
+export posted a month per request with workout series stripped. The real
+payload corrected two guesses: sleep is the `sleepStart` to `sleepEnd` span
+(Eight Sleep's overlapping records made `totalSleep` two to three times the
+night) and stand hours read `apple_stand_hour`, not `apple_stand_time`
+(minutes). Verified on production: 39 workouts, steps and sleep unbroken over
+90 days. Known: two zero rows from earlier tests (weight, body fat) and the
+fitness goal tile printing its value unrounded. Phase 12 (hardening) is the
+last v1.1 phase.
+
+**Health Auto Export backfill, argument handling and a sleep report**
+(2026-09-18, branch `claude/review-merge-open-prs-ccceog`). Two fixes to what
+PR #75 shipped. `scripts/hae-backfill.mts` parsed its arguments by taking the
+first token that did not begin with `--`, so `--url <url> export.json` read the
+URL as the export file, and a misspelled `--dryrun` was ignored and the export
+went to production for real; `parseArgs` in the lib now consumes `--url`'s value
+and refuses a flag it does not know. `--sleep` prints every sleep point in an
+export with its span, the hours the app summed, time in bed and the minutes the
+webhook would store for that day, and sends nothing. It runs `toBodyMetrics`
+itself, so it prints what would be stored rather than a second implementation of
+it. Still open, and the reason the report exists: the real export's nights ran
+297 to 1098 minutes, and 1098 is 18.3 hours. The report names the cause, because
+a day carrying two sleep points keeps the last of them, so an afternoon nap can
+outrank the night it shares a date with, while a single point means the span
+itself is that long. Resolved 2026-09-19 against the nine-month export
+(2026-01-01 to 2026-09-19, 58 metrics, 217 workouts): every mapped metric
+arrived in the units the parser expects; sleep now stores the smaller of the
+span and the summed hours and skips a night over 14 h in both (10 of 225
+nights, all Eight Sleep); pool swims arrive in yards and were stored as 0 m.
 
 **v1.1 Phase 7b, skill picker, remaining drawers** (2026-09-15, branch
 `phase-7b-skill-picker-rest`). The same `SkillPicker` block on the trip,
@@ -81,8 +192,8 @@ causes: `PullToRefresh` listens on `document`, `useEdgeBack` on `window`, and
 their midpoint, 4 px slop, no pointer capture so a star tap still selects.
 `pinch()` in `modules/skills/ui/view.ts` is unit tested (scale, midpoint held,
 clamp, identity when the fingers share a point). The mobile e2e covers the
-one-finger half. Not verified: the pinch itself on a real phone (Playwright
-cannot send two touches) and the ui-verifier pass at 402 and 1440.
+one-finger half. Pinch confirmed on the owner's phone 2026-09-18 (Playwright cannot
+send two touches). Not verified: the ui-verifier pass at 402 and 1440.
 
 **v1.1 Phase 6, goals, projects, tasks** (2026-09-15, branch
 `phase-6-projects-goals`). `tasks.project.goal_ref` (migration

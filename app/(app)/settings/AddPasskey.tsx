@@ -18,7 +18,7 @@ function messageFor(error: unknown): string | null {
 
   // The owner dismissed the sheet, or it timed out. Not a failure to report.
   if (name === 'NotAllowedError' || name === 'AbortError') return null
-  if (code === 'webauthn_credential_exists') return 'This device already has a passkey for POS.'
+  if (code === 'webauthn_credential_exists') return 'This device already has a passkey for Holon.'
   if (code === 'too_many_passkeys') return 'That is as many passkeys as this account can hold.'
   return error instanceof Error ? error.message : 'That did not work.'
 }

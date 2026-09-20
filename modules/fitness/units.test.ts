@@ -8,6 +8,7 @@ import {
   mass,
   pace,
   screenState,
+  shortDate,
   sourcesLabel,
   toGrams,
   whenLabel,
@@ -29,10 +30,33 @@ describe('mass', () => {
   })
 })
 
+describe('shortDate', () => {
+  it('dates a row in the owner\'s zone, not the renderer\'s', () => {
+    // 20:30 on Sep 12 in Chicago is 01:30 on Sep 13 in UTC, where the server runs.
+    expect(shortDate('2026-09-13T01:30:00.000Z', 'America/Chicago')).toBe('Sep 12')
+    expect(shortDate('2026-09-13T01:30:00.000Z', 'UTC')).toBe('Sep 13')
+  })
+})
+
 describe('distance', () => {
-  it('switches to kilometres when that is the readable number', () => {
-    expect(distance(820)).toBe('820 m')
-    expect(distance(5100)).toBe('5.1 km')
+  it('reads in miles, because the owner reads imperial', () => {
+    // 5,100 m is the 5 km run Health Auto Export sent as 3.17 mi.
+    expect(distance(5100)).toBe('3.17 mi')
+    expect(distance(1609.344)).toBe('1.00 mi')
+  })
+
+  it('switches to feet under a tenth of a mile', () => {
+    expect(distance(100)).toBe('328 ft')
+  })
+
+  it('still renders metric when asked for it', () => {
+    expect(distance(820, 'km')).toBe('820 m')
+    expect(distance(5100, 'km')).toBe('5.1 km')
+  })
+
+  it('reads a pool swim in yards', () => {
+    // 700 yd, as the pool measures it and Apple Health sent it.
+    expect(distance(640.08, 'yd')).toBe('700 yd')
   })
 
   it('says nothing for a workout that covered no ground', () => {
@@ -48,16 +72,27 @@ describe('duration', () => {
 })
 
 describe('pace', () => {
-  it('is minutes and seconds per kilometre', () => {
+  it('is minutes and seconds per mile', () => {
+    // 5,100 m is 3.17 mi, and 51 minutes over it is 16:06/mi.
+    expect(pace(5100, 3060)).toBe('16:06/mi')
+    // 6,400 m is 3.98 mi, and 50 minutes over it is 12:34/mi.
+    expect(pace(6400, 3000)).toBe('12:34/mi')
+  })
+
+  it('still renders metric when asked for it', () => {
     // 5.1 km in 51 minutes is 10:00/km.
-    expect(pace(5100, 3060)).toBe('10:00/km')
-    // 6.4 km in 50 minutes is 7:49/km.
-    expect(pace(6400, 3000)).toBe('7:49/km')
+    expect(pace(5100, 3060, 'km')).toBe('10:00/km')
+  })
+
+  it('paces a swim per hundred yards', () => {
+    // 700 yd in 20:25 is 2:55 per 100 yd.
+    expect(pace(640.08, 1225, 'yd')).toBe('2:55/100yd')
   })
 
   it('never produces a time ending in sixty seconds', () => {
-    // Naive rounding of 479.6 seconds per km gives 7:60, which is not a time.
-    expect(pace(1000, 479.6)).toBe('8:00/km')
+    // Naive rounding of 479.6 seconds per mile gives 7:60, which is not a time.
+    expect(pace(1609.344, 479.6)).toBe('8:00/mi')
+    expect(pace(1000, 479.6, 'km')).toBe('8:00/km')
   })
 
   it('says nothing when there is no distance to divide by', () => {
@@ -109,20 +144,23 @@ describe('load', () => {
 
 describe('the overview labels', () => {
   it('names when a set happened', () => {
-    expect(whenLabel('2026-09-12T18:00:00.000Z', '2026-09-12')).toBe('TODAY')
-    expect(whenLabel('2026-09-11T18:00:00.000Z', '2026-09-12')).toBe('YESTERDAY')
-    expect(whenLabel('2026-09-04T18:00:00.000Z', '2026-09-12')).toBe('SEP 04')
+    expect(whenLabel('2026-09-12T18:00:00.000Z', '2026-09-12')).toBe('Today')
+    expect(whenLabel('2026-09-11T18:00:00.000Z', '2026-09-12')).toBe('Yesterday')
+    expect(whenLabel('2026-09-04T18:00:00.000Z', '2026-09-12')).toBe('Sep 04')
   })
 
   it('prints the week in hours and minutes', () => {
-    expect(hoursLabel(222)).toBe('3H 42M')
-    expect(hoursLabel(51)).toBe('51M')
-    expect(hoursLabel(120)).toBe('2H 00M')
+    expect(hoursLabel(222)).toBe('3h 42m')
+    expect(hoursLabel(51)).toBe('51m')
+    expect(hoursLabel(120)).toBe('2h 00m')
   })
 
   it('counts where the rows came from and drops zeros', () => {
-    expect(sourcesLabel([{ source: 'strava' }, { source: 'demo' }, { source: 'manual' }])).toBe('1 STRAVA · 2 BY HAND')
-    expect(sourcesLabel([{ source: 'demo' }])).toBe('1 BY HAND')
+    expect(sourcesLabel([{ source: 'strava' }, { source: 'demo' }, { source: 'manual' }])).toBe('1 Strava · 2 by hand')
+    expect(
+      sourcesLabel([{ source: 'health_auto_export' }, { source: 'apple_shortcuts' }, { source: 'manual' }]),
+    ).toBe('2 Apple Health · 1 by hand')
+    expect(sourcesLabel([{ source: 'demo' }])).toBe('1 by hand')
     expect(sourcesLabel([])).toBe('')
   })
 

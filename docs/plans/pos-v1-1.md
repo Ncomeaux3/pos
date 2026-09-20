@@ -16,11 +16,11 @@ Order: bugs first, then speed, then features, fitness, hardening. Phases marked 
 | 6 Goals, projects, tasks | Projects link to goals, tasks inherit, project UI, per-view plus, any due date | high | 8, 9, 10 | 4 | Done 2026-09-15: one coalesce for the board and the linked seam, write_project and a Projects drawer, per-column plus, native date; migration pushed | #62 |
 | 7a Skill picker, core | link/unlink tools, one reader, one component; tasks, goals, ideas, brain | medium | 8, 9, 10 | 6 | Done 2026-09-15: `skills.link` and `skills.unlink`, `core/skill-links.ts` as the one reader (fitness's `fitnessGoal` reads through it too), `SkillPicker` on the four drawers with per-chip badges | #68 |
 | 7b Skill picker, rest | Trip, policy, recipe, workout, home, health drawers | low | 8, 9, 10 | 7a | Done 2026-09-15: the block on six drawers and under an expanding workout row, no data file touched | #70 |
-| 8 Skill tree gestures | Phone drag and pinch behave like the globe | medium | 1 to 7, 9, 10 | none | Done 2026-09-15: `data-gesture-surface` opts both canvases out of pull-to-refresh and edge-back, the globe's pointers Map ported, pinch() unit tested; owner still to confirm pinch on the phone | #65 |
+| 8 Skill tree gestures | Phone drag and pinch behave like the globe | medium | 1 to 7, 9, 10 | none | Done 2026-09-15: `data-gesture-surface` opts both canvases out of pull-to-refresh and edge-back, the globe's pointers Map ported, pinch() unit tested; pinch confirmed on the phone by the owner 2026-09-18 | #65 |
 | 9 Travel destinations | Multi-destination trips, all pinned, merge into | high | 1 to 8, 10 | none | Done 2026-09-15 in three PRs, migration pushed: destinations table, write_trip, pins, places, digest, merge_trip tool with the Merge into select, multi-row TripForm, and the e2e through a merge | #59, #60, #69 |
 | 10 Finance chart | Net worth on a 30-day date axis with the average | low | 1 to 9 | none | Done 2026-09-15: spine() on a date axis, nulls break the line, padded y, stats over recorded days. The LineChart extraction and the two-day e2e were not done and moved to Phase 11, which is the phase that needs them | #57 |
-| 11 Fitness | Trends, history filters, plan form, Apple arrival on Sync | high | none | 10, 7b | Not started | |
-| 12 Hardening | error pages, audit step, branch protection, route limits, rotation doc | low | none | all | Not started | |
+| 11 Fitness | Trends, history filters, plan form, Apple arrival on Sync | high | none | 10, 7b | Done 2026-09-15: LineChart extracted with spine() in core, Trends over 30/90/365, the filter row, PlanDrawer over write_plan, Apple arrival on the band from the request log. Health Auto Export connected 2026-09-18; the first real export fixed sleep (span, not summed hours) and stand hours, and added the month-chunked backfill script | #71, #75 |
+| 12 Hardening | error pages, audit step, branch protection, route limits, rotation doc | low | none | all | Done 2026-09-15: error.tsx and global-error.tsx with the digest and retry, pnpm audit in the check job, main protected on check, screens and migrations, maxDuration on MCP, webhook and OAuth, storage buckets mirrored by the backup, rotation table | |
 
 Every UI phase's exit checks include: `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build` pass; an e2e in `e2e/screens.spec.ts` for the flow (workers 1, never overridden); ui-verifier at 402 and 1440 px with no Must fix; spec-reviewer before the PR. Not repeated per phase.
 
@@ -260,12 +260,12 @@ Complexity: low
 Parallel-safe with: 1 to 9
 Files: new `modules/finance/series.ts` and `series.test.ts`, `modules/finance/data.ts`, `modules/finance/ui/Finance.tsx`, `modules/finance/ui/Tile.tsx`, `modules/finance/jobs/nightly-digest.ts`, `components/pos/charts.tsx`.
 
-- [ ] Test first: `spine(points, days, todayIso)` returns `days` entries back from today, known values in place, earlier days null, gaps after the first point filled forward; average over known points only.
-- [ ] `netWorthSeries` stays the raw read; `FinancePage` and the digest call `spine()`; the digest's `netWorthSeries` becomes the spined dollars (nulls kept); `changeCents` compares against the first known point.
-- [ ] `NetWorthChart`: x by day index over 30; nulls break the line; y padded 5 percent each side, a flat series drawn mid-height; `EmptyState` only under 1 known point; High, Low, Avg from known points; an average line.
+- [x] Test first: `spine(points, days, todayIso)` returns `days` entries back from today, known values in place, earlier days null, gaps after the first point filled forward; average over known points only.
+- [x] `netWorthSeries` stays the raw read; `FinancePage` and the digest call `spine()`; the digest's `netWorthSeries` becomes the spined dollars (nulls kept); `changeCents` compares against the first known point.
+- [x] `NetWorthChart`: x by day index over 30; nulls break the line; y padded 5 percent each side, a flat series drawn mid-height; `EmptyState` only under 1 known point; High, Low, Avg from known points; an average line.
 - [~] Extract axis and line into `LineChart` in `components/pos/charts.tsx` (dates, values with nulls, unit formatter, height) so Phase 11 reuses it; `NetWorthChart` becomes a thin wrapper. Not done here, moved to Phase 11: `NetWorthChart` is the only caller until Trends exists, and extracting a shared component against one caller guesses at what the second one needs.
-- [ ] `Tile.tsx`: `Sparkline` takes the spined series with nulls skipped; hidden only with no known point.
-- [ ] e2e: seed two `balance_daily` days; the polyline has two points at x 28/29 and 29/29 of the width.
+- [x] `Tile.tsx`: `Sparkline` takes the spined series with nulls skipped; hidden only with no known point.
+- [~] e2e: seed two `balance_daily` days; the polyline has two points at x 28/29 and 29/29 of the width. Not done in Phase 10, moved to Phase 11 with the LineChart extraction.
 
 Depends on: none. Out of scope: account-level lines.
 
@@ -276,15 +276,17 @@ Complexity: high
 Parallel-safe with: none
 Files: `components/pos/charts.tsx`, `modules/finance/ui/Finance.tsx`, `integrations/health_auto_export/client.ts` and test, `modules/fitness/data.ts`, `modules/fitness/manifest.ts`, `modules/fitness/ui/FitnessPage.tsx`, `modules/fitness/ui/Fitness.tsx`, new `modules/fitness/ui/PlanDrawer.tsx`, `modules/fitness/ui/sync.ts`, `modules/fitness/ui/actions.ts`, `modules/health/ui/HealthPage.tsx` (assert only), `e2e/seed.mts`, `e2e/screens.spec.ts`.
 
-- [ ] Owner step (OWNER-TODO 15): Health Auto Export Premium, one export to the webhook. Read the body from `core.request_log` through the integration's Test view; save it as the fixture for `client.test.ts` (written before the field-name fixes); correct the names marked verify in `client.ts`.
-- [ ] `data.ts`: `metricSeries(kind, days)` over `fitness.body_metric`; `listWorkouts` gains `{ kind?, source?, from?, to?, limit }`; `lastArrived()` = max `created_at` over `body_metric` and `workout` where `source = 'health_auto_export'`.
-- [ ] Extract axis and line into `LineChart` in `components/pos/charts.tsx` (dates, values with nulls, unit formatter, height), carried over from Phase 10, which left it undone. Do this first, with `NetWorthChart` becoming a thin wrapper over it and the finance e2e still green, so Trends is built on a component with two real callers rather than one.
-- [ ] Trends tab: select of kinds present, `PillGroup` 30 / 90 / 365, the extracted `LineChart` with the unit formatter from `units.ts`. 30 days rendered server side; 90 and 365 through a `readMetricSeries` server action.
-- [ ] Workouts tab: filter row (kind, source, two native date inputs), state in the URL through `useSearchState` with `local: true`.
-- [ ] Plan: `PlanDrawer.tsx` creating or editing `fitness.plan` and items (day label, exercise, sets, reps, target weight) through `callTool('fitness','write_plan')` (UI source is never guarded); read the tool's input shape at `manifest.ts:127` first.
-- [ ] Sync now: `SyncBand` `at` becomes the later of the Strava job and `lastArrived()`, with a second line "Apple data last arrived <when>".
-- [ ] Health: `HealthPage.tsx:41` reads `readMetric('fitness.body_weight')` live; add the e2e assertion that a new weight shows on `/health` after a webhook post; no code change expected.
-- [ ] e2e: seed 40 days of weight, Trends draws it; the filter narrows the list; the plan drawer saves a two-day plan.
+- [x] Owner step (OWNER-TODO 15): Health Auto Export Premium, one export to the webhook. Connected 2026-09-18 and a 90-day manual export read the same day: the real shapes are pinned in `client.test.ts` (no file committed, it is personal data), sleep and stand hours corrected from it, and `scripts/hae-backfill.mts` posts such an export by month (#75). Note for when it is: `core.request_log` stores route, status and error only, no body, so the fixture has to come from the app's own share sheet or a request bin, not from the Test view. Save it as the fixture for `client.test.ts`; correct the names marked verify in `client.ts`.
+- [x] `data.ts`: `metricSeries(kind, days)` over `fitness.body_metric`; `listWorkouts` gains `{ kind?, source?, from?, to?, limit }`; `lastArrived()` reads `core.request_log` (200s on the two Apple webhook routes) rather than the rows' `created_at`, which the inbound upsert keeps.
+- [x] `LineChart` extracted into `components/pos/LineChart.tsx` (its own client file: the crosshair needs state and `charts.tsx` renders on the server), `NetWorthChart` a thin wrapper, `spine()` moved to `core/series.ts` so both modules read it.
+- [x] Trends tab: select of kinds present, `PillGroup` 30 / 90 / 365, `LineChart` with `metricValue()`. 30 days of weight rendered server side; the rest through `readMetricSeries`.
+- [x] Workouts tab: filter row (kind, source, two native date inputs), state in the URL through `useSearchState` with `local: true`; the rows come from a `readWorkouts` action, fetched once on mount when a load carries a filter.
+- [x] Plan: `PlanDrawer.tsx` creating or editing `fitness.plan` and items through `writePlan` over `callTool('fitness','write_plan')`; item notes are carried, not edited.
+- [x] Sync now: `SyncBand` gains `arrived`, a second line "Apple data last arrived <when>". `at` stays Strava's own run, so the band never names Strava for an Apple payload.
+- [x] Health: no code change; the e2e reads the webhook secret from the Connections card, posts a weight, and asserts it on `/health`.
+- [x] e2e: the seed writes 14 weight readings over 40 days; Trends draws 10 of 30 and 14 of 90; the filter narrows and survives a reload; the plan drawer adds a day and removes it again.
+
+Done 2026-09-15 apart from the owner step. The full unit run found core/tools.test.ts leaving an idea's event behind, which failed core/events.test.ts whenever the cached file order put it later; the test now cleans up. The ui-verifier's one Must fix was the plan drawer's six-cell row clipping "AMRAP" at 1440 and the exercise name at 402; rows are two lines now, and the target reads in whole pounds like the card. Inherited and left for the token pass: ink-3 at 11 and 12px is under 4.5:1 across the chart axes, legend, Clear and the Apple line, as it is across every CardHead meta; the LineChart's x labels stop one tick short of the series end (the finance chart does the same); the crosshair is mouse only. While the mobile e2e ran, another session switched this checkout to a new branch, so the dev server served pre-phase code and three fitness tests failed against it; the PR was finished from a worktree and CI's `screens` job is the mobile evidence. A phase session should start in its own worktree (as Phase 5 already found).
 
 Exit checks: `client.test.ts` against the real fixture green; suites green.
 Depends on: 10, 7b. Out of scope: Strava changes, coach rule changes.
@@ -296,14 +298,16 @@ Complexity: low
 Parallel-safe with: none
 Files: new `app/error.tsx`, `app/global-error.tsx`, `.github/workflows/ci.yml`, `app/api/mcp/route.ts`, `app/api/integrations/[id]/webhook/route.ts`, `app/api/integrations/[id]/oauth/*/route.ts`, `docs/RESTORE.md`, `docs/SETUP-SUPABASE.md`, `CLAUDE.md`.
 
-- [ ] `app/error.tsx` and `app/global-error.tsx`: client components, headline, the digest, retry; imports from `components/pos` only.
-- [ ] `ci.yml` check job: `pnpm audit --prod --audit-level=high` after install.
-- [ ] Backup: `docs/RESTORE.md` adds the storage bucket to the backup and restore steps (verify the `supabase storage` CLI subcommands).
-- [ ] Branch protection: repo is public, so free allows it. `gh api -X PUT repos/<owner>/pos/branches/main/protection` requiring `check` and `screens`. The CLAUDE.md sentence was corrected on 2026-09-15; this phase makes it true in the repo settings.
-- [ ] `export const maxDuration`: MCP 60, webhook 30, OAuth start and callback 30.
-- [ ] Secret rotation paragraph in `docs/SETUP-SUPABASE.md`: each secret, where it is set, what rotating breaks (VAPID invalidates every device; `ENCRYPTION_KEY` orphans every `core.connections` row; `CRON_SECRET` and `MCP_TOKEN` are free).
+- [x] `app/error.tsx` and `app/global-error.tsx`: client components, headline, the digest, retry; imports from `components/pos` only.
+- [x] `ci.yml` check job: `pnpm audit --prod --audit-level=high` after install.
+- [x] Backup: `docs/RESTORE.md` adds the storage bucket to the backup and restore steps (verify the `supabase storage` CLI subcommands).
+- [x] Branch protection: repo is public, so free allows it. `gh api -X PUT repos/<owner>/pos/branches/main/protection` requiring `check` and `screens`. The CLAUDE.md sentence was corrected on 2026-09-15; this phase makes it true in the repo settings.
+- [x] `export const maxDuration`: MCP 60, webhook 30, OAuth start and callback 30.
+- [x] Secret rotation paragraph in `docs/SETUP-SUPABASE.md`: each secret, where it is set, what rotating breaks (VAPID invalidates every device; `ENCRYPTION_KEY` orphans every `core.connections` row; `CRON_SECRET` and `MCP_TOKEN` are free).
 
 Exit checks: prod-auditor reports the gaps closed; CI green with the audit step. Depends on: all.
+
+Done 2026-09-15. Two things go past the bullets: branch protection also requires `migrations`, so the db push gate blocks a merge (owner's choice), and `backup.yml` mirrors every storage bucket into `storage/` of pos-backups rather than the restore doc only describing a manual copy; that needs `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF` as repo secrets, which are the owner's step before the next 04:10 UTC run. `supabase storage cp -r ss:/// <dir> --experimental --project-ref <ref>` was run against production from a bare directory (2 files, 164K) and the upload direction against the local stack, where it created the missing bucket private. The error boundary was checked on the dev server with a scratch page that throws in a server component: the digest line and a 44px Try again at 402, 35px at 1440, retry re-rendering the boundary; no artboard exists for it. Protection is enforced for admins, so the owner cannot merge a red PR either. Not done, a speed pass rather than hardening: the `/tasks` client-chunk measurement noted under Phase 3.
 
 ## Platform concerns
 

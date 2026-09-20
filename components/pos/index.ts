@@ -5,7 +5,8 @@ export { BandSearch, SearchButton } from './BandSearch'
 // screen that needs something new adds it here rather than inventing it inline.
 
 export { Eyebrow, StatusDot, type DotTone } from './text'
-export { ComeauxverseMark, ComeauxverseLockup } from './Logo'
+export { HolonMark, HolonWordmark, HolonLockup } from './Logo'
+export { ThemeSwitch } from './ThemeSwitch'
 export {
   PaceBar,
   Radar,
@@ -14,6 +15,7 @@ export {
   type RadarAxis,
   type TimelineItem,
 } from './charts'
+export { LineChart } from './LineChart'
 export { Chip, StatusChip, type ChipTone } from './Chip'
 export { Card, CardHead, MetricStrip, MetricTile, type DeltaTone } from './Card'
 export { PageHeader } from './PageHeader'
@@ -27,6 +29,6 @@ export { Overlay } from './Overlay'
 export { SyncBand } from './SyncBand'
 export { ToastProvider, useToast } from './Toast'
 export { InlineEdit, ConfirmButton, SecretField, CopyBlock } from './edit'
-export { fieldClass } from './field'
+export { fieldClass, timeFieldClass } from './field'
 export { SkillPicker, type SkillLink } from './SkillPicker'
 export { WizardShell, type WizardStep } from './WizardShell'

@@ -1,10 +1,11 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { ActionButton, Eyebrow } from '@/components/pos'
+import { ActionButton, Card, Eyebrow, fieldClass, MetricStrip, MetricTile } from '@/components/pos'
 import { requireOwner } from '@/core/auth'
 import { db } from '@/core/db'
 import { getSettings, setSetting } from '@/core/settings'
 import { clockIn, zoneAbbrIn } from '@/core/today'
+import { cn } from '@/lib/utils'
 import { SettingsHeader } from './tabs'
 import { CapSlider } from './CapSlider'
 import { Passkeys } from './Passkeys'
@@ -39,14 +40,19 @@ async function spendThisMonthCents(): Promise<number> {
   return Number(rows[0].cents)
 }
 
+// The last nightly run, the same row the Agent Log describes, so the two
+// screens cannot disagree. Aggregating core.jobs instead read any job's
+// last_run as the nightly's and any stale failed row as its status.
 async function nightlyJobState() {
   const { rows } = await db().query<{ last_run: Date | null; last_status: string | null; n: string }>(
-    `select max(last_run) as last_run,
-            min(last_status) filter (where last_status = 'failed') as last_status,
-            count(*)::text as n
-       from core.jobs`,
+    `select r.started_at as last_run, r.status as last_status,
+            (select count(*)::text from core.jobs) as n
+       from core.job_runs r
+      where r.finished_at is not null
+      order by r.started_at desc
+      limit 1`,
   )
-  return rows[0]
+  return rows[0] ?? { last_run: null, last_status: null, n: '0' }
 }
 
 const ZONES = [
@@ -63,11 +69,9 @@ const ZONES = [
 ]
 
 const money = (cents: number) => `$${(cents / 100).toFixed(2)}`
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
-const field =
-  'w-full min-w-0 border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none focus-visible:border-brand'
-const card = 'border border-rule bg-bg-elev px-5 py-[18px]'
-const cell = 'px-3 py-2.5'
+const field = fieldClass
 
 export default async function SettingsPage({ searchParams }: PageProps<'/settings'>) {
   const [params, settings, spendCents, job] = await Promise.all([
@@ -90,7 +94,7 @@ export default async function SettingsPage({ searchParams }: PageProps<'/setting
       <SettingsHeader current="/settings" />
 
       <form action={save} className="flex max-w-[720px] flex-col gap-3.5">
-        <div className={card}>
+        <Card>
           <Eyebrow>Owner</Eyebrow>
           <div className="mt-3 grid gap-3.5 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5">
@@ -103,7 +107,7 @@ export default async function SettingsPage({ searchParams }: PageProps<'/setting
                 value={process.env.OWNER_EMAIL ?? ''}
                 readOnly
                 aria-label="Owner email"
-                className="num w-full min-w-0 border border-rule bg-bg-deep px-3 py-[9px] text-[13px] text-ink-3 outline-none"
+                className={cn(field, 'num bg-bg-deep text-ink-3')}
               />
             </label>
             <label className="flex flex-col gap-1.5">
@@ -127,44 +131,50 @@ export default async function SettingsPage({ searchParams }: PageProps<'/setting
               </select>
             </label>
           </div>
-        </div>
+        </Card>
 
-        <div className={card}>
+        <Card>
           <div className="flex items-baseline justify-between gap-3">
             <Eyebrow>Model spend · soft cap</Eyebrow>
-            <span className="num text-[11px] text-ink-3">
-              MONTH TO DATE <span className="text-ink">{money(spendCents)}</span>
+            <span className="num text-[12px] text-ink-3">
+              Month to date <span className="text-ink">{money(spendCents)}</span>
             </span>
           </div>
           <CapSlider initialDollars={Math.round(capCents / 100)} spendCents={spendCents} />
           <p className="mt-2.5 text-[12px] text-ink-3">
             Past the cap, research runs are refused and logged. Classification and headlines continue.
           </p>
-        </div>
+        </Card>
 
-        <div className={card}>
+        <Card>
           <Eyebrow>Nightly job</Eyebrow>
-          <div className="mt-3 grid border border-rule sm:grid-cols-3">
-            <div className={`${cell} border-b border-rule sm:border-b-0 sm:border-r`}>
-              <Eyebrow>Schedule</Eyebrow>
-              <div className="num mt-1.5 text-[12px] text-ink">0 9 * * * UTC · {local}</div>
-            </div>
-            <div className={`${cell} border-b border-rule sm:border-b-0 sm:border-r`}>
-              <Eyebrow>Last run</Eyebrow>
-              <div className={`num mt-1.5 text-[12px] ${job.last_status === 'failed' ? 'text-bad' : lastRun ? 'text-ok' : 'text-ink-3'}`}>
-                {lastRun ? `${job.last_status === 'failed' ? 'failed' : 'ok'} · ${lastRun} · ${job.n} jobs` : 'never'}
-              </div>
-            </div>
-            <div className={cell}>
-              <Eyebrow>Jobs registered</Eyebrow>
-              <div className="num mt-1.5 text-[12px] text-ink">{job.n} · every module plus core</div>
-            </div>
-          </div>
-        </div>
+          <MetricStrip className="mt-3">
+            <MetricTile label="Schedule" value={`0 9 * * * UTC · ${local}`} size="xs" />
+            <MetricTile
+              label="Last run"
+              value={
+                lastRun
+                  ? `${job.last_status === 'clean' ? 'Ok' : cap(job.last_status ?? 'unknown')} · ${lastRun} · ${job.n} jobs`
+                  : 'Never'
+              }
+              valueTone={
+                !lastRun
+                  ? undefined
+                  : job.last_status === 'clean'
+                    ? 'ok'
+                    : job.last_status === 'partial'
+                      ? 'warn'
+                      : 'bad'
+              }
+              size="xs"
+            />
+            <MetricTile label="Jobs registered" value={`${job.n} · every module plus core`} size="xs" />
+          </MetricStrip>
+        </Card>
 
         <div className="flex items-center justify-end gap-2.5">
-          {params.saved === '1' && <span className="num text-[11px] text-ink-3">SAVED · core.settings</span>}
-          <ActionButton type="submit" variant="solid" className="h-9 gap-2 px-3.5 text-[13px]">
+          {params.saved === '1' && <span className="num text-[12px] text-ink-3">Saved · core.settings</span>}
+          <ActionButton type="submit" variant="solid">
             Save <span aria-hidden="true">&rarr;</span>
           </ActionButton>
         </div>

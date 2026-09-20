@@ -2,32 +2,32 @@
 
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
-import { useToast } from '@/components/pos'
+import { ActionButton, useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { readAlert, snoozeAlert } from './notifications/actions'
 import { approveProposal, dismissProposal } from './review/actions'
 
-// The two tiles you act on without leaving the dashboard.
-//
-// Both call the same server actions their own screens do, so a decision made
-// here and a decision made there are the same write. Nothing is a dashboard
-// only code path.
+// The rows of the Needs attention band, the ones you act on without leaving
+// Today. Both call the same server actions their own screens do, so a
+// decision made here and a decision made there are the same write. Nothing
+// is a dashboard only code path.
 
-const MINI =
-  'h-11 shrink-0 border border-rule-2 px-2 text-[11px] text-ink-3 transition-colors duration-150 ' +
-  'hover:border-ink hover:text-ink disabled:opacity-50 sm:h-[23px]'
+/** A row in the band: a hairline above every row but the first, sand tinted. */
+const ROW =
+  'flex flex-wrap items-start gap-x-3 gap-y-2 px-1 py-2.5 ' +
+  'border-t border-[color-mix(in_srgb,var(--sand)_45%,transparent)] first:border-t-0'
 
 export function WarningList({
   warnings,
   phoneLimit,
 }: {
   warnings: { id: string; title: string; sub: string; urgent: boolean; href: string | null }[]
-  /** Rows shown below md; the rest sit behind a link, so Home fits in two swipes. */
+  /** Rows shown below md; the rest sit behind a link, so Today fits in two swipes. */
   phoneLimit?: number
 }) {
   const [gone, setGone] = useState<string[]>([])
   const [asking, setAsking] = useState<string | null>(null)
-  const [pending, start] = useTransition()
+  const [, start] = useTransition()
   const toast = useToast()
 
   // Optimistic, and it stays gone: the row is removed here the moment the
@@ -48,73 +48,56 @@ export function WarningList({
   const shown = warnings.filter((w) => !gone.includes(w.id))
 
   if (shown.length === 0) {
-    return (
-      <p className="grid flex-1 place-items-center text-[26px] font-light text-ink-3">0 warnings</p>
-    )
+    return <p className="t-caption px-1 py-2.5 text-ink-3">No warnings open.</p>
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="mt-2 flex flex-col">
       {shown.map((w, i) => (
         <div
           key={w.id}
-          className={cn(
-            'flex items-center justify-between gap-2.5 border-b border-rule px-1 py-2 hover:bg-brand-soft',
-            phoneLimit !== undefined && i >= phoneLimit && 'max-md:hidden',
-          )}
+          data-testid="warning-row"
+          className={cn(ROW, phoneLimit !== undefined && i >= phoneLimit && 'max-md:hidden')}
         >
-          <span className="grid min-w-0 grid-cols-[8px_1fr] items-start gap-2.5">
-            <span
-              className={cn('mt-[5px] size-1.5', w.urgent ? 'bg-bad' : 'bg-warn')}
-              aria-hidden
-            />
-            <span className="min-w-0">
-              {/* Every row goes somewhere (v1.1 Phase 5): the module that
-                * queued it named the screen, or the alert centre has it. */}
-              <Link
-                href={w.href ?? '/notifications'}
-                className="block text-[13px] leading-[1.35] text-ink"
-              >
-                {w.title}
-              </Link>
-              {w.sub && <span className="mt-0.5 block truncate text-[11px] text-ink-3">{w.sub}</span>}
-            </span>
+          <span
+            className={cn('mt-[7px] size-2 shrink-0 rounded-full', w.urgent ? 'bg-bad' : 'bg-warn')}
+            aria-hidden
+          />
+          <span className="min-w-0 flex-1 basis-[200px]">
+            {/* Every row goes somewhere (v1.1 Phase 5): the module that
+              * queued it named the screen, or the alert centre has it. */}
+            <Link
+              href={w.href ?? '/notifications'}
+              className="block text-[14.5px] font-medium leading-[1.35] text-ink hover:text-action"
+            >
+              {w.title}
+            </Link>
+            {w.sub && <span className="t-caption mt-0.5 block truncate text-ink-3">{w.sub}</span>}
           </span>
 
-          <span className="flex shrink-0 gap-1">
+          <span className="ml-auto flex shrink-0 gap-1.5">
             {asking === w.id ? (
               <>
-                <button
-                  type="button"
-                  className={MINI}
-                  disabled={pending}
-                  onClick={() => act(w.id, () => snoozeAlert(w.id, 1))}
-                >
+                <ActionButton size="sm" onClick={() => act(w.id, () => snoozeAlert(w.id, 1))}>
                   1d
-                </button>
-                <button
-                  type="button"
-                  className={MINI}
-                  disabled={pending}
-                  onClick={() => act(w.id, () => snoozeAlert(w.id, 7))}
-                >
+                </ActionButton>
+                <ActionButton size="sm" onClick={() => act(w.id, () => snoozeAlert(w.id, 7))}>
                   7d
-                </button>
+                </ActionButton>
               </>
             ) : (
               <>
-                <button type="button" className={MINI} onClick={() => setAsking(w.id)}>
+                <ActionButton size="sm" onClick={() => setAsking(w.id)}>
                   Snooze
-                </button>
-                <button
-                  type="button"
+                </ActionButton>
+                <ActionButton
+                  size="sm"
+                  variant="quiet"
                   aria-label={`Dismiss ${w.title}`}
-                  className={cn(MINI, 'hover:border-bad hover:text-bad')}
-                  disabled={pending}
                   onClick={() => act(w.id, () => readAlert(w.id))}
                 >
-                  ✕
-                </button>
+                  Dismiss
+                </ActionButton>
               </>
             )}
           </span>
@@ -135,7 +118,7 @@ export function ProposalList({
   const [gone, setGone] = useState<string[]>([])
   const [editing, setEditing] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
-  const [pending, start] = useTransition()
+  const [, start] = useTransition()
   const toast = useToast()
 
   const act = (id: string, run: () => Promise<{ ok: true } | { ok: false; error: string }>) => {
@@ -153,47 +136,47 @@ export function ProposalList({
   const shown = proposals.filter((p) => !gone.includes(p.id))
 
   if (shown.length === 0) {
-    return (
-      <p className="grid flex-1 place-items-center text-[26px] font-light text-ink-3">inbox clear</p>
-    )
+    return <p className="t-caption px-1 py-2.5 text-ink-3">Nothing waiting for review.</p>
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="mt-2 flex flex-col">
       {shown.map((p, i) => (
         <div
           key={p.id}
-          className={cn('border-b border-rule px-1 py-2.5', phoneLimit !== undefined && i >= phoneLimit && 'max-md:hidden')}
+          data-testid="proposal-row"
+          className={cn(ROW, phoneLimit !== undefined && i >= phoneLimit && 'max-md:hidden')}
         >
-          <div className="flex items-baseline justify-between gap-2.5">
-            <span className="truncate text-[11px] text-ink-3">{p.from}</span>
-            <span className="label text-[10px] tracking-[0.06em] text-warn">pending</span>
-          </div>
+          <span className="mt-[7px] size-2 shrink-0 rounded-full bg-action" aria-hidden />
+          <span className="min-w-0 flex-1 basis-[200px]">
+            {editing === p.id ? (
+              // Approving an edited title is what Edit is for: the proposal
+              // is accepted, with your wording rather than the agent's.
+              <input
+                value={draft}
+                autoFocus
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') setEditing(null)
+                  if (e.key === 'Enter' && draft.trim()) {
+                    act(p.id, () => approveProposal(p.id, { title: draft.trim() }))
+                  }
+                }}
+                aria-label={`Edit ${p.title}`}
+                className="w-full rounded-xl border border-action bg-bg-elev px-3 py-1.5 text-[14.5px] text-ink outline-none"
+              />
+            ) : (
+              <span className="block text-[14.5px] font-medium leading-[1.35] text-ink">{p.title}</span>
+            )}
+            <span className="t-caption mt-0.5 block truncate text-ink-3">
+              Proposal from {p.from}, waiting for review
+            </span>
+          </span>
 
-          {editing === p.id ? (
-            // Approving an edited title is what the artboard's pencil does: the
-            // proposal is accepted, with your wording rather than the agent's.
-            <input
-              value={draft}
-              autoFocus
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') setEditing(null)
-                if (e.key === 'Enter' && draft.trim()) {
-                  act(p.id, () => approveProposal(p.id, { title: draft.trim() }))
-                }
-              }}
-              aria-label={`Edit ${p.title}`}
-              className="mt-1 w-full border border-brand bg-bg px-2 py-1.5 text-[13px] text-ink outline-none"
-            />
-          ) : (
-            <p className="mt-1 text-[13px] leading-[1.4] text-ink">{p.title}</p>
-          )}
-
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            <button
-              type="button"
-              disabled={pending}
+          <span className="ml-auto flex shrink-0 flex-wrap gap-1.5">
+            <ActionButton
+              size="sm"
+              variant="brand"
               onClick={() =>
                 act(p.id, () =>
                   approveProposal(
@@ -205,29 +188,26 @@ export function ProposalList({
                   ),
                 )
               }
-              className="h-11 shrink-0 border border-brand px-2 text-[11px] text-ink transition-colors duration-150 hover:bg-brand hover:text-white sm:h-[23px]"
             >
               {editing === p.id ? 'Save and approve' : 'Approve'}
-            </button>
-            <button
-              type="button"
-              className={MINI}
+            </ActionButton>
+            <ActionButton
+              size="sm"
               onClick={() => {
                 setEditing(editing === p.id ? null : p.id)
                 setDraft(p.title)
               }}
             >
               {editing === p.id ? 'Cancel' : 'Edit'}
-            </button>
-            <button
-              type="button"
-              className={cn(MINI, 'hover:border-bad hover:text-bad')}
-              disabled={pending}
+            </ActionButton>
+            <ActionButton
+              size="sm"
+              variant="quiet"
               onClick={() => act(p.id, () => dismissProposal(p.id))}
             >
               Dismiss
-            </button>
-          </div>
+            </ActionButton>
+          </span>
         </div>
       ))}
       <More count={phoneLimit === undefined ? 0 : shown.length - phoneLimit} href="/review" />
@@ -239,7 +219,7 @@ export function ProposalList({
 function More({ count, href }: { count: number; href: string }) {
   if (count <= 0) return null
   return (
-    <Link href={href} className="px-1 py-2 text-[12px] text-ink-2 hover:text-ink md:hidden">
+    <Link href={href} className="px-1 py-2 text-[13px] font-medium text-action hover:underline md:hidden">
       and {count} more &rarr;
     </Link>
   )

@@ -39,7 +39,7 @@ async function rows() {
 async function workouts(source = 'health_auto_export') {
   const { rows } = await db().query(
     `select name, kind, to_char(started_at at time zone 'UTC', 'YYYY-MM-DD HH24:MI') as started_at,
-            duration_s, distance_m, avg_hr, detail, source, external_id
+            duration_s, distance_m::float8 as distance_m, avg_hr, detail, source, external_id
        from fitness.workout where source = $1 order by started_at`,
     [source],
   )
@@ -55,7 +55,8 @@ it('translates each metric into the units the table stores', async () => {
         metric('heart_rate_variability', 'ms', [{ qty: 61, date: at('2026-09-11') }]),
         metric('body_fat_percentage', '%', [{ qty: 18.4, date: at('2026-09-11') }]),
         metric('sleep_analysis', 'hr', [
-          { totalSleep: 7.5, asleep: 7.2, sleepStart: at('2026-09-10'), sleepEnd: at('2026-09-11') },
+          // The night is the span; the app's summed hours are not read when it is there.
+          { totalSleep: 26.7, asleep: 0, sleepStart: at('2026-09-10', '23:00:00'), sleepEnd: at('2026-09-11', '06:30:00') },
         ]),
       ],
     },
@@ -181,7 +182,7 @@ it('takes the Shortcut payload through its own inbound with its own source', asy
       kind: 'run',
       started_at: '2026-09-13 11:00',
       duration_s: 1800,
-      distance_m: 5633,
+      distance_m: 5632.7,
       avg_hr: null,
       detail: '',
       source: 'apple_shortcuts',

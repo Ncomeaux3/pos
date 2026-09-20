@@ -17,7 +17,9 @@ const { db } = await import('./db')
 const { saveCredentials } = await import('./integrations')
 const { expiryFrom, oauthStateCookie } = await import('./oauth')
 const { GET: oauthCallback } = await import('../app/api/integrations/[id]/oauth/callback/route')
-const { POST: webhook, SECRET_HEADER } = await import('../app/api/integrations/[id]/webhook/route')
+const { POST: webhook } = await import('../app/api/integrations/[id]/webhook/route')
+
+const SECRET_HEADER = 'x-pos-secret'
 
 const params = (id: string) => ({ params: Promise.resolve({ id }) })
 

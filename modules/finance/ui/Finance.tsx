@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, type ReactNode } from 'react'
+import { useState, useTransition } from 'react'
 import {
   DataTable,
   DataRow,
@@ -10,14 +10,19 @@ import {
   Chip,
   EmptyState,
   Eyebrow,
+  LineChart,
+  MetricStrip,
+  MetricTile,
   Overlay,
   PaceBar,
   Row,
   RowList,
+  StatusChip,
+  fieldClass,
   useToast,
 } from '@/components/pos'
 import { Segments } from '@/components/pos/Segments'
-import type { Day } from '../series'
+import type { Day } from '@/core/series'
 import { useSearchState } from '@/components/pos/searchState'
 import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
@@ -134,37 +139,9 @@ const monthLabel = (iso: string) => {
 /** The artboard's card: 1px rule on the elevated ground, 14px 20px inside. */
 const overviewCard = 'border-rule px-5 py-3.5'
 /** Its rows: 9px, and the accent wash on hover. */
-const overviewRow = 'md:py-[9px] md:gap-y-0 hover:bg-brand-soft'
+const overviewRow = 'lg:py-[9px] lg:gap-y-0 hover:bg-brand-soft'
 
 /** One cell of the KPI strip: eyebrow, 34px figure, an 11px tracked line. */
-function Kpi({
-  label,
-  value,
-  tone,
-  children,
-}: {
-  label: ReactNode
-  value: ReactNode
-  tone?: 'ok' | 'bad' | 'warn'
-  children: ReactNode
-}) {
-  return (
-    <div className="min-w-0 bg-bg px-4 py-3.5 sm:px-5 sm:py-4">
-      <Eyebrow>{label}</Eyebrow>
-      <div
-        className={cn(
-          'num mt-2.5 text-[24px] font-light leading-none tracking-[-0.02em] sm:text-[34px]',
-          tone === 'ok' ? 'text-ok' : tone === 'bad' ? 'text-bad' : tone === 'warn' ? 'text-warn' : 'text-ink',
-        )}
-      >
-        {value}
-      </div>
-      {/* Wraps on the phone, where a card is half the width and nothing may be cut. */}
-      <div className="label mt-2 text-[11px] tracking-[0.06em] text-ink-3 md:truncate">{children}</div>
-    </div>
-  )
-}
-
 /** The KPI strip's four cells: the phone's overview summary and the desktop's one-page dashboard share them. */
 function KpiStrip({
   data,
@@ -181,34 +158,55 @@ function KpiStrip({
   // recorded, not data.series[0], which is null until the first sync.
   const firstKnown = data.series.find((d) => d.observed)?.cents ?? null
 
+  // The sub-line wraps on the phone, where a cell is half the width and
+  // nothing may be cut, and truncates from md.
+  const sub = 'num block min-w-0 md:truncate'
   return (
     <>
-      <Kpi label="Net worth" value={balance(data.netWorthCents)}>
-        assets {money(data.assetsCents)} · debt {money(data.debtCents)}
-      </Kpi>
-      <Kpi
+      <MetricTile
+        size="lg"
+        label="Net worth"
+        value={balance(data.netWorthCents)}
+        delta={<span className={sub}>assets {money(data.assetsCents)} · debt {money(data.debtCents)}</span>}
+      />
+      <MetricTile
+        size="lg"
         label="30-day change"
         value={signedMoney(data.changeCents)}
-        tone={data.changeCents > 0 ? 'ok' : data.changeCents < 0 ? 'bad' : undefined}
-      >
-        {firstKnown === null
-          ? 'no history yet'
-          : `${data.changeCents >= 0 ? '+' : ''}${((data.changeCents / Math.max(1, Math.abs(firstKnown))) * 100).toFixed(1)}% · from ${money(firstKnown)}`}
-      </Kpi>
-      <Kpi label="Due in 14 days" value={money(upcomingTotal, true)}>
-        {data.upcoming.length > 0
-          ? `${data.upcoming.length} ${data.upcoming.length === 1 ? 'charge' : 'charges'} · next ${shortDate(data.upcoming[0].nextChargeOn)}`
-          : 'nothing booked'}
-      </Kpi>
-      <Kpi
+        valueTone={data.changeCents > 0 ? 'ok' : data.changeCents < 0 ? 'bad' : undefined}
+        delta={
+          <span className={sub}>
+            {firstKnown === null
+              ? 'no history yet'
+              : `${data.changeCents >= 0 ? '+' : ''}${((data.changeCents / Math.max(1, Math.abs(firstKnown))) * 100).toFixed(1)}% · from ${money(firstKnown)}`}
+          </span>
+        }
+      />
+      <MetricTile
+        size="lg"
+        label="Due in 14 days"
+        value={money(upcomingTotal, true)}
+        delta={
+          <span className={sub}>
+            {data.upcoming.length > 0
+              ? `${data.upcoming.length} ${data.upcoming.length === 1 ? 'charge' : 'charges'} · next ${shortDate(data.upcoming[0].nextChargeOn)}`
+              : 'nothing booked'}
+          </span>
+        }
+      />
+      <MetricTile
+        size="lg"
         label={`Budgets over ${data.alertThreshold}%`}
         value={hot.length}
-        tone={hot.length > 0 ? 'warn' : undefined}
-      >
-        {hot.length > 0
-          ? `${hot.map((b) => b.name).join(' · ')} · ${daysLeft} days left`
-          : `all within limits · ${daysLeft} days left`}
-      </Kpi>
+        valueTone={hot.length > 0 ? 'warn' : undefined}
+        delta={
+          <span className={sub}>
+            {hot.length > 0
+              ? `${daysLeft} days left · ${hot.map((b) => b.name).join(' · ')}`
+              : `${daysLeft} days left · all within limits`}
+          </span>
+        }
+      />
     </>
   )
 }
@@ -286,9 +284,9 @@ export function Finance({ data }: { data: FinanceData }) {
         >
           {tab === 'overview' && (
             <div className="mt-[18px] space-y-3.5">
-              <div className="grid grid-cols-2 gap-px border border-rule bg-rule">
+              <MetricStrip>
                 <KpiStrip data={data} hot={hot} upcomingTotal={upcomingTotal} daysLeft={daysLeft} />
-              </div>
+              </MetricStrip>
               <Card className={cn(overviewCard, 'flex min-h-[260px] flex-col')}>
                 <NetWorthCard data={data} />
               </Card>
@@ -328,7 +326,7 @@ export function Finance({ data }: { data: FinanceData }) {
                       <span className="num text-[14px] text-ink">{balance(a.balanceCents)}</span>
                       <span
                         className={cn(
-                          'label text-[10px]',
+                          'label text-[11px]',
                           a.changeCents === null
                             ? 'text-ink-3'
                             : a.changeCents > 0
@@ -348,7 +346,7 @@ export function Finance({ data }: { data: FinanceData }) {
                   {a.balanceCents > 0 && (
                     <div className="flex items-center gap-2.5">
                       <PaceBar value={a.sharePercent} max={100} className="flex-1" />
-                      <span className="label w-9 shrink-0 text-right text-[10px] text-ink-3">
+                      <span className="label w-9 shrink-0 text-right text-[11px] text-ink-3">
                         {Math.round(a.sharePercent)}%
                       </span>
                     </div>
@@ -365,13 +363,9 @@ export function Finance({ data }: { data: FinanceData }) {
                   {hot.length} over {data.alertThreshold}%
                 </span>
                 {/* The same drawer the desktop card opens; the phone has no card head to hold it. */}
-                <button
-                  type="button"
-                  onClick={() => setParams({ limits: '1' }, { push: true })}
-                  className="label border border-rule-2 px-2 py-1 text-[11px] tracking-[0.08em] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink"
-                >
+                <ActionButton size="sm" onClick={() => setParams({ limits: '1' }, { push: true })}>
                   Edit limits
-                </button>
+                </ActionButton>
               </div>
               <p className="t-caption text-ink-3">
                 The tick on each bar is where you would be if you spent evenly through the month. A
@@ -384,7 +378,7 @@ export function Finance({ data }: { data: FinanceData }) {
                     <button
                       type="button"
                       onClick={() => setParams({ budget: b.id }, { push: true })}
-                      className="t-body text-left text-ink"
+                      className="t-body text-left text-ink pointer-coarse:-my-3 pointer-coarse:py-3"
                     >
                       {b.name}
                     </button>
@@ -418,9 +412,9 @@ export function Finance({ data }: { data: FinanceData }) {
                       key={u.id}
                       title={u.name}
                       meta={`${u.vendor || 'No vendor'} / ${u.cadence} / next ${shortDate(u.nextChargeOn)}`}
+                      amount={money(u.amountCents, true)}
                       right={
                         <>
-                          <span className="num text-[13px] text-ink">{money(u.amountCents, true)}</span>
                           <ActionButton
                             onClick={() =>
                               run(() => setSubscriptionStatus(u.id, 'cancelled'), `Cancelled ${u.name}`)
@@ -454,14 +448,20 @@ export function Finance({ data }: { data: FinanceData }) {
           * the page ground with 1px rules between, then accounts over the
           * curve beside what is due over the budgets. The phone drills in
           * through its segments; the desktop through the drawers. */}
-        <div
-          data-testid="finance-kpis"
-          className="grid grid-cols-2 gap-px border border-rule bg-rule sm:grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))]"
-        >
-          <KpiStrip data={data} hot={hot} upcomingTotal={upcomingTotal} daysLeft={daysLeft} />
+        <div data-testid="finance-kpis">
+          <MetricStrip className="sm:grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))]">
+            <KpiStrip data={data} hot={hot} upcomingTotal={upcomingTotal} daysLeft={daysLeft} />
+          </MetricStrip>
         </div>
 
-        <div className="grid items-start gap-3.5 lg:grid-cols-2">
+        {/* The chart owns its own header, because the high, low and average
+          * belong beside the title rather than under the line. Full width
+          * under the KPIs, as the Holon mockup draws it (docs/design/holon/finance.html). */}
+        <Card className={cn(overviewCard, 'flex min-h-[300px] flex-col')}>
+          <NetWorthCard data={data} />
+        </Card>
+
+        <div className="grid items-start gap-3.5 xl:grid-cols-2">
           <div className="flex min-w-0 flex-col gap-3.5 self-stretch">
             <Card data-testid="finance-accounts" className={overviewCard}>
               <CardHead label="Accounts" meta="share of assets" className="mb-1" />
@@ -473,7 +473,7 @@ export function Finance({ data }: { data: FinanceData }) {
                   <DataRow key={a.id} onClick={() => setParams({ account: a.id }, { push: true })} className={overviewRow}>
                     <span className="min-w-0 truncate text-[13px] text-ink">
                       {a.name}
-                      <span className="label ml-1.5 text-[10px] text-ink-4">{a.txCount} tx →</span>
+                      <span className="label ml-1.5 text-[11px] text-ink-3">{a.txCount} tx →</span>
                     </span>
                     <span className="truncate text-[13px] text-ink-3">{a.institution}</span>
                     <span className="num text-right text-[13px] text-ink">{balance(a.balanceCents)}</span>
@@ -504,12 +504,6 @@ export function Finance({ data }: { data: FinanceData }) {
               </DataTable>
             </Card>
 
-            {/* The chart owns its own header, because the high, low and
-              * average belong beside the title rather than under the line.
-              * It takes the rest of the column's height, as drawn. */}
-            <Card className={cn(overviewCard, 'flex min-h-[340px] flex-1 flex-col')}>
-              <NetWorthCard data={data} />
-            </Card>
           </div>
 
           <div className="flex min-w-0 flex-col gap-3.5">
@@ -529,7 +523,7 @@ export function Finance({ data }: { data: FinanceData }) {
                     <DataRow key={u.id} className={cn(overviewRow, 'md:gap-x-3')}>
                       <span className="num text-[12px] text-ink">
                         {shortDate(u.nextChargeOn)}
-                        <span className="mt-0.5 block text-[10px] text-ink-3">
+                        <span className="mt-0.5 block text-[11px] text-ink-3">
                           {weekday(u.nextChargeOn)} · {inDays(data.todayIso, u.nextChargeOn)}
                         </span>
                       </span>
@@ -544,17 +538,17 @@ export function Finance({ data }: { data: FinanceData }) {
                         <span className="num text-right text-[13px] text-ink">{money(u.amountCents, true)}</span>
                         {/* Not on the artboard: cancel has no home there, and
                             this is the one place a due charge is named. */}
-                        <button
-                          type="button"
+                        <ActionButton
+                          size="sm"
+                          variant="quiet"
                           aria-label={`Cancel ${u.name}`}
                           onClick={(e) => {
                             e.stopPropagation()
                             run(() => setSubscriptionStatus(u.id, 'cancelled'), `${u.name} cancelled`)
                           }}
-                          className="label border border-rule-2 px-2 py-[3px] text-[10px] tracking-[0.08em] text-ink-3 transition-colors duration-150 hover:border-bad hover:text-bad"
                         >
                           Cancel
-                        </button>
+                        </ActionButton>
                       </span>
                     </DataRow>
                   ))}
@@ -577,13 +571,9 @@ export function Finance({ data }: { data: FinanceData }) {
                   <span className={cn('label text-[11px]', hot.length > 0 ? 'text-warn' : 'text-ink-3')}>
                     {hot.length} over {data.alertThreshold}%
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setParams({ limits: '1' }, { push: true })}
-                    className="label border border-rule-2 px-2 py-1 text-[11px] tracking-[0.08em] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink"
-                  >
+                  <ActionButton size="sm" onClick={() => setParams({ limits: '1' }, { push: true })}>
                     Edit limits
-                  </button>
+                  </ActionButton>
                 </span>
               </div>
               {data.budgets.length === 0 ? (
@@ -608,17 +598,15 @@ export function Finance({ data }: { data: FinanceData }) {
                         <DataRow
                           key={b.id}
                           onClick={() => setParams({ budget: b.id }, { push: true })}
-                          className={cn(overviewRow, 'md:block md:py-1.5')}
+                          className={cn(overviewRow, 'lg:block lg:py-1.5')}
                         >
-                          <span className="grid items-baseline gap-x-3.5 md:grid-cols-[minmax(0,1fr)_auto_44px]">
+                          <span className="grid items-baseline gap-x-3.5 lg:grid-cols-[minmax(0,1fr)_auto_44px]">
                             <span className="min-w-0 truncate text-[13px] text-ink">
                               {b.name}
                               {b.isFixed ? (
-                                <span className="label ml-1.5 text-[10px] tracking-[0.08em] text-ink-4">Fixed</span>
+                                <StatusChip tone="quiet" className="ml-1.5">Fixed</StatusChip>
                               ) : over ? (
-                                <span className="label ml-1.5 text-[10px] tracking-[0.08em] text-warn">
-                                  over {data.alertThreshold}%
-                                </span>
+                                <StatusChip tone="warn" className="ml-1.5">over {data.alertThreshold}%</StatusChip>
                               ) : null}
                             </span>
                             <span className="num text-[12px] text-ink-2">
@@ -634,7 +622,7 @@ export function Finance({ data }: { data: FinanceData }) {
                       )
                     })}
                   </DataTable>
-                  <div className="grid items-baseline gap-x-3.5 pt-2.5 md:grid-cols-[minmax(0,1fr)_auto_44px]">
+                  <div className="grid items-baseline gap-x-3.5 pt-2.5 lg:grid-cols-[minmax(0,1fr)_auto_44px]">
                     <span className="label text-[11px] text-ink-3">
                       Total · <span className="text-ink-2">{money(Math.max(0, budgetTotals.limit - budgetTotals.spent))} left</span> ·
                       pace mark at day {dayOfMonth(data.todayIso)}
@@ -706,7 +694,7 @@ export function Finance({ data }: { data: FinanceData }) {
               },
             ]}
           />
-          <div className="mt-3.5 flex items-center gap-3.5 border border-rule px-3.5 py-3">
+          <Card className="mt-3.5 flex items-center gap-3.5">
             <Eyebrow className="flex-1">Monthly limit</Eyebrow>
             <span className="num text-[13px] text-ink-3">$</span>
             <input
@@ -717,7 +705,7 @@ export function Finance({ data }: { data: FinanceData }) {
                 const n = parseNumber(e.target.value)
                 if (n !== null) run(() => saveBudget(openBudget.id, n), 'Limit saved')
               }}
-              className="num w-24 border border-rule-2 bg-bg px-2.5 py-[7px] text-right text-[14px] text-ink outline-none focus-visible:border-brand"
+              className={cn(fieldClass, 'num w-24 text-right')}
             />
             <span className="num text-[11px] text-ink-3">
               per month
@@ -725,7 +713,7 @@ export function Finance({ data }: { data: FinanceData }) {
                 ? ` · ${money(Math.max(0, Math.round((openBudget.limitCents - openBudget.spentCents) / Math.max(1, daysLeft))))}/day left`
                 : ''}
             </span>
-          </div>
+          </Card>
           <TransactionList
             transactions={data.transactions.filter((t) => t.categoryName === openBudget.name)}
             categories={data.budgets.map((b) => ({ id: b.id, name: b.name }))}
@@ -792,10 +780,10 @@ function BudgetBar({
       />
       {compact ? null : (
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className={cn('label text-[10px]', over ? 'text-warn' : 'text-ink-3')}>
+        <span className={cn('label text-[11px]', pct > 100 ? 'text-bad' : over ? 'text-warn' : 'text-ink-3')}>
           {pct}% used
         </span>
-        <span className="label text-[10px] text-ink-3">
+        <span className="label text-[11px] text-ink-3">
           {budget.limitCents - budget.spentCents >= 0
             ? `${money(budget.limitCents - budget.spentCents)} left`
             : `${money(budget.spentCents - budget.limitCents)} over`}
@@ -807,219 +795,21 @@ function BudgetBar({
 }
 
 /**
- * Thirty days of net worth, drawn the way the artboard draws it.
- *
- * The x axis is thirty days, not thirty rows. Before spine() this drew
- * whatever rows the query returned, evenly spaced, so two nights of balances
- * became a line across the full width under a caption reading "30 days".
- *
- * Gridlines, the first recorded balance as a dashed baseline, the average as a
- * second one, the high and the low marked, and a crosshair that says what a
- * given day was and how far from the start it had moved. The axis labels are
- * outside the plot in their own 64px column, so the line is never squeezed by
- * the width of a number.
+ * Thirty days of net worth on the shared LineChart (v1.1 Phase 11 extracted
+ * it; the drawing is described there). The x axis is thirty days, not thirty
+ * rows: before spine() this drew whatever rows the query returned, evenly
+ * spaced, so two nights of balances became a line across the full width
+ * under a caption reading "30 days".
  */
 function NetWorthChart({ days }: { days: Day[] }) {
-  const [hover, setHover] = useState<number | null>(null)
-
-  const width = 600
-  const height = 160
-
-  // Drawn values include the days carried across a missed sync; the stats
-  // below count only the days a balance was actually recorded. Averaging the
-  // carried days would weight one measurement once per day it was repeated.
-  const drawn = days.map((d) => d.cents)
-  const observed = days.filter((d) => d.observed).map((d) => d.cents as number)
-  const known = drawn.filter((v): v is number => v !== null)
-
-  const max = Math.max(...observed)
-  const min = Math.min(...observed)
-  const avg = Math.round(observed.reduce((sum, v) => sum + v, 0) / observed.length)
-
-  // Five percent of headroom each side so the high and the low are not drawn
-  // flush against the frame. A flat month has no span to pad, so it is given
-  // one and lands mid height rather than along the top edge.
-  const pad = (max - min) * 0.05 || Math.max(1, Math.abs(max) * 0.05)
-  const lo_ = min - pad
-  const hi_ = max + pad
-  const span = hi_ - lo_
-
-  const x = (i: number) => (i / Math.max(1, days.length - 1)) * width
-  const y = (v: number) => height - ((v - lo_) / span) * height
-
-  // One move command per run of days that have a value, so the leading nulls
-  // before the first sync break the line instead of drawing from zero.
-  const line = drawn
-    .map((v, i) => (v === null ? null : `${drawn[i - 1] == null ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`))
-    .filter((seg): seg is string => seg !== null)
-    .join(' ')
-
-  // The filled area follows the drawn run only, so it does not reach back
-  // under days that were never recorded. One run is all there is to follow:
-  // spine() carries a value forward once it has one, so the only nulls are the
-  // leading ones before the first sync.
-  const first = drawn.findIndex((v) => v !== null)
-  const area =
-    first === -1 ? '' : `M${x(first).toFixed(1)},${height} ${line.slice(1)} L${width},${height} Z`
-
-  const hi = drawn.indexOf(max)
-  const lo = drawn.indexOf(min)
-  const start = observed[0]
-  const last = known[known.length - 1]
-
-  // The biggest single day move in each direction, over consecutive days that
-  // both have a value, which is the one thing the shape does not tell you.
-  const moves = drawn
-    .map((v, i) => (v === null || drawn[i - 1] == null ? null : v - (drawn[i - 1] as number)))
-    .filter((m): m is number => m !== null)
-  const best = moves.length > 0 ? Math.max(...moves) : 0
-  const worst = moves.length > 0 ? Math.min(...moves) : 0
-
-  const at = hover === null ? null : drawn[hover]
-
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <span className="eyebrow text-ink-3">Net worth · 30 days</span>
-        <span className="label flex gap-[18px] text-[11px] tracking-[0.04em] text-ink-3">
-          <span>
-            High <span className="num text-ink">{compactMoney(max)}</span>
-          </span>
-          <span>
-            Low <span className="num text-ink">{compactMoney(min)}</span>
-          </span>
-          <span>
-            Avg <span className="num text-ink">{compactMoney(avg)}</span>
-          </span>
-        </span>
-      </div>
-
-      <div className="mt-2.5 grid flex-1 grid-cols-[1fr_64px]">
-        <div className="relative min-h-[200px]">
-          <svg
-            viewBox={`0 0 ${width} ${height}`}
-            preserveAspectRatio="none"
-            role="img"
-            aria-label={`Net worth over ${days.length} days, ${observed.length} of them recorded, from ${compactMoney(start)} to ${compactMoney(last)}`}
-            className="block h-full w-full cursor-crosshair overflow-visible"
-            onMouseMove={(e) => {
-              const box = e.currentTarget.getBoundingClientRect()
-              const share = (e.clientX - box.left) / box.width
-              setHover(Math.max(0, Math.min(days.length - 1, Math.round(share * (days.length - 1)))))
-            }}
-            onMouseLeave={() => setHover(null)}
-          >
-            {[0, 53, 107].map((line_) => (
-              <line key={line_} x1="0" y1={line_} x2={width} y2={line_} stroke="var(--rule)" />
-            ))}
-            <line x1="0" y1={height} x2={width} y2={height} stroke="var(--rule-2)" />
-
-            {/* Where it stood when the first balance was recorded: everything
-              * above this line is the gain since, and the eye reads that
-              * without arithmetic. */}
-            <line
-              x1="0"
-              y1={y(start)}
-              x2={width}
-              y2={y(start)}
-              stroke="var(--ink-4)"
-              strokeDasharray="3 4"
-              vectorEffect="non-scaling-stroke"
-            />
-
-            {/* The average of the recorded days, so a month that ended high
-              * still shows where it mostly sat. */}
-            <line
-              x1="0"
-              y1={y(avg)}
-              x2={width}
-              y2={y(avg)}
-              stroke="var(--accent)"
-              strokeOpacity={0.45}
-              strokeDasharray="1 5"
-              vectorEffect="non-scaling-stroke"
-            />
-
-            {area && <path d={area} fill="var(--accent-soft)" />}
-            <path
-              d={line}
-              fill="none"
-              stroke="var(--accent)"
-              strokeWidth={1.5}
-              vectorEffect="non-scaling-stroke"
-            />
-
-            <circle cx={x(hi)} cy={y(max)} r={2.5} fill="var(--bg-elev)" stroke="var(--ink-2)" vectorEffect="non-scaling-stroke" />
-            <circle cx={x(lo)} cy={y(min)} r={2.5} fill="var(--bg-elev)" stroke="var(--ink-2)" vectorEffect="non-scaling-stroke" />
-            <circle cx={width} cy={y(last)} r={3} fill="var(--accent)" />
-
-            {hover !== null && at !== null && at !== undefined && (
-              <g>
-                <line x1={x(hover)} y1="0" x2={x(hover)} y2={height} stroke="var(--ink-2)" vectorEffect="non-scaling-stroke" />
-                <circle cx={x(hover)} cy={y(at)} r={3.5} fill="var(--ink)" />
-              </g>
-            )}
-          </svg>
-
-          {hover !== null && at !== null && at !== undefined && (
-            <div
-              className="pointer-events-none absolute top-0 z-2 whitespace-nowrap border border-rule-2 bg-bg px-2.5 py-1.5 text-[11px]"
-              style={{
-                left: `${(hover / Math.max(1, days.length - 1)) * 100}%`,
-                transform: hover > days.length / 2 ? 'translateX(-100%)' : 'none',
-              }}
-            >
-              <span className="text-ink-3">{shortDate(days[hover].date)}</span>{' '}
-              <span className="num ml-2 text-ink">{money(at)}</span>{' '}
-              {!days[hover].observed && <span className="text-ink-4">carried</span>}{' '}
-              <span className={cn('num ml-2', at - start >= 0 ? 'text-ok' : 'text-bad')}>
-                {signedMoney(at - start)}
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col justify-between pl-3 text-[11px] text-ink-3">
-          {[hi_, lo_ + (span * 2) / 3, lo_ + span / 3, lo_].map((v, i) => (
-            <span key={i} className="num leading-none">
-              {compactMoney(Math.round(v))}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-2.5 grid grid-cols-[1fr_64px]">
-        <div className="flex justify-between text-[11px] text-ink-3">
-          {days
-            .filter((unused, i) => i % Math.max(1, Math.round(days.length / 6)) === 0)
-            .map((d) => (
-              <span key={d.date} className="num">
-                {shortDate(d.date)}
-              </span>
-            ))}
-        </div>
-        <span />
-      </div>
-
-      <div className="label mt-2.5 flex flex-wrap gap-x-[18px] gap-y-2 border-t border-rule pt-2.5 text-[11px] tracking-[0.04em] text-ink-3">
-        <span className="flex items-center gap-1.5">
-          <span className="h-0.5 w-3 bg-brand" aria-hidden />
-          Daily net worth
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 border-t border-dashed border-ink-3" aria-hidden />
-          First reading {compactMoney(start)}
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="size-1.5 rounded-full border border-ink-2" aria-hidden />
-          High / low
-        </span>
-        <span className="ml-auto">
-          Best day <span className="num text-ok">{signedMoney(best)}</span> · worst{' '}
-          <span className="num text-bad">{signedMoney(worst)}</span>
-        </span>
-      </div>
-    </div>
+    <LineChart
+      name="Net worth"
+      days={days}
+      format={money}
+      formatCompact={compactMoney}
+      formatDelta={signedMoney}
+    />
   )
 }
 
@@ -1030,28 +820,18 @@ function inOut(transactions: FinanceData['transactions']): string {
   return `${compactMoney(inCents)} / ${compactMoney(outCents)}`
 }
 
-/** The drawer's three cells in one rule box: eyebrow over a 22px figure. */
+/** The drawer's three cells: one strip, eyebrow over a 24px figure. */
 function DrawerStats({
   cells,
 }: {
   cells: { label: string; value: string; tone?: 'ok' | 'bad' | 'warn' }[]
 }) {
   return (
-    <div className="grid grid-cols-3 border border-rule">
-      {cells.map((c, i) => (
-        <div key={c.label} className={cn('px-3.5 py-3', i < cells.length - 1 && 'border-r border-rule')}>
-          <Eyebrow>{c.label}</Eyebrow>
-          <div
-            className={cn(
-              'num mt-2 text-[22px] font-light leading-none',
-              c.tone === 'ok' ? 'text-ok' : c.tone === 'bad' ? 'text-bad' : c.tone === 'warn' ? 'text-warn' : 'text-ink',
-            )}
-          >
-            {c.value}
-          </div>
-        </div>
+    <MetricStrip className="grid-cols-3 sm:grid-cols-3">
+      {cells.map((c) => (
+        <MetricTile key={c.label} size="sm" label={c.label} value={c.value} valueTone={c.tone} className="px-3.5 py-3 sm:px-3.5 sm:py-3" />
       ))}
-    </div>
+    </MetricStrip>
   )
 }
 
@@ -1092,7 +872,7 @@ function TransactionList({
       </div>
       <div className="mt-2 grid grid-cols-[64px_minmax(0,1fr)_auto] gap-x-3 border-b border-rule-2 py-[7px]">
         {['Date', 'Merchant', 'Amount'].map((h, i) => (
-          <span key={h} className={cn('label text-[11px] tracking-[0.08em] text-ink-3', i === 2 && 'text-right')}>
+          <span key={h} className={cn('label text-[11px] text-ink-3', i === 2 && 'text-right')}>
             {h}
           </span>
         ))}
@@ -1113,21 +893,24 @@ function TransactionList({
                     aria-expanded={open}
                     onClick={() => setEditing(open ? null : t.id)}
                     className={cn(
-                      'underline-offset-2 hover:text-ink hover:underline',
+                      // A text link in a dense row: the hit area grows on a coarse pointer without moving the row.
+                      'underline-offset-2 hover:text-ink hover:underline pointer-coarse:-my-3 pointer-coarse:py-3',
                       t.categoryName ? (t.isManual ? 'text-ink-2' : 'text-ink-3') : 'text-warn',
                     )}
                   >
                     {t.categoryName ?? 'Uncategorised'}
                   </button>{' '}
-                  <span className={cn('label text-[10px]', t.classifiedBy === 'model' ? 'text-brand' : 'text-ink-3')}>
-                    {t.isManual
-                      ? 'manual'
-                      : t.classifiedBy === 'model' && t.confidence !== null
-                        ? `model ${t.confidence.toFixed(2)}`
-                        : t.classifiedBy === 'rule'
-                          ? 'rule'
-                          : ''}
-                  </span>
+                  {(t.isManual || t.classifiedBy === 'model' || t.classifiedBy === 'rule') && (
+                    <StatusChip tone={t.classifiedBy === 'model' && !t.isManual ? 'brand' : 'quiet'}>
+                      {t.isManual
+                        ? 'Manual'
+                        : t.classifiedBy === 'model' && t.confidence !== null
+                          ? `Model ${t.confidence.toFixed(2)}`
+                          : t.classifiedBy === 'model'
+                            ? 'Model'
+                            : 'Rule'}
+                    </StatusChip>
+                  )}
                 </span>
               </span>
               <span className={cn('num text-right text-[13px]', amount.incoming ? 'text-ok' : 'text-ink')}>
@@ -1228,10 +1011,10 @@ function LimitsDrawer({
             {count === 0 ? 'No changes' : `${count} unsaved change${count === 1 ? '' : 's'}`}
           </span>
           <span className="flex gap-2.5">
-            <ActionButton variant="outline" size="lg" className="h-9 px-3.5 text-[13px]" onClick={reset} disabled={count === 0 || pending}>
+            <ActionButton variant="outline" onClick={reset} disabled={count === 0 || pending}>
               Reset
             </ActionButton>
-            <ActionButton variant="solid" size="lg" className="h-9 gap-2 px-3.5 text-[13px]" onClick={done} disabled={pending}>
+            <ActionButton variant="solid" onClick={done} disabled={pending}>
               Done <span aria-hidden="true">&rarr;</span>
             </ActionButton>
           </span>
@@ -1239,9 +1022,9 @@ function LimitsDrawer({
       }
     >
       <div className="grid grid-cols-[minmax(0,1fr)_auto_130px] gap-x-3.5 border-b border-rule-2 py-[7px]">
-        <span className="label text-[11px] tracking-[0.08em] text-ink-3">Category</span>
-        <span className="label text-right text-[11px] tracking-[0.08em] text-ink-3">Spent</span>
-        <span className="label text-right text-[11px] tracking-[0.08em] text-ink-3">Monthly limit</span>
+        <span className="label text-[11px] text-ink-3">Category</span>
+        <span className="label text-right text-[11px] text-ink-3">Spent</span>
+        <span className="label text-right text-[11px] text-ink-3">Monthly limit</span>
       </div>
       {budgets.map((b) => {
         const used = b.limitCents ? percent(b.spentCents, b.limitCents) : null
@@ -1266,7 +1049,7 @@ function LimitsDrawer({
                 value={limits[b.id] ?? (b.limitCents ? String(b.limitCents / 100) : '')}
                 onChange={(e) => setLimits((l) => ({ ...l, [b.id]: e.target.value }))}
                 aria-label={`Monthly limit for ${b.name}`}
-                className="num w-[88px] border border-rule-2 bg-bg px-2.5 py-1.5 text-right text-[13px] text-ink outline-none focus-visible:border-brand"
+                className={cn(fieldClass, 'num w-[88px] py-1.5 text-right')}
               />
             </span>
           </div>
@@ -1278,7 +1061,7 @@ function LimitsDrawer({
         <span className="num text-right text-[13px] text-ink">{money(totals.limit)}</span>
       </div>
 
-      <div className="mt-2 flex flex-col gap-2.5 border border-rule px-3.5 py-3">
+      <Card className="mt-2 flex flex-col gap-2.5">
         <Eyebrow>Alert threshold</Eyebrow>
         <div className="flex items-center gap-3.5">
           <input
@@ -1289,7 +1072,7 @@ function LimitsDrawer({
             value={nextThreshold}
             onChange={(e) => setNextThreshold(Number(e.target.value))}
             aria-label="Alert threshold"
-            className="flex-1 accent-brand"
+            className="flex-1 accent-action"
           />
           <span className="num w-11 text-right text-[13px] text-ink">{nextThreshold}%</span>
         </div>
@@ -1297,7 +1080,7 @@ function LimitsDrawer({
           Categories past this share of their limit are flagged in the digest and count toward
           &quot;Budgets over threshold&quot;.
         </p>
-      </div>
+      </Card>
     </Overlay>
   )
 }

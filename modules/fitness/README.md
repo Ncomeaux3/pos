@@ -5,15 +5,19 @@ Workouts, sets, and body metrics. Screen 09 of the design bundle.
 ## Units are a rendering decision
 
 Everything is stored unit free and integer: **grams** for mass, **metres** for
-distance, **seconds** for time. Pounds and kilograms are both a rendering
-choice, and storing either one makes the other lossy.
+distance, **seconds** for time. Pounds and miles are a rendering choice, and
+storing either system makes the other lossy. The providers convert on the way
+in: Health Auto Export and the Shortcut both send whatever the phone is set to,
+and their clients turn lb, kg, mi and km into grams and metres.
 
-`units.ts` is the only file that knows about pounds, and it is tested. Two cases
-worth knowing:
+`units.ts` is the only file that knows about pounds and miles, and it is tested.
+**It renders imperial by default**, because the owner reads imperial. `mass`,
+`distance` and `pace` each take an optional unit for the metric reading. Two
+cases worth knowing:
 
 **Pace is derived, never stored.** It is a ratio of the distance and the
 duration, so it cannot disagree with them. The test pins that it never produces
-`7:60/km`, which is what naive rounding gives and is not a time.
+`7:60/mi`, which is what naive rounding gives and is not a time.
 
 **Best set is by weight, then reps.** 315 for five beats 315 for three, and both
 beat 275 for ten. There is no one rep max estimate anywhere: that would be a
@@ -73,6 +77,32 @@ stops being read.
 No model call. "You jumped fifty percent in a week, back off" is not a
 judgement worth paying for, and not one that should come out differently on two
 Sundays with the same numbers.
+
+The owner writes the plan from the Plan tab (v1.1 Phase 11): `PlanDrawer`
+calls the same `write_plan` through `callTool` with the UI source, which the
+guard does not stop, and rewrites the item list in the order the rows are
+shown. Item notes are carried through an edit, not edited, so a note the coach
+wrote survives.
+
+## Trends, the filter row, and when Apple data arrived
+
+The Trends tab draws one metric on a date axis through the shared `LineChart`
+(`components/pos/LineChart.tsx`, the net worth chart's drawing with the money
+taken out) over `spine()` from `core/series.ts`, so a reading every third day
+is ten points on a thirty day axis, carried forward between them, and not ten
+evenly spaced points. Thirty days of weight come with the page; 90 and 365 and
+any other kind are one `readMetricSeries` action each, kept for the tab's life.
+
+The Workouts tab's filter (kind, source, from, to) lives in the URL as a local
+write and its rows come from `readWorkouts`, the same `screenWorkouts()` the
+page renders from, so a link with a filter opens narrowed.
+
+The band's "Apple data last arrived" reads `core.request_log`, the newest 200
+on either Apple webhook route, rather than the rows' `created_at`: the inbound
+upsert keeps `created_at` when a day is re-sent, and the log is what the
+Connections card's Test already reads. It is its own line beside the Strava
+clock, because "Strava · synced 07:02" for an Apple payload would name the
+wrong source.
 
 A suggestion already waiting is not repeated for a fortnight, so a nightly cron
 does not become a nightly nag.

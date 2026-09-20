@@ -1,27 +1,39 @@
 'use client'
 
 import Link from 'next/link'
-import { Fragment, useState } from 'react'
+import { Fragment, useEffect, useState, useTransition } from 'react'
 import {
+  ActionButton,
   Card,
   CardHead,
   DataRow,
   DataTable,
   EmptyState,
   Eyebrow,
+  LineChart,
+  PillGroup,
   Row,
   RowList,
   SkillPicker,
   TabBar,
   type SkillLink,
 } from '@/components/pos'
+import { fieldClass } from '@/components/pos/field'
 import { useSearchState } from '@/components/pos/searchState'
-import { distance, duration, mass, pace, sourcesLabel } from '../units'
+import type { Day } from '@/core/series'
+import { cn } from '@/lib/utils'
+import { WORKOUT_PAGE, distance, duration, mass, pace, shortDate, sourcesLabel } from '../units'
+import { readMetricSeries, readWorkouts } from './actions'
+import { PlanDrawer } from './PlanDrawer'
 
 // Two views over one list, plus the exercise index. The view is in the URL, so
 // it survives a refresh and can be linked to.
 
 export type FitnessData = {
+  /** The owner's zone: row dates are printed in it on the server and the device alike. */
+  timeZone: string
+  /** Every workout on file; `workouts` is the first page of them. */
+  total: number
   workouts: {
     id: string
     name: string
@@ -43,6 +55,8 @@ export type FitnessData = {
   weekMinutes: number
   weekLoad: number
   metrics: { kind: string; value: number; measuredOn: string }[]
+  /** Thirty days of the first metric on file, for the Trends tab's first paint. */
+  trend: { kind: string; days: Day[] } | null
   exercises: { id: string; name: string; sets: number }[]
   plan: {
     id: string
@@ -67,8 +81,6 @@ export type FitnessData = {
   skills: [string, string][]
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
 const right = (label: string) => (
   <span key={label} className="block text-right">
     {label}
@@ -81,20 +93,17 @@ const right = (label: string) => (
  * stored numbers rather than a stored one, so it can never disagree with them.
  */
 function detailOf(w: FitnessData['workouts'][number]): string {
+  const unit = w.kind === 'swim' ? 'yd' : 'mi'
   return [
     w.detail,
     w.best ? `${w.best.exercise} ${mass(w.best.weightG)} × ${w.best.reps}` : '',
-    w.distanceM > 0 ? `${distance(w.distanceM)} at ${pace(w.distanceM, w.durationS)}` : '',
+    w.distanceM > 0 ? `${distance(w.distanceM, unit)} at ${pace(w.distanceM, w.durationS, unit)}` : '',
     w.avgHr ? `${w.avgHr} bpm` : '',
   ]
     .filter(Boolean)
     .join(' · ')
 }
 
-const shortDate = (iso: string) => {
-  const d = new Date(iso)
-  return `${MONTHS[d.getMonth()]} ${String(d.getDate()).padStart(2, '0')}`
-}
 
 /** How a body metric reads. Each kind is stored in its own unit, so each reads differently. */
 function metricValue(kind: string, value: number): string {
@@ -137,12 +146,97 @@ const order = (kind: string) => {
   return i === -1 ? Number.MAX_SAFE_INTEGER : i
 }
 
+/** The metrics where a fall is the good direction. */
+const DOWN_IS_GOOD = new Set(['weight', 'resting_hr', 'body_fat'])
+
+const KIND_LABELS: Record<string, string> = {
+  strength: 'Strength',
+  run: 'Run',
+  ride: 'Ride',
+  swim: 'Swim',
+  walk: 'Walk',
+  other: 'Other',
+}
+
+const SOURCE_LABELS: Record<string, string> = {
+  manual: 'By hand',
+  agent: 'Agent',
+  strava: 'Strava',
+  health_auto_export: 'Apple Health',
+  apple_shortcuts: 'Apple Health (Shortcut)',
+  notion_import: 'Notion',
+  demo: 'Demo',
+}
+
+type Filter = { kind?: string; source?: string; from?: string; to?: string; limit?: number }
+
+/** The four filter keys the URL may carry, dropped when empty. */
+const filterOf = (params: URLSearchParams): Filter =>
+  Object.fromEntries(
+    (['kind', 'source', 'from', 'to'] as const).map((k) => [k, params.get(k) || undefined]).filter(([, v]) => v),
+  )
+
 export function Fitness({ data }: { data: FitnessData }) {
   const { params, set: setParams } = useSearchState()
   const tab = params.get('tab') ?? 'workouts'
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [pending, start] = useTransition()
 
   const setTab = (next: string) => setParams({ tab: next === 'workouts' ? null : next }, { local: true })
+
+  // The filter lives in the URL and the rows it selects come from one server
+  // action, like the Trends ranges: the page renders the unfiltered list, and
+  // a load that arrives with a filter already set fetches once on mount.
+  // Show more raises the limit a page at a time; a filter change puts it back.
+  const filter = filterOf(params)
+  const filtering = Object.keys(filter).length > 0
+  const [limit, setLimit] = useState(WORKOUT_PAGE)
+  const [filtered, setFiltered] = useState<FitnessData['workouts'] | null>(null)
+  const fetchRows = (next: Filter, rows = WORKOUT_PAGE) =>
+    start(async () =>
+      setFiltered(Object.keys(next).length > 0 || rows > WORKOUT_PAGE ? await readWorkouts({ ...next, limit: rows }) : null),
+    )
+  useEffect(() => {
+    if (filtering) fetchRows(filter)
+    // Once, on mount: later changes go through setFilter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const setFilter = (patch: Filter) => {
+    const next = { ...filter, ...patch }
+    for (const k of Object.keys(next) as (keyof Filter)[]) if (!next[k]) delete next[k]
+    setParams(Object.fromEntries((['kind', 'source', 'from', 'to'] as const).map((k) => [k, next[k] ?? null])), { local: true })
+    setLimit(WORKOUT_PAGE)
+    fetchRows(next)
+  }
+  const showMore = () => {
+    const next = limit + WORKOUT_PAGE
+    setLimit(next)
+    fetchRows(filter, next)
+  }
+  const rows = filtered ?? data.workouts
+  const kinds = [...new Set(data.workouts.map((w) => w.kind))]
+  const sources = [...new Set(data.workouts.map((w) => w.source))]
+
+  // Trends: thirty days of the first kind come with the page; every other
+  // kind and range is fetched once and kept for the tab's life.
+  const [trendKind, setTrendKind] = useState(data.trend?.kind ?? '')
+  const [range, setRange] = useState<'30' | '90' | '365'>('30')
+  const [series, setSeries] = useState<Record<string, Day[]>>(
+    data.trend ? { [`${data.trend.kind}:30`]: data.trend.days } : {},
+  )
+  const trendKey = `${trendKind}:${range}`
+  const trend = series[trendKey]
+  useEffect(() => {
+    if (tab !== 'trends' || !trendKind || series[trendKey]) return
+    start(async () => {
+      const days = await readMetricSeries(trendKind, Number(range))
+      setSeries((prev) => ({ ...prev, [trendKey]: days }))
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, trendKey])
+  const metricKinds = [...data.metrics].sort((a, b) => order(a.kind) - order(b.kind)).map((m) => m.kind)
+
+  const [planOpen, setPlanOpen] = useState(false)
 
   return (
     <div className="space-y-5">
@@ -151,9 +245,10 @@ export function Fitness({ data }: { data: FitnessData }) {
         value={tab}
         onChange={setTab}
         tabs={[
-          { value: 'workouts', label: 'Workouts', count: data.workouts.length },
+          { value: 'workouts', label: 'Workouts', count: data.total },
           { value: 'exercises', label: 'Exercises', count: data.exercises.length },
           { value: 'body', label: 'Body', count: data.metrics.length },
+          { value: 'trends', label: 'Trends' },
           { value: 'plan', label: 'Plan', count: data.plan?.items.length ?? 0 },
         ]}
       />
@@ -162,44 +257,114 @@ export function Fitness({ data }: { data: FitnessData }) {
         (data.workouts.length === 0 ? (
           <EmptyState headline="Nothing logged">
             Connect Strava at Settings and the nightly job pulls your history, or log one by hand.
-            Every workout links to a Health skill and earns XP on the Skill Tree.
+            Every workout links to a Health skill and earns XP on Skills.
           </EmptyState>
         ) : (
           <Card className="py-3.5">
-            <CardHead label="Recent workouts" meta={sourcesLabel(data.workouts)} className="mb-1" />
-            <DataTable
-              head={['Date', 'Workout', right('Time'), right('Skill')]}
-              cols="72px minmax(0,1fr) auto auto"
-            >
-              {data.workouts.map((w) => (
-                <Fragment key={w.id}>
-                  <DataRow
-                    className="py-[9px] text-[13px]"
-                    selected={expanded === w.id}
-                    onClick={() => setExpanded(expanded === w.id ? null : w.id)}
-                  >
-                    <span className="num text-[12px] text-ink-3">{shortDate(w.startedAt)}</span>
-                    <span className="min-w-0 text-ink">
-                      {w.name} <span className="text-[12px] text-ink-3">{detailOf(w)}</span>
-                    </span>
-                    <span className="num text-right text-ink">{duration(w.durationS)}</span>
-                    <span className="text-right text-[12px] text-ink-2">
-                      {w.skills[0] ?? <span className="text-ink-4">unlinked</span>}
-                    </span>
-                  </DataRow>
-                  {expanded === w.id && (
-                    <div className="border-b border-rule px-0 py-3">
-                      <Eyebrow>Linked skills</Eyebrow>
-                      {w.entityRef ? (
-                        <SkillPicker entityRef={w.entityRef} links={w.links} skills={data.skills} className="mt-2" />
-                      ) : (
-                        <p className="mt-2 text-[12px] text-ink-4">Nothing matched yet.</p>
-                      )}
-                    </div>
-                  )}
-                </Fragment>
-              ))}
-            </DataTable>
+            <CardHead label="Recent workouts" meta={sourcesLabel(rows)} className="mb-1" />
+            {/* The filter row: two selects and two native dates, each optional. */}
+            <div className={cn('mb-2 flex flex-wrap items-center gap-2', pending && 'opacity-60')}>
+              <select
+                aria-label="Kind"
+                value={filter.kind ?? ''}
+                onChange={(e) => setFilter({ kind: e.target.value })}
+                className={cn(fieldClass, 'w-auto py-1.5')}
+              >
+                <option value="">Any kind</option>
+                {kinds.map((k) => (
+                  <option key={k} value={k}>
+                    {KIND_LABELS[k] ?? k}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Source"
+                value={filter.source ?? ''}
+                onChange={(e) => setFilter({ source: e.target.value })}
+                className={cn(fieldClass, 'w-auto py-1.5')}
+              >
+                <option value="">Any source</option>
+                {sources.map((k) => (
+                  <option key={k} value={k}>
+                    {SOURCE_LABELS[k] ?? k}
+                  </option>
+                ))}
+              </select>
+              <label className="flex items-center gap-1.5 text-[11px] text-ink-3">
+                From
+                <input
+                  type="date"
+                  aria-label="From"
+                  value={filter.from ?? ''}
+                  onChange={(e) => setFilter({ from: e.target.value })}
+                  className={cn(fieldClass, 'w-auto py-1.5')}
+                />
+              </label>
+              <label className="flex items-center gap-1.5 text-[11px] text-ink-3">
+                To
+                <input
+                  type="date"
+                  aria-label="To"
+                  value={filter.to ?? ''}
+                  onChange={(e) => setFilter({ to: e.target.value })}
+                  className={cn(fieldClass, 'w-auto py-1.5')}
+                />
+              </label>
+              {filtering && (
+                <ActionButton
+                  variant="quiet"
+                  size="sm"
+                  onClick={() => setFilter({ kind: '', source: '', from: '', to: '' })}
+                >
+                  Clear
+                </ActionButton>
+              )}
+            </div>
+            {rows.length === 0 ? (
+              <p className="py-4 text-center text-[12px] text-ink-4">No workouts match.</p>
+            ) : (
+              <DataTable
+                head={['Date', 'Workout', right('Time'), right('Skill')]}
+                cols="72px minmax(0,1fr) auto auto"
+              >
+                {rows.map((w) => (
+                  <Fragment key={w.id}>
+                    <DataRow
+                      className="py-[9px] text-[13px]"
+                      selected={expanded === w.id}
+                      onClick={() => setExpanded(expanded === w.id ? null : w.id)}
+                    >
+                      <span className="num text-[12px] text-ink-3">{shortDate(w.startedAt, data.timeZone)}</span>
+                      <span className="min-w-0 text-ink">
+                        {w.name} <span className="text-[12px] text-ink-3">{detailOf(w)}</span>
+                      </span>
+                      <span className="num text-right text-ink">{duration(w.durationS)}</span>
+                      <span className="text-right text-[12px] text-ink-2">
+                        {w.skills[0] ?? <span className="text-ink-4">unlinked</span>}
+                      </span>
+                    </DataRow>
+                    {expanded === w.id && (
+                      <div className="border-b border-rule px-0 py-3">
+                        <Eyebrow>Linked skills</Eyebrow>
+                        {w.entityRef ? (
+                          <SkillPicker entityRef={w.entityRef} links={w.links} skills={data.skills} className="mt-2" />
+                        ) : (
+                          <p className="mt-2 text-[12px] text-ink-4">Nothing matched yet.</p>
+                        )}
+                      </div>
+                    )}
+                  </Fragment>
+                ))}
+              </DataTable>
+            )}
+            {/* A full page means there may be another; a short one is the end. */}
+            {rows.length >= limit && (
+              <div className="mt-3 flex justify-center">
+                <ActionButton size="sm" variant="quiet" onClick={showMore} disabled={pending}>
+                  {pending ? 'Loading' : filtering ? 'Show more' : `Show more · ${rows.length} of ${data.total}`}
+                </ActionButton>
+              </div>
+            )}
           </Card>
         ))}
 
@@ -240,9 +405,68 @@ export function Fitness({ data }: { data: FitnessData }) {
           </RowList>
         ))}
 
+      {tab === 'trends' &&
+        (metricKinds.length === 0 ? (
+          <EmptyState headline="No readings">
+            A trend needs readings. They arrive from Apple Health or by hand, one per metric per
+            day.
+          </EmptyState>
+        ) : (
+          <Card className="flex min-h-[260px] flex-col">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <select
+                aria-label="Metric"
+                value={trendKind}
+                onChange={(e) => setTrendKind(e.target.value)}
+                className={cn(fieldClass, 'w-auto py-1.5')}
+              >
+                {metricKinds.map((k) => (
+                  <option key={k} value={k}>
+                    {METRIC_LABELS[k] ?? k}
+                  </option>
+                ))}
+              </select>
+              <PillGroup
+                label="Range"
+                value={range}
+                onChange={setRange}
+                options={[
+                  { value: '30', label: '30 days' },
+                  { value: '90', label: '90 days' },
+                  { value: '365', label: '365 days' },
+                ]}
+              />
+            </div>
+            {!trend ? (
+              <p className="py-8 text-center text-[12px] text-ink-4">Loading</p>
+            ) : trend.some((d) => d.observed) ? (
+              <LineChart
+                name={METRIC_LABELS[trendKind] ?? trendKind}
+                days={trend}
+                format={(v) => metricValue(trendKind, v)}
+                formatDelta={(v) => `${v < 0 ? '-' : '+'}${metricValue(trendKind, Math.abs(v))}`}
+                downIsGood={DOWN_IS_GOOD.has(trendKind)}
+              />
+            ) : (
+              <EmptyState headline="Nothing in range" className="border-0">
+                No {(METRIC_LABELS[trendKind] ?? trendKind).toLowerCase()} reading in the last {range} days.
+              </EmptyState>
+            )}
+          </Card>
+        ))}
+
+      {tab === 'plan' && planOpen && <PlanDrawer plan={data.plan} onClose={() => setPlanOpen(false)} />}
+
       {tab === 'plan' &&
         (data.plan === null ? (
-          <EmptyState headline="No plan">
+          <EmptyState
+            headline="No plan"
+            action={
+              <ActionButton variant="solid" onClick={() => setPlanOpen(true)}>
+                New plan
+              </ActionButton>
+            }
+          >
             A plan is what the coach measures a week against. Without one it says nothing about
             missed sessions, because there is no target to have missed.
           </EmptyState>
@@ -251,7 +475,14 @@ export function Fitness({ data }: { data: FitnessData }) {
             <Card className="space-y-2.5">
               <CardHead
                 label={data.plan.name}
-                meta={`${data.plan.daysPerWeek} days a week`}
+                meta={
+                  <>
+                    {data.plan.daysPerWeek} days a week
+                    <ActionButton variant="quiet" size="sm" className="ml-3" onClick={() => setPlanOpen(true)}>
+                      Edit
+                    </ActionButton>
+                  </>
+                }
               />
               {data.plan.goal && <p className="t-caption text-ink-2">{data.plan.goal}</p>}
               {data.plan.startedOn && (

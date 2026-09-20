@@ -1,5 +1,8 @@
 # Goals to the artboard
 
+Superseded for styling on 2026-09-19 by the Holon redesign (docs/plans/holon-product-redesign.md, section 4): colour, type, radii, surfaces and control shapes now come from the Holon design contract and the shared components in `components/pos/`. This plan still governs what each screen shows and how it is laid out.
+
+
 ## Context
 
 Screen seven of the fidelity pass (method: docs/plans/weekly-review-fidelity.md). `POS Goals.dc.html` captured at 1440 into `/private/tmp/pos-handoff-sources/goals/` (Active dark and light, the view drawer for Net worth and Deadlift, the edit drawer, the inline add, Archive). Another session is running Insurance, Meals and Second Brain in worktrees off `6f5dd33`; it constrains itself to `modules/<name>/`. This pass touches `core/` for one seam (below) and `modules/tasks/manifest.ts` to fill it, which that session does not touch.

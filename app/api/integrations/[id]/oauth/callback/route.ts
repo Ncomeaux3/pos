@@ -4,6 +4,9 @@ import { getIntegration, saveCredentials, stateMatches } from '@/core/integratio
 import { type TokenResponse, expiryFrom, oauthStateCookie } from '@/core/oauth'
 import { withLog } from '@/core/log'
 
+// A redirect and one token exchange.
+export const maxDuration = 30
+
 const back = (origin: string, error?: string) =>
   NextResponse.redirect(
     `${origin}/settings/connections${error ? `?error=${encodeURIComponent(error)}` : '?connected=1'}`,

@@ -1,7 +1,21 @@
 import { randomBytes } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
-import { ActionButton, ConfirmButton, Eyebrow, Row, RowList, StatusChip } from '@/components/pos'
+import {
+  ActionButton,
+  Card,
+  Chip,
+  ConfirmButton,
+  Eyebrow,
+  fieldClass,
+  MetricStrip,
+  MetricTile,
+  Row,
+  RowList,
+  StatusChip,
+} from '@/components/pos'
+import { BASE, SIZE, VARIANT } from '@/components/pos/button-classes'
 import { requireOwner } from '@/core/auth'
+import { cn } from '@/lib/utils'
 import { db } from '@/core/db'
 import {
   type ConnectionStatus,
@@ -98,8 +112,11 @@ async function generateSecret(formData: FormData) {
   revalidatePath('/settings/connections')
 }
 
-const AUTH_LABEL = { token: 'TOKEN', oauth2: 'OAUTH2', webhook: 'WEBHOOK' } as const
+const AUTH_LABEL = { token: 'Token', oauth2: 'OAuth2', webhook: 'Webhook' } as const
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/** An `<a>` dressed as an md ActionButton. */
+const linkButton = (variant: keyof typeof VARIANT) => cn(BASE, SIZE.md, VARIANT[variant])
 
 /** Which modules named this provider in `requires`. Drives the "used by" line. */
 function usedBy(id: string): string[] {
@@ -108,10 +125,6 @@ function usedBy(id: string): string[] {
     .map((m) => m.nav.label)
 }
 
-const btn =
-  'inline-flex items-center gap-2 border border-rule-2 px-3.5 py-2 text-[13px] text-ink transition-colors duration-150 hover:border-ink hover:bg-ink hover:text-bg'
-const btnQuiet =
-  'inline-flex items-center border border-rule-2 px-3.5 py-2 text-[13px] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink'
 
 export default async function ConnectionsPage({ searchParams }: PageProps<'/settings/connections'>) {
   const params = await searchParams
@@ -148,7 +161,7 @@ export default async function ConnectionsPage({ searchParams }: PageProps<'/sett
     <div className="space-y-[18px]">
       <SettingsHeader current="/settings/connections" />
 
-      {error && <p className="border border-bad/60 px-3 py-2.5 text-[13px] text-bad">{error}</p>}
+      {error && <p className="t-caption rounded-md border border-bad/60 px-3 py-2 text-bad">{error}</p>}
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,380px),1fr))] items-stretch gap-3.5">
         {manifests.map((manifest) => (
@@ -212,14 +225,12 @@ function ProviderCard({
   const hoursLeft = expires ? Math.round((expires.getTime() - now.getTime()) / 3_600_000) : null
 
   return (
-    <div className="flex flex-col border border-rule bg-bg-elev px-5 py-[18px] transition-colors duration-150 hover:border-rule-2">
+    <Card className="flex flex-col">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
             <span className="text-[16px] text-ink">{manifest.label}</span>
-            <span className="num border border-rule-2 px-2 py-[3px] text-[10px] tracking-[0.08em] text-ink-2">
-              {AUTH_LABEL[manifest.auth.type]}
-            </span>
+            <Chip tone="quiet">{AUTH_LABEL[manifest.auth.type]}</Chip>
           </div>
           <p className="mt-1.5 text-[12px] text-ink-3">
             {manifest.description.replace(/\.$/, '')}
@@ -230,47 +241,52 @@ function ProviderCard({
             )}
           </p>
         </div>
-        <span
-          className={`inline-flex shrink-0 items-center gap-[7px] whitespace-nowrap text-[11px] tracking-[0.08em] ${connected ? 'text-ok' : rejected ? 'text-bad' : 'text-ink-3'}`}
+        <StatusChip
+          tone={connected ? 'ok' : rejected ? 'bad' : 'quiet'}
+          className="shrink-0 whitespace-nowrap"
         >
-          <span className={`size-1.5 rounded-full ${connected ? 'bg-ok' : rejected ? 'bg-bad' : 'bg-ink-3'}`} />
-          {connected ? 'CONNECTED' : rejected ? 'REJECTED' : 'NOT CONNECTED'}
-        </span>
+          {connected ? 'Connected' : rejected ? 'Rejected' : 'Not connected'}
+        </StatusChip>
       </div>
 
       {status ? (
         <>
-          <div className="mt-3.5 grid border border-rule sm:grid-cols-2">
-            <div className="border-b border-rule px-3 py-2.5 sm:border-b-0 sm:border-r">
-              <Eyebrow>Last test</Eyebrow>
-              <div className={`num mt-1.5 break-words text-[12px] ${connected ? 'text-ok' : 'text-bad'}`}>
-                {connected ? 'ok' : 'failed'}
-                {status.lastTestedAt && ` · ${clockIn(new Date(status.lastTestedAt), timezone)}`}
-                {status.lastTestDetail && ` · ${status.lastTestDetail}`}
-              </div>
-            </div>
-            <div className="px-3 py-2.5">
-              <Eyebrow>{expires ? 'Token expires' : 'Connected since'}</Eyebrow>
-              <div className="num mt-1.5 text-[12px] text-ink">
-                {expires && hoursLeft !== null
+          <MetricStrip className="mt-3.5">
+            {/* The provider's own detail line goes under the verdict, not in
+              * it: SimpleFIN answers with every account name. */}
+            <MetricTile
+              label="Last test"
+              size="xs"
+              valueTone={connected ? 'ok' : 'bad'}
+              value={`${connected ? 'Ok' : 'Failed'}${
+                status.lastTestedAt ? ` · ${clockIn(new Date(status.lastTestedAt), timezone)}` : ''
+              }`}
+              delta={status.lastTestDetail}
+              className="[&>p]:break-words"
+            />
+            <MetricTile
+              label={expires ? 'Token expires' : 'Connected since'}
+              size="xs"
+              value={
+                expires && hoursLeft !== null
                   ? hoursLeft > 48
                     ? `in ${Math.round(hoursLeft / 24)} days${manifest.refresh ? ' · auto-refresh' : ''}`
                     : `in ${Math.max(0, hoursLeft)}h${manifest.refresh ? ' · auto-refresh' : ''}`
                   : since
                     ? `${since.getDate()} ${MONTHS[since.getMonth()]} ${since.getFullYear()}`
-                    : ''}
-              </div>
-            </div>
-          </div>
+                    : ''
+              }
+            />
+          </MetricStrip>
 
           {manifest.auth.type === 'webhook' && (
-            <div className="mt-2.5 flex flex-col gap-2 border border-rule px-3 py-2.5">
+            <div className="glass mt-2.5 flex flex-col gap-2 rounded-[18px] px-4 py-3">
               {/* Wraps rather than truncates: the phone is where this gets read, and a
                   cut-off URL cannot be checked against the one pasted into the app. */}
               <div className="flex flex-col gap-1">
                 <Eyebrow>Inbound URL</Eyebrow>
                 <span className="flex items-center justify-between gap-2.5">
-                  <span className="num min-w-0 break-all text-[11px] text-ink-2">{`${origin}/api/integrations/${manifest.id}/webhook`}</span>
+                  <span className="num min-w-0 break-all text-[12px] text-ink-2">{`${origin}/api/integrations/${manifest.id}/webhook`}</span>
                   <Copy value={`${origin}/api/integrations/${manifest.id}/webhook`} />
                 </span>
               </div>
@@ -279,7 +295,7 @@ function ProviderCard({
                 {secret ? (
                   <Reveal value={secret} />
                 ) : (
-                  <span className="num text-[11px] text-ink-3">none yet</span>
+                  <span className="num text-[12px] text-ink-3">None yet</span>
                 )}
               </div>
             </div>
@@ -288,13 +304,15 @@ function ProviderCard({
           <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
             <form action={test}>
               <input type="hidden" name="id" value={manifest.id} />
-              <button type="submit" className={btn}>
-                Test
-              </button>
+              <ActionButton type="submit">Test</ActionButton>
             </form>
+            {/* A link, not a form: next.config.ts sets `form-action 'self'`
+              * and Chrome applies it to a submission's redirect, which here is
+              * the provider. The arrow says it leaves the app. */}
             {manifest.auth.type === 'oauth2' && (
-              <a href={`/api/integrations/${manifest.id}/oauth/start`} className={btnQuiet}>
-                Reauthorize
+              <a href={`/api/integrations/${manifest.id}/oauth/start`} className={linkButton('quiet')}>
+                Reauthorize <span aria-hidden="true">&#8599;</span>
+                <span className="sr-only">, opens {manifest.label}</span>
               </a>
             )}
             <form action={disconnect} className="ml-auto">
@@ -322,40 +340,37 @@ function ProviderCard({
                     type={f.secret ? 'password' : 'text'}
                     placeholder={f.placeholder}
                     autoComplete="off"
-                    className="num w-full border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand"
+                    className={`${fieldClass} num`}
                   />
                 </label>
               ))}
               <div className="flex flex-wrap items-center gap-2.5">
-                <ActionButton type="submit" variant="solid" className="h-9 gap-2 px-3.5 text-[13px]">
+                <ActionButton type="submit" variant="solid">
                   Save &amp; test <span aria-hidden="true">&rarr;</span>
                 </ActionButton>
-                <span className="num text-[11px] text-ink-3">tests on save</span>
+                <span className="t-caption text-ink-3">Tests on save</span>
               </div>
             </form>
           )}
           {manifest.auth.type === 'oauth2' && (
             <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
-              <a
-                href={`/api/integrations/${manifest.id}/oauth/start`}
-                className="inline-flex h-9 items-center gap-2 border border-ink bg-ink px-3.5 text-[13px] text-bg transition-colors duration-150 hover:bg-ink-2"
-              >
-                Connect with {manifest.label} <span aria-hidden="true">&rarr;</span>
+              <a href={`/api/integrations/${manifest.id}/oauth/start`} className={linkButton('solid')}>
+                Connect with {manifest.label} <span aria-hidden="true">&#8599;</span>
               </a>
-              <span className="num text-[11px] text-ink-3">opens {manifest.label.toLowerCase()}</span>
+              <span className="t-caption text-ink-3">Opens {manifest.label}</span>
             </div>
           )}
           {manifest.auth.type === 'webhook' && (
             <form action={generateSecret} className="mt-3.5 flex flex-wrap items-center gap-2.5">
               <input type="hidden" name="id" value={manifest.id} />
-              <ActionButton type="submit" variant="solid" className="h-9 gap-2 px-3.5 text-[13px]">
+              <ActionButton type="submit" variant="solid">
                 Enable webhook <span aria-hidden="true">&rarr;</span>
               </ActionButton>
-              <span className="num text-[11px] text-ink-3">generates URL + shared secret</span>
+              <span className="t-caption text-ink-3">Generates a URL and shared secret</span>
             </form>
           )}
         </>
       )}
-    </div>
+    </Card>
   )
 }

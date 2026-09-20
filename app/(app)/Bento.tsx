@@ -6,6 +6,7 @@ import { useState, useTransition, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { useLongPress } from '@/components/pos/gestures'
 import type { Settings } from '@/core/settings'
+import { arrange } from '@/core/dashboard-layout'
 import { saveDashboardLayout } from './shell-actions'
 
 // The dashboard grid, in the order the owner likes it.
@@ -16,9 +17,7 @@ import { saveDashboardLayout } from './shell-actions'
 // client because of it. The layout is one setting for every device (v1.1
 // Phase 5); it arrives as a prop and goes back through a server action.
 
-/** `phone: false` hides both the tile and its grid cell below md, so a tile
- * the phone does not carry leaves no blank row behind it. */
-export type Tile = { id: string; node: ReactNode; phone?: boolean }
+export type Tile = { id: string; node: ReactNode }
 
 export type Layout = Settings['dashboard_layout']
 
@@ -56,18 +55,11 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
     setLayout(next)
     start(() => saveDashboardLayout(next))
   }
-  const order = layout?.order ?? null
   const hidden = layout?.hidden ?? []
-
-  // The stored order names tiles that may no longer exist, and cannot know
-  // about a module installed since. Known ids first in their saved order, then
-  // everything new in the order the server sent it.
-  const ids = tiles.map((t) => t.id)
-  const sorted = order
-    ? [...order.filter((id) => ids.includes(id)), ...ids.filter((id) => !order.includes(id))]
-    : ids
-  const shown = sorted.filter((id) => !hidden.includes(id))
-  const hiddenTiles = sorted.filter((id) => hidden.includes(id))
+  const { sorted, shown, hidden: hiddenTiles } = arrange(
+    tiles.map((t) => t.id),
+    layout,
+  )
 
   // Moves are over the visible tiles, so ‹ on the tile after a hidden one
   // swaps with what the owner sees, not with the hidden one.
@@ -98,7 +90,7 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
     // arrange mode the banner takes 18px of that and the grid 22px more.
     <div className="mt-[22px]">
       {arranging && (
-        <div className="-mt-1 mb-[22px] flex flex-wrap items-center justify-between gap-3 border border-dashed border-brand px-3.5 py-2.5 text-[12px] text-ink-2">
+        <div className="-mt-1 mb-[22px] flex flex-wrap items-center justify-between gap-3 border border-dashed border-brand px-3.5 py-2.5 text-[12px] text-ink-2 rounded-[18px]">
           <span>
             Arrange mode: <span className="max-md:hidden">drag tiles, or </span>use ‹ › and Hide on
             each. The layout is saved for every device.
@@ -130,14 +122,13 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
               onDragOver={(e) => arranging && e.preventDefault()}
               onDrop={() => drop(id)}
               className={cn(
-                tile.phone === false ? 'hidden md:flex' : 'flex',
-                'min-w-0 flex-col',
+                'flex min-w-0 flex-col',
                 arranging && 'cursor-grab',
                 dragging === id && 'opacity-60',
               )}
             >
               {arranging && (
-                <div className="flex items-center justify-between border border-b-0 border-brand bg-brand-soft px-2 py-1">
+                <div className="flex items-center justify-between border border-b-0 border-brand bg-brand-soft px-2 py-1 rounded-[18px]">
                   <button
                     type="button"
                     aria-label={`Move ${id} earlier`}
@@ -146,7 +137,7 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
                   >
                     ‹
                   </button>
-                  <span className="label text-[10px] tracking-[0.08em] text-ink-3">Drag</span>
+                  <span className="label text-ink-3">Drag</span>
                   <span className="flex items-center gap-1">
                     <button
                       type="button"
@@ -180,14 +171,14 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
           data-testid="dashboard-hidden"
           className="mt-[22px] flex flex-wrap items-center gap-2 text-[12px] text-ink-3"
         >
-          <span className="label text-[10px] tracking-[0.08em]">Hidden</span>
+          <span className="label">Hidden</span>
           {hiddenTiles.map((id) => (
             <button
               key={id}
               type="button"
               aria-label={`Show ${id}`}
               onClick={() => show(id)}
-              className="border border-rule-2 px-2 py-1 text-ink-2 hover:border-ink hover:text-ink"
+              className="border border-rule-2 px-2 py-1 text-ink-2 hover:border-ink hover:text-ink rounded-full"
             >
               {id} · Show
             </button>
@@ -208,7 +199,7 @@ export function ArrangeToggle() {
       className={cn(
         // 12px in 8px 12px, and filled accent while arranging, as drawn.
         // Arrange is desktop only (2026-09-13 decision).
-        'hidden h-11 shrink-0 items-center border px-3 text-[12px] transition-colors duration-150 sm:h-[33px] md:inline-flex',
+        'hidden h-11 shrink-0 items-center border px-3 text-[12px] transition-colors duration-150 sm:h-[33px] md:inline-flex rounded-full',
         arranging
           ? 'border-brand bg-brand text-bg'
           : 'border-rule-2 text-ink-2 hover:border-ink hover:text-ink',

@@ -1,7 +1,7 @@
 'use client'
 
 import { useTransition } from 'react'
-import { ActionButton, BandSearch, SearchButton, useToast } from '@/components/pos'
+import { ActionButton, BandSearch, PillGroup, SearchButton, StatusChip, useToast } from '@/components/pos'
 import { BackControl } from '@/components/pos/BackControl'
 import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
@@ -100,8 +100,8 @@ export function Brain({ data }: { data: BrainData }) {
         ? `${shown.filter(isFinished).length} finished`
         : `${shown.length} ${shown.length === 1 ? 'note' : 'notes'}`
 
-  const folders: { id: string; label: string; count: number; hot?: boolean }[] = [
-    { id: 'inbox', label: 'Inbox', count: drafts.length, hot: true },
+  const folders: { id: string; label: string; count: number }[] = [
+    { id: 'inbox', label: 'Inbox', count: drafts.length },
     { id: 'reading', label: 'Reading list', count: reading.length },
     ...KINDS.map((k) => ({
       id: k,
@@ -112,7 +112,7 @@ export function Brain({ data }: { data: BrainData }) {
 
   return (
     <>
-      <header className="-mx-[18px] -mt-[18px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 md:-mx-7 md:-mt-7 md:h-14 md:flex-nowrap md:px-7 md:py-0">
+      <header className="-mx-[18px] -mt-[18px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 md:-mx-7 md:-mt-7 md:px-7 lg:h-14 lg:flex-nowrap lg:py-0">
         <BackControl />
         <span className="eyebrow shrink-0 whitespace-nowrap text-ink-3">
           Second Brain <span className="text-ink-4">/</span> {crumb}
@@ -135,80 +135,45 @@ export function Brain({ data }: { data: BrainData }) {
         </div>
       </header>
 
-      {/* The folder row: filled chips, Inbox and Reading list apart from the
-        * seven folders, and the line that says why nothing here is the truth. */}
-      <div
-        data-testid="brain-folders"
-        className="-mx-[18px] flex flex-wrap items-center gap-1 border-b border-rule bg-bg-elev px-5 py-2.5 md:-mx-7"
-      >
-        {folders.map((f, i) => {
-          const on = folder === f.id
-          return (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => setParams({ folder: f.id === 'inbox' ? null : f.id, note: null })}
-              className={cn(
-                'inline-flex min-h-11 items-center gap-2 border px-2.5 py-[5px] text-[12px] transition-colors duration-150 md:min-h-0',
-                on ? 'border-ink bg-ink text-bg' : 'border-rule-2 text-ink-3 hover:border-ink hover:text-ink',
-                i === 2 && 'ml-2.5',
-              )}
-            >
-              <span className="whitespace-nowrap">{f.label}</span>
-              <span className={cn('num text-[10px]', f.hot && f.count > 0 ? 'text-warn' : 'text-ink-4')}>
-                {f.count}
-              </span>
-            </button>
-          )
-        })}
-        <span className="ml-auto whitespace-nowrap text-[11px] text-ink-4">
-          Vault in git is the source of truth
-        </span>
-      </div>
-
-      {/* Hubs: the owner's own groupings, one note in as many as fit. The chip
-        * shape is the folder row's; the row is its own so the folder row's
-        * order is untouched. */}
-      <div
-        data-testid="brain-hubs"
-        className="-mx-[18px] flex flex-wrap items-center gap-1 border-b border-rule bg-bg-elev px-5 py-2.5 md:-mx-7"
-      >
-        {[
-          // Counted over published notes, the same rows the folder lists.
-          ...data.hubs.map((h) => ({
-            id: `hub:${h.slug}`,
-            label: h.name,
-            count: published.filter((n) => n.hubs.some((x) => x.id === h.id)).length,
-          })),
-          { id: 'unfiled', label: 'Unfiled', count: published.filter((n) => n.hubs.length === 0).length },
-        ].map((h) => {
-          const on = folder === h.id
-          return (
-            <button
-              key={h.id}
-              type="button"
-              onClick={() => setParams({ folder: h.id, note: null })}
-              className={cn(
-                'inline-flex min-h-11 items-center gap-2 border px-2.5 py-[5px] text-[12px] transition-colors duration-150 md:min-h-0',
-                on ? 'border-ink bg-ink text-bg' : 'border-rule-2 text-ink-3 hover:border-ink hover:text-ink',
-              )}
-            >
-              <span className="whitespace-nowrap">{h.label}</span>
-              <span className="num text-[10px] text-ink-4">{h.count}</span>
-            </button>
-          )
-        })}
-        <button
-          type="button"
-          onClick={() => setParams({ hub: 'new' }, { push: true })}
-          className="inline-flex min-h-11 items-center gap-2 border border-dashed border-rule-2 px-2.5 py-[5px] text-[12px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink md:min-h-0"
-        >
-          + Hub
-        </button>
+      {/* One filter band: the folder row, Inbox and Reading list ahead of the
+        * seven folders, then the hubs under a hairline. Both are the shared
+        * pill group, so selected reads the same as on every other screen. */}
+      <div className="-mx-[18px] border-b border-rule bg-bg-elev px-5 md:-mx-7">
+        <div data-testid="brain-folders" className="flex flex-wrap items-center gap-3 py-2.5">
+          <PillGroup
+            label="Folder"
+            value={folder}
+            onChange={(id) => setParams({ folder: id === 'inbox' ? null : id, note: null })}
+            options={folders.map((f) => ({ value: f.id, label: f.label, count: f.count }))}
+          />
+          <span className="ml-auto hidden whitespace-nowrap text-[11px] text-ink-4 md:inline">
+            Vault in git is the source of truth
+          </span>
+        </div>
+        {/* Hubs: the owner's own groupings, one note in as many as fit. */}
+        <div data-testid="brain-hubs" className="flex flex-wrap items-center gap-3 border-t border-rule py-2.5">
+          <PillGroup
+            label="Hub"
+            value={folder}
+            onChange={(id) => setParams({ folder: id, note: null })}
+            options={[
+              // Counted over published notes, the same rows the folder lists.
+              ...data.hubs.map((h) => ({
+                value: `hub:${h.slug}`,
+                label: h.name,
+                count: published.filter((n) => n.hubs.some((x) => x.id === h.id)).length,
+              })),
+              { value: 'unfiled', label: 'Unfiled', count: published.filter((n) => n.hubs.length === 0).length },
+            ]}
+          />
+          <ActionButton size="pill" variant="quiet" onClick={() => setParams({ hub: 'new' }, { push: true })}>
+            + Hub
+          </ActionButton>
+        </div>
       </div>
 
       <div className="-mx-[18px] -mb-[18px] flex flex-wrap items-stretch md:-mx-7 md:-mb-7 md:min-h-[calc(100dvh-106px)]">
-        <section className="flex min-w-0 flex-[1_1_280px] flex-col border-b border-rule md:max-w-[380px] md:border-b-0 md:border-r">
+        <section className="flex min-w-0 flex-[1_1_280px] flex-col border-b border-rule lg:max-w-[380px] lg:border-b-0 lg:border-r">
           <div className="flex items-baseline justify-between gap-2.5 border-b border-rule px-4 pb-2.5 pt-3.5">
             <span className="truncate text-[14px] text-ink">{listTitle}</span>
             <span className="num whitespace-nowrap text-[11px] text-ink-3">
@@ -233,38 +198,30 @@ export function Brain({ data }: { data: BrainData }) {
             shown.map((n) => {
               const selected = open?.id === n.id
               return (
+                // The row shape from Row.tsx: title, one meta line, the marks
+                // under; an inset hairline between rows, the soft fill when
+                // selected. A button rather than Row because the whole row is
+                // the click and the list has no expander.
                 <button
                   key={n.id}
                   type="button"
                   onClick={() => setParams({ note: n.slug })}
                   className={cn(
-                    'block w-full border-b border-l-2 border-b-rule py-[11px] pl-3.5 pr-4 text-left transition-colors duration-150 hover:bg-brand-soft',
-                    selected ? 'border-l-brand bg-brand-soft' : 'border-l-transparent',
+                    'relative block w-full px-4 py-2.5 text-left transition-colors duration-150 ease-[var(--ease)] hover:bg-glass-strong',
+                    'before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-rule first:before:hidden',
+                    selected && 'bg-brand-soft before:hidden [&+*]:before:hidden',
                   )}
                 >
                   <span className="flex items-baseline justify-between gap-2">
-                    <span className="min-w-0 truncate text-[13px] leading-[1.3] text-ink">{n.title}</span>
-                    <span className="num shrink-0 text-[10px] text-ink-4">{ago(n.updatedAt)}</span>
+                    <span className="min-w-0 truncate text-[14.5px] font-medium leading-[1.35] text-ink">{n.title}</span>
+                    <span className="num t-caption shrink-0 text-ink-4">{ago(n.updatedAt)}</span>
                   </span>
-                  <span className="mt-[3px] block truncate text-[11px] text-ink-3">{subLine(n)}</span>
-                  <span className="mt-[5px] flex items-center gap-1.5">
-                    <span
-                      className={cn(
-                        'label text-[9px] tracking-[0.08em]',
-                        n.status === 'draft' ? 'text-warn' : 'text-ink-4',
-                      )}
-                    >
-                      {n.kind}
-                    </span>
-                    {n.status === 'draft' && (
-                      <span className="label border border-warn px-1 text-[9px] tracking-[0.08em] text-warn">
-                        draft
-                      </span>
-                    )}
+                  <span className="t-caption mt-0.5 block truncate text-ink-3">{subLine(n)}</span>
+                  <span className="mt-1.5 flex items-center gap-1.5">
+                    <span className="label text-ink-4">{n.kind}</span>
+                    {n.status === 'draft' && <StatusChip tone="warn">Draft</StatusChip>}
                     {isFinished(n) && (
-                      <span className="label text-[9px] tracking-[0.08em] text-ok">
-                        FINISHED · {finishedOn(n.updatedAt)}
-                      </span>
+                      <StatusChip tone="ok">Finished · {finishedOn(n.updatedAt)}</StatusChip>
                     )}
                   </span>
                 </button>
