@@ -59,7 +59,7 @@
   /* Placeholders, disabled controls, separators and idle dots: 3.9:1 light,
    * 5:1 dark. Not for copy the reader needs; that is ink-3. */
   --ink-4: light-dark(#78787e, #8e8e93); /* derived */
-  --rule: light-dark(#e5e5ea, rgba(255, 255, 255, 0.09)); /* hairline, lighter than the kit border */
+  --rule: light-dark(#dcdce1, rgba(255, 255, 255, 0.09)); /* hairline, lighter than the kit border */
   --rule-2: light-dark(#d1d1d6, #48484a); /* the kit border: controls and sheet edges */
 
   /* Action is what is interactive or selected; brand is the identity cobalt
@@ -98,12 +98,12 @@
 
   /* Glass: a translucent surface over the flat canvas, blurred and saturated,
    * with a one pixel highlight on its top edge and a hairline around it. */
-  --glass: light-dark(rgba(255, 255, 255, 0.62), rgba(28, 28, 30, 0.55));
-  --glass-strong: light-dark(rgba(255, 255, 255, 0.78), rgba(28, 28, 30, 0.78));
-  --glass-panel: light-dark(rgba(255, 255, 255, 0.8), rgba(28, 28, 30, 0.88));
+  --glass: light-dark(rgba(255, 255, 255, 0.85), rgba(44, 44, 46, 0.64));
+  --glass-strong: light-dark(rgba(255, 255, 255, 0.92), rgba(44, 44, 46, 0.82));
+  --glass-panel: light-dark(rgba(255, 255, 255, 0.94), rgba(44, 44, 46, 0.9));
   --glass-edge: light-dark(rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.09));
   --glass-line: light-dark(rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.08));
-  --field: light-dark(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.22));
+  --field: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.07));
   --blur: 28px;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
