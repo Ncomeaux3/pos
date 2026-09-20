@@ -14,18 +14,26 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
   const [edits, setEdits] = useState<Record<string, string>>({})
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
+  // The panel remounts per proposal (ReviewList keys it by id), so seeding
+  // from the prop is safe: this is the same optimistic-then-revert shape
+  // Inbox.tsx uses for a row, just for one item's status instead of an array.
+  const [status, setStatus] = useState(item.status)
   const [busy, start] = useTransition()
   const toast = useToast()
 
-  const canEdit = item.status === 'pending' && item.diff.some((d) => d.editable)
+  const canEdit = status === 'pending' && item.diff.some((d) => d.editable)
   const after = (field: string, fallback: string | null) => edits[field] ?? fallback
 
-  function run(action: () => Promise<{ ok: boolean; error?: string }>, done: string) {
+  function run(action: () => Promise<{ ok: boolean; error?: string }>, done: string, next: ReviewItem['status']) {
     setError(null)
+    setStatus(next)
     start(async () => {
       const result = await action()
       if (result.ok) toast(done)
-      else setError(result.error ?? 'Failed')
+      else {
+        setStatus(item.status)
+        setError(result.error ?? 'Failed')
+      }
     })
   }
 
@@ -46,6 +54,7 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
     run(
       () => approveProposal(item.id, Object.keys(patch).length ? patch : undefined),
       `Approved: ${item.title}`,
+      'approved',
     )
   }
 
@@ -60,7 +69,7 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
           </Eyebrow>
           <h2 className="mt-2.5 text-[20px] leading-[1.3] tracking-[-0.02em] text-ink">{item.title}</h2>
         </div>
-        <StateChip status={item.status} />
+        <StateChip status={status} />
       </div>
 
       <div>
@@ -136,7 +145,7 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
         <p className="t-caption rounded-md border border-bad/60 px-3 py-2 text-bad">{error}</p>
       )}
 
-      {item.status === 'pending' ? (
+      {status === 'pending' ? (
         <>
           <div className="flex flex-wrap gap-2 pt-1">
             <ActionButton variant="solid" size="xl" disabled={busy} onClick={approve}>
@@ -154,7 +163,7 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
             <ActionButton
               className="ml-auto h-auto self-stretch px-3.5 text-[13px] text-ink-3 hover:border-bad hover:text-bad sm:h-auto"
               disabled={busy}
-              onClick={() => run(() => dismissProposal(item.id), 'Dismissed')}
+              onClick={() => run(() => dismissProposal(item.id), 'Dismissed', 'dismissed')}
             >
               Dismiss
             </ActionButton>
@@ -168,17 +177,17 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
       ) : (
         <div className="flex items-center justify-between gap-3 pt-1">
           <span className="text-[13px] text-ink-3">
-            {item.status === 'approved'
+            {status === 'approved'
               ? `Approved. ${item.module}.${item.tool} ran.`
               : 'Dismissed. The agent will not re-propose this for 30 days. Undo puts it back in the inbox.'}
           </span>
           {/* Only a dismissal comes back: reopening an approved proposal would
             * run its tool a second time, and the write it made stays. */}
-          {item.status === 'dismissed' && (
+          {status === 'dismissed' && (
             <ActionButton
               className="text-ink-2"
               disabled={busy}
-              onClick={() => run(() => reopenProposal(item.id), 'Back in the inbox')}
+              onClick={() => run(() => reopenProposal(item.id), 'Back in the inbox', 'pending')}
             >
               Undo
             </ActionButton>
