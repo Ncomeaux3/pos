@@ -1,6 +1,5 @@
 import { db } from './db'
 import { latestDigests } from './digests'
-import { getModules } from './modules'
 
 // Assembles the dashboard from digests and nothing else. It never reads a
 // module's own tables, which is what lets it stay ignorant of all of them.
@@ -323,37 +322,3 @@ export async function latestSummary(): Promise<LatestSummary> {
   }
 }
 
-/** Every job the system knows about, for the dashboard's system tile. */
-export async function jobStates(): Promise<
-  { module: string; name: string; status: string | null; lastRun: Date | null; tookMs: number | null }[]
-> {
-  const { rows } = await db().query<{
-    module: string
-    name: string
-    last_status: string | null
-    last_run: Date | null
-    took_ms: string | null
-  }>(
-    `select module, name, last_status, last_run, log->>'durationMs' as took_ms
-       from core.jobs order by module, name`,
-  )
-
-  // A module whose jobs have never run still belongs on the tile, greyed.
-  const known = new Set(rows.map((r) => `${r.module}.${r.name}`))
-  const expected = getModules().flatMap((m) =>
-    (m.jobs ?? []).map((j) => ({ module: m.id, name: j.name })),
-  )
-
-  return [
-    ...rows.map((r) => ({
-      module: r.module,
-      name: r.name,
-      status: r.last_status,
-      lastRun: r.last_run,
-      tookMs: r.took_ms === null ? null : Number(r.took_ms),
-    })),
-    ...expected
-      .filter((e) => !known.has(`${e.module}.${e.name}`))
-      .map((e) => ({ ...e, status: null, lastRun: null, tookMs: null })),
-  ]
-}

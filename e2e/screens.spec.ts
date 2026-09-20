@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process'
+import { generateKeyPairSync } from 'node:crypto'
 import { expect, test as base, type Locator, type Page } from '@playwright/test'
 
 // CI's dev server serves a chunk per module, and on its runner the gap between
@@ -759,6 +760,10 @@ test('login, signed out', async ({ page, context }) => {
   await expect(page.getByText(/^single owner$/i)).toBeVisible()
   // The arrow glyph is aria-hidden, so the accessible name stays plain.
   await expect(page.getByRole('button', { name: /^send sign-in code$/i })).toBeVisible()
+  // The autofill passkey ceremony runs on load; a browser that cannot finish
+  // it (headless Chromium here) says nothing, because nobody pressed anything.
+  await page.waitForTimeout(500)
+  await expect(page.locator('p.text-bad')).toHaveCount(0)
   await shoot(page, 'login')
 })
 
@@ -819,6 +824,138 @@ test('login, resend restarts the countdown', async ({ page, context }) => {
 
   await page.getByRole('button', { name: 'Resend' }).click()
   await expect(page.getByText('15:00')).toBeVisible()
+})
+
+// A virtual authenticator over CDP: Chromium's own WebAuthn stand-in, which
+// answers navigator.credentials.get and .create without a device. Internal
+// transport with resident keys and user verification is what a platform
+// passkey (Touch ID, Face ID) looks like to the page. The local GoTrue has
+// passkeys on with rp_id localhost (supabase/config.toml), so the ceremony
+// runs end to end against the real server.
+//
+// The login page also runs the ceremony without a press, as an autofill
+// suggestion on the email field (conditional mediation), and the virtual
+// authenticator answers that on page load. A test of the button turns it off
+// first so the press is what signs in.
+async function virtualAuthenticator(
+  page: Page,
+  opts: { conditional: boolean },
+): Promise<{ id: string; send: (m: string, p: object) => Promise<unknown> }> {
+  if (!opts.conditional) {
+    await page.addInitScript(() => {
+      PublicKeyCredential.isConditionalMediationAvailable = async () => false
+    })
+  }
+  const cdp = await page.context().newCDPSession(page)
+  await cdp.send('WebAuthn.enable')
+  const { authenticatorId } = await cdp.send('WebAuthn.addVirtualAuthenticator', {
+    options: {
+      protocol: 'ctap2',
+      transport: 'internal',
+      hasResidentKey: true,
+      hasUserVerification: true,
+      isUserVerified: true,
+      automaticPresenceSimulation: true,
+    },
+  })
+  return { id: authenticatorId, send: (m, p) => cdp.send(m as 'WebAuthn.enable', p as never) }
+}
+
+test('login, a passkey the server does not hold is told to use the code', async ({ page, context }) => {
+  await context.clearCookies()
+  const authenticator = await virtualAuthenticator(page, { conditional: false })
+
+  // A resident credential for this site that the project has no record of:
+  // one removed in Settings and still in the keychain, or made against another
+  // project. The browser signs happily and the server refuses, which is the
+  // one failure the button can name (GoTrue's webauthn_verification_failed).
+  const { privateKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' })
+  await authenticator.send('WebAuthn.addCredential', {
+    authenticatorId: authenticator.id,
+    credential: {
+      credentialId: Buffer.from('not-enrolled-here').toString('base64'),
+      isResidentCredential: true,
+      rpId: 'localhost',
+      privateKey: privateKey.export({ format: 'der', type: 'pkcs8' }).toString('base64'),
+      userHandle: Buffer.from('someone').toString('base64'),
+      signCount: 0,
+    },
+  })
+
+  await page.goto('/login')
+  await page.getByRole('button', { name: /sign in with a passkey/i }).click()
+  await expect(page.getByText(/not one Holon holds any more/i)).toBeVisible()
+  await expect(page).toHaveURL(/\/login/)
+})
+
+test('login, a press with no passkey on the device says nothing', async ({ page, context }) => {
+  await context.clearCookies()
+  await virtualAuthenticator(page, { conditional: false })
+
+  // The browser's own sheet is dismissed or finds nothing (NotAllowedError),
+  // which is the owner's call and not a failure to report. The button comes
+  // back and the email form is untouched.
+  await page.goto('/login')
+  const button = page.getByRole('button', { name: /sign in with a passkey/i })
+  await button.click()
+  await expect(button).toBeEnabled()
+  await expect(page.locator('p.text-bad')).toHaveCount(0)
+  await expect(page).toHaveURL(/\/login/)
+})
+
+test('a passkey made in Settings signs in from the login page', async ({ page, context }) => {
+  await virtualAuthenticator(page, { conditional: true })
+
+  await page.goto('/settings')
+  const rows = page.getByText(/^Chrome on /)
+  const before = await rows.count()
+  await page.getByRole('button', { name: /add a passkey on this device/i }).click()
+  await expect(page.getByText('Passkey added', { exact: false })).toBeVisible()
+  // Named after the browser that made it, which is the only record Supabase
+  // keeps of where a passkey came from.
+  await expect(rows).toHaveCount(before + 1)
+
+  // Signed out, the same authenticator holds the credential the server now
+  // knows. The autofill ceremony runs on load and lands on the dashboard
+  // before anything is pressed.
+  await context.clearCookies()
+  await page.goto('/login')
+  await expect(page).toHaveURL(/\/$/)
+
+  // And the button does the same on a browser that offers no autofill.
+  await context.clearCookies()
+  await page.addInitScript(() => {
+    PublicKeyCredential.isConditionalMediationAvailable = async () => false
+  })
+  await page.goto('/login')
+  await page.getByRole('button', { name: /sign in with a passkey/i }).click()
+  await expect(page).toHaveURL(/\/$/)
+
+  // Leave the local project as it was found. Every run would otherwise add
+  // one more passkey to the owner until the account's cap refuses. The rows
+  // carry no id and GoTrue's list order is unspecified, so on a laptop whose
+  // local owner already holds a passkey made by Chrome this removes one of
+  // the same name; the local project holds none and CI's database is fresh.
+  await page.goto('/settings')
+  await rows
+    .first()
+    .locator('xpath=ancestor::div[.//button[normalize-space()="Remove"]][1]')
+    .getByRole('button', { name: 'Remove' })
+    .click()
+  await expect(page.getByText('Passkey removed', { exact: false })).toBeVisible()
+  await expect(rows).toHaveCount(before)
+})
+
+test('login, Enter in the email field sends the code', async ({ page, context }) => {
+  await context.clearCookies()
+  await page.goto('/login')
+  // Not the owner's address, so no mail is sent and the local rate limit is
+  // untouched; the reply is the same either way by design.
+  await page.getByLabel(/owner email/i).fill('someone@example.com')
+  // The hint that lets a browser offer a synced passkey in this field.
+  await expect(page.getByLabel(/owner email/i)).toHaveAttribute('autocomplete', 'username webauthn')
+  await page.getByLabel(/owner email/i).press('Enter')
+  await expect(page).toHaveURL(/sent=1/)
 })
 
 test('login rejects a malformed address without clearing it', async ({ page, context }) => {

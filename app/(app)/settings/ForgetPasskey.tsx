@@ -1,21 +1,32 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { ActionButton, useToast } from '@/components/pos'
 import { forgetPasskey } from './passkey-actions'
 
+// Passkeys.tsx is a server component and hands this only the one id, not the
+// whole list, so there is no row to remove from here (unlike Devices.tsx,
+// which owns its full array). The button itself flips immediately instead;
+// the row disappears a beat later once the real removal revalidates.
 export function ForgetPasskey({ id }: { id: string }) {
+  const [gone, setGone] = useState(false)
   const [, start] = useTransition()
   const toast = useToast()
 
+  if (gone) return <span className="text-[13px] text-ink-3">Removed</span>
+
   return (
     <ActionButton
-      onClick={() =>
+      onClick={() => {
+        setGone(true)
         start(async () => {
           const result = await forgetPasskey(id)
-          toast(result.ok ? 'Passkey removed.' : result.error)
+          if (!result.ok) {
+            setGone(false)
+            toast(result.error)
+          }
         })
-      }
+      }}
     >
       Remove
     </ActionButton>

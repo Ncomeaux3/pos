@@ -131,7 +131,7 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
                     name="email"
                     type="email"
                     inputMode="email"
-                    autoComplete="email"
+                    autoComplete="username webauthn"
                     required
                     placeholder="you@yourdomain.com"
                     defaultValue={error === 'invalid' ? raw : ''}

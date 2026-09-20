@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useSyncExternalStore } from 'react'
 import { ActionButton, useToast } from '@/components/pos'
 import { browserClient } from '@/core/db-browser'
+import { deviceLabel } from '@/core/passkeys'
 
 // The one part of passkeys a server cannot do: creating one is a WebAuthn
 // ceremony, and only the browser can ask the device for a signature. Listing
@@ -47,11 +48,26 @@ export function AddPasskey() {
   const add = async () => {
     setBusy(true)
     try {
-      const { error } = await browserClient().auth.registerPasskey()
+      const client = browserClient()
+      const { data, error } = await client.auth.registerPasskey()
       if (error) {
         const message = messageFor(error)
         if (message) toast(message)
         return
+      }
+      // Named after the browser that made it, because that is the only record
+      // of where a passkey came from: Supabase lists a friendly_name and
+      // nothing about the authenticator. A rename that fails leaves the
+      // passkey usable under the plain name, so it is not an error.
+      if (data?.id) {
+        try {
+          await client.auth.passkey.update({
+            passkeyId: data.id,
+            friendlyName: deviceLabel(navigator.userAgent),
+          })
+        } catch {
+          // Still added, still usable, just unnamed.
+        }
       }
       toast('Passkey added. This device can sign in with it now.')
       router.refresh()

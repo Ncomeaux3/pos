@@ -98,7 +98,7 @@ export type NightlyOptions = {
 
 /**
  * The order is the one in ARCHITECTURE: refresh credentials, module jobs,
- * embed, digests, orchestrate, notify, prune, prune_digests. Each stage is a
+ * prune, embed, digests, orchestrate, notify, prune_digests. Each stage is a
  * job like any other, so a failure in any of them is recorded rather than fatal.
  */
 export async function runNightly(opts: NightlyOptions = {}): Promise<RunSummary> {
@@ -124,6 +124,9 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<RunSummary>
   }
 
   if (!only) {
+    // Before orchestrate, which reads core.jobs: a row left by a job nothing
+    // registers any more would otherwise be one more night's false alarm.
+    jobs.push(await runJob('core', 'prune', prune))
     jobs.push(await runJob('core', 'embed', () => embedChanged()))
     jobs.push(await runJob('core', 'digests', () => writeDigests()))
     jobs.push(await runJob('core', 'orchestrate', () => assembleSummary()))
@@ -135,7 +138,6 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<RunSummary>
     if (trigger !== 'manual') {
       jobs.push(await runJob('core', 'notify', () => sendPending()))
     }
-    jobs.push(await runJob('core', 'prune', pruneRequestLog))
     jobs.push(await runJob('core', 'prune_digests', pruneDigests))
   }
 
@@ -149,10 +151,81 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<RunSummary>
   return { runId, status, durationMs, jobs }
 }
 
+export type LatestRun = {
+  status: RunSummary['status']
+  startedAt: Date
+  failed: number
+  total: number
+}
+
+/**
+ * The last finished run, for the dashboard's system line. A run, not
+ * `core.jobs`: that table is the current state of each named job, so a job
+ * that failed once and never ran again (renamed, or its module removed) read
+ * as failing every day after.
+ */
+export async function latestRun(): Promise<LatestRun | null> {
+  const { rows } = await db().query<{
+    status: RunSummary['status']
+    started_at: Date
+    log: { jobs?: JobResult[] } | null
+  }>(
+    `select status, started_at, log from core.job_runs
+      where status <> 'running' order by started_at desc limit 1`,
+  )
+  if (rows.length === 0) return null
+  const jobs = rows[0].log?.jobs ?? []
+  return {
+    status: rows[0].status,
+    startedAt: rows[0].started_at,
+    failed: jobs.filter((j) => j.status === 'failed').length,
+    total: jobs.length,
+  }
+}
+
+/** "all 14 jobs ok", "partial, 2 of 14 jobs failed", "failed, every job". */
+export function runLine(run: Pick<LatestRun, 'status' | 'failed' | 'total'>): string {
+  if (run.status === 'clean') return `all ${run.total} jobs ok`
+  if (run.status === 'failed') return 'failed, every job'
+  return `partial, ${run.failed} of ${run.total} jobs failed`
+}
+
 /** 90 days, per the architecture. Keeps the table from growing without bound. */
 export async function pruneRequestLog(): Promise<{ deleted: number }> {
   const { rowCount } = await db().query(
     `delete from core.request_log where occurred_at < now() - interval '90 days'`,
   )
   return { deleted: rowCount ?? 0 }
+}
+
+/** The stages runNightly runs under the core module, in order. */
+const CORE_STAGES = ['prune', 'embed', 'digests', 'orchestrate', 'notify', 'prune_digests']
+
+/**
+ * Removes core.jobs rows for jobs nothing registers any more.
+ *
+ * runJob upserts, so a row outlives its job: a module deleted from the folder
+ * or a job renamed leaves its last status behind, and buildSummary reads a
+ * failed one as a live failure every night. That is what happened on
+ * 2026-09-15: the notes migration cleared the rows, a Run now on the old build
+ * ran the notes job against the dropped schema and wrote the row back as
+ * failed, and six digests in a row said "notes.nightly_digest failed".
+ */
+export async function pruneStaleJobs(): Promise<{ deleted: number }> {
+  const known = [
+    ...getModules().flatMap((m) => (m.jobs ?? []).map((j) => ({ module: m.id, name: j.name }))),
+    ...CORE_STAGES.map((name) => ({ module: 'core', name })),
+  ]
+  const { rowCount } = await db().query(
+    `delete from core.jobs
+      where (module, name) not in (
+        select module, name from jsonb_to_recordset($1::jsonb) as k(module text, name text))`,
+    [JSON.stringify(known)],
+  )
+  return { deleted: rowCount ?? 0 }
+}
+
+async function prune(): Promise<{ requestLog: number; staleJobs: number }> {
+  const [log, jobs] = await Promise.all([pruneRequestLog(), pruneStaleJobs()])
+  return { requestLog: log.deleted, staleJobs: jobs.deleted }
 }
