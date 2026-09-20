@@ -26,6 +26,8 @@ code (`aria-labelledby` from the eyebrow in Overlay, `phoneLimit` in Inbox,
 `md:min-w` on the Tasks Calendar, `max-md:bottom` on the globe legend, the
 trip drawer footer on `ink-2`). v1.1 below is complete.
 
+**Queued after v1.2: docs/plans/skills-v2.md** (2026-09-15, six phases from the owner's Skill Tree rewrite in docs/SKILLS.md: the nine-attribute tree, per-event XP snapshots, projects, challenges and achievements, the digest, the screen). Not started.
+
 **Previous plan: docs/plans/pos-v1-1.md** (2026-09-14, from /adopt-repo). Twelve
 phases from the owner's first week of live use: diagnosis and small bugs, the
 notes stub deleted, server and client speed, dashboard layout and freshness,

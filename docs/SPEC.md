@@ -79,6 +79,7 @@ Owner: Nick. Solo builder, nights and weekends. Ships incrementally. Do not buil
 - Every note is classified to skills. Finishing a book or article emits a skill event.
 
 ### 7. Skill Tree (character sheet)
+- Amended 2026-09-15. The full spec is docs/SKILLS.md (the owner's rewrite: nine attributes, about 180 leaves, XP attribution frozen per event in `core.event_skill_links`, confidence removed from the XP formula, one XP budget per event split across its skills, projects, challenges and achievements as evidence, a review queue for unclassified rows). Build plan: docs/plans/skills-v2.md, after v1.1. Where the bullets below and docs/SKILLS.md disagree, docs/SKILLS.md wins.
 - Tree of attributes, categories, and leaf skills. Example:
   - Engineering: Coding (TypeScript, Python, SQL), Systems (Architecture, Cloud, DevOps), AI (Agents, RAG, Evals)
   - Business: Product, Sales, Finance literacy, Marketing
