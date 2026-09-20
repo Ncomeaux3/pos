@@ -3,16 +3,16 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
-// Every control here is 44px tall on touch and 30px on a pointer, per the
-// design's hit target rule, and selected is always a 1px accent border plus the
-// soft fill rather than a change in opacity.
+// Every control here is 44px tall on touch and 32px on a pointer, per the
+// design's hit target rule, and selected is always the soft action fill with
+// the ink colour rather than a change in opacity.
 
 const PILL_BASE =
-  'label inline-flex h-11 items-center gap-2 rounded-full border px-3.5 text-[11px] leading-none tracking-[0.1em] ' +
-  'transition-colors duration-150 active:scale-[.985] sm:h-[30px]'
+  'inline-flex h-11 items-center gap-2 rounded-full px-3.5 text-[12.5px] font-medium leading-none ' +
+  'transition-[background-color,color,transform] duration-150 ease-[var(--ease)] active:scale-[.97] sm:h-8'
 
-const PILL_OFF = 'border-rule-2 text-ink-3 hover:border-rule-2 hover:text-ink'
-const PILL_ON = 'border-brand bg-brand-soft text-ink'
+const PILL_OFF = 'bg-glass-strong text-ink-3 shadow-[inset_0_0_0_1px_var(--glass-line)] hover:text-ink'
+const PILL_ON = 'bg-brand-soft text-ink shadow-[inset_0_0_0_1px_var(--action)]'
 
 export type PillOption<T extends string> = {
   value: T
@@ -78,7 +78,7 @@ export function PillGroup<T extends string>({
 }
 
 /**
- * 34x20 square knob. The prototypes ship two sizes; one is enough.
+ * The switch: a 44x26 pill track with a round knob, action-coloured when on.
  */
 export function Switch({
   checked,
@@ -102,8 +102,11 @@ export function Switch({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
-        'relative h-5 w-[34px] shrink-0 rounded-md border transition-colors duration-150',
-        checked ? 'border-brand bg-brand-soft' : 'border-rule-2 bg-bg-deep',
+        // The track is 44x26; the pseudo element widens the hit area to 44px
+        // tall without changing what is drawn.
+        'relative h-[26px] w-11 shrink-0 rounded-full transition-colors duration-200 ease-[var(--ease)]',
+        'before:absolute before:-inset-x-0 before:-inset-y-[9px] before:content-[""]',
+        checked ? 'bg-action' : 'bg-ink-4/60',
         disabled && 'cursor-not-allowed opacity-100',
         className,
       )}
@@ -111,8 +114,8 @@ export function Switch({
       <span
         aria-hidden
         className={cn(
-          'absolute top-[3px] block h-3 w-3 rounded-[2px] transition-[left] duration-150',
-          checked ? 'left-[17px] bg-brand' : 'left-[3px] bg-ink-4',
+          'absolute top-[3px] block size-5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,.25)] transition-[left] duration-200 ease-[var(--ease)]',
+          checked ? 'left-[21px]' : 'left-[3px]',
         )}
       />
     </button>

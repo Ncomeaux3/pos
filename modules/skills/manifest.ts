@@ -22,7 +22,7 @@ const skillId = z
 
 export default defineModule({
   id: 'skills',
-  nav: { label: 'Skill Tree', icon: 'sparkles', order: 20 },
+  nav: { label: 'Skills', icon: 'sparkles', order: 20 },
   pages: { '': SkillTreePage },
 
   classifier: classify,

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Eyebrow } from '@/components/pos'
+import { Card, Eyebrow } from '@/components/pos'
 import { getModule } from '@/core/modules'
 import { isLive, type Channel, type Rule } from '@/core/notification-rules'
 import { listRules } from '@/core/notify'
@@ -10,8 +10,6 @@ import { ChannelGrid, type CellState, type ModuleRow } from './ChannelGrid'
 import { Channels } from './Channels'
 import { Devices } from './Devices'
 import { QuietHours } from './QuietHours'
-
-const card = 'border border-rule bg-bg-elev px-5 py-[18px]'
 
 // The coarse view of the same rules the Notifications screen edits one at a
 // time. A switch here writes every rule in that module, which is the thing you
@@ -75,10 +73,10 @@ export default async function NotificationSettingsPage() {
       <SettingsHeader current="/settings/notifications" />
 
       <div className="flex max-w-[860px] flex-col gap-3.5">
-        <div className={card}>
+        <Card>
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <Eyebrow>Channels</Eyebrow>
-            <span className="num text-[11px] text-ink-3">PER MODULE BELOW</span>
+            <span className="t-caption text-ink-3">Per module below</span>
           </div>
           <Channels
             channels={CHANNELS.map((c) => ({
@@ -88,27 +86,27 @@ export default async function NotificationSettingsPage() {
               state: channelState(c.value),
             }))}
           />
-        </div>
+        </Card>
 
-        <div className={card}>
+        <Card>
           <Eyebrow>Per module</Eyebrow>
           <ChannelGrid rows={rows} paused={paused} />
-          <p className="mt-3 text-[11px] text-ink-3">
+          <p className="t-caption mt-3 text-ink-3">
             <Link href="/notifications" className="border-b border-rule-2 text-ink-3 hover:text-ink">
               The Notifications screen
             </Link>{' '}
             edits one rule at a time, with lead times, urgency and per-rule snooze.
           </p>
-        </div>
+        </Card>
 
-        <div className={card}>
+        <Card>
           <Eyebrow>Quiet hours</Eyebrow>
           <QuietHours
             from={settings.quiet_from}
             to={settings.quiet_to}
             urgentOverride={settings.quiet_urgent_override}
           />
-        </div>
+        </Card>
 
         <Devices
           vapidPublicKey={publicKey()}

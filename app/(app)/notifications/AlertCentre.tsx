@@ -3,7 +3,6 @@
 import { useState, useTransition } from 'react'
 import { ActionButton, EmptyState, Eyebrow, StatusDot, useToast } from '@/components/pos'
 import type { DotTone } from '@/components/pos'
-import { cn } from '@/lib/utils'
 import { readAlert, readAllAlerts } from './actions'
 
 export type AlertItem = {
@@ -66,14 +65,14 @@ export function AlertCentre({ alerts }: { alerts: AlertItem[] }) {
               <StatusDot tone={a.tone} className="mt-2" />
               <div className="min-w-0 flex-1 basis-[180px] space-y-1">
                 <div className="flex flex-wrap items-baseline gap-x-2.5">
-                  <span className="label text-[10px] tracking-[0.12em] text-brand">{a.module}</span>
-                  <span className="label text-[10px] tracking-[0.1em] text-ink-3">{a.via}</span>
+                  <span className="label text-action">{a.module}</span>
+                  <span className="t-caption text-ink-3">{a.via}</span>
                 </div>
                 <p className="t-body text-ink">{a.title}</p>
                 {a.body && <p className="t-caption text-ink-3">{a.body}</p>}
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <span className="label text-[10px] text-ink-3">{a.time}</span>
+                <span className="t-caption num text-ink-3">{a.time}</span>
                 <ActionButton onClick={() => run(() => readAlert(a.id))}>Read</ActionButton>
               </div>
             </div>
@@ -83,7 +82,7 @@ export function AlertCentre({ alerts }: { alerts: AlertItem[] }) {
 
       {showHistory && history.length > 0 && (
         <div className="space-y-2 pt-4">
-          <Eyebrow className="text-[10px] tracking-[0.12em]">History · {history.length}</Eyebrow>
+          <Eyebrow>History · {history.length}</Eyebrow>
           <div>
             {history.map((a) => (
               <div
@@ -93,14 +92,12 @@ export function AlertCentre({ alerts }: { alerts: AlertItem[] }) {
                 <StatusDot tone="idle" className="mt-2" />
                 <div className="min-w-0 flex-1 basis-[180px] space-y-1">
                   <div className="flex flex-wrap items-baseline gap-x-2.5">
-                    <span className={cn('label text-[10px] tracking-[0.12em] text-ink-3')}>
-                      {a.module}
-                    </span>
-                    <span className="label text-[10px] tracking-[0.1em] text-ink-3">{a.via}</span>
+                    <span className="label text-ink-3">{a.module}</span>
+                    <span className="t-caption text-ink-3">{a.via}</span>
                   </div>
                   <p className="t-caption text-ink-2">{a.title}</p>
                 </div>
-                <span className="label shrink-0 text-[10px] text-ink-3">{a.time}</span>
+                <span className="t-caption num shrink-0 text-ink-3">{a.time}</span>
               </div>
             ))}
           </div>

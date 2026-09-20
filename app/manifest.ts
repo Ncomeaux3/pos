@@ -1,25 +1,20 @@
 import type { MetadataRoute } from 'next'
 
+// Served at /manifest.webmanifest by Next. The icons are the kit's dark
+// appearance, opaque with square corners; the OS applies its own mask, and
+// there is no padded maskable artwork in the kit, so purpose stays `any`.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'POS',
-    short_name: 'POS',
-    description: 'Personal operating system',
+    name: 'Holon',
+    short_name: 'Holon',
+    description: 'Your life. One system.',
     start_url: '/',
     display: 'standalone',
-    // The brand ground, so the splash and the address bar match the page
-    // rather than the stock near-black they shipped with.
-    background_color: '#07080A',
-    theme_color: '#07080A',
+    background_color: '#F7F6F2',
+    theme_color: '#202927',
     icons: [
-      { src: '/icons/icon.svg', sizes: 'any', type: 'image/svg+xml' },
-      { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-      {
-        src: '/icons/icon-512.png',
-        sizes: '512x512',
-        type: 'image/png',
-        purpose: 'any',
-      },
+      { src: '/brand/holon-app-dark-192.png', sizes: '192x192', type: 'image/png' },
+      { src: '/brand/holon-app-dark-512.png', sizes: '512x512', type: 'image/png' },
     ],
   }
 }

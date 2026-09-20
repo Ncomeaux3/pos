@@ -1,19 +1,19 @@
 import { cookies } from 'next/headers'
 
 // Theme and sidebar width are the two things that must be right on the very
-// first paint, so they live in cookies and are read on the server rather than
-// hydrated from localStorage. core.settings holds the durable copy; the cookie
-// is the fast path.
+// first paint, so they live in cookies and are read on the server.
 
-export type Theme = 'dark' | 'light'
+/** `system` follows the device: <html> carries no data-theme and the CSS
+ * color-scheme resolves light-dark() from prefers-color-scheme. */
+export type Theme = 'dark' | 'light' | 'system'
 
 export const THEME_COOKIE = 'pos_theme'
 export const SIDEBAR_COOKIE = 'pos_sidebar'
 
-/** Dark is the design's default, so anything unset or unrecognised is dark. */
+/** An absent or unrecognised cookie follows the device. */
 export async function getTheme(): Promise<Theme> {
   const value = (await cookies()).get(THEME_COOKIE)?.value
-  return value === 'light' ? 'light' : 'dark'
+  return value === 'light' || value === 'dark' ? value : 'system'
 }
 
 export async function getSidebarCollapsed(): Promise<boolean> {

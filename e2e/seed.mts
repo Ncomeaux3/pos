@@ -39,6 +39,10 @@ await db().query(`delete from core.entities where module = 'ideas' and entity_id
 await db().query(`delete from ideas.idea where source <> 'demo'`)
 await db().query(`update ideas.idea set notes = '' where source = 'demo' and external_id = 'i-voice'`)
 
+// The arrange test saves a dashboard layout, and the shell test asserts the
+// default order, so the fixture starts with no layout on every machine.
+await db().query(`delete from core.settings where key = 'dashboard_layout'`)
+
 // The weekly review saves answers as you go, so a review left half finished
 // by an earlier pass would be loaded back and added to. The wizard resuming is
 // the feature; the fixture has to start from nothing.

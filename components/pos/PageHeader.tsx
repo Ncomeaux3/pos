@@ -12,12 +12,12 @@ import { Eyebrow, type DotTone } from './text'
  * lede and status are the desktop's; the phone reaches search through Browse
  * and the palette.
  *
- * Band one is the thin strip across the top of the column: a breadcrumb
- * eyebrow on the left, the search box in the middle, and the module's status
- * or its one primary action on the right. It is full bleed, so the negative
- * margins cancel the padding `main` puts around the page.
+ * Band one is the thin row across the top of the column: a breadcrumb on the
+ * left, the search box in the middle, and the module's status or its one
+ * primary action on the right. No rule under it: the page ground is one
+ * surface and the glass below is what separates.
  *
- * Band two is the page proper: a 400 weight title at 28px, one grey sentence
+ * Band two is the page proper: a 600 weight title at 30px, one grey sentence
  * under it, and the record making actions right aligned against it.
  *
  * Both bands live here rather than in the layout because the status on the
@@ -64,7 +64,7 @@ export function PageHeader({
         * a screen has one heading either way. */}
       <div className="flex min-h-11 items-center gap-2 md:hidden">
         <BackControl />
-        <h1 className="min-w-0 flex-1 truncate text-[20px] font-normal leading-none tracking-[-0.03em] text-ink">
+        <h1 className="line-clamp-3 min-w-0 flex-1 text-[24px] font-semibold leading-[1.1] tracking-[-0.022em] text-ink">
           {title}
         </h1>
         {/* One action top right. A module with no phone pass keeps its
@@ -75,23 +75,24 @@ export function PageHeader({
         )}
       </div>
 
-      {/* The negative margins cancel `main`'s padding, 28px from md up. */}
-      <div className="-mx-7 -mt-7 hidden h-14 items-center gap-x-4 border-b border-rule px-7 md:flex">
-        <Eyebrow dot={dot}>{eyebrow}</Eyebrow>
+      <div className="-mt-3 hidden min-h-10 flex-wrap items-center gap-x-4 gap-y-2 md:flex">
+        <Eyebrow dot={dot} className="whitespace-nowrap">
+          {eyebrow}
+        </Eyebrow>
         {search && (
           <BandSearch
             className="ml-auto"
             placeholder={searchPlaceholder ?? (typeof title === 'string' ? `Search ${title.toLowerCase()}` : undefined)}
           />
         )}
-        {status && <div className={cn('flex items-center gap-3', !search && 'ml-auto')}>{status}</div>}
+        {status && <div className="ml-auto flex shrink-0 items-center gap-3 whitespace-nowrap">{status}</div>}
       </div>
 
       {hideTitle ? (
         <h1 className="sr-only hidden md:block">{title}</h1>
       ) : (
       <header className="hidden flex-wrap items-end justify-between gap-x-6 gap-y-4 md:flex">
-        <div className="min-w-0 space-y-2">
+        <div className="min-w-0 space-y-1.5">
           <h1 className="t-headline text-ink">{title}</h1>
           {lede && <p className="t-lede max-w-[78ch] text-ink-3">{lede}</p>}
         </div>

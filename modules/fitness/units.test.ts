@@ -144,23 +144,23 @@ describe('load', () => {
 
 describe('the overview labels', () => {
   it('names when a set happened', () => {
-    expect(whenLabel('2026-09-12T18:00:00.000Z', '2026-09-12')).toBe('TODAY')
-    expect(whenLabel('2026-09-11T18:00:00.000Z', '2026-09-12')).toBe('YESTERDAY')
-    expect(whenLabel('2026-09-04T18:00:00.000Z', '2026-09-12')).toBe('SEP 04')
+    expect(whenLabel('2026-09-12T18:00:00.000Z', '2026-09-12')).toBe('Today')
+    expect(whenLabel('2026-09-11T18:00:00.000Z', '2026-09-12')).toBe('Yesterday')
+    expect(whenLabel('2026-09-04T18:00:00.000Z', '2026-09-12')).toBe('Sep 04')
   })
 
   it('prints the week in hours and minutes', () => {
-    expect(hoursLabel(222)).toBe('3H 42M')
-    expect(hoursLabel(51)).toBe('51M')
-    expect(hoursLabel(120)).toBe('2H 00M')
+    expect(hoursLabel(222)).toBe('3h 42m')
+    expect(hoursLabel(51)).toBe('51m')
+    expect(hoursLabel(120)).toBe('2h 00m')
   })
 
   it('counts where the rows came from and drops zeros', () => {
-    expect(sourcesLabel([{ source: 'strava' }, { source: 'demo' }, { source: 'manual' }])).toBe('1 STRAVA · 2 BY HAND')
+    expect(sourcesLabel([{ source: 'strava' }, { source: 'demo' }, { source: 'manual' }])).toBe('1 Strava · 2 by hand')
     expect(
       sourcesLabel([{ source: 'health_auto_export' }, { source: 'apple_shortcuts' }, { source: 'manual' }]),
-    ).toBe('2 APPLE HEALTH · 1 BY HAND')
-    expect(sourcesLabel([{ source: 'demo' }])).toBe('1 BY HAND')
+    ).toBe('2 Apple Health · 1 by hand')
+    expect(sourcesLabel([{ source: 'demo' }])).toBe('1 by hand')
     expect(sourcesLabel([])).toBe('')
   })
 

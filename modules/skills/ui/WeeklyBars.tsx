@@ -27,9 +27,9 @@ export function WeeklyBars({ weeks }: { weeks: number[] }) {
         <line x1="0" y1="33.5" x2="100" y2="33.5" stroke="var(--rule-2)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
       </svg>
       <div className="eyebrow flex justify-between text-ink-3">
-        <span>&minus;90D</span>
-        <span>&minus;45D</span>
-        <span>NOW</span>
+        <span>&minus;90d</span>
+        <span>&minus;45d</span>
+        <span>now</span>
       </div>
     </div>
   )

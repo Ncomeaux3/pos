@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Eyebrow, Overlay, fieldClass, useToast } from '@/components/pos'
+import { DataRow, DataTable, Eyebrow, Overlay, fieldClass, useToast } from '@/components/pos'
 import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
 import { centsPerPoint } from '../globe'
@@ -33,41 +33,35 @@ export function LoyaltyDrawer({
       title="Loyalty"
       lede="Balances you type; no programme publishes an API worth reading. The move shown in the strip is against the last figure you entered."
     >
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_130px] gap-x-3.5 border-b border-rule-2 py-[7px]">
-        {['Program', 'Kind', 'Balance'].map((h, i) => (
-          <span key={h} className={cn('label text-[11px] tracking-[0.08em] text-ink-3', i > 0 && 'text-right')}>
-            {h}
-          </span>
+      <DataTable head={['Program', 'Balance']} cols="minmax(0,1fr) 130px">
+        {loyalty.map((p) => (
+          <DataRow key={p.id}>
+            <span className="min-w-0">
+              <span className="block truncate text-ink">{p.name}</span>
+              <span className="mt-0.5 block text-[11px] text-ink-3">{[p.kind, p.statusTier].filter(Boolean).join(' · ')}</span>
+            </span>
+            <input
+              inputMode="decimal"
+              defaultValue={p.balance}
+              aria-label={`${p.name} balance`}
+              onBlur={(e) => {
+                const next = parseNumber(e.target.value)
+                if (next === null || next === p.balance) return
+                start(async () => {
+                  const result = await saveLoyalty(p.name, next, p.kind as 'airline' | 'hotel' | 'card' | 'rail')
+                  toast(result.ok ? `${p.name} saved` : result.error)
+                })
+              }}
+              className={cn(fieldClass, 'num w-[130px] max-w-full py-1.5 text-right')}
+            />
+          </DataRow>
         ))}
-      </div>
-      {loyalty.map((p) => (
-        <div key={p.id} className="grid grid-cols-[minmax(0,1fr)_auto_130px] items-center gap-x-3.5 border-b border-rule py-2.5 text-[13px]">
-          <span className="min-w-0">
-            <span className="block truncate text-ink">{p.name}</span>
-            {p.statusTier && <span className="mt-0.5 block text-[11px] text-ink-3">{p.statusTier}</span>}
-          </span>
-          <span className="text-[11px] text-ink-3">{p.kind}</span>
-          <input
-            inputMode="decimal"
-            defaultValue={p.balance}
-            aria-label={`${p.name} balance`}
-            onBlur={(e) => {
-              const next = parseNumber(e.target.value)
-              if (next === null || next === p.balance) return
-              start(async () => {
-                const result = await saveLoyalty(p.name, next, p.kind as 'airline' | 'hotel' | 'card' | 'rail')
-                toast(result.ok ? `${p.name} saved` : result.error)
-              })
-            }}
-            className="num w-full border border-rule-2 bg-bg px-2.5 py-1.5 text-right text-[13px] text-ink outline-none focus-visible:border-brand"
-          />
-        </div>
-      ))}
+      </DataTable>
 
-      <div className="mt-5 border border-rule px-3.5 py-3">
+      <div className="mt-5 border border-rule px-3.5 py-3 rounded-[18px]">
         <div className="flex items-baseline justify-between">
           <Eyebrow>Cents per point</Eyebrow>
-          <span className="label text-[11px] text-ink-3">both numbers yours</span>
+          <Eyebrow className="text-[11px]">Both numbers yours</Eyebrow>
         </div>
         <p className="mt-2 text-[12px] leading-[1.5] text-ink-3">
           What the cash fare would have been, against the points it would cost. Above about 1.5
@@ -75,18 +69,18 @@ export function LoyaltyDrawer({
         </p>
         <div className="mt-3 grid grid-cols-2 gap-2.5">
           <label className="space-y-1.5">
-            <Eyebrow className="text-[10px]">Cash fare</Eyebrow>
+            <Eyebrow className="text-[11px]">Cash fare</Eyebrow>
             <input inputMode="decimal" value={cash} onChange={(e) => setCash(e.target.value)} aria-label="Cash fare in dollars" placeholder="640" className={cn(fieldClass, 'w-full')} />
           </label>
           <label className="space-y-1.5">
-            <Eyebrow className="text-[10px]">Points</Eyebrow>
+            <Eyebrow className="text-[11px]">Points</Eyebrow>
             <input inputMode="decimal" value={points} onChange={(e) => setPoints(e.target.value)} aria-label="Points required" placeholder="35000" className={cn(fieldClass, 'w-full')} />
           </label>
         </div>
         <div className="mt-3 flex items-baseline gap-2.5">
           <span className="num text-[22px] font-light leading-none text-ink">{cpp === null ? '--' : `${cpp.toFixed(2)}c`}</span>
-          <span className={cn('label text-[10px] tracking-[0.1em]', cpp === null ? 'text-ink-3' : cpp >= 1.5 ? 'text-ok' : 'text-warn')}>
-            {cpp === null ? 'enter both' : cpp >= 1.5 ? 'worth using points' : 'pay cash'}
+          <span className={cn('text-[12px]', cpp === null ? 'text-ink-3' : cpp >= 1.5 ? 'text-ok' : 'text-warn')}>
+            {cpp === null ? 'Enter both' : cpp >= 1.5 ? 'Worth using points' : 'Pay cash'}
           </span>
         </div>
       </div>

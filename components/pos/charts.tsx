@@ -35,8 +35,8 @@ export function Sparkline({
       aria-hidden
       className={cn('h-9 w-full', className)}
     >
-      <polygon points={`0,${height} ${coords.join(' ')} ${width},${height}`} fill="var(--accent-soft)" />
-      <polyline points={coords.join(' ')} fill="none" stroke="var(--accent)" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+      <polygon points={`0,${height} ${coords.join(' ')} ${width},${height}`} fill="var(--chart-1)" fillOpacity={0.08} />
+      <polyline points={coords.join(' ')} fill="none" stroke="var(--chart-1)" strokeWidth={1.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
     </svg>
   )
 }
@@ -57,7 +57,7 @@ export function PaceBar({
   className?: string
 }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0
-  const fill = tone === 'bad' ? 'bg-bad' : tone === 'warn' ? 'bg-warn' : 'bg-brand'
+  const fill = tone === 'bad' ? 'bg-bad' : tone === 'warn' ? 'bg-warn' : 'bg-action'
 
   return (
     <div className={cn('relative h-1 w-full rounded-full bg-rule', className)}>
@@ -86,7 +86,10 @@ export function Radar({ axes, size = 132 }: { axes: RadarAxis[]; size?: number }
   if (axes.length < 3) return null
 
   const c = size / 2
-  const r = c - 22
+  // The polygon gives up 34px so the labels sit clear of it; a label on the
+  // right still overhangs the box (the SVG is overflow-visible), and the
+  // caller leaves room for it.
+  const r = c - 34
   const max = Math.max(...axes.map((a) => a.value)) || 1
 
   const point = (i: number, scale: number) => {
@@ -116,12 +119,13 @@ export function Radar({ axes, size = 132 }: { axes: RadarAxis[]; size?: number }
         const [x, y] = point(i, 1)
         return <line key={a.label} x1={c} y1={c} x2={x} y2={y} stroke="var(--rule)" strokeWidth={1} />
       })}
-      <polygon points={shape} fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth={1.5} />
+      <polygon points={shape} fill="var(--chart-1)" fillOpacity={0.12} stroke="var(--chart-1)" strokeWidth={1.5} strokeLinejoin="round" />
       {axes.map((a, i) => {
         const [x, y] = point(i, 1.2)
-        // Anchored away from the centre, so a label on the left does not run
-        // back over its own spoke.
-        const anchor = Math.abs(x - c) < r * 0.15 ? 'middle' : x > c ? 'start' : 'end'
+        // Centred unless the vertex sits well to one side: the lower pair of a
+        // pentagon then reads under its vertex instead of running 70px out of
+        // the box, and only the two widest vertices anchor away from the centre.
+        const anchor = Math.abs(x - c) < r * 0.75 ? 'middle' : x > c ? 'start' : 'end'
         return (
           <text
             key={a.label}
@@ -129,11 +133,12 @@ export function Radar({ axes, size = 132 }: { axes: RadarAxis[]; size?: number }
             y={y}
             textAnchor={anchor}
             dominantBaseline="middle"
-            className="label"
-            fontSize={size < 150 ? 7 : 8}
+            // Inline, not the `.label` class: a stylesheet rule beats an
+            // SVG presentation attribute, and 12px labels overran the tile.
+            style={{ fontSize: 10, fontWeight: 500 }}
             fill="var(--ink-3)"
           >
-            {a.label.slice(0, 6).toUpperCase()}
+            {a.label}
           </text>
         )
       })}
@@ -163,15 +168,15 @@ export function TimelineAxis({ items, days = 7 }: { items: TimelineItem[]; days?
             title={item.label}
             className={cn(
               'absolute top-[11px] h-2 w-2 -translate-x-1/2 rounded-full',
-              item.tone === 'bad' ? 'bg-bad' : item.tone === 'warn' ? 'bg-warn' : 'bg-brand',
+              item.tone === 'bad' ? 'bg-bad' : item.tone === 'warn' ? 'bg-warn' : 'bg-action',
             )}
             style={{ left: `${(Math.min(item.day, days) / days) * 100}%` }}
           />
         ))}
       </div>
       <div className="flex justify-between">
-        <span className="label text-[9px] tracking-[0.1em] text-ink-4">Today</span>
-        <span className="label text-[9px] tracking-[0.1em] text-ink-4">+{days}d</span>
+        <span className="label text-[11px] text-ink-3">Today</span>
+        <span className="label text-[11px] text-ink-3">+{days}d</span>
       </div>
     </div>
   )

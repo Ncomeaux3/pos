@@ -1,15 +1,17 @@
 'use client'
 
-import { Filter, Plus } from 'lucide-react'
+import { AlarmClock, Check, Filter, Plus } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useMemo, useOptimistic, useState, useTransition } from 'react'
-import { ActionButton, EmptyState, PillGroup, useToast } from '@/components/pos'
+import { ActionButton, EmptyState, PillGroup, RowList, StatusChip, useToast } from '@/components/pos'
+import { actionButtonBase, actionButtonSizes, actionButtonVariants } from '@/components/pos/Button'
 import { cn } from '@/lib/utils'
 import { parseQuickAdd } from '../quickadd'
 import {
   bucket,
   columnsFor,
   dueLabel,
+  hoursLabel,
   remindLabel,
   VIEWS,
   type Task,
@@ -43,17 +45,15 @@ const ProjectsDrawer = dynamic(() => import('./ProjectsDrawer').then((m) => m.Pr
 // expanded row and the drawer all read the same selection, and splitting them
 // would mean syncing it.
 
-const DOWS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const LONG_DOWS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
-/** The artboard's small buttons: 11px, 4px 9px, a rule-2 border. */
-export const mini =
-  'border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink'
-export const miniAccent =
-  'border border-brand px-[9px] py-1 text-[11px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg'
+/** The small buttons, as ActionButton draws them: a glass pill, and the soft action fill. */
+export const mini = cn(actionButtonBase, actionButtonSizes.sm, actionButtonVariants.outline)
+export const miniAccent = cn(actionButtonBase, actionButtonSizes.sm, actionButtonVariants.brand)
 
+/** P1 in the risk colour, P2 in attention, P3 quiet, as the mockup marks them. */
 export const priorityColor = (p: Task['priority']) =>
-  p === 'P1' ? 'text-bad' : p === 'P2' ? 'text-ink-2' : 'text-ink-4'
+  p === 'P1' ? 'text-bad' : p === 'P2' ? 'text-warn' : 'text-ink-3'
 
 const TABS: { value: View | 'calendar'; label: string }[] = [
   ...VIEWS.slice(0, 4),
@@ -195,12 +195,7 @@ export function Board({
     <div>
       {/* The artboard's order: the line you type a task on comes first, the
         * views under it. Adding is the thing this screen is for. */}
-      <QuickAdd
-        projects={projects.map((p) => p.name)}
-        today={today}
-        onSave={run}
-        onNew={() => openNew()}
-      />
+      <QuickAdd projects={projects.map((p) => p.name)} today={today} onSave={run} />
 
       <Segments
         label="Task views"
@@ -230,7 +225,7 @@ export function Board({
             aria-pressed={showFilter}
             // Lit while open, and while a filtered view is showing, since no
             // segment is selected then and the crumb is the only other cue.
-            className={cn(mini, 'mb-2 md:hidden', (showFilter || filtered) && 'border-brand text-ink')}
+            className={cn(mini, 'mb-2 md:hidden', (showFilter || filtered) && 'border-action text-ink')}
           >
             <Filter size={13} aria-hidden />
           </button>
@@ -278,10 +273,16 @@ export function Board({
             )}
           >
             {columns.map((column) => {
+              // "Today, Friday 18" on the Today view, as the mockup writes it;
+              // every other column keeps the label the shape gives it.
               const label =
-                view === 'today' && column.id === 'today'
-                  ? `Today · ${DOWS[today.getDay()]} ${MONTHS[today.getMonth()]} ${today.getDate()}`
-                  : column.label
+                view === 'today' && column.id === 'today' ? (
+                  <>
+                    Today<span className="font-normal text-ink-3">, {LONG_DOWS[today.getDay()]} {today.getDate()}</span>
+                  </>
+                ) : (
+                  column.label
+                )
               return (
                 <section
                   key={column.id}
@@ -296,18 +297,15 @@ export function Board({
                     if (!id || !column.drop) return
                     run(() => writeTask({ id, ...dropPatch(column.drop!) }), `Moved to ${column.label}`)
                   }}
-                  className={cn(
-                    'min-w-0 border bg-bg-elev px-2.5 py-3 transition-colors duration-150',
-                    // A dashed accent border says this column will take the card.
-                    // A read-only column stays solid, so it says it will not.
-                    dragging && column.drop ? 'border-dashed border-brand' : 'border-rule',
-                  )}
+                  className="min-w-0"
                 >
-                  <div className="flex items-baseline justify-between gap-3 border-b border-rule-2 px-1 pb-2.5">
-                    <span
+                  {/* The heading over the column, then one grouped surface
+                    * holding its rows: whitespace between groups, hairlines
+                    * between records. */}
+                  <div className="flex items-baseline justify-between gap-3 px-1 pb-2.5">
+                    <h2
                       className={cn(
-                        'eyebrow',
-                        column.tone === 'ink' && 'text-ink',
+                        'text-[15px] font-semibold leading-tight text-ink',
                         column.tone === 'ink-2' && 'text-ink-2',
                         column.tone === 'ink-3' && 'text-ink-3',
                         column.tone === 'warn' && 'text-warn',
@@ -315,9 +313,9 @@ export function Board({
                       )}
                     >
                       {label}
-                    </span>
+                    </h2>
                     <span className="flex shrink-0 items-center gap-1.5">
-                      <span className="num text-[11px] text-ink-3">{column.meta}</span>
+                      <span className="num text-[13px] text-ink-3">{column.meta}</span>
                       {column.drop && (
                         <button
                           type="button"
@@ -332,11 +330,16 @@ export function Board({
                     </span>
                   </div>
 
-                  <div className="flex min-h-[60px] flex-col gap-1.5 pt-2.5">
+                  <RowList
+                    className={cn(
+                      'min-h-[60px] transition-colors duration-150',
+                      // A dashed accent edge says this column will take the card.
+                      // A read-only column stays as it is, so it says it will not.
+                      dragging && column.drop && 'border-dashed border-action',
+                    )}
+                  >
                     {column.tasks.length === 0 ? (
-                      <p className="border border-dashed border-rule px-2 py-[18px] text-center text-[12px] text-ink-4">
-                        {column.empty}
-                      </p>
+                      <p className="px-4 py-[18px] text-center text-[13px] text-ink-3">{column.empty}</p>
                     ) : (
                       column.tasks.map((task) => (
                         <Row
@@ -355,6 +358,7 @@ export function Board({
                                 ),
                             }))}
                           draggable={column.drop !== null}
+                          inToday={column.id === 'today'}
                           isPhone={isPhone}
                           onDragStart={(e) => {
                             e.dataTransfer.setData('text/plain', task.id)
@@ -381,7 +385,7 @@ export function Board({
                         />
                       ))
                     )}
-                  </div>
+                  </RowList>
                 </section>
               )
             })}
@@ -433,32 +437,24 @@ export function Board({
   )
 }
 
-/** The phone header's plus: the same drawer opener as the inline "New task" button. */
-export function NewTaskButton() {
+/**
+ * The title block's "New task" and the phone header's plus: the same drawer
+ * opener, so `?task=new` is the one way a blank form opens.
+ */
+export function NewTaskButton({ phone = false }: { phone?: boolean }) {
   const { set: setParams } = useSearchState()
+  const open = () => setParams({ task: 'new' }, { push: true })
+  if (phone) {
+    return (
+      <ActionButton variant="solid" aria-label="New task" className="h-11 w-11 gap-0 rounded-full p-0" onClick={open}>
+        <Plus size={18} aria-hidden />
+      </ActionButton>
+    )
+  }
   return (
-    <ActionButton
-      variant="solid"
-      aria-label="New task"
-      className="h-11 w-11 gap-0 rounded-full p-0"
-      onClick={() => setParams({ task: 'new' }, { push: true })}
-    >
-      <Plus size={18} aria-hidden />
+    <ActionButton variant="accent" size="lg" onClick={open}>
+      New task
     </ActionButton>
-  )
-}
-
-/** The outlined 9px marks: OVERDUE in red, AGENT · REVIEW in amber. */
-function Mark({ tone, children }: { tone: 'bad' | 'warn'; children: string }) {
-  return (
-    <span
-      className={cn(
-        'num border px-[5px] py-px text-[9px] tracking-[0.08em]',
-        tone === 'bad' ? 'border-bad text-bad' : 'border-warn text-warn',
-      )}
-    >
-      {children}
-    </span>
   )
 }
 
@@ -469,6 +465,7 @@ function Row({
   expanded,
   moves,
   draggable,
+  inToday,
   isPhone,
   onDragStart,
   onDragEnd,
@@ -483,6 +480,8 @@ function Row({
   expanded: boolean
   moves: { label: string; go: () => void }[]
   draggable: boolean
+  /** In the Today column, where a due date of today says nothing the heading does not. */
+  inToday: boolean
   /** No inline expand and no EDIT button at this width: tapping the row opens the drawer. */
   isPhone: boolean
   onDragStart: (e: React.DragEvent) => void
@@ -512,16 +511,26 @@ function Row({
   })
 
   return (
-    <div className="relative">
-      <span
-        aria-hidden="true"
-        className={cn(
-          'label absolute inset-y-0 flex w-20 items-center justify-center text-[10px] tracking-[0.12em] text-brand',
-          done ? 'right-0' : 'left-0',
-        )}
-      >
-        {done ? 'Reopen' : 'Done'}
-      </span>
+    <div
+      className={cn(
+        // The inset hairline between rows, drawn by every row but the first;
+        // the selected row's soft fill takes its own and the next one's.
+        'relative overflow-hidden before:absolute before:inset-x-4 before:top-0 before:z-10 before:h-px before:bg-rule first:before:hidden',
+        expanded && 'bg-brand-soft before:hidden [&+*]:before:hidden',
+      )}
+    >
+      {/* The word the swipe is about to earn, behind the row while it moves. */}
+      {dx !== 0 && (
+        <span
+          aria-hidden="true"
+          className={cn(
+            'absolute inset-y-0 flex w-20 items-center justify-center text-[12px] font-medium text-action',
+            done ? 'right-0' : 'left-0',
+          )}
+        >
+          {done ? 'Reopen' : 'Done'}
+        </span>
+      )}
       <article
         data-swipes
         draggable={draggable}
@@ -530,28 +539,29 @@ function Row({
         {...swipe}
         style={{ transform: dx ? `translateX(${dx}px)` : undefined }}
         className={cn(
-          'relative border bg-bg p-2.5 transition-colors duration-150 [touch-action:pan-y]',
+          'relative px-4 py-2.5 transition-colors duration-150 [touch-action:pan-y]',
           !dx && 'transition-transform',
-          expanded ? 'border-rule-2' : 'border-rule',
+          dx && 'bg-bg-elev',
           draggable && 'cursor-grab active:cursor-grabbing',
         )}
       >
-        <div className="flex items-start gap-2.5">
+        <div className="flex items-start gap-3">
           <button
             type="button"
             onClick={onComplete}
             title={agent ? 'Approve first' : done ? 'Reopen' : 'Complete'}
             aria-label={done ? `Reopen ${task.title}` : `Complete ${task.title}`}
             className={cn(
-              'mt-px flex size-4 shrink-0 items-center justify-center border transition-colors duration-150',
+              'relative mt-px grid size-5 shrink-0 place-items-center rounded-full border transition-colors duration-150',
+              'before:absolute before:-inset-3 before:content-[""] sm:before:inset-0',
               done
-                ? 'border-brand bg-brand'
+                ? 'border-action bg-action text-action-fg'
                 : agent
                   ? 'border-dashed border-warn'
-                  : 'border-ink-3 hover:border-brand',
+                  : 'border-rule-2 hover:border-action',
             )}
           >
-            {done && <span className="block size-1.5 bg-bg" />}
+            {done && <Check size={12} strokeWidth={3} aria-hidden />}
           </button>
 
           <button
@@ -564,54 +574,56 @@ function Row({
           >
             <span
               className={cn(
-                'block text-[13px] leading-[1.35]',
+                'block text-[14.5px] font-medium leading-[1.35]',
                 done ? 'text-ink-3 line-through' : 'text-ink',
               )}
             >
               {task.title}
             </span>
-            <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
-              {overdue && <Mark tone="bad">OVERDUE</Mark>}
-              {agent && <Mark tone="warn">AGENT · REVIEW</Mark>}
-              <span className={cn('num text-[10px]', priorityColor(task.priority))}>
-                {task.priority}
-              </span>
-              <span className="num text-[10px] text-ink-3">
-                {dueLabel(task.dueInDays, today)}
-                {task.dueAt ? ` · ${task.dueAt}` : ''}
-              </span>
-              {remind && (
-                <span
-                  title="Reminder"
-                  className="num inline-flex items-center gap-[3px] whitespace-nowrap border border-rule-2 px-[5px] py-px text-[9px] tracking-[0.06em] text-ink-4"
-                >
-                  ⏰ {remind}
+            {/* One grey line: the priority when it matters, the project, when
+              * it is due, and the reminder. The estimate sits on the right. */}
+            <span className="t-caption mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-ink-3 [&>*+*]:before:mr-1.5 [&>*+*]:before:content-['·']">
+              {agent && <StatusChip tone="warn">Agent, review</StatusChip>}
+              {task.priority !== 'P3' && (
+                <span className={cn('num font-medium', priorityColor(task.priority))}>{task.priority}</span>
+              )}
+              <span>{task.projectName ?? 'No project'}</span>
+              {/* Overdue is the due label itself in the risk colour, not a second
+                * mark. In the Today column a task due today with no time says
+                * nothing here: the heading already says today. */}
+              {(!inToday || task.dueInDays !== 0 || task.dueAt) && (
+                <span className={cn('num', overdue && 'font-medium text-bad')}>
+                  {inToday && task.dueInDays === 0 ? task.dueAt : dueLabel(task.dueInDays, today)}
+                  {!(inToday && task.dueInDays === 0) && task.dueAt ? ` · ${task.dueAt}` : ''}
                 </span>
               )}
-              {task.projectName && (
-                <span className="text-[10px] text-ink-3">#{task.projectName}</span>
-              )}
-              {task.estimateMinutes !== null && task.estimateMinutes > 0 && (
-                <span className="num text-[10px] text-ink-4">{task.estimateMinutes}m</span>
+              {remind && (
+                <span title="Reminder" className="num inline-flex items-center gap-1 text-ink-3">
+                  <AlarmClock size={12} aria-hidden />
+                  {remind.toLowerCase()}
+                </span>
               )}
             </span>
           </button>
 
+          {task.estimateMinutes !== null && task.estimateMinutes > 0 && (
+            <span className="num shrink-0 pt-0.5 text-[12.5px] text-ink-3">{hoursLabel(task.estimateMinutes)}</span>
+          )}
           <button
             type="button"
             onClick={onEdit}
             title="Edit task"
             aria-label={`Edit ${task.title}`}
-            className="num hidden shrink-0 border border-rule px-1.5 py-0.5 text-[9px] tracking-[0.08em] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink md:inline-flex"
+            className="hidden shrink-0 pt-0.5 text-[12.5px] font-medium text-ink-3 transition-colors duration-150 hover:text-action md:inline-flex"
           >
-            EDIT
+            Edit
           </button>
         </div>
 
         {expanded && (
-          <div className="mt-2.5 flex flex-col gap-2 border-t border-rule pt-2.5 duration-150 animate-in fade-in">
-            {task.notes && <p className="text-[12px] leading-[1.5] text-ink-2">{task.notes}</p>}
-            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-ink-3">
+          <div className="mt-3 flex flex-col gap-2.5 pl-8 duration-150 animate-in fade-in">
+            {task.notes && <p className="text-[13px] leading-[1.5] text-ink-2">{task.notes}</p>}
+            <div className="t-caption flex flex-wrap gap-x-3 gap-y-1 text-ink-3">
               <span>
                 Goal: <span className="text-ink-2">{task.goalTitle ?? 'none'}</span>
                 {task.goalRef && !task.ownGoalRef && ' · via project'}
@@ -630,11 +642,10 @@ function Row({
                 {task.skills.length > 0 && (
                   <span
                     className={cn(
-                      'num',
-                      by === 'manual' ? 'text-warn' : by === 'model' ? 'text-ink-4' : 'text-ok',
+                      by === 'manual' ? 'text-warn' : by === 'model' ? 'text-ink-3' : 'text-ok',
                     )}
                   >
-                    {by.toUpperCase()}
+                    {by === 'manual' ? 'by hand' : by === 'model' ? 'by model' : 'by rules'}
                   </span>
                 )}
               </span>
@@ -659,7 +670,7 @@ function Row({
               <button
                 type="button"
                 onClick={onDelete}
-                className={cn(mini, 'ml-auto hover:border-bad hover:text-bad')}
+                className={cn(mini, 'ml-auto hover:text-bad')}
               >
                 Delete
               </button>
@@ -672,9 +683,9 @@ function Row({
 }
 
 /**
- * The line you type a task on, and the button beside it.
+ * The line you type a task on.
  *
- * The artboard's shape: one 44px field with a + in front of it, what the
+ * One 44px field with a + in front of it, what the
  * parser understood shown as chips inside the field rather than under it, and
  * the token hint sitting where the chips will be until you type. Nothing is
  * saved until Add, so a misread token is caught by the reader first.
@@ -683,12 +694,10 @@ function QuickAdd({
   projects,
   today,
   onSave,
-  onNew,
 }: {
   projects: string[]
   today: Date
   onSave: (action: () => Promise<ActionResult>, ok?: string) => void
-  onNew: () => void
 }) {
   const [text, setText] = useState('')
   const parsed = useMemo(
@@ -731,22 +740,16 @@ function QuickAdd({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2.5">
-        <ActionButton
-          variant="solid"
-          className="hidden h-11 gap-2 px-4 text-[13px] md:inline-flex"
-          onClick={onNew}
-        >
-          New task <span aria-hidden="true">&rarr;</span>
-        </ActionButton>
-
         <form
           onSubmit={(e) => {
             e.preventDefault()
             save()
           }}
           className={cn(
-            'flex h-11 min-w-0 flex-1 basis-[280px] items-center border bg-bg-elev transition-colors duration-150',
-            text ? 'border-brand' : 'border-rule-2',
+            'flex h-11 min-w-0 flex-1 basis-[280px] items-center rounded-full border bg-field transition-colors duration-150',
+            // The ring shows while typing and, for the keyboard, while focused.
+            'focus-within:border-action focus-within:shadow-[0_0_0_3px_var(--accent-soft)]',
+            text ? 'border-action bg-bg-elev shadow-[0_0_0_3px_var(--accent-soft)]' : 'border-glass-line',
           )}
         >
           <span className="num pl-4 pr-3 text-[13px] text-ink-4" aria-hidden>
@@ -761,8 +764,8 @@ function QuickAdd({
           />
 
           {text.trim() === '' ? (
-            <span className="num hidden whitespace-nowrap px-4 text-[10px] tracking-[0.08em] text-ink-4 sm:inline">
-              !P1 · #PROJECT · @DAY · 30M
+            <span className="num hidden whitespace-nowrap px-4 text-[12px] text-ink-3 lg:inline">
+              !p1 · #project · @day · 30m
             </span>
           ) : (
             <span className="flex shrink-0 items-center gap-1.5 px-3">
@@ -770,7 +773,7 @@ function QuickAdd({
                 <span
                   key={p.field}
                   className={cn(
-                    'border border-current px-[7px] py-0.5 text-[10px]',
+                    'rounded-full bg-glass-strong px-2 py-0.5 text-[11.5px] font-medium shadow-[inset_0_0_0_1px_var(--glass-line)]',
                     chipColor(p.field, p.value),
                   )}
                 >
@@ -780,9 +783,9 @@ function QuickAdd({
               <button
                 type="submit"
                 disabled={!parsed.title}
-                className="num shrink-0 bg-ink px-2.5 py-1.5 text-[10px] tracking-[0.08em] text-bg disabled:bg-rule-2 disabled:text-ink-4"
+                className="shrink-0 rounded-full bg-ink px-3 py-1.5 text-[12px] font-medium text-bg disabled:bg-rule-2 disabled:text-ink-4"
               >
-                ADD ↵
+                Add ↵
               </button>
             </span>
           )}

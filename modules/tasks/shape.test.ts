@@ -62,8 +62,9 @@ describe('loadLabel', () => {
 describe('hoursLabel', () => {
   it('reads minutes under an hour and decimal hours over one', () => {
     expect(hoursLabel(0)).toBe('')
-    expect(hoursLabel(45)).toBe('45m')
-    expect(hoursLabel(250)).toBe('4.2h')
+    expect(hoursLabel(45)).toBe('45 min')
+    expect(hoursLabel(250)).toBe('4.2 h')
+    expect(hoursLabel(120)).toBe('2 h')
   })
 })
 
@@ -96,11 +97,11 @@ describe('columnsFor', () => {
       [task({ estimateMinutes: 90 }), task({ estimateMinutes: 40 })],
       context,
     )
-    expect(columns[0].meta).toBe('2 · 2.2h')
+    expect(columns[0].meta).toBe('2 tasks, about 2.2 h')
   })
 
   it('counts without a load when nothing is estimated', () => {
-    expect(columnsFor('today', [task()], context)[0].meta).toBe('1')
+    expect(columnsFor('today', [task()], context)[0].meta).toBe('1 task')
   })
 
   it('sorts by priority first, then time of day', () => {

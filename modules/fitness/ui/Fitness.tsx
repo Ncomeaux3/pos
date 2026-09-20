@@ -257,7 +257,7 @@ export function Fitness({ data }: { data: FitnessData }) {
         (data.workouts.length === 0 ? (
           <EmptyState headline="Nothing logged">
             Connect Strava at Settings and the nightly job pulls your history, or log one by hand.
-            Every workout links to a Health skill and earns XP on the Skill Tree.
+            Every workout links to a Health skill and earns XP on Skills.
           </EmptyState>
         ) : (
           <Card className="py-3.5">
@@ -311,13 +311,13 @@ export function Fitness({ data }: { data: FitnessData }) {
                 />
               </label>
               {filtering && (
-                <button
-                  type="button"
+                <ActionButton
+                  variant="quiet"
+                  size="sm"
                   onClick={() => setFilter({ kind: '', source: '', from: '', to: '' })}
-                  className="text-[12px] text-ink-3 hover:text-ink"
                 >
                   Clear
-                </button>
+                </ActionButton>
               )}
             </div>
             {rows.length === 0 ? (
@@ -478,13 +478,9 @@ export function Fitness({ data }: { data: FitnessData }) {
                 meta={
                   <>
                     {data.plan.daysPerWeek} days a week
-                    <button
-                      type="button"
-                      onClick={() => setPlanOpen(true)}
-                      className="ml-3 uppercase tracking-[0.1em] text-ink-3 hover:text-ink hover:underline"
-                    >
+                    <ActionButton variant="quiet" size="sm" className="ml-3" onClick={() => setPlanOpen(true)}>
                       Edit
-                    </button>
+                    </ActionButton>
                   </>
                 }
               />

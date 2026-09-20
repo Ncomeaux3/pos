@@ -1,5 +1,8 @@
 # POS Handoff UI Fidelity Implementation Plan
 
+Superseded for styling on 2026-09-19 by the Holon redesign (docs/plans/holon-product-redesign.md, section 4): colour, type, radii, surfaces and control shapes now come from the Holon design contract and the shared components in `components/pos/`. This plan still governs what each screen shows and how it is laid out.
+
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make the POS UI match the supplied Claude handoff at 1440x900 desktop and 402x874 phone viewports without changing routes, data ownership, writes, or module contracts.

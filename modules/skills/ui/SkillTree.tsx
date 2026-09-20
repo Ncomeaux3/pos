@@ -2,7 +2,8 @@
 
 import { useSearchParams } from 'next/navigation'
 import { useCallback, useMemo, useState, useTransition } from 'react'
-import { BandSearch, Chip, EmptyState, Radar, SearchButton } from '@/components/pos'
+import { ActionButton, BandSearch, Chip, EmptyState, MetricStrip, Radar, RowList, SearchButton } from '@/components/pos'
+import { cn } from '@/lib/utils'
 import { BackControl } from '@/components/pos/BackControl'
 import type { SkillEvent, SkillStat, SkillTreeData } from '../data'
 import { underGoalPressure } from '../pressure'
@@ -199,13 +200,13 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
         * start under the band. The heading is drawn nowhere and present all
         * the same, because a page with no heading is one a screen reader
         * cannot announce. */}
-      <header className="-mx-[18px] -mt-[18px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 md:-mx-7 md:-mt-7 md:h-14 md:flex-nowrap md:px-7 md:py-0">
+      <header className="-mx-[18px] -mt-[18px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 md:-mx-7 md:-mt-7 md:px-7 lg:h-14 lg:flex-nowrap lg:py-0">
         <BackControl />
-        <h1 className="sr-only">Skill Tree</h1>
+        <h1 className="sr-only">Skills</h1>
         {/* The view name is desktop only: there is one view, and with the
           * back control in the band the full crumb ran under the search. */}
         <span className="eyebrow shrink-0 whitespace-nowrap text-ink-3">
-          Skill Tree
+          Skills
           <span className="hidden md:contents">
             <span className="text-ink-4">/</span> Constellation
           </span>
@@ -213,13 +214,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
         <div className="flex min-w-0 flex-1 items-center justify-end gap-4">
           <SearchButton className="md:hidden" />
           <BandSearch className="hidden min-w-[220px] flex-1 md:flex" placeholder="Search skill tree" />
-          <button
-            type="button"
-            onClick={() => setResetToken((t) => t + 1)}
-            className="shrink-0 whitespace-nowrap border border-rule-2 px-3 py-[7px] text-[12px] text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink"
-          >
-            Reset view
-          </button>
+          <ActionButton onClick={() => setResetToken((t) => t + 1)}>Reset view</ActionButton>
         </div>
       </header>
 
@@ -247,7 +242,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
                 </span>
                 <span className="text-[20px] tracking-[-0.02em] text-white">{characterTitle(data.characterLevel)}</span>
               </div>
-              <div className="num mt-2 text-[11px] uppercase tracking-[0.06em] text-[#8fa3b8]">
+              <div className="num mt-2 text-[11px] text-[#8fa3b8]">
                 {round(data.totalXp)} XP · {round(toNext(data.totalXp).needed)} to Lv{' '}
                 {toNext(data.totalXp).next}
               </div>
@@ -255,14 +250,18 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
 
             {/* One pip per attribute, the character sheet, six letters each as
               * the artboard cuts them. Cells on a hairline grid. */}
-            <div className="z-10 mx-5 mt-3 flex flex-wrap justify-end gap-px border border-white/12 bg-white/12 md:absolute md:right-5 md:top-[18px] md:mx-0 md:mt-0 md:max-w-[calc(100%-320px)]">
+            <div className="z-10 mx-5 mt-3 flex flex-wrap justify-end gap-px border border-white/12 bg-white/12 md:absolute md:right-5 md:top-[18px] md:mx-0 md:mt-0 md:max-w-[calc(100%-320px)] rounded-[18px]">
               {attributes.map((a) => (
                 <button
                   key={a.id}
                   type="button"
                   onClick={() => setSelected(a.id)}
                   aria-label={a.name}
-                  className="min-w-[56px] bg-[#0a1018] px-2.5 py-1.5 text-center hover:bg-brand-soft"
+                  aria-pressed={selected === a.id}
+                  className={cn(
+                    'min-w-[56px] px-2.5 py-1.5 text-center hover:bg-brand-soft',
+                    selected === a.id ? 'bg-brand-soft' : 'bg-[#0a1018]',
+                  )}
                 >
                   <span data-testid="skill-pip-label" className="label block text-[9px] tracking-[0.1em] text-[#8fa3b8]">
                     {a.name.slice(0, 6)}
@@ -309,9 +308,11 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
             </div>
           </div>
 
-          {/* The four column read of the whole tree under the canvas, divided
-            * from it and from itself by hairlines. */}
-          <div className="grid shrink-0 grid-cols-[repeat(auto-fit,minmax(min(100%,150px),1fr))] gap-px border-t border-rule bg-rule">
+          {/* The four column read of the whole tree under the canvas: one
+            * strip of four cells, flush on the phone so it still ends above
+            * the tab bar, inset from md up. */}
+          <div className="shrink-0 border-t border-rule bg-bg md:p-4">
+          <MetricStrip className="grid-cols-2 rounded-none sm:grid-cols-2 md:rounded-[18px]">
           <Column label="Gaining fastest">
             {gainingFastest.length === 0 ? (
               <Quiet>Nothing gained XP in 30 days.</Quiet>
@@ -363,6 +364,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
               ))
             )}
           </Column>
+          </MetricStrip>
           </div>
         </section>
 
@@ -413,7 +415,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
                 {/* Three cells on a hairline grid rather than three loose
                   * columns, which is what the artboard draws and what makes
                   * them read as one instrument. */}
-                <dl className="grid grid-cols-3 gap-px border border-rule bg-rule">
+                <MetricStrip className="grid-cols-3 sm:grid-cols-3">
                   <Stat
                     label="30 days"
                     value={stat.gained30d > 0 ? `+${round(stat.gained30d)} XP` : 'idle'}
@@ -424,7 +426,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
                     value={stat.goalWeight > 0 ? stat.goalWeight.toFixed(1) : '\u2014'}
                   />
                   <Stat label="Last event" value={since(stat.lastEventAt, now)} />
-                </dl>
+                </MetricStrip>
 
                 <div>
                   <div className="flex items-baseline justify-between gap-3">
@@ -439,14 +441,14 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
                 {children.length > 0 && (
                   <div>
                     <span className="eyebrow text-ink-3">{isRoot ? 'Attributes' : 'Children'}</span>
-                    <ul className="mt-1.5">
+                    <RowList className="mt-1.5">
                       {children.map((c) => (
-                        <li key={c.id}>
-                          <button
-                            type="button"
-                            onClick={() => setSelected(c.id)}
-                            className="flex w-full items-center justify-between gap-3 border-b border-rule py-2 text-left hover:bg-brand-soft"
-                          >
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setSelected(c.id)}
+                          className={cn(ROW, 'flex w-full items-center justify-between gap-3 text-left')}
+                        >
                             <span className="text-[13px] text-ink">{c.name}</span>
                             {/* The artboard's two figures: what it gained this
                               * month, then where it stands. */}
@@ -458,10 +460,9 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
                               </span>
                               <span className="num text-[12px] text-ink">Lv {c.level}</span>
                             </span>
-                          </button>
-                        </li>
+                        </button>
                       ))}
-                    </ul>
+                    </RowList>
                     <p className="mt-2 text-[11px] text-ink-4">
                       Drop an event here to reassign it to that skill.
                     </p>
@@ -493,11 +494,13 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
                         // hundred rows; the seed's is five thousand, and every
                         // hover on the constellation paid to lay them out
                         // (105ms to first paint against 35ms with a hundred).
-                        <ul className="mt-1 max-h-[420px] overflow-y-auto pr-1">
-                          {recent.slice(0, EVENT_ROWS).map((e) => (
-                            <EventRow key={`${e.entityRef}-${e.skillId}-${e.occurredAt}`} event={e} now={now} />
-                          ))}
-                        </ul>
+                        <RowList className="mt-1.5">
+                          <ul className="max-h-[420px] overflow-y-auto">
+                            {recent.slice(0, EVENT_ROWS).map((e) => (
+                              <EventRow key={`${e.entityRef}-${e.skillId}-${e.occurredAt}`} event={e} now={now} />
+                            ))}
+                          </ul>
+                        </RowList>
                       )}
                     </div>
 
@@ -542,8 +545,7 @@ function topLeaf(data: SkillTreeData): string | undefined {
   return best && best.gained30d > 0 ? best.id : (data.stats.find((s) => !s.parent)?.id ?? leaves[0]?.id)
 }
 
-/** One cell of the three up grid under the name. Its own fill, so the 1px
- * grid gaps behind it read as hairlines. */
+/** One cell of the metric strip under the name. */
 function Stat({
   label,
   value,
@@ -554,7 +556,7 @@ function Stat({
   tone?: 'ok' | 'warn'
 }) {
   return (
-    <div className="bg-bg px-3 py-2.5">
+    <div className="px-3 py-2.5">
       <dt className="eyebrow text-ink-3">{label}</dt>
       <dd
         className={`num mt-1.5 text-[15px] ${tone === 'ok' ? 'text-ok' : tone === 'warn' ? 'text-warn' : 'text-ink'}`}
@@ -579,12 +581,12 @@ function EventRow({ event, now }: { event: SkillEvent; now: number }) {
         e.dataTransfer.setData('text/plain', `${event.entityRef}|${event.skillId}`)
         e.dataTransfer.effectAllowed = 'move'
       }}
-      className="flex cursor-grab items-center gap-2.5 border-b border-rule py-[7px] hover:bg-brand-soft active:cursor-grabbing"
+      className={cn(ROW, 'flex cursor-grab items-center gap-2.5 active:cursor-grabbing')}
     >
-      <span className="num w-[34px] shrink-0 text-[10px] text-ink-3">{ago(event.occurredAt, now)}</span>
+      <span className="num w-[34px] shrink-0 text-[11px] text-ink-3">{ago(event.occurredAt, now)}</span>
       <div className="min-w-0 flex-1">
         <div className="truncate text-[12px] text-ink">{event.title}</div>
-        <div className="mt-px text-[10px] text-ink-4">
+        <div className="mt-px text-[11px] text-ink-3">
           {event.eventType.replace(/_/g, ' ')} · {event.isManual ? 'manual' : event.classifiedBy}
         </div>
       </div>
@@ -602,6 +604,11 @@ function characterTitle(level: number): string {
   return 'Novice'
 }
 
+/** The row shape from Row.tsx, for a list item that is its own button. */
+const ROW =
+  'relative px-4 py-2.5 transition-colors duration-150 ease-[var(--ease)] hover:bg-glass-strong ' +
+  'before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-rule first:before:hidden'
+
 /** One of the four summary columns under the canvas. */
 function Column({
   label,
@@ -614,10 +621,10 @@ function Column({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-w-0 bg-bg px-4 py-3">
-      <span className={`eyebrow block whitespace-normal leading-[1.4] ${tone === 'warn' ? 'text-warn' : 'text-brand'}`}>
+    <div className="min-w-0 px-4 py-3">
+      <h2 className={cn('text-[13px] font-semibold leading-tight', tone === 'warn' ? 'text-warn' : 'text-ink')}>
         {label}
-      </span>
+      </h2>
       <div className="mt-2 flex flex-col gap-1">{children}</div>
     </div>
   )

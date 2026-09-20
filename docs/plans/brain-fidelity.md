@@ -1,5 +1,8 @@
 # Second Brain to the artboard
 
+Superseded for styling on 2026-09-19 by the Holon redesign (docs/plans/holon-product-redesign.md, section 4): colour, type, radii, surfaces and control shapes now come from the Holon design contract and the shared components in `components/pos/`. This plan still governs what each screen shows and how it is laid out.
+
+
 ## Context
 
 Screen seven of the fidelity pass (method: docs/plans/weekly-review-fidelity.md). `POS Second Brain.dc.html` captured at 1440 (38 PNGs: inbox, inbox editing, a video and a book draft, notes, notes editing, reading list with a book to finish and a finished one, every folder, search hits and no hits, the ingest drawer in its four kinds and running, the inbox after an ingest and empty, dark and light) into `/private/tmp/pos-handoff-sources/brain/`. The app has the right data (drafts beside their source, `[[wikilinks]]` both ways, dangling links kept, the vault pulled read only, ingest guarded) under a screen of another shape: a title block and lede, underlined TabBar folders, a paste-a-link row on the inbox and a title-then-Enter row on Notes, `Row` list rows with chips, a card stack on the right with a textarea that saves on blur, an "As prose" preview, a "Links" card, a page-level "Links with nothing behind them" card, and "Send back to the inbox".

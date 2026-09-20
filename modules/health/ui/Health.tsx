@@ -2,7 +2,23 @@
 
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
-import { ActionButton, Eyebrow, useToast, type SkillLink } from '@/components/pos'
+import {
+  ActionButton,
+  Card,
+  Chip,
+  EmptyState,
+  Eyebrow,
+  MetricStrip,
+  MetricTile,
+  PillGroup,
+  Row,
+  RowList,
+  StatusChip,
+  TabBar,
+  fieldClass,
+  useToast,
+  type SkillLink,
+} from '@/components/pos'
 import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
 import { dueOn, screeningStatus, type ScreeningStatus } from '../screening'
@@ -86,10 +102,10 @@ export type HealthData = {
 export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const DOWS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-/** "12 MAR 2026", the artboard's record date. */
+/** "12 Mar 2026", the record date. */
 export const recordDate = (iso: string) => {
   const d = new Date(`${iso}T12:00:00`)
-  return `${String(d.getDate()).padStart(2, '0')} ${MONTHS[d.getMonth()].toUpperCase()} ${d.getFullYear()}`
+  return `${String(d.getDate()).padStart(2, '0')} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`
 }
 
 /** "Fri 18 Sep 2026, 08:30", the drawer's When row. */
@@ -126,18 +142,11 @@ export const KIND_LABEL: Record<string, string> = {
   immunisation: 'Immunisation',
 }
 
-// The artboard's three control shapes.
-export const pill = (on: boolean) =>
-  cn(
-    'num h-[30px] shrink-0 border px-[11px] text-[10px] tracking-[0.1em] uppercase transition-colors duration-150',
-    on ? 'border-brand bg-brand-soft text-ink' : 'border-rule-2 text-ink-3 hover:text-ink',
-  )
-export const small =
-  'num inline-flex h-8 shrink-0 items-center whitespace-nowrap border border-rule-2 px-3 text-[10px] tracking-[0.08em] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink'
-export const ctl =
-  'inline-flex h-10 shrink-0 items-center whitespace-nowrap border border-rule-2 px-4 text-[11px] tracking-[0.12em] uppercase text-ink-2 transition-colors duration-150 hover:border-ink hover:text-ink'
-export const accentOutline =
-  'inline-flex h-[34px] shrink-0 items-center whitespace-nowrap border border-brand px-[13px] text-[12px] text-brand transition-colors duration-150 hover:bg-brand hover:text-white'
+/** "Wed 1 Oct · 09:30", an appointment row's right column. */
+const rowWhen = (iso: string) => {
+  const d = new Date(iso)
+  return `${DOWS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} · ${d.toTimeString().slice(0, 5)}`
+}
 
 function useParams() {
   const { params, set: setParams } = useSearchState()
@@ -148,18 +157,27 @@ function useParams() {
 export function LogVisitButton() {
   const { setParams } = useParams()
   return (
-    <ActionButton variant="accent" className="h-10 px-4 text-[13px]" onClick={() => setParams({ new: '1', appt: null, record: null }, { push: true })}>
+    <ActionButton variant="accent" size="lg" onClick={() => setParams({ new: '1', appt: null, record: null }, { push: true })}>
       Log a visit
     </ActionButton>
   )
 }
+
+const RECORD_FILTERS = [
+  { value: 'all', label: 'All' },
+  { value: 'lab', label: 'Labs' },
+  { value: 'visit', label: 'Visits' },
+  { value: 'imaging', label: 'Imaging' },
+  { value: 'other', label: 'Other' },
+] as const
+type RecordFilter = (typeof RECORD_FILTERS)[number]['value']
 
 export function Health({ data }: { data: HealthData }) {
   // Which appointment or record is open, and whether the form is, live in the
   // URL so a screenshot survives the theme reload and a row can be linked to.
   const { params, setParams } = useParams()
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming')
-  const [filter, setFilter] = useState<'all' | 'lab' | 'visit' | 'imaging' | 'other'>('all')
+  const [filter, setFilter] = useState<RecordFilter>('all')
   const [query, setQuery] = useState('')
   const [, start] = useTransition()
   const toast = useToast()
@@ -174,7 +192,8 @@ export function Health({ data }: { data: HealthData }) {
   const now = new Date()
   const isPast = (a: Appointment) => a.status === 'done' || a.status === 'cancelled' || new Date(a.startsAt) < now
   const upcoming = data.appointments.filter((a) => !isPast(a))
-  const shownAppts = tab === 'upcoming' ? upcoming : data.appointments.filter(isPast)
+  const past = data.appointments.filter(isPast)
+  const shownAppts = tab === 'upcoming' ? upcoming : past
 
   const active = data.medications.filter((m) => !m.ended)
   const takenToday = active.filter((m) => m.taken.includes(data.todayIso)).length
@@ -197,121 +216,102 @@ export function Health({ data }: { data: HealthData }) {
   return (
     <div className="-mx-[18px] flex flex-wrap items-start border-t border-rule md:-mx-7">
       <div className="flex min-w-0 flex-[1_1_540px] flex-col gap-7 px-[18px] pb-10 pt-[22px] md:px-7">
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,158px),1fr))] gap-2.5">
-          {data.bodyWeightLb !== null && (
-            <Tile name="Weight" src="FITNESS" value={String(Math.round(data.bodyWeightLb))} delta="lb · from Fitness" />
-          )}
-          {data.vitals.map((v) => (
-            <Tile
-              key={v.metric}
-              name={VITAL_LABELS[v.metric] ?? v.metric}
-              src={v.provenance.toUpperCase()}
-              value={v.valueText || String(v.value)}
-              delta={
-                v.prevValue !== null && v.metric !== 'blood_pressure'
-                  ? `${v.value - v.prevValue > 0 ? '+' : ''}${Math.round((v.value - v.prevValue) * 10) / 10} · since ${monthYear(v.prevMeasuredAt!)}`
-                  : monthYear(v.measuredAt)
-              }
-            />
-          ))}
-          {data.vitals.length === 0 && data.bodyWeightLb === null && (
-            <p className="text-[12px] text-ink-4">No readings yet. Blood pressure, lipids and glucose live here; weight comes from Fitness.</p>
-          )}
-        </div>
+        {data.vitals.length === 0 && data.bodyWeightLb === null ? (
+          <p className="text-[12px] text-ink-4">No readings yet. Blood pressure, lipids and glucose live here; weight comes from Fitness.</p>
+        ) : (
+          <MetricStrip>
+            {data.bodyWeightLb !== null && (
+              <MetricTile size="sm" label="Weight" value={String(Math.round(data.bodyWeightLb))} delta="lb · from Fitness" />
+            )}
+            {data.vitals.map((v) => (
+              <MetricTile
+                key={v.metric}
+                size="sm"
+                label={VITAL_LABELS[v.metric] ?? v.metric}
+                value={v.valueText || String(v.value)}
+                delta={
+                  v.prevValue !== null && v.metric !== 'blood_pressure'
+                    ? `${v.value - v.prevValue > 0 ? '+' : ''}${Math.round((v.value - v.prevValue) * 10) / 10} · since ${monthYear(v.prevMeasuredAt!)} · ${v.provenance}`
+                    : `${monthYear(v.measuredAt)} · ${v.provenance}`
+                }
+              />
+            ))}
+          </MetricStrip>
+        )}
 
         <section>
-          <div className="flex flex-wrap items-baseline justify-between gap-4">
-            <Eyebrow>Appointments</Eyebrow>
-            <div role="tablist" aria-label="Appointment views" className="flex flex-wrap gap-1.5">
-              {(['upcoming', 'past'] as const).map((t) => (
-                <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={pill(tab === t)}>
-                  {t === 'upcoming' ? 'Upcoming' : 'History'}
-                </button>
-              ))}
-            </div>
-          </div>
-          {shownAppts.map((a) => {
-            const d = new Date(a.startsAt)
-            const held = a.status === 'held'
-            const past = isPast(a)
-            const tone = past ? 'text-ink-3' : held ? 'text-warn' : 'text-brand'
-            return (
-              <button
-                key={a.id}
-                type="button"
-                onClick={() => setParams({ appt: a.id, record: null, new: null }, { push: true })}
-                className={cn(
-                  'mt-2.5 flex w-full flex-wrap items-center gap-3 gap-x-4 border bg-bg-elev p-4 text-left transition-colors duration-150 hover:border-ink',
-                  held ? 'border-warn' : 'border-rule-2',
-                )}
-              >
-                <span className="w-[58px] shrink-0">
-                  <span className={cn('num block text-[10px] tracking-[0.1em]', tone)}>{MONTHS[d.getMonth()].toUpperCase()}</span>
-                  <span className={cn('num block text-[22px] font-light leading-[1.1]', tone)}>{String(d.getDate()).padStart(2, '0')}</span>
-                </span>
-                <span className="min-w-0 flex-[1_1_200px]">
-                  <span className="block text-[15px] text-ink">{a.what}</span>
-                  <span className="mt-1 block text-[11px] leading-[1.45] text-ink-3">
-                    {[a.provider, a.location].filter(Boolean).join(' · ')}
-                  </span>
-                </span>
-                <span className="flex shrink-0 flex-wrap items-center gap-2.5">
-                  <span className="num text-[10px] text-ink-3">{d.toTimeString().slice(0, 5)}</span>
-                  <span
-                    className={cn(
-                      'num border px-[7px] py-1 text-[9px] tracking-[0.1em] uppercase',
-                      held ? 'border-warn text-warn' : past ? 'border-rule-2 text-ink-3' : 'border-brand text-brand',
-                    )}
-                  >
-                    {a.status}
-                  </span>
-                </span>
-              </button>
-            )
-          })}
-          {shownAppts.length === 0 && (
-            <div className="mt-3 border border-dashed border-rule-2 px-[18px] py-[30px] text-center">
-              <div className="num text-[20px] font-light text-ink-2">{tab === 'upcoming' ? 'NOTHING BOOKED' : 'NO HISTORY'}</div>
-              <div className="mt-2 text-[12px] text-ink-3">
-                {tab === 'upcoming' ? 'Nothing is on the calendar. Log a visit with a future date to add one.' : 'Nothing has happened yet.'}
-              </div>
-            </div>
+          <TabBar
+            label="Appointment views"
+            value={tab}
+            onChange={setTab}
+            tabs={[
+              { value: 'upcoming', label: 'Upcoming', count: upcoming.length },
+              { value: 'past', label: 'History', count: past.length },
+            ]}
+          />
+          {shownAppts.length > 0 ? (
+            <RowList className="mt-3.5">
+              {shownAppts.map((a) => {
+                const held = a.status === 'held'
+                return (
+                  <Row
+                    key={a.id}
+                    title={a.what}
+                    meta={[a.provider, a.location].filter(Boolean).join(' · ')}
+                    date={rowWhen(a.startsAt)}
+                    muted={isPast(a)}
+                    onClick={() => setParams({ appt: a.id, record: null, new: null }, { push: true })}
+                    right={
+                      <StatusChip tone={held ? 'warn' : isPast(a) ? 'quiet' : 'brand'}>
+                        {a.status.charAt(0).toUpperCase() + a.status.slice(1)}
+                      </StatusChip>
+                    }
+                  />
+                )
+              })}
+            </RowList>
+          ) : (
+            <EmptyState headline={tab === 'upcoming' ? 'Nothing booked' : 'No history'} className="mt-3.5">
+              {tab === 'upcoming' ? 'Nothing is on the calendar. Log a visit with a future date to add one.' : 'Nothing has happened yet.'}
+            </EmptyState>
           )}
         </section>
 
         <section>
           <Eyebrow>Medications &amp; supplements</Eyebrow>
-          {active.map((m) => {
-            const taken = m.taken.includes(data.todayIso)
-            const days = m.refillOn ? daysBetween(data.todayIso, m.refillOn) : null
-            return (
-              <div key={m.id} className="flex flex-wrap items-center gap-3 gap-x-3.5 border-b border-rule py-[15px]">
-                <span className="min-w-0 flex-[1_1_200px]">
-                  <span className="block text-[15px] text-ink">{[m.name, m.dose].filter(Boolean).join(' · ')}</span>
-                  <span className="mt-1 block text-[11px] leading-[1.45] text-ink-3">
-                    {[m.schedule, m.startedOn ? `started ${monthYear(m.startedOn)}` : ''].filter(Boolean).join(' · ')}
-                  </span>
-                </span>
-                {days !== null && (
-                  <span className={cn('num shrink-0 text-[10px]', days < 0 ? 'text-bad' : days <= 10 ? 'text-warn' : 'text-ink-3')}>
-                    {days < 0 ? 'REFILL OVERDUE' : `${days} DAYS LEFT`}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  aria-pressed={taken}
-                  aria-label={`Taken today, ${m.name}`}
-                  onClick={() => run(() => markMedication(m.id, !taken))}
-                  className={cn(
-                    small,
-                    taken && 'border-brand bg-brand-soft text-ink',
-                  )}
-                >
-                  {taken ? 'Taken today' : 'Mark taken'}
-                </button>
-              </div>
-            )
-          })}
+          {active.length > 0 && (
+            <RowList className="mt-2.5">
+              {active.map((m) => {
+                const taken = m.taken.includes(data.todayIso)
+                const days = m.refillOn ? daysBetween(data.todayIso, m.refillOn) : null
+                return (
+                  <Row
+                    key={m.id}
+                    title={[m.name, m.dose].filter(Boolean).join(' · ')}
+                    meta={[m.schedule, m.startedOn ? `started ${monthYear(m.startedOn)}` : ''].filter(Boolean).join(' · ')}
+                    right={
+                      <>
+                        {days !== null && (
+                          <StatusChip tone={days < 0 ? 'bad' : days <= 10 ? 'warn' : 'quiet'}>
+                            {days < 0 ? 'Refill overdue' : `${days} days left`}
+                          </StatusChip>
+                        )}
+                        <ActionButton
+                          size="sm"
+                          variant={taken ? 'brand' : 'outline'}
+                          aria-pressed={taken}
+                          aria-label={`Taken today, ${m.name}`}
+                          onClick={() => run(() => markMedication(m.id, !taken))}
+                        >
+                          {taken ? 'Taken today' : 'Mark taken'}
+                        </ActionButton>
+                      </>
+                    }
+                  />
+                )
+              })}
+            </RowList>
+          )}
           {active.length === 0 && <p className="mt-3 text-[12px] text-ink-4">Nothing prescribed.</p>}
           {active.length > 0 && (
             <p className="mt-3 text-[12px] leading-[1.5] text-ink-3">
@@ -323,7 +323,7 @@ export function Health({ data }: { data: HealthData }) {
         </section>
 
         <section>
-          <div className="flex flex-wrap items-baseline justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <Eyebrow>Records</Eyebrow>
             <div className="flex flex-wrap items-center gap-2.5">
               <input
@@ -331,61 +331,40 @@ export function Health({ data }: { data: HealthData }) {
                 onChange={(e) => setQuery(e.target.value)}
                 aria-label="Search records"
                 placeholder="Search records"
-                className="h-[30px] w-[150px] border border-rule-2 bg-transparent px-2.5 text-[11px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand"
+                className={cn(fieldClass, 'w-[180px] py-1.5')}
               />
-              <div className="flex flex-wrap gap-1.5">
-                {(
-                  [
-                    ['all', 'All'],
-                    ['lab', 'Labs'],
-                    ['visit', 'Visits'],
-                    ['imaging', 'Imaging'],
-                    ['other', 'Other'],
-                  ] as const
-                ).map(([f, label]) => (
-                  <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)} className={pill(filter === f)}>
-                    {label}
-                  </button>
-                ))}
-              </div>
+              <PillGroup label="Record kind" value={filter} onChange={setFilter} options={[...RECORD_FILTERS]} />
             </div>
           </div>
-          <div className="flex flex-wrap gap-3 border-b border-rule-2 px-3 pb-2.5 pt-3.5 text-[10px] tracking-[0.12em] text-ink-3">
-            <span className="min-w-0 flex-[1_1_200px]">RECORD</span>
-            <span className="shrink-0">TYPE · DATE · FILE</span>
-          </div>
-          {records.map((r) => (
-            <button
-              key={r.id}
-              type="button"
-              onClick={() => setParams({ record: r.id, appt: null, new: null }, { push: true })}
-              className="flex w-full flex-wrap items-center gap-3 gap-x-3.5 border-b border-rule px-3 py-[15px] text-left transition-colors duration-150 hover:bg-brand-soft"
-            >
-              <span className="min-w-0 flex-[1_1_200px]">
-                <span className="block text-[14px] text-ink">{r.title}</span>
-                {r.summary && <span className="mt-1 block text-[11px] leading-[1.45] text-ink-3">{r.summary}</span>}
-              </span>
-              <span className="flex shrink-0 flex-wrap items-center gap-3">
-                <span className={cn('num text-[9px] tracking-[0.1em] uppercase', r.kind === 'lab' ? 'text-brand' : r.kind === 'imaging' ? 'text-warn' : 'text-ink-3')}>
-                  {r.kind}
-                </span>
-                <span className="num text-[10px] text-ink-3">{recordDate(r.takenOn)}</span>
-                <span className="num text-[9px] tracking-[0.08em] text-ink-3">{r.file ?? 'NO FILE'}</span>
-              </span>
-            </button>
-          ))}
-          {records.length === 0 && (
-            <div className="mt-3 border border-dashed border-rule-2 px-[18px] py-[30px] text-center">
-              <div className="num text-[20px] font-light text-ink-2">{data.records.length === 0 ? 'NO RECORDS' : 'NO MATCHES'}</div>
-              <div className="mt-2 text-[12px] text-ink-3">
-                {data.records.length === 0 ? 'Log a visit with a past date to file one.' : q ? `Nothing in this filter matches "${query.trim()}".` : 'Nothing in this filter.'}
-              </div>
-            </div>
+          {records.length > 0 ? (
+            <RowList className="mt-3.5">
+              {records.map((r) => (
+                <Row
+                  key={r.id}
+                  title={r.title}
+                  meta={r.summary || undefined}
+                  date={recordDate(r.takenOn)}
+                  onClick={() => setParams({ record: r.id, appt: null, new: null }, { push: true })}
+                  right={
+                    <>
+                      <StatusChip tone={r.kind === 'lab' ? 'brand' : r.kind === 'imaging' ? 'warn' : 'neutral'}>
+                        {KIND_LABEL[r.kind] ?? r.kind}
+                      </StatusChip>
+                      <Chip tone="quiet">{r.file ?? 'No file'}</Chip>
+                    </>
+                  }
+                />
+              ))}
+            </RowList>
+          ) : (
+            <EmptyState headline={data.records.length === 0 ? 'No records' : 'No matches'} className="mt-3.5">
+              {data.records.length === 0 ? 'Log a visit with a past date to file one.' : q ? `Nothing in this filter matches "${query.trim()}".` : 'Nothing in this filter.'}
+            </EmptyState>
           )}
         </section>
       </div>
 
-      <aside className="flex min-w-0 flex-[1_1_320px] flex-col gap-[26px] border-t border-rule px-[18px] pb-10 pt-[22px] md:max-w-[400px] md:px-6">
+      <aside className="flex min-w-0 flex-[1_1_320px] flex-col gap-[26px] border-t border-rule px-[18px] pb-10 pt-[22px] xl:max-w-[400px] md:px-6">
         <section>
           <Eyebrow>Due &amp; overdue</Eyebrow>
           {data.screenings.map((s) => {
@@ -399,39 +378,37 @@ export function Health({ data }: { data: HealthData }) {
                 ? `Booked for ${new Date(booked!.startsAt).getDate()} ${MONTHS[new Date(booked!.startsAt).getMonth()]}`
                 : s.lastDoneOn
                   ? `Last done ${monthYear(s.lastDoneOn)} · ${Math.round(-daysBetween(data.todayIso, s.lastDoneOn) / 30)} months ago`
-                  : 'Never done'
-            const tone =
-              state === 'overdue' ? 'text-bad' : state === 'scheduled' ? 'text-brand' : state === 'never' ? 'text-ink-3' : 'text-warn'
+                  : 'No date on record'
             return (
-              <div key={s.id} className={cn('mt-2.5 border bg-bg-elev p-3.5', state === 'overdue' ? 'border-bad' : 'border-rule-2')}>
-                <div className="flex items-baseline justify-between gap-2.5">
-                  <span className={cn('num text-[9px] tracking-[0.12em]', tone)}>
-                    {state === 'scheduled' ? 'SCHEDULED' : state === 'overdue' ? 'OVERDUE' : state === 'never' ? 'NEVER DONE' : 'DUE SOON'}
-                  </span>
-                  <span className="num text-[10px] text-ink-3">EVERY {s.intervalMonths} MO</span>
+              <Card key={s.id} as="article" className={cn('mt-2.5', state === 'overdue' && 'ring-1 ring-bad')}>
+                <div className="flex items-center justify-between gap-2.5">
+                  <StatusChip tone={state === 'overdue' ? 'bad' : state === 'scheduled' ? 'brand' : state === 'never' ? 'quiet' : 'warn'}>
+                    {state === 'scheduled' ? 'Scheduled' : state === 'overdue' ? 'Overdue' : state === 'never' ? 'Never done' : 'Due soon'}
+                  </StatusChip>
+                  <span className="num text-[12px] text-ink-3">Every {s.intervalMonths} mo</span>
                 </div>
-                <div className="mt-[7px] text-[14px] leading-[1.4] text-ink">{s.name}</div>
-                <div className="mt-1 text-[11px] leading-[1.45] text-ink-3">
+                <p className="mt-2.5 text-[14.5px] font-medium leading-[1.35] text-ink">{s.name}</p>
+                <p className="t-caption mt-0.5 text-ink-3">
                   {label}
                   {due && state !== 'scheduled' && state !== 'never' ? ` · due ${new Date(`${due}T12:00:00`).getDate()} ${MONTHS[new Date(`${due}T12:00:00`).getMonth()]}` : ''}
-                </div>
+                </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {state === 'scheduled' ? (
-                    <button type="button" className={accentOutline} onClick={() => setParams({ appt: booked!.id, record: null, new: null }, { push: true })}>
+                    <ActionButton size="sm" onClick={() => setParams({ appt: booked!.id, record: null, new: null }, { push: true })}>
                       View appointment
-                    </button>
+                    </ActionButton>
                   ) : (
                     <>
-                      <button type="button" className={accentOutline} onClick={() => run(() => completeScreening(s.id), `${s.name} recorded`)}>
+                      <ActionButton size="sm" variant="accent" onClick={() => run(() => completeScreening(s.id), `${s.name} recorded`)}>
                         Mark done
-                      </button>
-                      <button type="button" className={small} onClick={() => run(() => snoozeScreening(s.id, 3), 'Pushed out three months')}>
+                      </ActionButton>
+                      <ActionButton size="sm" onClick={() => run(() => snoozeScreening(s.id, 3), 'Pushed out three months')}>
                         Snooze 3 mo
-                      </button>
+                      </ActionButton>
                     </>
                   )}
                 </div>
-              </div>
+              </Card>
             )
           })}
           {data.screenings.every((s) => ['ok', 'snoozed'].includes(screeningStatus(s, data.todayIso))) && (
@@ -441,13 +418,14 @@ export function Health({ data }: { data: HealthData }) {
 
         <section>
           <Eyebrow>Insurance &amp; cost</Eyebrow>
-          {data.coverage.map((c) => (
-            <div key={c.label} className="flex flex-wrap items-baseline gap-2 gap-x-3 border-b border-rule py-[11px]">
-              <span className="min-w-0 flex-[1_1_130px] text-[13px] text-ink">{c.label}</span>
-              <span className="num shrink-0 text-[12px] text-ink-2">{c.value}</span>
-            </div>
-          ))}
-          <p className="mt-3 text-[11px] leading-[1.5] text-ink-3">
+          {data.coverage.length > 0 && (
+            <RowList className="mt-2.5">
+              {data.coverage.map((c) => (
+                <Row key={c.label} title={<span className="text-[13.5px] font-normal">{c.label}</span>} amount={c.value} />
+              ))}
+            </RowList>
+          )}
+          <p className="mt-3 text-[12px] leading-[1.5] text-ink-3">
             {data.coverage.length === 0 ? 'Nothing from Insurance yet: its nightly digest is where these come from. ' : ''}
             Plan details live in{' '}
             <Link href="/insurance" className="border-b border-rule-2 text-ink-3 hover:text-ink">
@@ -459,15 +437,18 @@ export function Health({ data }: { data: HealthData }) {
 
         <section>
           <Eyebrow>Care team</Eyebrow>
-          {data.providers.map((p) => (
-            <div key={p.id} className="border-b border-rule py-3">
-              <div className="flex items-baseline justify-between gap-2.5">
-                <span className="text-[13px] text-ink">{p.name}</span>
-                <span className="num text-[9px] tracking-[0.1em] uppercase text-ink-3">{p.role}</span>
-              </div>
-              <div className="mt-1 text-[11px] text-ink-3">{[p.phone, p.address || p.notes].filter(Boolean).join(' · ')}</div>
-            </div>
-          ))}
+          {data.providers.length > 0 && (
+            <RowList className="mt-2.5">
+              {data.providers.map((p) => (
+                <Row
+                  key={p.id}
+                  title={p.name}
+                  meta={[p.phone, p.address || p.notes].filter(Boolean).join(' · ')}
+                  right={<Chip tone="quiet">{p.role}</Chip>}
+                />
+              ))}
+            </RowList>
+          )}
           {data.providers.length === 0 && <p className="mt-3 text-[12px] text-ink-4">Nobody yet.</p>}
         </section>
       </aside>
@@ -484,19 +465,6 @@ export function Health({ data }: { data: HealthData }) {
           onRun={run}
         />
       )}
-    </div>
-  )
-}
-
-function Tile({ name, src, value, delta }: { name: string; src: string; value: string; delta: string }) {
-  return (
-    <div className="border border-rule-2 bg-bg-elev p-[15px]">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[11px] text-ink-3">{name}</span>
-        <span className="num text-[9px] tracking-[0.1em] text-ink-3">{src}</span>
-      </div>
-      <div className="num mt-2 text-[25px] font-light leading-none tracking-[-0.02em] text-ink">{value}</div>
-      <div className="num mt-1.5 text-[10px] text-ink-3">{delta}</div>
     </div>
   )
 }

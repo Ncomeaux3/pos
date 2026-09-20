@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ActionButton, Eyebrow, Overlay, PillGroup, SkillPicker, fieldClass } from '@/components/pos'
+import { ActionButton, Eyebrow, Overlay, PillGroup, Row, RowList, SkillPicker, fieldClass } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { addMonths, logDate, money, monthKey, monthLabelLong } from '../schedule'
 import { logService, type ActionResult } from './actions'
@@ -10,9 +10,6 @@ import type { Fact, HomeData } from './Home'
 // The three drawers: an asset, a warranty, the Log service form. The shared
 // Overlay at `narrow` draws the band and the title; what is here is the rows.
 
-const KEY = 'label w-[126px] shrink-0 text-[10px] tracking-[0.12em] text-ink-3'
-const FIELD = cn(fieldClass, 'h-[42px] px-3 text-[14px]')
-const LABEL = 'label text-[10px] tracking-[0.12em] text-ink-3'
 
 function FactRows({ facts }: { facts: Fact[] }) {
   return (
@@ -22,7 +19,7 @@ function FactRows({ facts }: { facts: Fact[] }) {
           key={f.label}
           className="flex flex-wrap items-baseline gap-x-3.5 gap-y-2 border-b border-rule py-[13px]"
         >
-          <span className={KEY}>{f.label}</span>
+          <Eyebrow className="w-[126px] shrink-0">{f.label}</Eyebrow>
           <span className="min-w-0 flex-[1_1_160px] text-[14px] leading-[1.45] text-ink">{f.value}</span>
         </div>
       ))}
@@ -62,23 +59,18 @@ export function AssetDrawer({
           <FactRows facts={asset.facts} />
           {log.length > 0 && (
             <div>
-              <span className={LABEL}>Service history</span>
-              {log.map((l) => (
-                <div
-                  key={l.id}
-                  className="flex flex-wrap items-baseline gap-x-3 gap-y-2 border-b border-rule py-[11px]"
-                >
-                  <span className="num w-[74px] shrink-0 text-[10px] text-ink-3">{logDate(l.doneOn)}</span>
-                  <span className="min-w-0 flex-[1_1_140px] text-[13px] leading-[1.4] text-ink">
-                    {l.what}
-                    {l.vendorName ? ` · ${l.vendorName}` : ''}
-                  </span>
-                  <span className="num shrink-0 text-[11px] text-ink-3">
-                    {/* Null is "no receipt to hand", which is not the same claim as free. */}
-                    {l.costCents === null ? 'not recorded' : money(l.costCents)}
-                  </span>
-                </div>
-              ))}
+              <Eyebrow>Service history</Eyebrow>
+              <RowList className="mt-2">
+                {log.map((l) => (
+                  <Row
+                    key={l.id}
+                    title={`${l.what}${l.vendorName ? ` · ${l.vendorName}` : ''}`}
+                    date={logDate(l.doneOn)}
+                    // Null is "no receipt to hand", which is not the same claim as free.
+                    amount={l.costCents === null ? 'not recorded' : money(l.costCents)}
+                  />
+                ))}
+              </RowList>
             </div>
           )}
           <div>
@@ -199,7 +191,7 @@ export function LogServiceDrawer({
           <ActionButton variant="accent" className="h-11 px-4 text-[13px] sm:h-10" onClick={submit}>
             Save service
           </ActionButton>
-          <ActionButton className="label h-11 px-4 text-[11px] tracking-[0.12em] sm:h-10" onClick={onClose}>
+          <ActionButton className="h-11 px-4 text-[13px] sm:h-10" onClick={onClose}>
             Cancel
           </ActionButton>
         </div>
@@ -207,12 +199,12 @@ export function LogServiceDrawer({
     >
       <div className="flex flex-col gap-[18px]">
         <div>
-          <span className={LABEL}>Asset</span>
+          <Eyebrow>Asset</Eyebrow>
           <select
             value={assetId}
             aria-label="Asset"
             onChange={(e) => setAssetId(e.target.value)}
-            className={cn(FIELD, 'mt-2.5')}
+            className={cn(fieldClass, 'mt-2.5')}
           >
             {data.assets.map((a) => (
               <option key={a.id} value={a.id}>
@@ -223,47 +215,47 @@ export function LogServiceDrawer({
         </div>
 
         <label className="flex flex-col gap-2">
-          <span className={LABEL}>What was done</span>
+          <Eyebrow>What was done</Eyebrow>
           <input
             value={what}
             aria-label="What was done"
             onChange={(e) => setWhat(e.target.value)}
             placeholder="Replaced the water heater anode rod"
-            className={FIELD}
+            className={fieldClass}
           />
         </label>
 
         <div className="flex flex-wrap gap-3">
           <label className="flex min-w-0 flex-[1_1_140px] flex-col gap-2">
-            <span className={LABEL}>Date</span>
+            <Eyebrow>Date</Eyebrow>
             <input
               type="date"
               aria-label="Date"
               value={doneOn}
               onChange={(e) => setDoneOn(e.target.value)}
-              className={FIELD}
+              className={fieldClass}
             />
           </label>
           <label className="flex min-w-0 flex-[1_1_110px] flex-col gap-2">
-            <span className={LABEL}>Cost</span>
+            <Eyebrow>Cost</Eyebrow>
             <input
               inputMode="decimal"
               aria-label="Cost"
               value={cost}
               onChange={(e) => setCost(e.target.value)}
               placeholder="$180"
-              className={FIELD}
+              className={fieldClass}
             />
           </label>
         </div>
 
         <label className="flex flex-col gap-2">
-          <span className={LABEL}>Vendor</span>
+          <Eyebrow>Vendor</Eyebrow>
           <select
             value={vendorId}
             aria-label="Vendor"
             onChange={(e) => setVendorId(e.target.value)}
-            className={FIELD}
+            className={fieldClass}
           >
             {data.vendors.map((v) => (
               <option key={v.id} value={v.id}>
@@ -275,7 +267,7 @@ export function LogServiceDrawer({
         </label>
 
         <div>
-          <span className={LABEL}>Schedule the next one</span>
+          <Eyebrow>Schedule the next one</Eyebrow>
           <PillGroup
             label="Interval"
             value={intervalMonths}
@@ -286,7 +278,7 @@ export function LogServiceDrawer({
         </div>
 
         <label className="flex flex-col gap-2">
-          <span className={LABEL}>Notes</span>
+          <Eyebrow>Notes</Eyebrow>
           <textarea
             value={notes}
             aria-label="Notes"

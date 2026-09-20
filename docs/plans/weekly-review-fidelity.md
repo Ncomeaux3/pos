@@ -1,5 +1,8 @@
 # Weekly Review to the artboard, and the shell under it
 
+Superseded for styling on 2026-09-19 by the Holon redesign (docs/plans/holon-product-redesign.md, section 4): colour, type, radii, surfaces and control shapes now come from the Holon design contract and the shared components in `components/pos/`. This plan still governs what each screen shows and how it is laid out.
+
+
 ## Context
 
 Nick wants the POS app to match the Claude Design prototypes exactly, module by module, starting with `POS Weekly Review.dc.html`. The prototypes are the screen spec (decision 2026-09-07). The live project file matches the Sep 9 export on disk line for line, so `/Users/ncomeaux/Downloads/design_handoff_pos 2/` is the source; the two extra remote files (`-standalone`, `.html`) are variants of the same screen and are not used.

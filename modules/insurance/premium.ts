@@ -195,6 +195,11 @@ export function paymentSchedule(
   ]
 }
 
+/** Capitalises the first letter: a kind or a free-form status read title case. */
+export function cap(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
 /** "$7,901.88", "$14", "$13.49": cents shown only when there are some. */
 export function money(cents: number): string {
   return `$${(cents / 100).toLocaleString('en-US', {

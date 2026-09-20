@@ -1,3 +1,4 @@
+import { Eyebrow } from '@/components/pos'
 import type { TravelDigest } from '../jobs/nightly-digest'
 
 // The Travel dashboard tile. The next trip and how far away it is, which is
@@ -21,7 +22,7 @@ export function TravelTile({ payload }: { payload: Record<string, unknown> }) {
   return (
     <div className="space-y-3">
       <div>
-        <span className="eyebrow block text-ink-3">Next trip</span>
+        <Eyebrow className="block text-ink-3">Next trip</Eyebrow>
         <span className="block text-[17px] text-ink">{next.destination}</span>
         <span className="num text-[11px] text-ink-3">
           {next.name} · {next.daysAway} days away

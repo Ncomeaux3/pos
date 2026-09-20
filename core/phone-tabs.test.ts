@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest'
 import type { NavItem } from './nav'
 import { phoneTabs } from './phone-tabs'
 
-const item = (href: string, label: string): NavItem => ({ href, label, code: '00' })
+const item = (href: string, label: string): NavItem => ({ href, label, group: 'life' })
 
 const nav = [
-  item('/', 'Dashboard'),
+  item('/', 'Today'),
   item('/finance', 'Finance'),
   item('/skills', 'Skill Tree'),
   item('/tasks', 'Tasks'),
@@ -14,8 +14,8 @@ const nav = [
 ]
 
 describe('phoneTabs', () => {
-  it('is Home, Tasks, Finance, Browse, whatever order the rail has', () => {
-    expect(phoneTabs(nav).map((t) => t.label)).toEqual(['Home', 'Tasks', 'Finance', 'Browse'])
+  it('is Today, Tasks, Finance, Browse, whatever order the rail has', () => {
+    expect(phoneTabs(nav).map((t) => t.label)).toEqual(['Today', 'Tasks', 'Finance', 'Browse'])
   })
 
   it('drops a disabled module and keeps Browse last', () => {

@@ -36,18 +36,18 @@ export function isLive(rule: Rule, paused: boolean): boolean {
 }
 
 export type RuleState =
-  | { label: 'PAUSED' | 'MUTED'; tone: 'muted' }
-  | { label: 'ON'; tone: 'on' }
+  | { label: 'Paused' | 'Muted'; tone: 'muted' }
+  | { label: 'On'; tone: 'on' }
   | { label: string; tone: 'snoozed' }
 
 export function ruleState(rule: Rule, paused: boolean): RuleState {
-  if (paused) return { label: 'PAUSED', tone: 'muted' }
-  if (rule.muted) return { label: 'MUTED', tone: 'muted' }
+  if (paused) return { label: 'Paused', tone: 'muted' }
+  if (rule.muted) return { label: 'Muted', tone: 'muted' }
   if (rule.snooze_until && rule.snooze_until > new Date()) {
     const days = Math.max(1, Math.ceil((rule.snooze_until.getTime() - Date.now()) / 86_400_000))
-    return { label: `${days}D`, tone: 'snoozed' }
+    return { label: `${days}d`, tone: 'snoozed' }
   }
-  return { label: 'ON', tone: 'on' }
+  return { label: 'On', tone: 'on' }
 }
 
 /** "None", "30m", "1 day", "14 days". The design's own vocabulary. */

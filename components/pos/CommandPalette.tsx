@@ -64,7 +64,7 @@ export function CommandPalette({ nav }: { nav: NavItem[] }) {
 
   const goto: Row[] = nav
     .filter((n) => !query || n.label.toLowerCase().includes(query.toLowerCase()))
-    .map((n) => ({ key: `nav-${n.href}`, label: n.label, hint: `G ${n.code}`, go: n.href, group: 'goto' as const }))
+    .map((n) => ({ key: `nav-${n.href}`, label: n.label, hint: n.group === 'today' || n.group === 'review' ? n.label : n.group[0].toUpperCase() + n.group.slice(1), go: n.href, group: 'goto' as const }))
 
   const fresh = hits.q === query.trim() && query.trim().length >= 2 ? hits.rows : []
   const found: Row[] = fresh.map((h) => ({
@@ -129,7 +129,7 @@ export function CommandPalette({ nav }: { nav: NavItem[] }) {
         aria-label="Command palette"
         className="relative w-[min(640px,calc(100%-32px))] duration-200 animate-in fade-in zoom-in-95"
       >
-        <div className="flex h-[52px] items-center border border-rule-2 bg-bg-elev focus-within:border-brand">
+        <div className="flex h-[52px] items-center border border-rule-2 bg-bg-elev focus-within:border-brand rounded-[18px]">
           <span aria-hidden className="num pl-4 pr-3 text-[13px] text-ink-4">
             &gt;
           </span>
@@ -160,16 +160,16 @@ export function CommandPalette({ nav }: { nav: NavItem[] }) {
           />
         </div>
 
-        <div className="mt-2.5 max-h-[52vh] overflow-y-auto border border-rule-2 bg-bg-elev py-1.5">
+        <div className="mt-2.5 max-h-[52vh] overflow-y-auto border border-rule-2 bg-bg-elev py-1.5 rounded-[18px]">
           {found.length > 0 && (
             <>
-              <div className="px-3.5 py-1.5 text-[11px] text-ink-4">Results</div>
+              <div className="px-3.5 py-1.5 text-[11px] text-ink-3">Results</div>
               <ul>{found.map(rowButton)}</ul>
             </>
           )}
           {goto.length > 0 && (
             <>
-              <div className="px-3.5 py-1.5 text-[11px] text-ink-4">Go to</div>
+              <div className="px-3.5 py-1.5 text-[11px] text-ink-3">Go to</div>
               <ul>{goto.map(rowButton)}</ul>
             </>
           )}

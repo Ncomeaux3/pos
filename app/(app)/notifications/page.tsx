@@ -16,17 +16,19 @@ function when(at: Date): string {
   const days = Math.floor((Date.now() - date.getTime()) / 86_400_000)
   if (days < 1 && date.getDate() === new Date().getDate()) return time
   if (days < 2) return `Yest ${time}`
-  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase()
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
 
-function toItem(alert: Alert): AlertItem {
+const VIA: Record<string, string> = { push: 'Push', email: 'Email', inapp: 'In-app' }
+
+function toItem(alert: Alert, moduleLabel: (id: string) => string): AlertItem {
   const tone: DotTone = alert.urgency === 'urgent' ? 'bad' : alert.read_at ? 'idle' : 'warn'
   return {
     id: alert.id,
     title: alert.title,
     body: alert.body,
-    module: (alert.module ?? 'system').toUpperCase(),
-    via: alert.channel.replace('inapp', 'in-app').toUpperCase(),
+    module: moduleLabel(alert.module ?? 'system'),
+    via: VIA[alert.channel] ?? alert.channel,
     time: when(alert.due_at),
     tone,
     read: alert.read_at !== null,
@@ -53,11 +55,10 @@ export default async function NotificationsPage() {
   // 'system' has no manifest and never will: the runner's own alerts belong to
   // no module. Everything else takes its name from the registry, so a renamed
   // module renames here too.
+  const moduleLabel = (id: string) =>
+    id === 'system' ? 'System' : (getModule(id)?.nav.label ?? id[0].toUpperCase() + id.slice(1))
   const moduleLabels = Object.fromEntries(
-    [...new Set(rules.map((r) => r.module))].map((id) => [
-      id,
-      id === 'system' ? 'System' : (getModule(id)?.nav.label ?? id[0].toUpperCase() + id.slice(1)),
-    ]),
+    [...new Set(rules.map((r) => r.module))].map((id) => [id, moduleLabel(id)]),
   )
 
   const active = rules.filter((r) => isLive(r, schedule.paused)).length
@@ -74,7 +75,7 @@ export default async function NotificationsPage() {
       />
 
       <Notifications rules={rules} schedule={schedule} moduleLabels={moduleLabels}>
-        <AlertCentre alerts={alerts.map(toItem)} />
+        <AlertCentre alerts={alerts.map((a) => toItem(a, moduleLabel))} />
       </Notifications>
     </div>
   )

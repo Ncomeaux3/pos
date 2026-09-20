@@ -3,6 +3,25 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session; the paragraph below names the plan that comes next.
 
+**Current plan: docs/plans/holon-product-redesign.md** (2026-09-18). The
+app is being rebranded and redesigned as Holon on the integration branch
+`holon`; phase PRs target it and one final PR lands on `main`. Production keeps
+the old brand until then. Phases 0 (mockups, #74), 1 (foundations, #76), 2
+(shell, #79), 3 (Today recomposed, task and goal rows, #82) and 4 (Second
+Brain, Ideas and Skills on the shared controls, #83) are merged into `holon`;
+Phase 5 (Finance KPIs as a MetricStrip, Health rebuilt on rows, chips, cards
+and the TabBar, Fitness strings and buttons, #86) is merged; Phase 6 is two
+PRs, the first (Meals, Travel, Home & Property and Insurance on the shared
+controls, #88) and the second (Review, Weekly review, Notifications,
+Settings, Agent log, #91) merged; `main` merged into `holon` (#92). Phase 7
+(release validation: shared-component a11y fixes, the six-width visual pass,
+the keyboard and zoom audit, the docs, #93) merged 2026-09-20, and `main`
+(#90, the owner-timezone clocks) merged into `holon` after it. One
+merge-commit PR takes `holon` to `main` and the owner merges it under the
+release step. Two owner checks stay on the phone (OWNER-TODO 23).
+Decisions are in decisions/log.md under 2026-09-18 and 2026-09-19. v1.1 below
+is complete except Phase 11's owner step.
+
 **Next plan: docs/plans/pos-v1-1.md** (2026-09-14, from /adopt-repo). Twelve
 phases from the owner's first week of live use: diagnosis and small bugs, the
 notes stub deleted, server and client speed, dashboard layout and freshness,
