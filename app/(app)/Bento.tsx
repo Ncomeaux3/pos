@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useTransition, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { useLongPress } from '@/components/pos/gestures'
+import { useToast } from '@/components/pos'
 import type { Settings } from '@/core/settings'
 import { arrange } from '@/core/dashboard-layout'
 import { saveDashboardLayout } from './shell-actions'
@@ -50,10 +51,18 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
   const [layout, setLayout] = useState<Layout>(saved)
   const [, start] = useTransition()
   const [dragging, setDragging] = useState<string | null>(null)
+  const toast = useToast()
 
   const save = (next: Layout) => {
+    const prev = layout
     setLayout(next)
-    start(() => saveDashboardLayout(next))
+    start(async () => {
+      const result = await saveDashboardLayout(next)
+      if (!result.ok) {
+        setLayout(prev)
+        toast(result.error)
+      }
+    })
   }
   const hidden = layout?.hidden ?? []
   const { sorted, shown, hidden: hiddenTiles } = arrange(
