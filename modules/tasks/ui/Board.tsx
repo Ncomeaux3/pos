@@ -53,7 +53,7 @@ export const miniAccent = cn(actionButtonBase, actionButtonSizes.sm, actionButto
 
 /** P1 in the risk colour, P2 in attention, P3 quiet, as the mockup marks them. */
 export const priorityColor = (p: Task['priority']) =>
-  p === 'P1' ? 'text-bad' : p === 'P2' ? 'text-warn' : 'text-ink-4'
+  p === 'P1' ? 'text-bad' : p === 'P2' ? 'text-warn' : 'text-ink-3'
 
 const TABS: { value: View | 'calendar'; label: string }[] = [
   ...VIEWS.slice(0, 4),
@@ -339,7 +339,7 @@ export function Board({
                     )}
                   >
                     {column.tasks.length === 0 ? (
-                      <p className="px-4 py-[18px] text-center text-[13px] text-ink-4">{column.empty}</p>
+                      <p className="px-4 py-[18px] text-center text-[13px] text-ink-3">{column.empty}</p>
                     ) : (
                       column.tasks.map((task) => (
                         <Row
@@ -552,7 +552,8 @@ function Row({
             title={agent ? 'Approve first' : done ? 'Reopen' : 'Complete'}
             aria-label={done ? `Reopen ${task.title}` : `Complete ${task.title}`}
             className={cn(
-              'mt-px grid size-5 shrink-0 place-items-center rounded-full border transition-colors duration-150',
+              'relative mt-px grid size-5 shrink-0 place-items-center rounded-full border transition-colors duration-150',
+              'before:absolute before:-inset-3 before:content-[""] sm:before:inset-0',
               done
                 ? 'border-action bg-action text-action-fg'
                 : agent
@@ -613,7 +614,7 @@ function Row({
             onClick={onEdit}
             title="Edit task"
             aria-label={`Edit ${task.title}`}
-            className="hidden shrink-0 pt-0.5 text-[12.5px] font-medium text-ink-4 transition-colors duration-150 hover:text-action md:inline-flex"
+            className="hidden shrink-0 pt-0.5 text-[12.5px] font-medium text-ink-3 transition-colors duration-150 hover:text-action md:inline-flex"
           >
             Edit
           </button>
@@ -641,7 +642,7 @@ function Row({
                 {task.skills.length > 0 && (
                   <span
                     className={cn(
-                      by === 'manual' ? 'text-warn' : by === 'model' ? 'text-ink-4' : 'text-ok',
+                      by === 'manual' ? 'text-warn' : by === 'model' ? 'text-ink-3' : 'text-ok',
                     )}
                   >
                     {by === 'manual' ? 'by hand' : by === 'model' ? 'by model' : 'by rules'}
@@ -746,6 +747,8 @@ function QuickAdd({
           }}
           className={cn(
             'flex h-11 min-w-0 flex-1 basis-[280px] items-center rounded-full border bg-field transition-colors duration-150',
+            // The ring shows while typing and, for the keyboard, while focused.
+            'focus-within:border-action focus-within:shadow-[0_0_0_3px_var(--accent-soft)]',
             text ? 'border-action bg-bg-elev shadow-[0_0_0_3px_var(--accent-soft)]' : 'border-glass-line',
           )}
         >
@@ -761,7 +764,7 @@ function QuickAdd({
           />
 
           {text.trim() === '' ? (
-            <span className="num hidden whitespace-nowrap px-4 text-[12px] text-ink-4 sm:inline">
+            <span className="num hidden whitespace-nowrap px-4 text-[12px] text-ink-3 lg:inline">
               !p1 · #project · @day · 30m
             </span>
           ) : (

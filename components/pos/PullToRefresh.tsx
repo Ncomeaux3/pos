@@ -71,7 +71,7 @@ export function PullToRefresh() {
   return (
     <p
       aria-live="polite"
-      className="label fixed inset-x-0 top-2 z-50 flex h-4 items-center justify-center gap-2 text-[10px] text-brand"
+      className="label fixed inset-x-0 top-2 z-50 flex h-4 items-center justify-center gap-2 text-[11px] text-brand"
     >
       {pending && (
         <span

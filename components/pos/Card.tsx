@@ -75,12 +75,14 @@ const DELTA: Record<DeltaTone, string> = {
 export function MetricStrip({
   children,
   className,
-}: {
+  ...rest
+}: ComponentProps<'div'> & {
   children: ReactNode
   className?: string
 }) {
   return (
     <div
+      {...rest}
       className={cn(
         // Two up on a phone. One per row put a 34px number in a full width
         // block and pushed everything else off the screen; the phone artboard

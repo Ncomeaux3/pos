@@ -244,7 +244,7 @@ export function RunLog({
                           <p className="t-body text-ink">{jobLabel(j.name)}</p>
                           {/* The raw provider message, not a paraphrase of it.
                               A rewritten error is one you cannot search for. */}
-                          <p className="code t-caption break-all text-ink-2">
+                          <p className="code t-caption break-words text-ink-2">
                             {j.detail ?? 'No detail recorded.'}
                           </p>
                           <p className="t-caption text-ink-3">

@@ -15,7 +15,7 @@ export const fieldClass =
 // dark and the light variant puts it back.
 export const timeFieldClass =
   'h-11 rounded-xl border border-glass-line bg-field px-2.5 text-[16px] text-ink num sm:h-[34px] sm:text-[13px] ' +
-  'outline-none focus-visible:border-action ' +
+  'outline-none focus-visible:border-action focus-visible:shadow-[0_0_0_3px_var(--accent-soft)] ' +
   '[&::-webkit-calendar-picker-indicator]:opacity-55 ' +
   '[&::-webkit-calendar-picker-indicator]:invert ' +
   'light:[&::-webkit-calendar-picker-indicator]:invert-0'

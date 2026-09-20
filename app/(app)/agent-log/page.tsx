@@ -99,7 +99,7 @@ export default async function AgentLogPage() {
           <RunLog runs={shaped} moduleLabels={moduleLabels} registeredModules={registeredModules} />
         </div>
 
-        <aside className="flex min-w-0 flex-[1_1_320px] flex-col gap-6 md:max-w-[400px]">
+        <aside className="flex min-w-0 flex-[1_1_320px] flex-col gap-6 xl:max-w-[400px]">
           <section className="space-y-3">
             <Eyebrow>{last ? 'This run' : 'No run yet'}</Eyebrow>
             <div className="grid grid-cols-2 gap-2.5">

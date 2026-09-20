@@ -287,7 +287,7 @@ function Itinerary({ trip, items, run }: { trip: Trip; items: TravelData['itiner
       />
     ) : (
       <div className="grid grid-cols-[44px_1fr_auto] items-start gap-2.5 border-b border-rule py-2">
-        <span className="num pt-0.5 text-[10px] text-ink-3">{it.occursAt ?? ''}</span>
+        <span className="num pt-0.5 text-[11px] text-ink-3">{it.occursAt ?? ''}</span>
         <button type="button" title="Edit" onClick={() => setEditingId(it.id)} className="min-w-0 text-left hover:text-brand">
           <span className="block text-[13px] text-ink">{it.title}</span>
           {(it.detail || it.confirmation) && (
@@ -313,7 +313,7 @@ function Itinerary({ trip, items, run }: { trip: Trip; items: TravelData['itiner
           <div key={day}>
             <div className="flex items-baseline justify-between border-b border-rule-2 pb-1.5">
               <span className="text-[13px] text-ink">Day {i + 1}</span>
-              <span className="num text-[10px] text-ink-3">{shortDate(day)}</span>
+              <span className="num text-[11px] text-ink-3">{shortDate(day)}</span>
             </div>
             {today.length === 0 ? (
               <span className="block py-2 text-[12px] text-ink-4">Free day</span>
@@ -577,7 +577,7 @@ function Packing({ trip, packing, run }: { trip: Trip; packing: TravelData['pack
     <>
       <div className="flex items-baseline justify-between">
         <Eyebrow>Packing list</Eyebrow>
-        <span className="num text-[10px] text-ink-3">
+        <span className="num text-[11px] text-ink-3">
           {packed} / {packing.length} packed
         </span>
       </div>

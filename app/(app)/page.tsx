@@ -402,7 +402,9 @@ export default async function DashboardPage() {
 
       <div
         className={cn(
-          'mt-7 grid gap-7 md:mt-8',
+          // minmax(0, 1fr) rather than the implicit auto column: a truncated
+          // title's min-content width was widening the phone track to 403px.
+          'mt-7 grid grid-cols-[minmax(0,1fr)] gap-7 md:mt-8',
           TasksTile && 'lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:gap-8',
         )}
       >

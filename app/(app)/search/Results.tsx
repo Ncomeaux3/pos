@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
-import { ActionButton, Eyebrow, Overlay } from '@/components/pos'
+import { ActionButton, Chip, Eyebrow, Overlay } from '@/components/pos'
 
 export type Hit = {
   id: string
@@ -85,9 +85,7 @@ export function Results({
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-2.5">
                     <span className="text-[15px] text-ink">{hit.title}</span>
-                    <span className="num border border-rule-2 px-[7px] py-0.5 text-[10px] tracking-[0.06em] text-ink-2 uppercase rounded-full">
-                      {hit.entityType}
-                    </span>
+                    <Chip tone="quiet">{hit.entityType.charAt(0).toUpperCase() + hit.entityType.slice(1)}</Chip>
                   </span>
                   {hit.snippet && (
                     <span className="mt-1 block text-[13px] leading-[1.5] text-ink-3">{hit.snippet}</span>
@@ -104,7 +102,7 @@ export function Results({
                       style={{ width: `${Math.max(12, Math.round((hit.score / top) * 100))}%` }}
                     />
                   </span>
-                  <span className="text-[10px] text-ink-4">match</span>
+                  <span className="text-[11px] text-ink-3">match</span>
                 </span>
               </button>
             ))}
@@ -144,7 +142,7 @@ export function Results({
           footer={
             <>
               <span />
-              <ActionButton variant="solid" className="h-9 gap-2 px-3.5 text-[13px]" onClick={() => router.push(`/${open.module}`)}>
+              <ActionButton variant="solid" onClick={() => router.push(`/${open.module}`)}>
                 Open in {open.moduleLabel} <span aria-hidden="true">&rarr;</span>
               </ActionButton>
             </>
@@ -174,9 +172,7 @@ export function Results({
                 <Eyebrow>Linked skills</Eyebrow>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {open.skills.map((s) => (
-                    <span key={s} className="num border border-rule-2 px-2 py-[3px] text-[11px] tracking-[0.06em] text-ink-2 uppercase rounded-full">
-                      {s}
-                    </span>
+                    <Chip key={s}>{s}</Chip>
                   ))}
                 </div>
               </div>

@@ -103,7 +103,7 @@ export function NotePane({
             <button type="button" onClick={toggleEdit} className={MINI}>
               {editLabel}
             </button>
-            <ActionButton variant="solid" className="h-9 gap-2 px-3.5 text-[13px]" onClick={accept}>
+            <ActionButton variant="solid" onClick={accept}>
               Accept <span aria-hidden="true">&rarr;</span>
             </ActionButton>
           </div>
@@ -335,7 +335,7 @@ export function NotePane({
                 className="flex min-h-11 items-baseline justify-between gap-2 border-b border-rule py-1.5 text-left text-[12px] text-ink-2 transition-colors duration-150 hover:text-ok md:min-h-0"
               >
                 <span className="min-w-0 truncate">{r.title}</span>
-                <span className="num shrink-0 text-[10px] text-ink-4">{Math.round(r.similarity * 100)}%</span>
+                <span className="num shrink-0 text-[11px] text-ink-3">{Math.round(r.similarity * 100)}%</span>
               </button>
             ))}
             {(related === null || related.length === 0) && <span className="text-[12px] text-ink-4">None yet</span>}
@@ -347,7 +347,7 @@ export function NotePane({
             {inVault ? (
               <div className="flex justify-between gap-2 border-b border-rule py-1.5 text-[12px] text-ink">
                 <span className="min-w-0 truncate">{note.externalId}</span>
-                <span className="num shrink-0 text-[10px] text-ink-4">
+                <span className="num shrink-0 text-[11px] text-ink-3">
                   {note.vaultSha.slice(0, 7)} · {ago(note.updatedAt)}
                 </span>
               </div>

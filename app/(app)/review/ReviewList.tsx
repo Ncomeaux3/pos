@@ -81,7 +81,7 @@ export function ReviewList({
   }
 
   return (
-    <div className="mt-[18px] grid items-start gap-3.5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+    <div className="mt-[18px] grid items-start gap-3.5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <div className="flex flex-col gap-2">
         {items.map((item) => {
           const on = item.id === selected?.id

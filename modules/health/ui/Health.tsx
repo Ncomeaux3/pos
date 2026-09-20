@@ -364,7 +364,7 @@ export function Health({ data }: { data: HealthData }) {
         </section>
       </div>
 
-      <aside className="flex min-w-0 flex-[1_1_320px] flex-col gap-[26px] border-t border-rule px-[18px] pb-10 pt-[22px] md:max-w-[400px] md:px-6">
+      <aside className="flex min-w-0 flex-[1_1_320px] flex-col gap-[26px] border-t border-rule px-[18px] pb-10 pt-[22px] xl:max-w-[400px] md:px-6">
         <section>
           <Eyebrow>Due &amp; overdue</Eyebrow>
           {data.screenings.map((s) => {

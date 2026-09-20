@@ -6,7 +6,8 @@ import { cn } from '@/lib/utils'
  * Health, Meals and Travel all draw one. One glass surface with a label row
  * and inset hairlines between rows.
  *
- * Grid rather than <table>, and the template only applies from `md` up. Below
+ * Grid rather than <table>, and the template only applies from `lg` up (768
+ * gave five columns about 700px and truncated every name). Below
  * that the first cell (usually the date or the name) and the last (usually the
  * amount) share one line and the cells between wrap under, which keeps the
  * design rule that a row has to reflow at 300px.
@@ -36,7 +37,7 @@ export function DataTable({
       <div
         aria-hidden
         data-table-head
-        className="hidden border-b border-rule px-4 pb-2 pt-3 md:grid md:grid-cols-[var(--cols)] md:gap-x-4"
+        className="hidden border-b border-rule px-4 pb-2 pt-3 lg:grid lg:grid-cols-[var(--cols)] lg:gap-x-4"
       >
         {head.map((h, i) => (
           <span key={i} className="label text-ink-3">
@@ -91,11 +92,11 @@ export function DataRow({
         'relative px-4 py-3 transition-colors duration-150 ease-[var(--ease)]',
         'before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-rule first:before:hidden [[data-table-head]+&]:before:hidden',
         // Phone: first and last cells share the top line, the rest wrap under.
-        'max-md:grid max-md:grid-cols-[auto_minmax(0,1fr)_auto] max-md:gap-x-3 max-md:gap-y-1',
-        'max-md:[&>*:first-child]:col-start-1 max-md:[&>*:first-child]:row-start-1',
-        'max-md:[&>*:last-child]:col-start-3 max-md:[&>*:last-child]:row-start-1 max-md:[&>*:last-child]:text-right',
-        'max-md:[&>*:not(:first-child):not(:last-child)]:col-start-2',
-        'md:grid md:grid-cols-[var(--cols)] md:items-center md:gap-x-4',
+        'max-lg:grid max-lg:grid-cols-[auto_minmax(0,1fr)_auto] max-lg:gap-x-3 max-lg:gap-y-1',
+        'max-lg:[&>*:first-child]:col-start-1 max-lg:[&>*:first-child]:row-start-1',
+        'max-lg:[&>*:last-child]:col-start-3 max-lg:[&>*:last-child]:row-start-1 max-lg:[&>*:last-child]:text-right',
+        'max-lg:[&>*:not(:first-child):not(:last-child)]:col-start-2',
+        'lg:grid lg:grid-cols-[var(--cols)] lg:items-center lg:gap-x-4',
         interactive && 'cursor-pointer hover:bg-glass-strong',
         selected && 'bg-brand-soft before:hidden [&+*]:before:hidden',
         className,

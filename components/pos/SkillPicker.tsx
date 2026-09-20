@@ -22,9 +22,9 @@ export type SkillLink = {
 type Patch = { op: 'add'; link: SkillLink } | { op: 'remove'; id: string }
 
 const BADGE: Record<SkillLink['by'], [string, string]> = {
-  manual: ['MANUAL', 'text-warn'],
-  rule: ['RULES', 'text-ok'],
-  model: ['MODEL', 'text-ink-2'],
+  manual: ['Manual', 'text-warn'],
+  rule: ['Rules', 'text-ok'],
+  model: ['Model', 'text-ink-2'],
 }
 
 export function SkillPicker({
@@ -83,7 +83,7 @@ export function SkillPicker({
           <Link href={`/skills?skill=${encodeURIComponent(l.id)}`} className="hover:text-brand">
             {l.name}
           </Link>
-          <span className={cn('num text-[10px]', BADGE[l.by][1])}>
+          <span className={cn('text-[11px]', BADGE[l.by][1])}>
             {BADGE[l.by][0]}
           </span>
           <button
@@ -93,7 +93,7 @@ export function SkillPicker({
               plus.current?.focus()
               run({ op: 'remove', id: l.id }, () => unlinkSkill(entityRef, l.id))
             }}
-            className="min-h-6 min-w-6 text-ink-3 hover:text-bad"
+            className="relative min-h-6 min-w-6 text-ink-3 before:absolute before:-inset-2.5 before:content-[''] hover:text-bad sm:before:inset-0"
           >
             ×
           </button>

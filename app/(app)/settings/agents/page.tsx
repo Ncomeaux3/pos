@@ -68,15 +68,15 @@ export default async function AgentsPage() {
         <Card>
           <Eyebrow>Guarded tools · agent writes go to Review</Eyebrow>
           <div className="mt-2">
-            <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-4 border-b border-rule py-[9px] text-[13px]">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 border-b border-rule py-[9px] text-[13px] md:grid-cols-[auto_minmax(0,1fr)_auto]">
               <span className="num text-[12px] text-ink">*.get_digest · *.query · core.search</span>
-              <span className="text-[12px] text-ink-3">Read-only, 5s timeout, 500 rows</span>
+              <span className="order-last col-span-2 text-[12px] text-ink-3 md:order-none md:col-span-1">Read-only, 5s timeout, 500 rows</span>
               <StatusChip tone="ok">Open</StatusChip>
             </div>
             {writes.map((t) => (
-              <div key={t.name} className="grid grid-cols-[1fr_auto_auto] items-center gap-x-4 border-b border-rule py-[9px] text-[13px] last:border-b-0">
+              <div key={t.name} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 border-b border-rule py-[9px] text-[13px] last:border-b-0 md:grid-cols-[auto_minmax(0,1fr)_auto]">
                 <span className="num text-[12px] text-ink">{t.name}</span>
-                <span className="max-w-[320px] truncate text-[12px] text-ink-3" title={t.description}>
+                <span className="order-last col-span-2 min-w-0 text-[12px] text-ink-3 md:order-none md:col-span-1">
                   {t.description.replace(/ Guarded: this lands in the review inbox instead of writing\.$/, '')}
                 </span>
                 {guarded.has(t.name) ? (

@@ -139,7 +139,7 @@ const monthLabel = (iso: string) => {
 /** The artboard's card: 1px rule on the elevated ground, 14px 20px inside. */
 const overviewCard = 'border-rule px-5 py-3.5'
 /** Its rows: 9px, and the accent wash on hover. */
-const overviewRow = 'md:py-[9px] md:gap-y-0 hover:bg-brand-soft'
+const overviewRow = 'lg:py-[9px] lg:gap-y-0 hover:bg-brand-soft'
 
 /** One cell of the KPI strip: eyebrow, 34px figure, an 11px tracked line. */
 /** The KPI strip's four cells: the phone's overview summary and the desktop's one-page dashboard share them. */
@@ -326,7 +326,7 @@ export function Finance({ data }: { data: FinanceData }) {
                       <span className="num text-[14px] text-ink">{balance(a.balanceCents)}</span>
                       <span
                         className={cn(
-                          'label text-[10px]',
+                          'label text-[11px]',
                           a.changeCents === null
                             ? 'text-ink-3'
                             : a.changeCents > 0
@@ -346,7 +346,7 @@ export function Finance({ data }: { data: FinanceData }) {
                   {a.balanceCents > 0 && (
                     <div className="flex items-center gap-2.5">
                       <PaceBar value={a.sharePercent} max={100} className="flex-1" />
-                      <span className="label w-9 shrink-0 text-right text-[10px] text-ink-3">
+                      <span className="label w-9 shrink-0 text-right text-[11px] text-ink-3">
                         {Math.round(a.sharePercent)}%
                       </span>
                     </div>
@@ -461,7 +461,7 @@ export function Finance({ data }: { data: FinanceData }) {
           <NetWorthCard data={data} />
         </Card>
 
-        <div className="grid items-start gap-3.5 lg:grid-cols-2">
+        <div className="grid items-start gap-3.5 xl:grid-cols-2">
           <div className="flex min-w-0 flex-col gap-3.5 self-stretch">
             <Card data-testid="finance-accounts" className={overviewCard}>
               <CardHead label="Accounts" meta="share of assets" className="mb-1" />
@@ -473,7 +473,7 @@ export function Finance({ data }: { data: FinanceData }) {
                   <DataRow key={a.id} onClick={() => setParams({ account: a.id }, { push: true })} className={overviewRow}>
                     <span className="min-w-0 truncate text-[13px] text-ink">
                       {a.name}
-                      <span className="label ml-1.5 text-[10px] text-ink-4">{a.txCount} tx →</span>
+                      <span className="label ml-1.5 text-[11px] text-ink-3">{a.txCount} tx →</span>
                     </span>
                     <span className="truncate text-[13px] text-ink-3">{a.institution}</span>
                     <span className="num text-right text-[13px] text-ink">{balance(a.balanceCents)}</span>
@@ -523,7 +523,7 @@ export function Finance({ data }: { data: FinanceData }) {
                     <DataRow key={u.id} className={cn(overviewRow, 'md:gap-x-3')}>
                       <span className="num text-[12px] text-ink">
                         {shortDate(u.nextChargeOn)}
-                        <span className="mt-0.5 block text-[10px] text-ink-3">
+                        <span className="mt-0.5 block text-[11px] text-ink-3">
                           {weekday(u.nextChargeOn)} · {inDays(data.todayIso, u.nextChargeOn)}
                         </span>
                       </span>
@@ -598,9 +598,9 @@ export function Finance({ data }: { data: FinanceData }) {
                         <DataRow
                           key={b.id}
                           onClick={() => setParams({ budget: b.id }, { push: true })}
-                          className={cn(overviewRow, 'md:block md:py-1.5')}
+                          className={cn(overviewRow, 'lg:block lg:py-1.5')}
                         >
-                          <span className="grid items-baseline gap-x-3.5 md:grid-cols-[minmax(0,1fr)_auto_44px]">
+                          <span className="grid items-baseline gap-x-3.5 lg:grid-cols-[minmax(0,1fr)_auto_44px]">
                             <span className="min-w-0 truncate text-[13px] text-ink">
                               {b.name}
                               {b.isFixed ? (
@@ -622,7 +622,7 @@ export function Finance({ data }: { data: FinanceData }) {
                       )
                     })}
                   </DataTable>
-                  <div className="grid items-baseline gap-x-3.5 pt-2.5 md:grid-cols-[minmax(0,1fr)_auto_44px]">
+                  <div className="grid items-baseline gap-x-3.5 pt-2.5 lg:grid-cols-[minmax(0,1fr)_auto_44px]">
                     <span className="label text-[11px] text-ink-3">
                       Total · <span className="text-ink-2">{money(Math.max(0, budgetTotals.limit - budgetTotals.spent))} left</span> ·
                       pace mark at day {dayOfMonth(data.todayIso)}
@@ -780,10 +780,10 @@ function BudgetBar({
       />
       {compact ? null : (
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className={cn('label text-[10px]', pct > 100 ? 'text-bad' : over ? 'text-warn' : 'text-ink-3')}>
+        <span className={cn('label text-[11px]', pct > 100 ? 'text-bad' : over ? 'text-warn' : 'text-ink-3')}>
           {pct}% used
         </span>
-        <span className="label text-[10px] text-ink-3">
+        <span className="label text-[11px] text-ink-3">
           {budget.limitCents - budget.spentCents >= 0
             ? `${money(budget.limitCents - budget.spentCents)} left`
             : `${money(budget.spentCents - budget.limitCents)} over`}
@@ -1011,10 +1011,10 @@ function LimitsDrawer({
             {count === 0 ? 'No changes' : `${count} unsaved change${count === 1 ? '' : 's'}`}
           </span>
           <span className="flex gap-2.5">
-            <ActionButton variant="outline" size="lg" className="h-9 px-3.5 text-[13px]" onClick={reset} disabled={count === 0 || pending}>
+            <ActionButton variant="outline" onClick={reset} disabled={count === 0 || pending}>
               Reset
             </ActionButton>
-            <ActionButton variant="solid" size="lg" className="h-9 gap-2 px-3.5 text-[13px]" onClick={done} disabled={pending}>
+            <ActionButton variant="solid" onClick={done} disabled={pending}>
               Done <span aria-hidden="true">&rarr;</span>
             </ActionButton>
           </span>

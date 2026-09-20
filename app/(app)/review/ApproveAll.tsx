@@ -9,12 +9,13 @@ import { approveAllUnguarded } from './actions'
  * are never in this set, so the button empties the noise and leaves the
  * decisions.
  */
-export function ApproveAll({ count }: { count: number }) {
+export function ApproveAll({ count, short }: { count: number; short?: boolean }) {
   const [pending, start] = useTransition()
   const toast = useToast()
 
   return (
     <ActionButton
+      size={short ? 'pill' : 'md'}
       disabled={pending}
       onClick={() =>
         start(async () => {
@@ -27,7 +28,7 @@ export function ApproveAll({ count }: { count: number }) {
         })
       }
     >
-      {pending ? 'Approving' : `Approve all non-guarded (${count})`}
+      {pending ? 'Approving' : short ? `Approve all (${count})` : `Approve all non-guarded (${count})`}
     </ActionButton>
   )
 }

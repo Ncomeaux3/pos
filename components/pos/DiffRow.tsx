@@ -19,7 +19,7 @@ export function DiffRow({ diff, undone }: { diff: Diff; undone?: boolean }) {
 
   return (
     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-rule py-2 last:border-b-0">
-      <span className="label min-w-[7rem] text-[10px] text-ink-3">
+      <span className="label min-w-[7rem] text-[11px] text-ink-3">
         {diff.field}
       </span>
       <span className={cn('num text-xs text-ink-3', undone && 'line-through')}>

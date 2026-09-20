@@ -250,8 +250,9 @@ export function Notifications({
                   // The design opens a rule onto bg-elev with an accent border,
                   // not onto the accent-soft fill a selected row gets. An open
                   // expander is a place you are working, not a choice you made.
-                  className={cn(isOpen && 'border-b-brand bg-bg-elev ring-1 ring-brand')}
+                  className={cn(isOpen && 'bg-bg-elev ring-1 ring-brand')}
                   muted={!live}
+                  expanded={isOpen}
                   onClick={() => {
                     setSelected(rule.id)
                     setOpen(isOpen ? '' : rule.id)
@@ -436,7 +437,7 @@ function Preview({
   }))
 
   return (
-    <aside className="flex min-w-0 flex-[1_1_320px] flex-col gap-6 md:max-w-[420px]">
+    <aside className="flex min-w-0 flex-[1_1_320px] flex-col gap-6 xl:max-w-[420px]">
       <div className="flex items-baseline justify-between gap-3">
         <Eyebrow>Preview</Eyebrow>
         <span className="t-caption text-ink-3">{moduleLabel}</span>

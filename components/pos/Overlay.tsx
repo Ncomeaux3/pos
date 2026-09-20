@@ -6,6 +6,9 @@ import { cn } from '@/lib/utils'
 import { useSwipe } from './gestures'
 import { Eyebrow } from './text'
 
+const FOCUSABLE =
+  'a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])'
+
 /** Nothing to subscribe to: the value only ever differs between server and client. */
 const subscribeToNothing = () => () => {}
 
@@ -85,6 +88,28 @@ export function Overlay({
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onEscape()
+      // Tab stays inside the dialog: past the last control it wraps to the
+      // first and Shift+Tab from the first wraps to the last. The dim behind is
+      // aria-hidden by aria-modal already; this makes the keyboard agree.
+      if (e.key === 'Tab' && panel.current) {
+        const items = [...panel.current.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
+          (el) => !el.hasAttribute('disabled') && el.getClientRects().length > 0,
+        )
+        if (items.length === 0) return
+        const first = items[0]
+        const last = items[items.length - 1]
+        const active = document.activeElement
+        if (e.shiftKey && (active === first || active === panel.current)) {
+          e.preventDefault()
+          last.focus()
+        } else if (!e.shiftKey && active === last) {
+          e.preventDefault()
+          first.focus()
+        } else if (!(active instanceof Node) || !panel.current.contains(active)) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
     }
     document.addEventListener('keydown', onKey)
 

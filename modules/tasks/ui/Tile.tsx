@@ -61,7 +61,9 @@ export function TasksTile({ payload }: { payload: Record<string, unknown> }) {
               onClick={() => tick(t.id)}
               aria-label={`Complete ${t.title}`}
               className={cn(
-                'mt-px grid size-5 shrink-0 place-items-center rounded-full border transition-colors duration-150',
+                // 20px ring, 44px hit area on touch through the pseudo element.
+                'relative mt-px grid size-5 shrink-0 place-items-center rounded-full border transition-colors duration-150',
+                'before:absolute before:-inset-3 before:content-[""] sm:before:inset-0',
                 on ? 'border-action bg-action text-action-fg' : 'border-rule-2 hover:border-action',
               )}
             >

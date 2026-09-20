@@ -1,5 +1,8 @@
 # Travel to the artboard
 
+Superseded for styling on 2026-09-19 by the Holon redesign (docs/plans/holon-product-redesign.md, section 4): colour, type, radii, surfaces and control shapes now come from the Holon design contract and the shared components in `components/pos/`. This plan still governs what each screen shows and how it is laid out.
+
+
 ## Context
 
 Screen five of the fidelity pass (method: docs/plans/weekly-review-fidelity.md). `POS Travel.dc.html` captured at 1440 (page at 1500 tall, the drawer's four tabs, light) into `/private/tmp/pos-handoff-sources/travel/`. This screen is further from the artboard than the last four: the app has page tabs (Trips, Map, Inbox, Loyalty), a wireframe globe, trip cards of another shape, an inline three-card drawer, no wishlist section, no loyalty strip, one budget figure per trip, and no way to add or remove itinerary, packing or budget rows from the screen.

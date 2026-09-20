@@ -311,7 +311,7 @@ export function Home({ data }: { data: HomeData }) {
                         </span>
                         <span
                           className={cn(
-                            'num shrink-0 text-[10px]',
+                            'num shrink-0 text-[11px]',
                             state === 'good' ? 'text-ink-3' : 'text-warn',
                           )}
                         >
@@ -351,7 +351,7 @@ export function Home({ data }: { data: HomeData }) {
                       <span className={cn('label', selected ? 'text-ink' : 'text-ink-3')}>{m.label}</span>
                       <span
                         className={cn(
-                          'num text-[10px]',
+                          'num text-[11px]',
                           m.isCurrent ? 'text-warn' : selected ? 'text-ink' : 'text-ink-3',
                         )}
                       >
@@ -365,7 +365,7 @@ export function Home({ data }: { data: HomeData }) {
                           <span key={j.id} className={cn('block size-1.5 rounded-full', DOT[j.status])} />
                         ))}
                     </span>
-                    <span className="mt-2.5 block text-[10px] text-ink-3">
+                    <span className="mt-2.5 block text-[11px] text-ink-3">
                       {m.costCents > 0 ? money(m.costCents) : 'No cost'}
                     </span>
                   </button>
@@ -376,7 +376,7 @@ export function Home({ data }: { data: HomeData }) {
             <div className="mt-[18px]">
               <div className="flex flex-wrap items-baseline justify-between gap-3">
                 <Eyebrow>{monthLabelLong(month)}</Eyebrow>
-                <span className="num text-[10px] text-ink-3">
+                <span className="num text-[11px] text-ink-3">
                   {monthCents > 0 ? `${money(monthCents)} estimated` : 'No cost'}
                 </span>
               </div>
@@ -440,7 +440,7 @@ export function Home({ data }: { data: HomeData }) {
           </section>
         </div>
 
-        <div className="min-w-0 flex-[1_1_320px] space-y-[26px] md:max-w-[352px]">
+        <div className="min-w-0 flex-[1_1_320px] space-y-[26px] xl:max-w-[352px]">
           <section>
             <Eyebrow>Needs attention</Eyebrow>
             {attention.length === 0 ? (

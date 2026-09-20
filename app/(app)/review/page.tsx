@@ -82,6 +82,8 @@ export default async function ReviewPage({ searchParams }: PageProps<'/review'>)
         lede="Everything an agent wants to change. Nothing here touches your data until you approve it."
         status={<Eyebrow dot={pending.length > 0 ? 'warn' : 'ok'}>{pending.length} pending</Eyebrow>}
         actions={unguarded > 0 && <ApproveAll count={unguarded} />}
+        // Shorter on the phone, where the long form clipped the h1 at 360.
+        phoneAction={unguarded > 0 && <ApproveAll count={unguarded} short />}
       />
 
       <ReviewTabs

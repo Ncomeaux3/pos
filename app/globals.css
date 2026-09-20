@@ -54,7 +54,9 @@
   --ink: light-dark(#202927, #f7f6f2);
   --ink-2: light-dark(#3d4744, #dde3df); /* derived */
   --ink-3: light-dark(#59645f, #b9c5be);
-  --ink-4: light-dark(#a3ada8, #6f7e76); /* derived */
+  /* Placeholders, disabled controls, separators and idle dots: 3.5:1 light,
+   * 5:1 dark. Not for copy the reader needs; that is ink-3. */
+  --ink-4: light-dark(#7a8580, #8a9a91); /* derived */
   --rule: light-dark(#e3e6e1, rgba(255, 255, 255, 0.09)); /* hairline, lighter than the kit border */
   --rule-2: light-dark(#d9ded8, #526159); /* the kit border: controls and sheet edges */
 
@@ -69,9 +71,13 @@
   --sand: #d6bb9a;
   --sand-surface: light-dark(#f0e7da, rgba(214, 187, 154, 0.14));
 
-  --positive: light-dark(#15803d, #5dc98a); /* dark derived */
-  --attention: light-dark(#a16207, #e3b341); /* dark derived */
-  --risk: light-dark(#b91c1c, #f87171); /* dark derived */
+  /* Darkened from the kit's #15803D and #A16207, and the dark risk lightened
+   * from #F87171, so the status text on a chip's 12 to 14% tint reads at
+   * 4.6:1 or better on every surface, including the selected brand-soft fill.
+   * Measured 2026-09-19; the kit values sat at 3.7 to 4.3. */
+  --positive: light-dark(#116b33, #5dc98a);
+  --attention: light-dark(#875100, #e3b341);
+  --risk: light-dark(#b91c1c, #fb8a8a);
   --green: var(--positive);
   --amber: var(--attention);
   --red: var(--risk);

@@ -40,10 +40,12 @@ export function SkillsTile({ payload }: { payload: Record<string, unknown> }) {
   ]
 
   return (
-    <div className="mt-1 grid min-h-0 flex-1 grid-cols-[120px_1fr] gap-3.5">
-      {axes.length >= 3 ? <Radar axes={axes} size={120} /> : <span />}
+    <div className="mt-1 grid min-h-0 flex-1 grid-cols-[148px_1fr] gap-x-3">
+      {axes.length >= 3 ? <Radar axes={axes} size={148} /> : <span />}
 
-      <div className="flex min-w-0 flex-col justify-center gap-2">
+      {/* pl-2: the radar's right-hand label overhangs its box by a few px (the
+        * SVG is overflow-visible) and the rows start past it. */}
+      <div className="flex min-w-0 flex-col justify-center gap-2 pl-2">
         {rows.length === 0 ? (
           <p className="t-caption text-ink-3">Nothing gained XP in the last 30 days.</p>
         ) : (

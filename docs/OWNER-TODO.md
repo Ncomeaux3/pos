@@ -190,6 +190,21 @@ in it is easy to get wrong in a way that looks like a bug six days later.
       blocked by the proxy when this was researched, so it rests on secondary
       sources. Check the console before trusting the 7-day figure.
 
+## Holon release, on your phone (after the `holon` to `main` merge)
+
+- [ ] **23. Check the installed app on the phone**, about 10 minutes, once. The
+      redesign was verified in a desktop browser at phone width, not on the
+      device, so these are the checks only a phone can make. Open the Home
+      Screen app (or reinstall it if the icon or name did not update): the
+      icon is the Holon knot on charcoal and the splash the kit one; the app follows the
+      phone's light or dark setting until you pick one in the rail footer;
+      the tab bar clears the home indicator; a drawer's footer stays above
+      the keyboard when a field inside it is focused (Tasks, new task; Meals,
+      log a meal); the Today page, the tasks board and a task drawer scroll
+      without a sideways wobble; a pull on a sheet's handle closes it. If
+      the old icon shows after a reinstall, the phone cached the manifest:
+      remove the app, clear the site in Safari settings, add it again.
+
 ## Decisions I would like from you
 
 - [ ] **Confirm one deviation from "no monospace anywhere".** Literal secrets

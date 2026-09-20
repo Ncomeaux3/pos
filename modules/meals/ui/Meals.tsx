@@ -1,24 +1,21 @@
 'use client'
 
 import Link from 'next/link'
-import { Fragment, useEffect, useState, useTransition } from 'react'
+import { Fragment, useEffect, useRef, useState, useTransition } from 'react'
 import {
   ActionButton,
-  BandSearch,
   Card,
   Chip,
   Eyebrow,
   MetricStrip,
   MetricTile,
+  PageHeader,
   PillGroup,
-  SearchButton,
   StatusChip,
-  StatusDot,
   fieldClass,
   useToast,
   type SkillLink,
 } from '@/components/pos'
-import { BackControl } from '@/components/pos/BackControl'
 import { useSearchState } from '@/components/pos/searchState'
 import { Segments } from '@/components/pos/Segments'
 import { cn } from '@/lib/utils'
@@ -136,6 +133,18 @@ export function Meals({ data }: { data: MealsData }) {
   const eatenToday = total(todayEntries.filter((e): e is Entry => e !== undefined), true)
   const firstEmptyToday = SLOTS.find((s, i) => !todayEntries[i])
   const [adhoc, setAdhoc] = useState('')
+  // The week grid is 920px wide and scrolls inside its card below 1280px;
+  // start it on today's column rather than on Monday, which was off screen.
+  const weekScroll = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const box = weekScroll.current
+    const col = box?.querySelector<HTMLElement>('[data-today]')
+    if (!box || !col || box.scrollWidth <= box.clientWidth) return
+    // Measured against the box, not offsetLeft: with no positioned ancestor
+    // that counts from the body and includes the rail.
+    const left = col.getBoundingClientRect().left - box.getBoundingClientRect().left + box.scrollLeft
+    box.scrollLeft = Math.max(0, left - 72 - 8)
+  }, [monday, tab])
   const [ingestUrl, setIngestUrl] = useState('')
   const [ingesting, setIngesting] = useState(false)
 
@@ -167,44 +176,55 @@ export function Meals({ data }: { data: MealsData }) {
 
   return (
     <>
-      <header className="-mx-[18px] -mt-[18px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 md:-mx-7 md:-mt-7 md:h-14 md:flex-nowrap md:px-7 md:py-0">
-        <BackControl />
-        <span className="eyebrow shrink-0 whitespace-nowrap text-ink-3">
-          Meals <span className="text-ink-4">/</span> {tab === 'week' ? 'Week' : 'Recipes'}
-        </span>
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-4">
-          <SearchButton className="md:hidden" />
-          <BandSearch className="hidden min-w-[160px] max-w-[320px] flex-1 md:flex" placeholder="Search meals" />
-          <span className="eyebrow hidden shrink-0 whitespace-nowrap text-ink-3 md:inline-flex">
-            <StatusDot tone={kcalStanding === 'none' ? 'brand' : kcalStanding === 'on' ? 'ok' : 'warn'} />
-            {inWeek.length} / 28 planned · {avg('protein')}g protein avg
-          </span>
-        </div>
-      </header>
-
-      <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0 flex-1 basis-[420px]">
-          <h1 className="text-[28px] font-normal leading-none tracking-[-0.03em] text-ink">Meals</h1>
-          <p className="mt-2 hidden text-[13px] text-ink-3 md:block">
-            Plan the week, log what you ate, and see calories against the Fitness estimate. Cooking a
-            planned meal earns XP on the skills the recipe is linked to.
-          </p>
-        </div>
-        <div className="flex shrink-0 gap-2">
-          <ActionButton onClick={() => setParams({ drawer: 'grocery' }, { push: true })}>
-            Grocery list <span className="num text-[11px] text-ink-3">{groceryCount}</span>
-          </ActionButton>
-          <ActionButton
-            variant="solid"
-            size="xl"
-            disabled={pending}
-            className="h-11 gap-2 px-3.5 text-[13px] md:h-[51px] md:px-[22px] md:text-[15px]"
-            onClick={() => run(() => fillWeek(thisWeek ? data.todayIso : week[0], week[6]), 'Week filled from the library')}
+      <PageHeader
+        eyebrow={
+          <>
+            Meals <span className="text-ink-4">/</span> {tab === 'week' ? 'Week' : 'Recipes'}
+          </>
+        }
+        title="Meals"
+        lede="Plan the week, log what you ate, and see calories against the Fitness estimate. Cooking a planned meal earns XP on the skills the recipe is linked to."
+        status={
+          <Eyebrow
+            dot={kcalStanding === 'none' ? 'brand' : kcalStanding === 'on' ? 'ok' : 'warn'}
+            className="whitespace-nowrap"
           >
-            {pending ? 'Suggesting…' : 'Suggest week'} <span aria-hidden="true">&rarr;</span>
-          </ActionButton>
-        </div>
-      </div>
+            {inWeek.length} / 28 planned · {avg('protein')}g protein avg
+          </Eyebrow>
+        }
+        actions={
+          <>
+            <ActionButton onClick={() => setParams({ drawer: 'grocery' }, { push: true })}>
+              Grocery list <span className="num text-[11px] text-ink-3">{groceryCount}</span>
+            </ActionButton>
+            <ActionButton
+              variant="solid"
+              size="xl"
+              disabled={pending}
+              onClick={() => run(() => fillWeek(thisWeek ? data.todayIso : week[0], week[6]), 'Week filled from the library')}
+            >
+              {pending ? 'Suggesting…' : 'Suggest week'} <span aria-hidden="true">&rarr;</span>
+            </ActionButton>
+          </>
+        }
+        // The pair at pill size on the phone, as Insurance does, so the h1
+        // keeps its room and the grocery list stays one tap away.
+        phoneAction={
+          <>
+            <ActionButton size="pill" aria-label="Grocery list" onClick={() => setParams({ drawer: 'grocery' }, { push: true })}>
+              Grocery <span className="num text-[11px] text-ink-3">{groceryCount}</span>
+            </ActionButton>
+            <ActionButton
+              size="pill"
+              variant="solid"
+              disabled={pending}
+              onClick={() => run(() => fillWeek(thisWeek ? data.todayIso : week[0], week[6]), 'Week filled from the library')}
+            >
+              {pending ? 'Suggesting…' : 'Suggest week'}
+            </ActionButton>
+          </>
+        }
+      />
 
       <Segments
         label="Meals views"
@@ -294,7 +314,7 @@ export function Meals({ data }: { data: MealsData }) {
                         <span className="num text-ink-2">
                           {value.toLocaleString('en-US')}
                           {unit}
-                          {t !== null && <span className="text-ink-4"> / {t.toLocaleString('en-US')}</span>}
+                          {t !== null && <span className="text-ink-3"> / {t.toLocaleString('en-US')}</span>}
                         </span>
                       </div>
                       {t !== null && (
@@ -314,13 +334,17 @@ export function Meals({ data }: { data: MealsData }) {
               </section>
             )}
 
-            <div className="overflow-x-auto">
+            <div ref={weekScroll} className="overflow-x-auto">
               <div className="grid min-w-[920px] grid-cols-[72px_repeat(7,minmax(120px,1fr))] gap-px border border-rule bg-rule rounded-[18px]">
                 <div className="bg-bg px-2 py-2.5" />
                 {week.map((iso, i) => {
                   const isToday = iso === data.todayIso
                   return (
-                    <div key={iso} className={cn('flex flex-col border-t-2 bg-bg px-2 py-2.5', isToday ? 'border-action' : 'border-transparent')}>
+                    <div
+                      key={iso}
+                      data-today={isToday || undefined}
+                      className={cn('flex flex-col border-t-2 bg-bg px-2 py-2.5', isToday ? 'border-action' : 'border-transparent')}
+                    >
                       <span className={cn('label', isToday ? 'text-action' : 'text-ink-3')}>{DAYS[i]}</span>
                       <span className={cn('mt-0.5 text-[14px]', isToday ? 'text-action' : 'text-ink-2')}>{dateOf(iso).getDate()}</span>
                     </div>
@@ -376,14 +400,14 @@ export function Meals({ data }: { data: MealsData }) {
                                     run(() => markEaten(entry.id, !entry.eaten))
                                   }}
                                   className={cn(
-                                    'grid size-6 shrink-0 place-items-center rounded-full border text-[10px] text-bg transition-colors hover:border-ink sm:size-4 sm:leading-[14px]',
+                                    'grid size-6 shrink-0 place-items-center rounded-full border text-[11px] text-bg transition-colors hover:border-ink sm:size-4 sm:leading-[14px]',
                                     entry.eaten ? 'border-action bg-action text-action-fg' : 'border-rule-2',
                                   )}
                                 >
                                   {entry.eaten ? '✓' : ''}
                                 </button>
                               </div>
-                              <div className="num mt-1.5 flex flex-wrap gap-1.5 text-[9.5px] text-ink-3">
+                              <div className="num mt-1.5 flex flex-wrap gap-1.5 text-[11px] text-ink-3">
                                 <span>{entry.macros ? Math.round(entry.macros.kcal * entry.servings) : 0} kcal</span>
                                 <span className="text-action">{entry.macros ? Math.round(entry.macros.protein * entry.servings) : 0}p</span>
                                 <span>{recipe?.timeMinutes ?? 0}m</span>
@@ -411,7 +435,7 @@ export function Meals({ data }: { data: MealsData }) {
                 </div>
                 {days.map((d, i) => (
                   <div key={week[i]} className="flex flex-col gap-[5px] bg-bg px-2 py-2.5">
-                    <div className="flex justify-between text-[10px]">
+                    <div className="flex justify-between text-[11px]">
                       <span className="text-ink-3">kcal</span>
                       <span className={cn('num', d.n === 0 ? 'text-ink-4' : target !== null && d.kcal > target * 1.1 ? 'text-warn' : 'text-ink-2')}>{d.kcal.toLocaleString('en-US')}</span>
                     </div>
@@ -420,11 +444,11 @@ export function Meals({ data }: { data: MealsData }) {
                         <div className={cn('h-full', d.kcal > target * 1.1 ? 'bg-warn' : 'bg-brand')} style={{ width: `${Math.min(100, (d.kcal / target) * 100)}%` }} />
                       </div>
                     )}
-                    <div className="flex justify-between text-[10px]">
+                    <div className="flex justify-between text-[11px]">
                       <span className="text-ink-3">protein</span>
                       <span className={cn('num', d.n === 0 ? 'text-ink-4' : 'text-ink-2')}>{d.protein}g</span>
                     </div>
-                    <span className="num mt-0.5 text-[9.5px] text-ink-4">
+                    <span className="num mt-0.5 text-[11px] text-ink-3">
                       {money(d.cost)} · {d.time}m
                     </span>
                   </div>
@@ -540,7 +564,7 @@ export function Meals({ data }: { data: MealsData }) {
                       {r.favourite ? '★' : '☆'}
                     </button>
                   </div>
-                  <div className="num mt-2 flex flex-wrap gap-2 text-[10px] text-ink-3">
+                  <div className="num mt-2 flex flex-wrap gap-2 text-[11px] text-ink-3">
                     <span>{r.macros.kcal} kcal</span>
                     <span className="text-action">{r.macros.protein}g protein</span>
                     <span>{r.timeMinutes} min</span>
@@ -557,7 +581,7 @@ export function Meals({ data }: { data: MealsData }) {
                   {r.status === 'draft' ? (
                     <DraftActions id={r.id} run={run} className="mt-2.5" />
                   ) : (
-                    <div className="mt-2.5 text-[10.5px] text-ink-4">
+                    <div className="mt-2.5 text-[11px] text-ink-3">
                       {usage(r.id) ? `${usage(r.id)}× this week` : 'Not planned this week'}
                     </div>
                   )}

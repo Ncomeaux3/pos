@@ -53,13 +53,13 @@ From the prod-auditor report of 2026-09-14 (8 present, 5 partial, 0 absent, no c
 
 | Layer | Decision | Phase | Notes |
 |---|---|---|---|
-| 1. Frontend | Present | | `pnpm build` and a served /login check in CI; tokens in app/globals.css; Playwright at 1440 and 402 |
+| 1. Frontend | Present | | `pnpm build` and a served /login check in CI; the Holon token set in app/globals.css with `light-dark()`, Geist self-hosted under app/fonts (OFL, 40 KB), theme in the `pos_theme` cookie (lax, one year, not httpOnly, a display preference); Playwright at 1440 and 402; client JS 1668 kB on 2026-09-19 against the 1704 kB pre-redesign baseline |
 | 2. APIs and backend logic | Present | | zod on every route, `{ error }` JSON, refusal tests in core/*.test.ts |
 | 3. Database and storage | Present | | 30 migrations, replayed into pos_test by CI |
-| 4. Auth and permissions | Present | | proxy.ts, requireOwner(), bearer on /api/mcp and /api/cron, passkeys |
+| 4. Auth and permissions | Present | | proxy.ts (matcher excludes `brand/`, the icons moved there from `icons/`), requireOwner(), bearer on /api/mcp and /api/cron, passkeys |
 | 5. Hosting and deployment | Present | | Vercel git integration, previews per branch, rollback in docs/SETUP-SUPABASE.md section 7 |
 | 6. Cloud and compute | Present | 12 | maxDuration on the cron (300), MCP (60), webhook and both OAuth routes (30) |
-| 7. CI/CD and version control | Present | 12 | Branch protection on main requires `check`, `screens` and `migrations`, enforced for admins, since 2026-09-15 |
+| 7. CI/CD and version control | Present | 12 | Branch protection on main requires `check`, `screens` and `migrations`, enforced for admins, since 2026-09-15; the served-login smoke grep in ci.yml reads the input's `w-full rounded-xl` class and moves with it |
 | 8. Security and data access | Present | 12 | .env gitignored, CSP, dependabot, `pnpm audit --prod --audit-level=high` in the check job |
 | 9. Rate limiting | Present | | core/ratelimit.ts, 60 per minute per IP, 429 with retry-after |
 | 10. Caching and CDN | Present | | Request-scoped React cache() on settings, today and skill names since Phase 3; no TTL caches by decision, single user and freshness wins |

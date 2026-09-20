@@ -132,7 +132,7 @@ export function ReviewShell({
           {/* Six dashes, not a percentage bar. Clickable, because the steps are
               and a reader who can see where they are should be able to go
               there. */}
-          <nav aria-label="Review steps" className="mt-[26px] flex flex-wrap gap-1.5">
+          <nav aria-label="Review steps" className="mt-[14px] flex flex-wrap gap-1.5 sm:mt-[26px]">
             {steps.map((s, i) => (
               <button
                 key={s.key}
@@ -142,9 +142,11 @@ export function ReviewShell({
                 // Numbered, so "Close" the step and "Close the week" the
                 // button are distinguishable to anyone driving by name.
                 aria-label={`${String(i + 1).padStart(2, '0')} ${s.name}`}
+                // The dash is drawn by the pseudo element; the button itself
+                // is 44px tall on touch so a thumb can land on it.
                 className={cn(
-                  'h-[3px] w-[34px] transition-colors duration-150',
-                  i === index ? 'bg-brand' : i < index ? 'bg-ink-4' : 'bg-rule-2 hover:bg-ink-4',
+                  'relative h-11 w-[34px] before:absolute before:inset-x-0 before:top-1/2 before:h-[3px] before:-translate-y-1/2 before:transition-colors before:duration-150 before:content-[""] sm:h-3',
+                  i === index ? 'before:bg-brand' : i < index ? 'before:bg-ink-4' : 'before:bg-rule-2 hover:before:bg-ink-4',
                 )}
               />
             ))}
@@ -256,7 +258,7 @@ export function ReviewRow({
       <span className="min-w-0 flex-[1_1_200px]">
         <span className="block text-[15px] text-ink">{title}</span>
         {meta && (
-          <span className="mt-1 block text-[11px] uppercase text-ink-3">{meta}</span>
+          <span className="mt-1 block text-[11px] text-ink-3">{meta}</span>
         )}
       </span>
       {right}

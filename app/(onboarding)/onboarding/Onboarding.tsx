@@ -297,13 +297,13 @@ export function Onboarding({ data }: { data: SetupData }) {
         <div className="flex flex-wrap gap-2">
           <Link
             href="/"
-            className="label rounded-md border border-brand bg-brand-soft px-3 py-2 text-[10px] tracking-[0.1em] text-ink"
+            className="label rounded-md border border-brand bg-brand-soft px-3 py-2 text-ink"
           >
             Go to the dashboard
           </Link>
           <Link
             href="/settings/connections"
-            className="label rounded-md border border-rule-2 px-3 py-2 text-[10px] tracking-[0.1em] text-ink-2 hover:border-ink hover:text-ink"
+            className="label rounded-md border border-rule-2 px-3 py-2 text-ink-2 hover:border-ink hover:text-ink"
           >
             Connect a provider
           </Link>
@@ -388,7 +388,7 @@ export function Onboarding({ data }: { data: SetupData }) {
                     <span className="flex items-baseline justify-between gap-2.5">
                       <span
                         className={cn(
-                          'label text-[9px] tracking-[0.12em]',
+                          'label',
                           on ? 'text-brand' : 'text-ink-3',
                         )}
                       >
@@ -396,7 +396,7 @@ export function Onboarding({ data }: { data: SetupData }) {
                       </span>
                       <span
                         className={cn(
-                          'label text-[9px] tracking-[0.1em]',
+                          'label',
                           on ? 'text-brand' : 'text-ink-3',
                         )}
                       >
@@ -528,7 +528,7 @@ export function Onboarding({ data }: { data: SetupData }) {
                       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                         <span className="text-[15px] text-ink-3">{displayName}</span>
                         <span className="flex items-center gap-2.5">
-                          <span className="label text-[9px] tracking-[0.1em] text-ink-3">
+                          <span className="label text-ink-3">
                             {moduleLabel} module off
                           </span>
                           <ActionButton variant="outline" onClick={() => toggleModule(category.module)}>
@@ -559,7 +559,7 @@ export function Onboarding({ data }: { data: SetupData }) {
                         <span className="flex items-baseline gap-2">
                           <span className="text-[15px] text-ink">{displayName}</span>
                           {needed && (
-                            <span className="label border border-amber px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-amber rounded-full">
+                            <span className="label border border-amber px-1.5 py-0.5 text-amber rounded-full">
                               Needed
                             </span>
                           )}
@@ -567,7 +567,7 @@ export function Onboarding({ data }: { data: SetupData }) {
                         <span className="flex items-center gap-2">
                           <span
                             className={cn(
-                              'label text-[9px] tracking-[0.1em]',
+                              'label',
                               requestedCount > 0 ? 'text-brand' : 'text-ink-3',
                             )}
                           >
@@ -858,7 +858,7 @@ export function Onboarding({ data }: { data: SetupData }) {
                   key={row.key}
                   className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-rule py-3"
                 >
-                  <span className="label w-[110px] shrink-0 text-[10px] tracking-[0.12em] text-ink-3">
+                  <span className="label w-[110px] shrink-0 text-ink-3">
                     {row.key}
                   </span>
                   <span className="min-w-0 flex-1 text-[14px] leading-[1.45] text-ink">

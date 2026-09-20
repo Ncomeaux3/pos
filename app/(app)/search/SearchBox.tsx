@@ -39,7 +39,8 @@ export function SearchBox({ initial }: { initial: string }) {
       <div
         className={cn(
           'flex h-[60px] items-center border bg-bg-elev transition-colors duration-150 rounded-[18px]',
-          has ? 'border-brand' : 'border-rule-2 focus-within:border-brand',
+          'focus-within:shadow-[0_0_0_3px_var(--accent-soft)]',
+          has ? 'border-action' : 'border-rule-2 focus-within:border-action',
         )}
       >
         <span aria-hidden className="num pl-[18px] pr-3.5 text-[14px] text-ink-4">

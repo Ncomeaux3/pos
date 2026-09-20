@@ -137,7 +137,7 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
                   >
                     ‹
                   </button>
-                  <span className="label text-[10px] tracking-[0.08em] text-ink-3">Drag</span>
+                  <span className="label text-ink-3">Drag</span>
                   <span className="flex items-center gap-1">
                     <button
                       type="button"
@@ -171,7 +171,7 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
           data-testid="dashboard-hidden"
           className="mt-[22px] flex flex-wrap items-center gap-2 text-[12px] text-ink-3"
         >
-          <span className="label text-[10px] tracking-[0.08em]">Hidden</span>
+          <span className="label">Hidden</span>
           {hiddenTiles.map((id) => (
             <button
               key={id}

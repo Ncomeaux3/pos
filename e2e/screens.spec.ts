@@ -828,7 +828,7 @@ test('review inbox, list and sticky detail panel', async ({ page }) => {
   await expect(list).toBeVisible()
   // The bulk action never offers to approve a guarded write, and one of the two
   // seeded proposals is guarded.
-  await expect(page.getByRole('button', { name: /approve all non-guarded \(1\)/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /approve all( non-guarded)? \(1\)/i })).toBeVisible()
 
   // The card: "{agent} · {when}", the state word and the meta line.
   const first = page.getByRole('button', { name: /Add a pitch to a bare idea/ })
@@ -1406,7 +1406,7 @@ test('tasks, completing one emits the event that earns XP', async ({ page }) => 
   await expect(page.getByText('Read DDIA ch. 5, Replication', { exact: true })).toBeVisible()
 })
 
-test('tasks, a skill linked by hand shows MANUAL, survives a reload and reaches the tree', async ({ page }) => {
+test('tasks, a skill linked by hand shows Manual, survives a reload and reaches the tree', async ({ page }) => {
   // On the phone the row itself opens the drawer; on the desktop it expands
   // and EDIT opens it.
   const mobile = (page.viewportSize()?.width ?? 0) < 768
@@ -1432,7 +1432,7 @@ test('tasks, a skill linked by hand shows MANUAL, survives a reload and reaches 
   // The chip is optimistic, so wait for the action's POST before reloading.
   const saved = page.waitForResponse((r) => r.request().method() === 'POST' && r.ok())
   await drawer.getByRole('combobox', { name: 'Skill' }).selectOption('negotiation')
-  const chip = drawer.locator('span').filter({ hasText: /^NegotiationMANUAL×$/ })
+  const chip = drawer.locator('span').filter({ hasText: /^NegotiationManual×$/ })
   await expect(chip).toBeVisible()
   await saved
 
@@ -1454,7 +1454,7 @@ test('tasks, a skill linked by hand shows MANUAL, survives a reload and reaches 
   await removed
 })
 
-test('travel, a skill linked by hand on a trip shows MANUAL and survives a reload', async ({ page }) => {
+test('travel, a skill linked by hand on a trip shows Manual and survives a reload', async ({ page }) => {
   await page.goto('/travel')
   await page.waitForLoadState('networkidle')
   await page.getByTestId('travel-sections').getByRole('button', { name: /Tokyo/ }).first().click()
@@ -1475,7 +1475,7 @@ test('travel, a skill linked by hand on a trip shows MANUAL and survives a reloa
   // The chip is optimistic, so wait for the action's POST before reloading.
   const saved = page.waitForResponse((r) => r.request().method() === 'POST' && r.ok())
   await drawer.getByRole('combobox', { name: 'Skill' }).selectOption('negotiation')
-  const chip = drawer.locator('span').filter({ hasText: /^NegotiationMANUAL×$/ })
+  const chip = drawer.locator('span').filter({ hasText: /^NegotiationManual×$/ })
   await expect(chip).toBeVisible()
   await saved
 
