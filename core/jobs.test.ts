@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
-import { latestRun, pruneRequestLog, runJob, runLine } from './jobs'
+import { latestRun, pruneRequestLog, pruneStaleJobs, runJob, runLine } from './jobs'
 import { pending, queue, renderEmail, snoozeNotification, unreadWarnings } from './notify'
 import { buildSummary } from './orchestrator'
 
@@ -102,6 +102,27 @@ describe('runLine', () => {
     expect(runLine({ status: 'clean', failed: 0, total: 14 })).toBe('all 14 jobs ok')
     expect(runLine({ status: 'partial', failed: 2, total: 14 })).toBe('partial, 2 of 14 jobs failed')
     expect(runLine({ status: 'failed', failed: 14, total: 14 })).toBe('failed, every job')
+  })
+})
+
+describe('pruneStaleJobs', () => {
+  it('drops rows for jobs nothing registers and keeps the rest', async () => {
+    // Production, 2026-09-15: the notes module was deleted and its migration
+    // cleared core.jobs, but a Run now on the still-deployed old build ran the
+    // notes job against the dropped schema and upserted the row back as
+    // failed. Nothing ran it again, so every nightly from then on raised
+    // "notes.nightly_digest failed" (six digests, 09-16 to 09-20).
+    await runJob('notes', 'nightly_digest', async () => {
+      throw new Error('relation "notes.note" does not exist')
+    })
+    await runJob('core', 'digests', async () => ({}))
+    await runJob('finance', 'nightly_digest', async () => ({}))
+
+    const { deleted } = await pruneStaleJobs()
+
+    expect(deleted).toBe(1)
+    const { rows } = await db().query<{ module: string }>(`select module from core.jobs order by module`)
+    expect(rows.map((r) => r.module)).toEqual(['core', 'finance'])
   })
 })
 
