@@ -1,6 +1,7 @@
 'use client'
 
 import { useTransition } from 'react'
+import { syncClock } from '@/core/clock'
 import { cn } from '@/lib/utils'
 import { ActionButton } from './Button'
 import { Eyebrow } from './text'
@@ -20,6 +21,7 @@ export function SyncBand({
   status,
   connected = true,
   arrived,
+  timeZone,
   onSync,
 }: {
   /** The integration's label, or null when the module imports from nothing. */
@@ -31,6 +33,8 @@ export function SyncBand({
   connected?: boolean
   /** ISO timestamp of the last inbound payload from a phone, where a module takes one. */
   arrived?: string | null
+  /** The owner's zone from core.settings: the clocks below are printed in it on the server and the device alike. */
+  timeZone: string
   onSync: () => Promise<{ ran: number; failed: string[] }>
 }) {
   const [pending, start] = useTransition()
@@ -63,7 +67,7 @@ export function SyncBand({
           : status === 'failed'
             ? 'last sync failed'
             : at
-              ? `synced ${clock(at)}`
+              ? `synced ${syncClock(at, timeZone)}`
               : 'never synced'}
       </Eyebrow>
       {/* Inbound data has no job row to read, so it gets its own line rather
@@ -71,7 +75,7 @@ export function SyncBand({
         * Apple payload would name the wrong source. */}
       {arrived !== undefined && (
         <span className="num hidden text-[11px] text-ink-3 md:inline">
-          Apple data last arrived {arrived ? clock(arrived) : 'never'}
+          Apple data last arrived {arrived ? syncClock(arrived, timeZone) : 'never'}
         </span>
       )}
       {/* A quiet glass pill: syncing is a maintenance action, not the page's primary. */}
@@ -80,16 +84,4 @@ export function SyncBand({
       </ActionButton>
     </>
   )
-}
-
-/**
- * "04:02", the run's clock as the artboard prints it, in the device's zone:
- * this is a client component and the device is the owner's. A run older than
- * today says its date too, so "04:02" never means last week's.
- */
-function clock(iso: string): string {
-  const at = new Date(iso)
-  const time = at.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
-  const sameDay = at.toDateString() === new Date().toDateString()
-  return sameDay ? time : `${at.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} ${time}`
 }
