@@ -30,7 +30,7 @@ Order: bugs, then look and forms, then data pulls, then Calendar and integration
 |---|---|---|---|---|---|---|
 | 0 Housekeeping and baseline tag | main pulled, branches pruned, STATUS rewritten, package.json 1.1.0 and tag v1.1.0, SPEC v1.2 amendments | low | all | none | Done 2026-09-20 | #100 |
 | 1a Diagnose: nightly digest and passkey | Both explained with production evidence and fixed | medium | 1b, 2 | 0 | Done 2026-09-20: digest was a stale core.jobs row for the deleted notes module, pruned nightly now; passkey autofill, named passkeys, local CSP | #108 |
-| 1b Reported module bugs | Budget percent and colours, 30d column, Health insurance by type, phantom skill event, travel date icon and suggestion re-pop, Projects select speed | medium | 1a, 2 | 0 | PR open 2026-09-20: four causes re-diagnosed (net-credit month, renamed task, Chrome's glyph colour, the wait for a new project), all seven fixed with a check each | |
+| 1b Reported module bugs | Budget percent and colours, 30d column, Health insurance by type, phantom skill event, travel date icon and suggestion re-pop, Projects select speed | medium | 1a, 2 | 0 | PR open 2026-09-20: four causes re-diagnosed (net-credit month, renamed task, Chrome's glyph colour, the wait for a new project), all seven fixed with a check each | #110 |
 | 2 Errors tab and diagnostics | Agent log Errors tab, client_errors table, Settings diagnostics card | medium | 1a, 1b | 0 | | |
 | 3a Look: mockup gate | Today and one drawer, before and after, light and dark, owner approves | low | 2 | 1b | | |
 | 3b Look: affordance and contrast rollout | Every button, row link and tile visibly clickable; ink tokens AA at every size; whole goal card opens | high | none | 3a | | |
