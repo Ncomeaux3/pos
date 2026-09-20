@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { requireOwner } from '@/core/auth'
 import { callTool } from '@/core/tools'
 
+export type ActionResult = { ok: true } | { ok: false; error: string }
+
 /**
  * Dropping an event onto a different skill. Server actions are standalone POST
  * endpoints addressed by id, so the (app) layout does not run for them and this
@@ -13,11 +15,16 @@ export async function reassignEvent(
   entityRef: string,
   fromSkillId: string,
   toSkillId: string,
-): Promise<void> {
+): Promise<ActionResult> {
   await requireOwner()
 
-  // Through the tool rather than straight to SQL, so the one write that sets
-  // is_manual has one implementation and the MCP client gets the same one.
-  await callTool('skills', 'reassign', { entityRef, fromSkillId, toSkillId }, { source: 'ui' })
-  revalidatePath('/skills')
+  try {
+    // Through the tool rather than straight to SQL, so the one write that sets
+    // is_manual has one implementation and the MCP client gets the same one.
+    await callTool('skills', 'reassign', { entityRef, fromSkillId, toSkillId }, { source: 'ui' })
+    revalidatePath('/skills')
+    return { ok: true }
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'Failed' }
+  }
 }

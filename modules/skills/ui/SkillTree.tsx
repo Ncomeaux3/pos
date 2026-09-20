@@ -2,7 +2,17 @@
 
 import { useSearchParams } from 'next/navigation'
 import { useCallback, useMemo, useState, useTransition } from 'react'
-import { ActionButton, BandSearch, Chip, EmptyState, MetricStrip, Radar, RowList, SearchButton } from '@/components/pos'
+import {
+  ActionButton,
+  BandSearch,
+  Chip,
+  EmptyState,
+  MetricStrip,
+  Radar,
+  RowList,
+  SearchButton,
+  useToast,
+} from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { BackControl } from '@/components/pos/BackControl'
 import type { SkillEvent, SkillStat, SkillTreeData } from '../data'
@@ -61,6 +71,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
   )
   const [pending, startTransition] = useTransition()
   const [resetToken, setResetToken] = useState(0)
+  const toast = useToast()
 
   const setSelected = useCallback((id: string | null) => {
     setSelectedState(id)
@@ -186,7 +197,8 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
 
   const onReassign = (entityRef: string, from: string, to: string) => {
     startTransition(async () => {
-      await reassignEvent(entityRef, from, to)
+      const result = await reassignEvent(entityRef, from, to)
+      if (!result.ok) toast(result.error)
     })
   }
 
