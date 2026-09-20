@@ -3,26 +3,30 @@
 Where the build actually is. Updated at the end of each step. Read this first
 in a fresh session; the paragraph below names the plan that comes next.
 
-**Current plan: docs/plans/holon-product-redesign.md** (2026-09-18). The
-app is being rebranded and redesigned as Holon on the integration branch
-`holon`; phase PRs target it and one final PR lands on `main`. Production keeps
-the old brand until then. Phases 0 (mockups, #74), 1 (foundations, #76), 2
-(shell, #79), 3 (Today recomposed, task and goal rows, #82) and 4 (Second
-Brain, Ideas and Skills on the shared controls, #83) are merged into `holon`;
-Phase 5 (Finance KPIs as a MetricStrip, Health rebuilt on rows, chips, cards
-and the TabBar, Fitness strings and buttons, #86) is merged; Phase 6 is two
-PRs, the first (Meals, Travel, Home & Property and Insurance on the shared
-controls, #88) and the second (Review, Weekly review, Notifications,
-Settings, Agent log, #91) merged; `main` merged into `holon` (#92). Phase 7
-(release validation: shared-component a11y fixes, the six-width visual pass,
-the keyboard and zoom audit, the docs, #93) merged 2026-09-20, and `main`
-(#90, the owner-timezone clocks) merged into `holon` after it. One
-merge-commit PR takes `holon` to `main` and the owner merges it under the
-release step. Two owner checks stay on the phone (OWNER-TODO 23).
-Decisions are in decisions/log.md under 2026-09-18 and 2026-09-19. v1.1 below
-is complete except Phase 11's owner step.
+**Current plan: docs/plans/pos-v1-2.md** (2026-09-20). Sixteen phases from
+the owner's first day on Holon: the digest and passkey diagnosed, the reported
+module bugs, an Errors tab, an affordance and contrast pass behind a mockup
+gate, required-field errors and keyboard submit, Finance re-pulled with
+transfer and credit categories and three new views, a Calendar module fed by
+every module and by Google, Apple and Gmail read-only, recurring tasks,
+manual entry on every module, and a semver release with notes. Decisions in
+decisions/log.md under 2026-09-20. docs/plans/fitness-workout-detail.md
+(approved #98) runs inside its Phase 8 slot as its own two PRs. Version
+scheme starts here: `package.json` is 1.1.0 and today's main is tagged
+v1.1.0 after this PR merges; this plan ships v1.2.0.
 
-**Next plan: docs/plans/pos-v1-1.md** (2026-09-14, from /adopt-repo). Twelve
+**Holon shipped 2026-09-20.** docs/plans/holon-product-redesign.md, Phases 0
+to 7 (#74, #76, #79, #82, #83, #86, #88, #91, #93, with `main` synced in by
+#92 and #94), released to `main` as merge commit edcb1ad (#95) and deployed.
+After it on `main`: #97 (Health Auto Export needs two automations), #98 (the
+fitness plan), #99 (the collapsed rail centres its icons and the theme
+control fits). One owner check stays on the phone (OWNER-TODO 23).
+docs/plans/phone-polish.md (2026-09-14) is done: all five items are in the
+code (`aria-labelledby` from the eyebrow in Overlay, `phoneLimit` in Inbox,
+`md:min-w` on the Tasks Calendar, `max-md:bottom` on the globe legend, the
+trip drawer footer on `ink-2`). v1.1 below is complete.
+
+**Previous plan: docs/plans/pos-v1-1.md** (2026-09-14, from /adopt-repo). Twelve
 phases from the owner's first week of live use: diagnosis and small bugs, the
 notes stub deleted, server and client speed, dashboard layout and freshness,
 goals > projects > tasks, the skill picker, skill tree gestures, travel
@@ -32,7 +36,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-19 (nine-month Apple Health import and the Fitness fixes it surfaced, #84 to #89, plus the owner-timezone clocks below). Branch `main`, production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-20 (Holon released, v1.2 plan written). Branch `main`, production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md

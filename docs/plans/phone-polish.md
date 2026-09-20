@@ -1,5 +1,7 @@
 # Phone polish: the items the UI checks flagged
 
+Done: all five items are in the code as of the Holon release (checked 2026-09-20 in `components/pos/Overlay.tsx`, `app/(app)/Inbox.tsx`, `modules/tasks/ui/Calendar.tsx`, `modules/travel/ui/Globe.tsx`, `modules/travel/ui/TripDrawer.tsx`).
+
 Approved 2026-09-14 by the owner's answers (recorded in the session, logged in decisions/log.md on merge). One branch, one PR, one session. Follow-on to docs/plans/phone-shell.md; nothing here changes a desktop screen.
 
 ## Change
