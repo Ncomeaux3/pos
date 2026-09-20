@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
-import { pruneRequestLog, runJob } from './jobs'
+import { latestRun, pruneRequestLog, runJob, runLine } from './jobs'
 import { pending, queue, renderEmail, snoozeNotification, unreadWarnings } from './notify'
 import { buildSummary } from './orchestrator'
 
 beforeEach(async () => {
   await db().query('delete from core.jobs')
+  await db().query('delete from core.job_runs')
   await db().query('delete from core.notifications')
   await db().query('delete from core.proposals')
   await db().query('delete from core.llm_calls')
@@ -62,6 +63,45 @@ describe('runJob', () => {
 
     // A bank sync that cannot reach its provider must not cost you the digest.
     expect(order).toEqual(['one', 'two'])
+  })
+})
+
+describe('latestRun', () => {
+  it('reads the last finished run, not the standing state of every job', async () => {
+    // A job that failed once and never ran again: a renamed job, or a module
+    // since removed. core.jobs keeps it as failed forever; the run does not.
+    await runJob('gone', 'nightly_digest', async () => {
+      throw new Error('relation "gone.thing" does not exist')
+    })
+    await db().query(
+      `insert into core.job_runs (status, started_at, log)
+       values ('partial', now() - interval '2 days', $1::jsonb),
+              ('clean', now() - interval '1 day', $2::jsonb),
+              ('running', now(), '{}'::jsonb)`,
+      [
+        JSON.stringify({ jobs: [{ module: 'gone', name: 'nightly_digest', status: 'failed' }] }),
+        JSON.stringify({
+          jobs: [
+            { module: 'finance', name: 'sync', status: 'ok' },
+            { module: 'core', name: 'digests', status: 'ok' },
+          ],
+        }),
+      ],
+    )
+
+    expect(await latestRun()).toMatchObject({ status: 'clean', failed: 0, total: 2 })
+  })
+
+  it('is null before anything has run', async () => {
+    expect(await latestRun()).toBeNull()
+  })
+})
+
+describe('runLine', () => {
+  it('says how the run went in one clause', () => {
+    expect(runLine({ status: 'clean', failed: 0, total: 14 })).toBe('all 14 jobs ok')
+    expect(runLine({ status: 'partial', failed: 2, total: 14 })).toBe('partial, 2 of 14 jobs failed')
+    expect(runLine({ status: 'failed', failed: 14, total: 14 })).toBe('failed, every job')
   })
 })
 

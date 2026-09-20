@@ -149,6 +149,45 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<RunSummary>
   return { runId, status, durationMs, jobs }
 }
 
+export type LatestRun = {
+  status: RunSummary['status']
+  startedAt: Date
+  failed: number
+  total: number
+}
+
+/**
+ * The last finished run, for the dashboard's system line. A run, not
+ * `core.jobs`: that table is the current state of each named job, so a job
+ * that failed once and never ran again (renamed, or its module removed) read
+ * as failing every day after.
+ */
+export async function latestRun(): Promise<LatestRun | null> {
+  const { rows } = await db().query<{
+    status: RunSummary['status']
+    started_at: Date
+    log: { jobs?: JobResult[] } | null
+  }>(
+    `select status, started_at, log from core.job_runs
+      where status <> 'running' order by started_at desc limit 1`,
+  )
+  if (rows.length === 0) return null
+  const jobs = rows[0].log?.jobs ?? []
+  return {
+    status: rows[0].status,
+    startedAt: rows[0].started_at,
+    failed: jobs.filter((j) => j.status === 'failed').length,
+    total: jobs.length,
+  }
+}
+
+/** "all 14 jobs ok", "partial, 2 of 14 jobs failed", "failed, every job". */
+export function runLine(run: Pick<LatestRun, 'status' | 'failed' | 'total'>): string {
+  if (run.status === 'clean') return `all ${run.total} jobs ok`
+  if (run.status === 'failed') return 'failed, every job'
+  return `partial, ${run.failed} of ${run.total} jobs failed`
+}
+
 /** 90 days, per the architecture. Keeps the table from growing without bound. */
 export async function pruneRequestLog(): Promise<{ deleted: number }> {
   const { rowCount } = await db().query(

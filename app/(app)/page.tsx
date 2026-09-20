@@ -10,7 +10,8 @@ import { getModules } from '@/core/modules'
 import { getNav, getOffRailNav } from '@/core/nav'
 import { unreadWarnings } from '@/core/notify'
 import { upcoming } from '@/core/review-registry'
-import { headlineSegments, jobStates, latestSummary } from '@/core/orchestrator'
+import { latestRun, runLine } from '@/core/jobs'
+import { headlineSegments, latestSummary } from '@/core/orchestrator'
 import { getSettings } from '@/core/settings'
 import { clockIn, minutesIn, ownerToday, zoneAbbrIn } from '@/core/today'
 import { RunNow } from './RunNow'
@@ -151,10 +152,10 @@ export default async function DashboardPage() {
     month: 'long',
   }).format(new Date())
 
-  const [latest, digests, jobs, diary, warnings, proposals, spend, nav, offRail] = await Promise.all([
+  const [latest, digests, run, diary, warnings, proposals, spend, nav, offRail] = await Promise.all([
     latestSummary(),
     latestDigests(),
-    jobStates(),
+    latestRun(),
     nextSevenDays(todayIso),
     unreadWarnings(),
     pendingProposals(),
@@ -167,7 +168,6 @@ export default async function DashboardPage() {
   const summary = latest?.summary
   const segments = summary ? headlineSegments(summary, todayIso) : []
   const alerts = summary?.alerts ?? []
-  const failed = jobs.filter((j) => j.status === 'failed')
   const spendCents = summary?.spendCents ?? 0
   const capCents = summary?.capCents ?? settings.llm_soft_cap_cents
 
@@ -452,15 +452,16 @@ export default async function DashboardPage() {
       <Bento tiles={tiles} layout={settings.dashboard_layout} />
 
       {/* The system's own line, last: discoverable, and below every piece of
-        * personal work. The run's own clock, in the owner's zone. */}
+        * personal work. The last run's own clock, in the owner's zone, and
+        * that run's outcome rather than the standing state of every job. */}
       <p className="mt-8 px-1 t-caption text-ink-3">
         <StatusDot
-          tone={failed.length > 0 ? 'bad' : latest ? 'ok' : 'idle'}
+          tone={!run ? 'idle' : run.status === 'clean' ? 'ok' : run.status === 'partial' ? 'warn' : 'bad'}
           className="mr-2 inline-block align-middle"
         />
         <span>
-          {latest
-            ? `Nightly summary ran at ${clockIn(new Date(latest.runAt), settings.timezone)} ${zoneAbbrIn(settings.timezone)}, ${failed.length > 0 ? `${failed.length} job${failed.length === 1 ? '' : 's'} failed` : 'all jobs ok'}.`
+          {run
+            ? `Nightly ran at ${clockIn(new Date(run.startedAt), settings.timezone)} ${zoneAbbrIn(settings.timezone)}, ${runLine(run)}.`
             : 'No run yet.'}{' '}
           Model spend this month {money(spendCents)}
           {capCents > 0 ? ` of ${money(capCents)}` : ''}.
