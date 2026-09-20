@@ -13,25 +13,21 @@ export type Tab<T extends string> = {
   countTone?: 'warn'
 }
 
-// The DS tab, as every artboard draws it: 13px, a 1px underline sitting on the
-// row's rule, 8px over and 12px under, the tabs touching with their own side
-// padding. Only that padding varies between screens (10 to 16), which is what
-// `tabClassName` is for.
+// The segmented control: a sunken glass track holding the tabs, the selected
+// one raised as a pill. 13.5px, 32px tall on desktop and 44 on a phone.
 const TAB_BASE =
-  '-mb-px flex shrink-0 items-center border-b px-2.5 pb-3 pt-2 text-[13px] whitespace-nowrap transition-colors duration-150'
-const TAB_ON = 'border-brand text-ink'
-const TAB_OFF = 'border-transparent text-ink-3 hover:text-ink'
-const TAB_SOON = 'border-transparent text-ink-4 cursor-not-allowed'
-// Scrolls rather than wraps. Five tabs at 402px wrapped onto two lines with
-// the underline of the first row cutting through the second, where the phone
-// artboard runs its segmented control off the edge of the screen instead.
+  'flex h-11 shrink-0 items-center rounded-[9px] px-3.5 text-[13.5px] font-medium whitespace-nowrap transition-[background-color,color,box-shadow] duration-150 ease-[var(--ease)] md:h-8'
+const TAB_ON = 'bg-glass-strong text-ink font-semibold shadow-[inset_0_1px_0_var(--glass-edge),0_2px_6px_rgba(0,0,0,.08)]'
+const TAB_OFF = 'text-ink-3 hover:text-ink'
+const TAB_SOON = 'text-ink-4 cursor-not-allowed'
+// Scrolls rather than wraps: five tabs at 402px run off the edge of the track.
 const TAB_ROW =
-  'flex overflow-x-auto border-b border-rule [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex-wrap md:overflow-visible'
+  'glass inline-flex max-w-full gap-0.5 self-start overflow-x-auto rounded-[12px] p-[3px] shadow-[inset_0_1px_2px_rgba(0,0,0,.06)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
 
 function TabCount({ count, tone }: { count?: number; tone?: 'warn' }) {
   if (count === undefined) return null
   return (
-    <span className={cn('num ml-1.5 text-[10px]', tone === 'warn' ? 'text-warn' : 'text-ink-3')}>
+    <span className={cn('num ml-1.5 text-[11px] font-normal', tone === 'warn' ? 'text-warn' : 'text-ink-3')}>
       {count}
     </span>
   )
@@ -136,7 +132,7 @@ export function TabLinks({
         t.soon ? (
           <span key={t.href} className={cn(TAB_BASE, TAB_SOON, tabClassName)}>
             {t.label}
-            <span className="label ml-1.5 text-[9px] tracking-[0.1em] text-ink-4">soon</span>
+            <span className="ml-1.5 text-[11px] text-ink-3">soon</span>
           </span>
         ) : (
           <Link

@@ -60,7 +60,7 @@ async function NotSyncing({ ids }: { ids: string[] }) {
       </div>
       <Link
         href="/settings/connections"
-        className="label shrink-0 rounded-md border border-rule-2 px-3 py-2 text-[10px] tracking-[0.1em] text-ink-2 hover:border-ink hover:text-ink"
+        className="label shrink-0 rounded-md border border-rule-2 px-3 py-2 text-ink-2 hover:border-ink hover:text-ink"
       >
         Connect
       </Link>

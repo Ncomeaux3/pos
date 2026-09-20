@@ -2,70 +2,115 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* ComeauxVerse brand system.
+/* Holon design tokens.
  *
- * The brand guide (ComeauxVerse/brand/visual.md) governs the app, not just the
- * content surfaces: Manrope as the one family, no monospace, 12px radius
- * standard and 8px on small controls. The POS design bundle supplied the
- * screens and the palette, and the palette is identical, so only type and
- * shape came from here.
+ * Every colour is declared once with light-dark(). The theme is the presence
+ * or absence of data-theme on <html>: light or dark force a scheme, and no
+ * attribute follows the device. The server writes the attribute from the
+ * cookie, so a forced theme is right on the first paint with no script.
  *
- * Dark is the default. The server always writes data-theme on <html> from a
- * cookie, so both variants below always match and there is no flash.
+ * The old names (--bg, --ink-*, --rule*, --accent, --green, --amber, --red)
+ * stay canonical so no module changes; the Holon names (--action, --brand,
+ * --sand, --chart-*, --positive, --attention, --risk) sit beside them for
+ * components that need to say which they mean. "derived" marks a value that
+ * is not in the kit and was checked for contrast in Phase 1.
  */
 
-@custom-variant dark ([data-theme="dark"] &);
-@custom-variant light ([data-theme="light"] &);
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(html:not([data-theme]), html:not([data-theme]) *) {
+      @slot;
+    }
+  }
+}
+@custom-variant light {
+  &:where([data-theme="light"], [data-theme="light"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: light) {
+    &:where(html:not([data-theme]), html:not([data-theme]) *) {
+      @slot;
+    }
+  }
+}
 
 :root {
+  color-scheme: light dark;
+
   /* The phone's home indicator, with a floor for browsers that report zero. */
   --inset-b: max(env(safe-area-inset-bottom), 12px);
   /* The tab bar: 1px rule, 8px top, 56px buttons, the inset. Everything that must clear
      it (toasts, sheets, the page bottom) measures from this. */
   --tabbar: calc(65px + var(--inset-b));
-  --bg: #07080a;
-  --bg-elev: #0c0e11;
-  --bg-deep: #050608;
-  --ink: #f4f5f7;
-  --ink-2: #b8bcc4;
-  --ink-3: #6b7079;
-  --ink-4: #3a3d44;
-  --rule: rgba(255, 255, 255, 0.07);
-  --rule-2: rgba(255, 255, 255, 0.14);
-  /* The dark side of the Travel globe: the deep tone here, the ink in light,
-     since a shadow must darken in both themes and no other token does. */
-  --shade: #050608;
 
-  /* One accent for every theme. The soft fill is baked at 0.14 alpha rather
-   * than derived, which is the value the design system ships. */
-  --accent: #037a68;
-  --accent-soft: rgba(3, 122, 104, 0.14);
+  --bg: light-dark(#f7f6f2, #202927);
+  --bg-elev: light-dark(#ffffff, #29332f);
+  --bg-deep: light-dark(#eeece6, #1a2220); /* derived: sunken fills, segmented tracks, inputs */
+  /* The dark side of the Travel globe: a shadow must darken in both themes. */
+  --shade: light-dark(#202927, #101513);
+  --ink: light-dark(#202927, #f7f6f2);
+  --ink-2: light-dark(#3d4744, #dde3df); /* derived */
+  --ink-3: light-dark(#59645f, #b9c5be);
+  /* Placeholders, disabled controls, separators and idle dots: 3.5:1 light,
+   * 5:1 dark. Not for copy the reader needs; that is ink-3. */
+  --ink-4: light-dark(#7a8580, #8a9a91); /* derived */
+  --rule: light-dark(#e3e6e1, rgba(255, 255, 255, 0.09)); /* hairline, lighter than the kit border */
+  --rule-2: light-dark(#d9ded8, #526159); /* the kit border: controls and sheet edges */
 
-  /* No second green. The 2026-09-09 design bundle's colour table has exactly
-   * one saturated colour, --accent, and measuring the prototypes confirms it:
-   * small coloured text renders as --green #6BD49C, never as a teal of its
-   * own. A --teal: #2fb8a6 used to sit here for contrast at small sizes,
-   * which solved the right problem with a colour the design does not contain
-   * and made every chip, badge and active nav item the wrong green. */
+  /* Action is what is interactive or selected; brand is the identity cobalt
+   * and the first chart series. They differ so a link never has to be the
+   * same blue as the ribbon. */
+  --action: light-dark(#3157b7, #9bb9ff);
+  --action-fg: light-dark(#ffffff, #202927);
+  --accent: var(--action);
+  --accent-soft: light-dark(#eef2fa, rgba(155, 185, 255, 0.16));
+  --brand: #416aca;
+  --sand: #d6bb9a;
+  --sand-surface: light-dark(#f0e7da, rgba(214, 187, 154, 0.14));
 
-  --green: #6bd49c;
-  --amber: #f5c04a;
-  --red: #ff6b6b;
+  /* Darkened from the kit's #15803D and #A16207, and the dark risk lightened
+   * from #F87171, so the status text on a chip's 12 to 14% tint reads at
+   * 4.6:1 or better on every surface, including the selected brand-soft fill.
+   * Measured 2026-09-19; the kit values sat at 3.7 to 4.3. */
+  --positive: light-dark(#116b33, #5dc98a);
+  --attention: light-dark(#875100, #e3b341);
+  --risk: light-dark(#b91c1c, #fb8a8a);
+  --green: var(--positive);
+  --amber: var(--attention);
+  --red: var(--risk);
+
+  --chart-1: var(--brand);
+  --chart-2: var(--sand);
+  --chart-3: light-dark(#246a57, #4e9c85);
+  --chart-4: light-dark(#68568d, #9c8bc2);
+
+  --focus: var(--action);
+  --selection: light-dark(#eef2fa, rgba(155, 185, 255, 0.28));
+
+  /* Cards carry a faint lift; overlays float. */
+  --lift: light-dark(0 1px 2px rgba(32, 41, 39, 0.05), 0 1px 2px rgba(0, 0, 0, 0.3));
+  --pop: light-dark(0 24px 64px rgba(32, 41, 39, 0.22), 0 24px 64px rgba(0, 0, 0, 0.55));
+
+  /* Glass: a translucent surface over the canvas wash, blurred and saturated,
+   * with a one pixel highlight on its top edge and a hairline around it. */
+  --glass: light-dark(rgba(255, 255, 255, 0.62), rgba(41, 51, 47, 0.55));
+  --glass-strong: light-dark(rgba(255, 255, 255, 0.78), rgba(41, 51, 47, 0.78));
+  --glass-panel: light-dark(rgba(255, 255, 255, 0.8), rgba(41, 51, 47, 0.88));
+  --glass-edge: light-dark(rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.09));
+  --glass-line: light-dark(rgba(32, 41, 39, 0.08), rgba(255, 255, 255, 0.08));
+  --field: light-dark(rgba(32, 41, 39, 0.04), rgba(0, 0, 0, 0.22));
+  --blur: 28px;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* Light overrides the grounds and the inks. Accent and the three state
- * colours are shared, which is what the design bundle's light table says. */
-[data-theme="light"] {
-  --bg: #f4f2ec;
-  --bg-elev: #fbfaf6;
-  --bg-deep: #ece9e0;
-  --shade: #0c0e11;
-  --ink: #0c0e11;
-  --ink-2: #3a3d44;
-  --ink-3: #6b7079;
-  --ink-4: #b0b3b8;
-  --rule: #e1dfd8;
-  --rule-2: rgba(12, 14, 17, 0.22);
+html[data-theme="light"] {
+  color-scheme: light;
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 html {
@@ -84,16 +129,34 @@ html {
   --color-rule: var(--rule);
   --color-rule-2: var(--rule-2);
 
-  /* The brand green is `brand`, not `accent`: shadcn already owns `accent` and
-   * means a hover surface by it, which here is the soft fill. */
-  --color-brand: var(--accent);
+  /* brand is the identity cobalt; action is the interactive colour. shadcn
+   * owns `accent` and means a hover surface by it, which is the soft fill. */
+  --color-brand: var(--brand);
   --color-brand-soft: var(--accent-soft);
+  --color-action: var(--action);
+  --color-action-fg: var(--action-fg);
+  --color-sand: var(--sand);
+  --color-sand-surface: var(--sand-surface);
 
-  --color-ok: var(--green);
-  --color-warn: var(--amber);
-  --color-bad: var(--red);
+  --color-ok: var(--positive);
+  --color-warn: var(--attention);
+  --color-bad: var(--risk);
+  --color-positive: var(--positive);
+  --color-attention: var(--attention);
+  --color-risk: var(--risk);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-glass: var(--glass);
+  --color-glass-strong: var(--glass-strong);
+  --color-glass-panel: var(--glass-panel);
+  --color-glass-line: var(--glass-line);
+  --color-glass-edge: var(--glass-edge);
+  --color-field: var(--field);
+  --ease-out-soft: var(--ease);
 
-  /* shadcn semantics mapped onto the brand, so any component added later with
+  /* shadcn semantics mapped onto the tokens, so any component added later with
    * `shadcn add` inherits the palette without being patched. */
   --color-background: var(--bg);
   --color-foreground: var(--ink);
@@ -109,48 +172,62 @@ html {
   --color-muted-foreground: var(--ink-3);
   --color-accent: var(--accent-soft);
   --color-accent-foreground: var(--ink);
-  --color-destructive: var(--red);
+  --color-destructive: var(--risk);
   --color-border: var(--rule-2);
   --color-input: var(--rule-2);
-  --color-ring: var(--accent);
+  --color-ring: var(--action);
   --color-sidebar: var(--bg-elev);
   --color-sidebar-foreground: var(--ink);
   --color-sidebar-border: var(--rule);
   --color-sidebar-accent: var(--accent-soft);
   --color-sidebar-accent-foreground: var(--ink);
-  --color-sidebar-primary: var(--accent);
-  --color-sidebar-primary-foreground: var(--bg);
-  --color-sidebar-ring: var(--accent);
+  --color-sidebar-primary: var(--action);
+  --color-sidebar-primary-foreground: var(--action-fg);
+  --color-sidebar-ring: var(--action);
 
-  /* Manrope, one family. No monospace anywhere, including secrets and shell
-   * commands: the guide says one family and means it. */
-  --font-sans: var(--font-manrope), system-ui, sans-serif;
-  --font-brand: var(--font-manrope), system-ui, sans-serif;
+  /* Geist, one family, served from app/fonts. No monospace anywhere. */
+  --font-sans: var(--font-geist), system-ui, sans-serif;
+  --font-brand: var(--font-geist), system-ui, sans-serif;
 
-  /* 12px standard, 8px small controls. Pills use a literal 999px and status
-   * dots 50%. Nothing else, per the brand guide. */
-  /* Radius 0 on everything. The 2026-09-09 handoff is explicit: "Border radius
-   * is 0 on everything except pills (999px) and status dots (50%)", and both of
-   * those carry their own declaration further down. The 12px and 8px here were
-   * the earlier ComeauxVerse reading, which the new bundle supersedes. */
-  --radius: 0px;
-  --radius-sm: 0px;
-  --radius-md: 0px;
-  --radius-lg: 0px;
-  --radius-xl: 0px;
-  --radius-2xl: 0px;
-  --radius-3xl: 0px;
-  --radius-4xl: 0px;
+  /* 10px small controls and rail rows, 12px inputs, 18px cards and grouped
+   * lists, 24px sheets and the floating drawer. Buttons and chips are pills
+   * (a literal 999px) and status dots 50%. */
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-2xl: 24px;
+  --radius-3xl: 24px;
+  --radius-4xl: 24px;
+  --shadow-card: var(--lift);
+  --shadow-pop: var(--pop);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
 
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  /* Nothing is a sharp rectangle. Controls carry a radius by default and a
+   * utility on the element still wins, so a pill stays a pill. */
+  button,
+  [role='button'],
+  select,
+  textarea,
+  input:not([type='checkbox']):not([type='radio']):not([type='range']) {
+    border-radius: var(--radius-sm);
+  }
+
+  /* No background on html: body's propagates to the canvas, and the wash in
+   * body::before then paints above it rather than under body's own. */
   html {
     @apply font-sans;
-    background: var(--bg);
     color: var(--ink);
   }
 
@@ -161,13 +238,28 @@ html {
     text-rendering: optimizeLegibility;
     overflow-x: hidden;
     transition:
-      background 0.4s ease,
-      color 0.4s ease;
+      background 160ms var(--ease),
+      color 160ms var(--ease);
+  }
+
+  /* The canvas wash: cobalt and sand at a few percent, fixed behind the page,
+   * which is what the glass surfaces blur. A pseudo element rather than
+   * background-attachment, which iOS does not honour. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(60% 55% at 12% -5%, light-dark(rgba(65, 106, 202, 0.14), rgba(65, 106, 202, 0.22)), transparent 65%),
+      radial-gradient(45% 40% at 95% 15%, light-dark(rgba(214, 187, 154, 0.26), rgba(214, 187, 154, 0.1)), transparent 65%),
+      radial-gradient(50% 45% at 70% 105%, light-dark(rgba(65, 106, 202, 0.1), rgba(65, 106, 202, 0.14)), transparent 65%);
   }
 
   ::selection {
-    background: var(--accent);
-    color: var(--bg);
+    background: var(--selection);
+    color: var(--ink);
   }
 
   ::-webkit-scrollbar {
@@ -187,34 +279,94 @@ html {
 }
 
 @layer components {
-  /* The type scale from the 2026-09-09 design handoff. Named so a screen states
-   * which step it is on instead of hardcoding a size, and so the scale is
-   * auditable against the bundle in one grep.
-   *
-   * Two rules from that README drive every weight here: "Headings never go
-   * bold. Display weight is 400 everywhere; large numbers are 300." The earlier
-   * scale ran 700 and 600 at larger sizes, which is what made every screen read
-   * heavier and chunkier than the prototypes. */
+  /* Glass surfaces. `.glass` is a card, a grouped list, a table or a band;
+   * `.glass-strong` a raised control; `.glass-panel` the drawer and the tab
+   * bar. Readers who ask for reduced transparency get the opaque surface. */
+  .glass,
+  .glass-strong,
+  .glass-panel {
+    background: var(--glass);
+    -webkit-backdrop-filter: saturate(180%) blur(var(--blur));
+    backdrop-filter: saturate(180%) blur(var(--blur));
+    border: 1px solid var(--glass-line);
+    box-shadow:
+      inset 0 1px 0 var(--glass-edge),
+      var(--lift);
+  }
+  .glass-strong {
+    background: var(--glass-strong);
+  }
+  .glass-panel {
+    background: var(--glass-panel);
+    -webkit-backdrop-filter: saturate(180%) blur(40px);
+    backdrop-filter: saturate(180%) blur(40px);
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .glass,
+    .glass-strong,
+    .glass-panel {
+      background: var(--bg-elev);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  /* One orchestrated reveal when a screen loads: the top-level blocks rise
+   * 6px and fade in, 40ms apart. Plays on navigation because the route's
+   * children remount; nothing else on a page moves by itself. */
+  .reveal > * {
+    animation: rise 360ms var(--ease) both;
+  }
+  .reveal > :nth-child(2) { animation-delay: 40ms; }
+  .reveal > :nth-child(3) { animation-delay: 80ms; }
+  .reveal > :nth-child(4) { animation-delay: 120ms; }
+  .reveal > :nth-child(5) { animation-delay: 160ms; }
+  .reveal > :nth-child(6) { animation-delay: 200ms; }
+  .reveal > :nth-child(n + 7) { animation-delay: 240ms; }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* Interactive glass lifts a pixel under the pointer. */
+  .lift {
+    transition:
+      transform 200ms var(--ease),
+      box-shadow 200ms var(--ease);
+  }
+  .lift:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 var(--glass-edge),
+      0 8px 24px rgba(32, 41, 39, 0.08);
+  }
+
+  /* The type scale. Named so a screen states which step it is on instead of
+   * hardcoding a size. Headings are 600 with tight tracking; body 400. */
   .t-display {
-    /* Large numbers: the one place weight goes below 400. */
-    font-size: clamp(24px, 3vw, 38px);
-    font-weight: 300;
-    line-height: 1.05;
-    letter-spacing: -0.02em;
+    font-size: clamp(28px, 3vw, 36px);
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    font-variant-numeric: tabular-nums;
   }
   .t-headline {
-    /* Measured off the prototypes: every page title renders at 28px/400 with
-     * -0.03em at 1440. The README's table says the ramp tops out at 30px, but
-     * 2.2vw of a 1440 viewport is 31.68px, so the clamp never produced the 28
-     * the artboards actually show. The ramp is kept, the ceiling is corrected. */
-    font-size: clamp(22px, 2.2vw, 28px);
-    font-weight: 400;
+    /* 30px desktop, 26px phone, per the owner's call: the kit's 40px H1 is
+     * for sign-in and the splash only. */
+    font-size: clamp(26px, 2.2vw, 30px);
+    font-weight: 600;
     line-height: 1.15;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.022em;
   }
   .t-title {
     font-size: 17px;
-    font-weight: 400;
+    font-weight: 600;
     line-height: 1.3;
     letter-spacing: -0.01em;
   }
@@ -224,28 +376,25 @@ html {
     line-height: 1.55;
   }
   .t-lede {
-    /* The one grey sentence under a page title. 13px in every prototype, which
-     * is the bottom of the README's 13-15px body range rather than the 14px
-     * .t-body sits at. */
-    font-size: 13px;
+    /* The one grey sentence under a page title. */
+    font-size: 15px;
     font-weight: 400;
-    line-height: 1.55;
+    line-height: 1.5;
+    color: var(--ink-3);
   }
   .t-caption {
-    /* Metadata and secondary, 11 to 12px at 400 in the handoff. */
-    font-size: 12px;
+    font-size: 12.5px;
     font-weight: 400;
-    line-height: 1.45;
+    line-height: 1.4;
   }
 
-  /* Numbers. Manrope with tabular figures, so a column of amounts lines up
-   * without reaching for a monospace face. */
+  /* Numbers. Tabular figures so a column of amounts lines up. */
   .num {
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
   }
 
-  /* Machine values: secrets, URLs, cron expressions. Manrope like everything
+  /* Machine values: secrets, URLs, cron expressions. Geist like everything
    * else, with tabular figures and a little tracking so a long token is still
    * readable character by character. */
   .code {
@@ -254,39 +403,36 @@ html {
     word-break: break-all;
   }
 
-  /* The universal small label: the eyebrow, the chip, the metadata line. The
-   * tracked uppercase treatment is what the design bundle used monospace for;
-   * the brand does the same job with Manrope 500 and wide tracking. */
+  /* The universal small label: table heads, chips, metadata. Sentence case,
+   * 500, no tracking. The tracked uppercase treatment is retired. */
   .label {
-    /* 400, not 500. The README's type table lists the eyebrow at 500, but every
-     * prototype renders .eyebrow and every chip at 400 with the same tracking,
-     * and the prototype is what governs. 500 is what made the tracked uppercase
-     * labels read heavier than the artboards on every screen. */
-    font-weight: 400;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
     font-variant-numeric: tabular-nums;
   }
 
   .eyebrow {
-    font-weight: 400;
-    font-size: 11px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
+    font-weight: 500;
+    font-size: 13px;
+    letter-spacing: 0;
+    text-transform: none;
     color: var(--ink-3);
     display: inline-flex;
     align-items: center;
     gap: 8px;
   }
 
+  /* The dot beside an eyebrow or a status line. Still, never pulsing: motion
+   * never carries status alone and nothing on the dashboard breathes. */
   .eyebrow .dot,
   .status-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
     background: var(--accent);
-    box-shadow: 0 0 0 0 var(--accent);
-    animation: pulseDot 2.4s ease-in-out infinite;
     flex: none;
   }
 
@@ -299,23 +445,9 @@ html {
   }
 }
 
-@keyframes pulseDot {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 var(--accent-soft);
-  }
-  50% {
-    box-shadow: 0 0 0 6px transparent;
-  }
-}
-
-/* The dot pulses forever and the tap scale is decorative. Both go for readers
- * who ask for reduced motion; the dot itself stays visible. */
+/* The tap scale and every transition are decorative and go for readers who
+ * ask for reduced motion. */
 @media (prefers-reduced-motion: reduce) {
-  .eyebrow .dot,
-  .status-dot {
-    animation: none;
-  }
   *,
   *::before,
   *::after {

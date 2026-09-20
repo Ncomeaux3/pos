@@ -92,8 +92,8 @@ export function monthKey(iso: string): string {
   return iso.slice(0, 7)
 }
 
-/** 'OCT 26', the mono label the design prints on each month. */
-const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+/** 'Oct 26', the mono label the design prints on each month. */
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 export function monthLabel(key: string): string {
   const [y, m] = key.split('-').map(Number)
@@ -133,7 +133,7 @@ export function next12Months(jobs: Job[], todayIso: string): Month[] {
   })
 }
 
-/** 'SEP 2026', the selected month's head and an asset card's next date. */
+/** 'Sep 2026', the selected month's head and an asset card's next date. */
 export function monthLabelLong(key: string): string {
   const [y, m] = key.split('-').map(Number)
   return `${MONTHS[m - 1]} ${y}`
@@ -161,7 +161,7 @@ export function compactMoney(cents: number): string {
   return `$${Math.round(dollars).toLocaleString('en-US')}`
 }
 
-/** '05 SEP 26', the date column in the drawer's service history. */
+/** '05 Sep 26', the date column in the drawer's service history. */
 export function logDate(iso: string): string {
   const [y, m, d] = iso.split('-')
   return `${d} ${MONTHS[Number(m) - 1]} ${y.slice(2)}`
@@ -170,6 +170,5 @@ export function logDate(iso: string): string {
 /** 'Jul 2026', when a vendor was last used. */
 export function monthYear(iso: string): string {
   const [y, m] = iso.split('-').map(Number)
-  const label = MONTHS[m - 1]
-  return `${label[0]}${label.slice(1).toLowerCase()} ${y}`
+  return `${MONTHS[m - 1]} ${y}`
 }

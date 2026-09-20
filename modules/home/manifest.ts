@@ -12,7 +12,7 @@ const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD')
 
 export default defineModule({
   id: 'home',
-  nav: { label: 'Home & Assets', icon: 'house', order: 85 },
+  nav: { label: 'Home & Property', icon: 'house', order: 85 },
   pages: { '': HomePage },
 
   tools: {

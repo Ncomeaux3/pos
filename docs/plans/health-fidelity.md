@@ -1,5 +1,8 @@
 # Health to the artboard
 
+Superseded for styling on 2026-09-19 by the Holon redesign (docs/plans/holon-product-redesign.md, section 4): colour, type, radii, surfaces and control shapes now come from the Holon design contract and the shared components in `components/pos/`. This plan still governs what each screen shows and how it is laid out.
+
+
 ## Context
 
 Screen twelve of the fidelity pass (method: docs/plans/weekly-review-fidelity.md). `POS Health.dc.html` captured at 1440 into `/private/tmp/pos-handoff-sources/health/` (page dark and light at 1500 tall, the appointment drawer, the record drawer, the Log a visit form). The other session is on Fitness, Home and Review in worktrees off `e6b02b6`; this pass stays inside `modules/health/` plus its own e2e tests and seed rows.

@@ -152,9 +152,9 @@ export function UploadDrawer({
           <>
             <div className="flex items-baseline justify-between gap-3">
               <Eyebrow className="text-warn">Extracted · confirm each field</Eyebrow>
-              <span className="num truncate text-[10px] text-ink-3">{draft.fileName}</span>
+              <span className="num truncate text-[11px] text-ink-3">{draft.fileName}</span>
             </div>
-            <div className="flex flex-col gap-px border border-rule bg-rule">
+            <div className="flex flex-col gap-px border border-rule bg-rule rounded-[18px]">
               {draft.fields.map((field, i) => {
                 const low = field.confidence < LOW_CONFIDENCE
                 return (
@@ -185,7 +185,7 @@ export function UploadDrawer({
                     />
                     <span
                       title="Extraction confidence"
-                      className={cn('num text-[10px]', low ? 'text-warn' : 'text-ink-4')}
+                      className={cn('num text-[11px]', low ? 'text-warn' : 'text-ink-3')}
                     >
                       {Math.round(field.confidence * 100)}%
                     </span>

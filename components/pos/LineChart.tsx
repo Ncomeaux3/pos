@@ -113,7 +113,7 @@ export function LineChart({
         <span className="eyebrow text-ink-3">
           {name} · {days.length} days
         </span>
-        <span className="label flex gap-[18px] text-[11px] tracking-[0.04em] text-ink-3">
+        <span className="label flex gap-[18px] text-[11px] text-ink-3">
           <span>
             High <span className="num text-ink">{formatCompact(max)}</span>
           </span>
@@ -166,24 +166,26 @@ export function LineChart({
               y1={y(avg)}
               x2={width}
               y2={y(avg)}
-              stroke="var(--accent)"
-              strokeOpacity={0.45}
-              strokeDasharray="1 5"
+              stroke="var(--chart-2)"
+              strokeDasharray="4 5"
+              strokeWidth={2}
               vectorEffect="non-scaling-stroke"
             />
 
-            {area && <path d={area} fill="var(--accent-soft)" />}
+            {area && <path d={area} fill="var(--chart-1)" fillOpacity={0.08} />}
             <path
               d={line}
               fill="none"
-              stroke="var(--accent)"
-              strokeWidth={1.5}
+              stroke="var(--chart-1)"
+              strokeWidth={2}
+              strokeLinejoin="round"
+              strokeLinecap="round"
               vectorEffect="non-scaling-stroke"
             />
 
             <circle cx={x(hi)} cy={y(max)} r={2.5} fill="var(--bg-elev)" stroke="var(--ink-2)" vectorEffect="non-scaling-stroke" />
             <circle cx={x(lo)} cy={y(min)} r={2.5} fill="var(--bg-elev)" stroke="var(--ink-2)" vectorEffect="non-scaling-stroke" />
-            <circle cx={width} cy={y(last)} r={3} fill="var(--accent)" />
+            <circle cx={width} cy={y(last)} r={3.5} fill="var(--bg-elev)" stroke="var(--chart-1)" strokeWidth={2} />
 
             {hover !== null && at !== null && at !== undefined && (
               <g>
@@ -195,7 +197,7 @@ export function LineChart({
 
           {hover !== null && at !== null && at !== undefined && (
             <div
-              className="pointer-events-none absolute top-0 z-2 whitespace-nowrap border border-rule-2 bg-bg px-2.5 py-1.5 text-[11px]"
+              className="pointer-events-none absolute top-0 z-2 whitespace-nowrap border border-rule-2 bg-bg px-2.5 py-1.5 text-[11px] rounded-[18px]"
               style={{
                 left: `${(hover / Math.max(1, days.length - 1)) * 100}%`,
                 transform: hover > days.length / 2 ? 'translateX(-100%)' : 'none',
@@ -224,8 +226,9 @@ export function LineChart({
         <div className="flex justify-between text-[11px] text-ink-3">
           {days
             .filter((unused, i) => i % Math.max(1, Math.round(days.length / 6)) === 0)
-            .map((d) => (
-              <span key={d.date} className="num">
+            .map((d, i) => (
+              // Six labels ran together at 360px; every other one hides below sm.
+              <span key={d.date} className={cn('num', i % 2 === 1 && 'hidden sm:inline')}>
                 {shortDate(d.date)}
               </span>
             ))}
@@ -233,9 +236,9 @@ export function LineChart({
         <span />
       </div>
 
-      <div className="label mt-2.5 flex flex-wrap gap-x-[18px] gap-y-2 border-t border-rule pt-2.5 text-[11px] tracking-[0.04em] text-ink-3">
+      <div className="label mt-2.5 flex flex-wrap gap-x-[18px] gap-y-2 border-t border-rule pt-2.5 text-[11px] text-ink-3">
         <span className="flex items-center gap-1.5">
-          <span className="h-0.5 w-3 bg-brand" aria-hidden />
+          <span className="h-0.5 w-3 rounded-full bg-chart-1" aria-hidden />
           Daily {name.toLowerCase()}
         </span>
         <span className="flex items-center gap-1.5">

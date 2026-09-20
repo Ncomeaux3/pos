@@ -51,27 +51,27 @@ describe('inQuietHours', () => {
 describe('isLive and ruleState', () => {
   it('is on when nothing holds it', () => {
     expect(isLive(rule(), false)).toBe(true)
-    expect(ruleState(rule(), false).label).toBe('ON')
+    expect(ruleState(rule(), false).label).toBe('On')
   })
 
   it('lets the global pause beat everything', () => {
     expect(isLive(rule(), true)).toBe(false)
-    expect(ruleState(rule(), true).label).toBe('PAUSED')
+    expect(ruleState(rule(), true).label).toBe('Paused')
   })
 
   it('treats a mute as indefinite', () => {
     expect(isLive(rule({ muted: true }), false)).toBe(false)
-    expect(ruleState(rule({ muted: true }), false).label).toBe('MUTED')
+    expect(ruleState(rule({ muted: true }), false).label).toBe('Muted')
   })
 
   it('counts a live snooze in days and ignores one that has passed', () => {
     const future = new Date(Date.now() + 6.2 * 86_400_000)
-    expect(ruleState(rule({ snooze_until: future }), false).label).toBe('7D')
+    expect(ruleState(rule({ snooze_until: future }), false).label).toBe('7d')
     expect(isLive(rule({ snooze_until: future }), false)).toBe(false)
 
     const past = new Date(Date.now() - 86_400_000)
     expect(isLive(rule({ snooze_until: past }), false)).toBe(true)
-    expect(ruleState(rule({ snooze_until: past }), false).label).toBe('ON')
+    expect(ruleState(rule({ snooze_until: past }), false).label).toBe('On')
   })
 })
 
@@ -109,8 +109,8 @@ describe('the owner clock, not the server clock', () => {
   })
 
   it('renders the owner date, not the server date', () => {
-    expect(dayIn(evening, 'America/Chicago')).toBe('9 SEP')
-    expect(dayIn(evening, 'UTC')).toBe('10 SEP')
+    expect(dayIn(evening, 'America/Chicago')).toBe('9 Sep')
+    expect(dayIn(evening, 'UTC')).toBe('10 Sep')
     expect(clockIn(evening, 'America/Chicago')).toBe('19:34')
   })
 

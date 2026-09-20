@@ -64,14 +64,13 @@ async function shoot(page: Page, name: string) {
 test('dashboard shell', async ({ page }) => {
   await page.goto('/')
 
-  // The nav is built from manifests, so Dashboard has to be there for the
+  // The nav is built from manifests, so Today has to be there for the
   // module contract to still be working.
   const nav = page.getByRole('navigation', { name: /modules|sections/i }).first()
   const mobile = (page.viewportSize()?.width ?? 0) < 768
-  // The rail says Dashboard; the phone's first tab says Home.
-  await expect(nav.getByRole('link', { name: mobile ? 'Home' : 'Dashboard' })).toBeVisible()
+  await expect(nav.getByRole('link', { name: 'Today' })).toBeVisible()
 
-  // The phone bar holds Home, Tasks, Finance and Browse, and Browse is the
+  // The phone bar holds Today, Tasks, Finance and Browse, and Browse is the
   // page where Review lives. What is worth asserting is that Review is
   // reachable, wherever it sits.
   if (mobile) {
@@ -80,10 +79,13 @@ test('dashboard shell', async ({ page }) => {
     await expect(page.getByRole('link', { name: /^Review/ })).toBeVisible()
     await page.goto('/')
 
-    // Phone Home is a Today page: the headline plus five tiles (2026-09-13
-    // decision) - warnings, finance, tasks, review, timeline. Every other
-    // tile is desktop only.
-    await expect(page.getByTestId('dashboard-bento').locator(':scope > div:visible')).toHaveCount(5)
+    // Phone Today is the same page as the desktop's (Holon phase 3): the
+    // greeting, what needs attention, today's work, the week ahead, then
+    // every module's summary in the saved order.
+    await expect(page.getByTestId('dashboard-attention')).toBeVisible()
+    await expect(page.getByTestId('dashboard-today')).toBeVisible()
+    await expect(page.getByTestId('dashboard-week')).toBeVisible()
+    await expect(page.getByTestId('dashboard-bento').locator(':scope > div:visible')).toHaveCount(12)
   } else {
     // By href: the sidebar prefixes each label with its two character index and
     // appends the pending count, so the accessible name is "RV Review 2", and
@@ -96,100 +98,99 @@ test('dashboard shell', async ({ page }) => {
   await expect(nav.locator('a[href="/notes"]')).toHaveCount(0)
 
   if (!mobile) {
-    // PosSidebar.dc.html at 1440x900: the order of the rail, top to bottom.
+    // The Holon rail, top to bottom: Today, then Plan, Knowledge and Life
+    // under their headings, then Review with the weekly review beside it.
     const labels = await nav.locator('a').evaluateAll((links) =>
       links.map((a) => a.querySelector('.truncate')?.textContent?.trim()),
     )
     expect(labels).toEqual([
-      'Dashboard',
-      'Finance',
-      'Skill Tree',
+      'Today',
       'Tasks',
       'Goals',
+      'Skills',
       'Second Brain',
-      'Insurance',
       'Ideas',
-      'Fitness',
+      'Finance',
       'Health',
-      'Home & Assets',
+      'Fitness',
       'Meals',
       'Travel',
+      'Home & Property',
+      'Insurance',
       'Review',
+      'Weekly review',
     ])
+    await expect(nav.getByText('Plan', { exact: true })).toBeVisible()
+    await expect(nav.getByText('Knowledge', { exact: true })).toBeVisible()
+    await expect(nav.getByText('Life', { exact: true })).toBeVisible()
 
-    // PosSidebar.dc.html: a row is 36px tall at least, its index is 11px mono,
-    // and the Review badge is drawn in the accent, not the green.
+    // A rail row is a 38px pill with the route's icon before its label, and
+    // the Review badge is filled with the action colour.
     const row = nav.locator('a[href="/finance"]')
-    const geometry = await row.evaluate((a) => {
-      const index = a.querySelector('.label')!
-      return {
-        minHeight: getComputedStyle(a).minHeight,
-        indexSize: getComputedStyle(index).fontSize,
-      }
-    })
-    expect(geometry).toEqual({ minHeight: '36px', indexSize: '11px' })
+    const geometry = await row.evaluate((a) => ({
+      height: getComputedStyle(a).height,
+      radius: getComputedStyle(a).borderRadius,
+      icon: a.querySelector('svg') !== null,
+    }))
+    expect(geometry).toEqual({ height: '38px', radius: '10px', icon: true })
 
     const badge = nav.locator('a[href="/review"] span').last()
     const accent = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
     )
-    const badgeColor = await badge.evaluate((el) => getComputedStyle(el).color)
+    const badgeColor = await badge.evaluate((el) => getComputedStyle(el).backgroundColor)
     const accentRgb = await page.evaluate((hex) => {
       const probe = document.createElement('span')
-      probe.style.color = hex
+      probe.style.backgroundColor = hex
       document.body.append(probe)
-      const rgb = getComputedStyle(probe).color
+      const rgb = getComputedStyle(probe).backgroundColor
       probe.remove()
       return rgb
     }, accent)
     expect(badgeColor).toBe(accentRgb)
 
-    // POS Dashboard.dc.html at 1440x900: the artboard's nine tiles first, in
-    // its default order, then every other module's tile in rail order. The
-    // tile is 16px 20px inside a 1px --rule border, and the band's search is
-    // the compact one with its placeholder.
+    // Holon phase 3: warnings, proposals, today's tasks and the week ahead
+    // are sections above the grid, in that order, and the grid holds one
+    // summary per module: the three most used first, then rail order, then
+    // the model spend. A summary is a glass card at 16px 20px.
+    const attention = page.getByTestId('dashboard-attention')
+    await expect(attention.getByRole('heading', { name: 'Needs attention' })).toBeVisible()
+    await expect(attention.getByRole('button', { name: 'Snooze' }).first()).toBeVisible()
+    await expect(attention.getByRole('button', { name: 'Approve' }).first()).toBeVisible()
+    await expect(page.getByTestId('dashboard-today').getByRole('heading', { name: 'Today' })).toBeVisible()
+    await expect(page.getByTestId('dashboard-week').getByRole('heading', { name: 'Next 7 days' })).toBeVisible()
     const bento = page.getByTestId('dashboard-bento')
-    const eyebrows = await bento
+    const heads = await bento
       .locator(':scope > div')
-      .evaluateAll((tiles) => tiles.map((t) => t.querySelector('.eyebrow')?.textContent?.trim()))
-    expect(eyebrows.slice(0, 8)).toEqual([
-      'Warnings',
+      .evaluateAll((tiles) => tiles.map((t) => t.querySelector('h2')?.textContent?.trim()))
+    expect(heads).toEqual([
       'Finance',
-      'Tasks · today',
-      'Review · agent proposals',
       'Goals',
-      'Skill Tree',
-      'Model spend · month',
-      'Next 7 days',
-    ])
-    expect(eyebrows.slice(8)).toEqual([
+      'Skills',
       'Second Brain',
-      'Insurance',
       'Ideas',
-      'Fitness',
       'Health',
-      'Home & Assets',
+      'Fitness',
       'Meals',
       'Travel',
+      'Home & Property',
+      'Insurance',
+      'Model spend',
     ])
-    const tile = await bento.locator(':scope > div > div').first().evaluate((el) => {
-      const cs = getComputedStyle(el)
-      const rule = getComputedStyle(document.documentElement).getPropertyValue('--rule').trim()
-      const probe = document.createElement('span')
-      probe.style.color = rule
-      document.body.append(probe)
-      const ruleRgb = getComputedStyle(probe).color
-      probe.remove()
-      return { padding: cs.padding, border: cs.borderTopColor === ruleRgb }
-    })
-    expect(tile).toEqual({ padding: '16px 20px', border: true })
+    const tile = await bento.locator(':scope > div > div').first().evaluate((el) => ({
+      padding: getComputedStyle(el).padding,
+      glass: el.classList.contains('glass'),
+    }))
+    expect(tile).toEqual({ padding: '16px 20px', glass: true })
     // The band's search, with the artboard's question rather than PageHeader's default.
     await expect(page.getByRole('button', { name: /What are you looking for/ })).toBeVisible()
 
-    // The footer is a list too: Dark (or Light) and Collapse are rows in it
-    // with 13px labels, not a bar under it.
+    // The footer holds the three-way theme control and the Collapse row.
     const footer = page.getByRole('navigation', { name: /sections/i })
-    await expect(footer.getByRole('button', { name: /^(Dark|Light)$/ })).toBeVisible()
+    const themeGroup = footer.getByRole('group', { name: 'Theme' })
+    await expect(themeGroup.getByRole('button', { name: 'System', exact: true })).toBeVisible()
+    // No cookie yet, so the page follows the device and System is pressed.
+    await expect(themeGroup.getByRole('button', { name: 'System', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await expect(footer.getByRole('button', { name: 'Collapse' })).toBeVisible()
     const labelSize = await footer
       .getByRole('button', { name: 'Collapse' })
@@ -200,21 +201,23 @@ test('dashboard shell', async ({ page }) => {
   await shoot(page, 'dashboard')
 })
 
-test('browse lists every enabled module and the POS group', async ({ page }) => {
+test('browse lists the rail groups', async ({ page }) => {
   await page.goto('/browse')
-  // Same source as the rail, minus Dashboard and Review, which have their own
-  // places: a tab and the POS group.
-  const modules = page.getByRole('list').first()
-  await expect(modules.getByRole('link')).toHaveCount(12)
-  await expect(modules.getByRole('link', { name: 'Finance' })).toBeVisible()
-  await expect(modules.getByRole('link', { name: 'Travel' })).toBeVisible()
-  await expect(modules.getByRole('link', { name: 'Dashboard' })).toHaveCount(0)
+  // Same source as the rail, in the rail's groups, minus Today (the first
+  // tab) and Search (the band above). Plan, Knowledge, Life, Review, Utilities.
+  const lists = page.getByRole('list')
+  await expect(lists).toHaveCount(5)
+  await expect(lists.nth(0).getByRole('link')).toHaveCount(3)
+  await expect(lists.nth(2).getByRole('link')).toHaveCount(7)
+  await expect(lists.nth(2).getByRole('link', { name: 'Finance' })).toBeVisible()
+  // Not in the list: the desktop rail beside it still has its own Today.
+  await expect(page.getByRole('main').getByRole('link', { name: 'Today' })).toHaveCount(0)
 
-  const pos = page.getByRole('list').last()
-  const labels = await pos.getByRole('link').evaluateAll((links) =>
-    links.map((a) => a.textContent?.replace(/\d+$/, '').trim()),
+  const utilities = await lists.last().getByRole('link').evaluateAll((links) =>
+    links.map((a) => a.textContent?.trim()),
   )
-  expect(labels).toEqual(['Review', 'Notifications', 'Agent log', 'Settings'])
+  expect(utilities).toEqual(['Notifications', 'Agent log', 'Settings'])
+  await expect(lists.nth(3).getByRole('link', { name: /^Review/ })).toBeVisible()
   await shoot(page, 'browse')
 })
 
@@ -235,21 +238,24 @@ test('phone header shows back off a tab root and not on one', async ({ page }, t
 test('home shows Run now on the phone', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile', 'The phone header is a phone thing')
 
-  // Home is a tab root, so its phone header is title plus one action, no
+  // Today is a tab root, so its phone header is title plus one action, no
   // Back: the one thing to do from a phone after a run is press it again.
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Home', level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Today', level: 1 })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Back' })).toHaveCount(0)
   // The phone header's own Run now, first in DOM order; the desktop band's
   // copy of the same button sits after it, hidden below md.
   await expect(page.getByRole('button', { name: 'Run now' }).first()).toBeVisible()
 
-  // A Today page fits in two swipes: the seed's warnings and proposals show
-  // two and one rows here, the rest behind a link.
+  // The personal work fits in two swipes: the seed's warnings and proposals
+  // show two and one rows here, the rest behind a link, and the week ahead
+  // ends inside the second screen. The module summaries scroll on below
+  // (Holon phase 3, following the phone mockup).
   await expect(page.getByRole('button', { name: /^Dismiss / })).toHaveCount(2)
   await expect(page.getByRole('link', { name: /and \d+ more/ })).toHaveCount(2)
   await expect(page.getByRole('button', { name: 'Approve' })).toHaveCount(1)
-  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(1800)
+  const week = (await page.getByTestId('dashboard-week').boundingBox())!
+  expect(week.y + week.height).toBeLessThan(1800)
 })
 
 test('dashboard, the week ahead and arranging the tiles', async ({ page }) => {
@@ -259,9 +265,10 @@ test('dashboard, the week ahead and arranging the tiles', async ({ page }) => {
   // task from the Tasks module appears on a core screen without core reading
   // the tasks schema.
   await expect(page.getByText('Next 7 days')).toBeVisible()
-  // Dated by the module that owns it, not by core. The strip's entry is a
-  // link named by its day; the Tasks tile lists the same title as a button.
-  const amex = page.getByRole('link', { name: /Pay the Amex statement$/ })
+  // Dated by the module that owns it, not by core. The week's row is a link
+  // (day, title, the module's line); today's work lists the same title as a
+  // button.
+  const amex = page.getByRole('link', { name: /Pay the Amex statement/ })
   await expect(amex).toBeVisible()
   // The row opens the task's own drawer, not the module root (v1.1 Phase 1).
   await expect(amex).toHaveAttribute('href', /\?task=/)
@@ -283,15 +290,16 @@ test('dashboard, the week ahead and arranging the tiles', async ({ page }) => {
       page.waitForResponse(
         (r) => r.request().method() === 'POST' && 'next-action' in r.request().headers(),
       )
+    const spend = main.getByRole('link', { name: 'Open Model spend' })
     let acted = saved()
     await page.getByRole('button', { name: 'Hide llm' }).click()
-    await expect(main.getByText('Model spend · month')).toBeHidden()
+    await expect(spend).toBeHidden()
     await acted
     await page.reload()
-    await expect(main.getByText('Model spend · month')).toBeHidden()
+    await expect(spend).toBeHidden()
     acted = saved()
     await page.getByTestId('dashboard-hidden').getByRole('button', { name: 'Show llm' }).click()
-    await expect(main.getByText('Model spend · month')).toBeVisible()
+    await expect(spend).toBeVisible()
     await acted
 
     await page.getByRole('link', { name: 'Done', exact: true }).click()
@@ -305,7 +313,7 @@ test('skill tree, constellation and the selected skill panel', async ({ page }) 
   // Three shots of the heaviest page in the app, each in two themes.
   test.slow()
   await page.goto('/skills')
-  await expect(page.getByRole('heading', { name: 'Skill Tree' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Skills' })).toBeVisible()
   await expect(page.getByRole('img', { name: 'Skill constellation' })).toBeVisible()
 
   // POS Skill Tree.dc.html opens on a skill (the top gainer), so the right
@@ -662,10 +670,10 @@ test('command palette opens on cmd k and finds an entity', async ({ page }) => {
   await expect(palette).toBeVisible()
 
   // The Go to list is the same nav the sidebar builds, so it is there before
-  // anything is typed, each row with its G-code.
+  // anything is typed, each row with its group as the hint.
   await expect(palette.getByText('Go to')).toBeVisible()
   await expect(palette.getByRole('button', { name: /Settings/ })).toBeVisible()
-  await expect(palette.getByRole('button', { name: /Finance G 02/ })).toBeVisible()
+  await expect(palette.getByRole('button', { name: /Finance Life/ })).toBeVisible()
   await page.getByLabel(/command palette search/i).fill('deadlift')
   await expect(palette.getByRole('button', { name: /Deadlift 405/ })).toBeVisible()
   await shoot(page, 'command-palette')
@@ -704,10 +712,10 @@ test('settings, connections', async ({ page }) => {
   // One card per provider with its auth kind and a status mark; a connected
   // one carries the last test and when it was connected. The fixture enables
   // the Health Auto Export webhook, so at least one card is connected.
-  await expect(page.getByText('CONNECTED', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Connected', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('Last test').first()).toBeVisible()
   await expect(page.getByText(/^(Connected since|Token expires)$/).first()).toBeVisible()
-  await expect(page.getByText('NOT CONNECTED').first()).toBeVisible()
+  await expect(page.getByText('Not connected').first()).toBeVisible()
   await shoot(page, 'connections')
 })
 
@@ -717,9 +725,8 @@ test('login, signed out', async ({ page, context }) => {
   await expect(page.getByLabel(/owner email/i)).toBeVisible()
   await expect(page.getByLabel(/owner email/i)).toHaveAttribute('placeholder', /.+/)
   await expect(page.getByText(/code expires in 15 min/i)).toBeVisible()
-  // The install band uses middots, matching the artboard; a page crumb like
-  // "Review / Pending" is the only place this app uses a plain slash.
-  await expect(page.getByText(/POS · single owner · v0\.1/i)).toBeVisible()
+  // The band names the install: one owner, no version string.
+  await expect(page.getByText(/^single owner$/i)).toBeVisible()
   // The arrow glyph is aria-hidden, so the accessible name stays plain.
   await expect(page.getByRole('button', { name: /^send sign-in code$/i })).toBeVisible()
   await shoot(page, 'login')
@@ -821,16 +828,14 @@ test('review inbox, list and sticky detail panel', async ({ page }) => {
   await expect(list).toBeVisible()
   // The bulk action never offers to approve a guarded write, and one of the two
   // seeded proposals is guarded.
-  await expect(page.getByRole('button', { name: /approve all non-guarded \(1\)/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /approve all( non-guarded)? \(1\)/i })).toBeVisible()
 
-  // The card: "{agent} · {when}", the state word and the meta line as plain
-  // text, no chips.
+  // The card: "{agent} · {when}", the state word and the meta line.
   const first = page.getByRole('button', { name: /Add a pitch to a bare idea/ })
   await expect(first).toHaveText(/ideas\.tidy · (\d\d:\d\d today|yesterday|\d+ days ago)/)
-  await expect(first).toContainText('PENDING')
+  await expect(first).toContainText('Pending')
   await expect(first).toContainText('64% confident')
-  await expect(list).toContainText('GUARDED')
-  await expect(page.locator('.rounded-full', { hasText: /confident|write|guarded/i })).toHaveCount(0)
+  await expect(list).toContainText('Guarded')
 
   // The panel for the default selection: Current / After, the strip, the
   // three actions.
@@ -916,9 +921,10 @@ test('review, inbox clear', async ({ page }) => {
   for (const name of [/Draft a weekly summary idea/, /Add a little weight/]) {
     await page.getByRole('button', { name }).click()
     await page.getByRole('button', { name: 'Dismiss' }).click()
-    await expect(page.getByText('Dismissed', { exact: true })).toBeVisible()
+    // The toast, not the panel's Dismissed chip.
+    await expect(page.locator('[aria-live="polite"]').getByText('Dismissed', { exact: true })).toBeVisible()
   }
-  await expect(page.getByText('inbox clear')).toBeVisible()
+  await expect(page.getByText('Inbox clear')).toBeVisible()
   await expect(page.getByText(/after the nightly run at \d\d:\d\d\./)).toBeVisible()
   await shoot(page, 'review-empty')
 
@@ -939,11 +945,11 @@ test('settings, agents and mcp', async ({ page }) => {
   await expect(page.getByText(/claude mcp add --transport http pos/)).toBeVisible()
   await expect(page.getByText(/Bearer ••••••••/)).toBeVisible()
   await expect(page.getByRole('button', { name: 'Reveal token' })).toBeVisible()
-  await expect(page.getByText(/LIVE · \d+ TOOLS/)).toBeVisible()
+  await expect(page.getByText(/Live · \d+ tools/)).toBeVisible()
 
   // Reads collapse to one open row; every write is listed with its mode.
   await expect(page.getByText('*.get_digest · *.query · core.search')).toBeVisible()
-  await expect(page.getByText('GUARDED').first()).toBeVisible()
+  await expect(page.getByText('Guarded', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('finance.write')).toBeVisible()
 
   await shoot(page, 'settings-agents')
@@ -962,7 +968,6 @@ test('changing autonomy is what decides whether an agent write is held', async (
 
 test('dashboard renders the nightly run', async ({ page }) => {
   await page.goto('/')
-  const mobile = (page.viewportSize()?.width ?? 0) < 768
 
   // Run now is a server action behind requireOwner, not a call to the cron
   // route, so it needs no secret. On both widths: a job runs from a button
@@ -972,27 +977,24 @@ test('dashboard renders the nightly run', async ({ page }) => {
   await expect(page.getByText(/^Run clean$|jobs? failed/i)).toBeVisible({ timeout: 20_000 })
   await page.reload()
 
-  // Tile labels are uppercased by CSS, so the DOM still says "Warnings".
   const main = page.getByRole('main')
-  await expect(main.getByText('Warnings')).toBeVisible()
-  // The System tile is gone (v1.1 Phase 1): the run line at the top of the
-  // page is the health corner and links to the Agent Log.
-  await expect(main.getByRole('link', { name: /Agent Log$/ })).toHaveAttribute('href', '/agent-log')
-  if (!mobile) {
-    // Model spend and the module tiles are desktop only on the phone
-    // (2026-09-13 decision): Home is warnings, finance, tasks, review, timeline.
-    await expect(main.getByText('Model spend')).toBeVisible()
-    // One tile per module that wrote a digest, so the page needs no knowledge of
-    // any module to show its numbers. The tile's head is the link in, as drawn.
-    await expect(main.getByRole('link', { name: /open ideas/i })).toBeVisible()
-  }
+  await expect(main.getByText('Needs attention')).toBeVisible()
+  // The System tile is gone (v1.1 Phase 1): the run line at the foot of the
+  // page is the health corner and links to the Agent Log (Holon phase 3
+  // moved it under the summaries).
+  await expect(main.getByRole('link', { name: /Agent log$/ })).toHaveAttribute('href', '/agent-log')
+  await expect(main.getByRole('link', { name: 'Open Model spend' })).toBeVisible()
+  // One summary per module that wrote a digest, so the page needs no knowledge
+  // of any module to show its numbers. The head is the link in.
+  await expect(main.getByRole('link', { name: /open ideas/i })).toBeVisible()
 
   // Snooze holds the notification row itself, not its rule, so the row is gone
   // now and still gone after a reload (v1.1 Phase 1; before this the button
   // wrote to a rule id that did not exist and the row came straight back).
-  const snoozeButton = main.getByRole('button', { name: 'Snooze' }).first()
+  const warningRow = main.getByTestId('warning-row').filter({ visible: true }).first()
+  const snoozeButton = warningRow.getByRole('button', { name: 'Snooze' })
   await expect(snoozeButton).toBeVisible()
-  const snoozedTitle = (await snoozeButton.locator('../..').locator('a.text-ink').first().textContent()) ?? ''
+  const snoozedTitle = (await warningRow.getByRole('link').first().textContent()) ?? ''
   expect(snoozedTitle).not.toBe('')
   // Every warning row goes somewhere (v1.1 Phase 5): the nightly digest's row
   // opens the alert centre.
@@ -1010,7 +1012,7 @@ test('dashboard renders the nightly run', async ({ page }) => {
   await expect(main.getByText(snoozedTitle, { exact: true })).toHaveCount(0)
   await acted
   await page.reload()
-  await expect(main.getByText('Warnings')).toBeVisible()
+  await expect(main.getByText('Needs attention')).toBeVisible()
   await expect(main.getByText(snoozedTitle, { exact: true })).toHaveCount(0)
 
   await shoot(page, 'dashboard-live')
@@ -1029,14 +1031,14 @@ test('notifications, rules table and the alert centre', async ({ page }) => {
   // join with the same middle dot. Statement due carries all three channels
   // and a 3 day lead, so its row spells out both joins at once.
   await expect(page.getByText('Channels · timing · state')).toBeVisible()
-  await expect(page.getByText('PUSH · EMAIL · IN-APP').first()).toBeVisible()
-  await expect(page.getByText('IMMEDIATE · 3 days')).toBeVisible()
+  await expect(page.getByText('Push · Email · In-app').first()).toBeVisible()
+  await expect(page.getByText('Immediate · 3 days')).toBeVisible()
 
   // A live Insurance rule's module label reads amber, not the flat green
   // every module used to share. Scoped to the row itself: the filter pill
   // above the table also renders the word "Insurance".
   const policyRow = page.getByRole('button', { name: /Policy renewal/ })
-  await expect(policyRow.getByText('INSURANCE', { exact: true })).toHaveClass(/text-warn/)
+  await expect(policyRow.getByText('Insurance', { exact: true })).toHaveClass(/text-warn/)
 
   // The seeded rule set, the schedule above it and the preview rail that
   // follows the selected row. All three are the screen.
@@ -1062,12 +1064,12 @@ test('notifications, rules table and the alert centre', async ({ page }) => {
   // An unread alert's module label is flat accent, like the artboard, not the
   // rules table's per-module colour and not the old flat green.
   const chaseAlert = page.locator('div.bg-brand-soft', { hasText: 'Chase Sapphire due in 3 days' })
-  await expect(chaseAlert.getByText('FINANCE', { exact: true })).toHaveClass(/text-brand/)
+  await expect(chaseAlert.getByText('Finance', { exact: true })).toHaveClass(/text-action/)
 
   // The email digest's section header is a plain accent label and a plain
   // item count, not the shared Eyebrow (fixed ink-3) or a Chip pill.
   const digestCard = page.locator('div.bg-bg-elev', { hasText: 'Your morning digest' })
-  await expect(digestCard.getByText('Finance', { exact: true })).toHaveClass(/text-brand/)
+  await expect(digestCard.getByText('Finance', { exact: true })).toHaveClass(/text-action/)
   await expect(digestCard.getByText('1 item').first()).toBeVisible()
 
   await shoot(page, 'notifications')
@@ -1159,12 +1161,12 @@ test('agent log, the run accordion and the rail', async ({ page }) => {
   await expect(page.getByText('Undo history / 0')).toBeVisible()
   await expect(page.getByRole('radiogroup', { name: 'Agent autonomy' })).toBeVisible()
 
-  // The filter pills read in the sidebar's module order (Skill Tree is order
+  // The filter pills read in the sidebar's module order (Skills is order
   // 20, Ideas is 80), not the order entries happened to be written in: the
   // seed writes the ideas row first.
   const pills = page.getByRole('radiogroup', { name: 'Filter the log by module' }).getByRole('radio')
   const labels = await pills.allTextContents()
-  expect(labels.indexOf('Skill Tree')).toBeLessThan(labels.indexOf('Ideas'))
+  expect(labels.indexOf('Skills')).toBeLessThan(labels.indexOf('Ideas'))
 
   await shoot(page, 'agent-log')
 })
@@ -1205,7 +1207,8 @@ test('settings, notifications', async ({ page }) => {
   await expect(page.getByRole('switch', { name: 'Email digest' })).toBeVisible()
   await expect(page.getByRole('switch', { name: 'Digest for Finance' })).toBeVisible()
   await expect(page.getByRole('switch', { name: 'In-app for System' })).toBeVisible()
-  await expect(page.getByText('WHAT TRIGGERS IT')).toBeVisible()
+  // The head is hidden below md, so the trigger column is checked by a row.
+  await expect(page.getByText(/^statement due, /)).toBeVisible()
   await expect(page.getByText('No push between')).toBeVisible()
   await expect(page.getByRole('button', { name: /breaks through/i })).toBeVisible()
 
@@ -1225,7 +1228,7 @@ test('tasks, the board and the quick add parser', async ({ page }) => {
   await expectBand(page, page.getByText(/\d+ open · \d+ done today/))
 
   // Today holds what is due today and what slipped, because a slip is today.
-  await expect(page.getByText(/^Today · \w{3} \w{3} \d+$/)).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Today, \w+day \d+$/ })).toBeVisible()
   await expect(page.getByText('Recurring detection tests')).toBeVisible()
   await expect(page.getByText('Read DDIA ch. 5, Replication')).toBeVisible()
 
@@ -1293,7 +1296,7 @@ test('tasks, a row expands in place and EDIT opens the form drawer', async ({ pa
     const box = (await drawer.boundingBox())!
     expect(box.x).toBe(0)
     expect(box.width).toBe(viewport.width)
-    expect(box.height).toBeLessThanOrEqual(viewport.height * 0.74 + 1)
+    expect(box.height).toBeLessThanOrEqual(viewport.height * 0.78 + 1)
   }
 
   // Edits hold until Save, then land as one write.
@@ -1307,7 +1310,7 @@ test('tasks, a row expands in place and EDIT opens the form drawer', async ({ pa
     const t = (await toast.boundingBox())!
     expect(t.y + t.height).toBeLessThan(bar.y)
   }
-  await expect(page.locator('article').filter({ hasText: 'Recurring detection tests' }).getByText('95m')).toBeVisible()
+  await expect(page.locator('article').filter({ hasText: 'Recurring detection tests' }).getByText('1.6 h')).toBeVisible()
 })
 
 test('tasks, the six views and the month grid', async ({ page }) => {
@@ -1335,7 +1338,7 @@ test('tasks, the six views and the month grid', async ({ page }) => {
   // until it is accepted.
   await openView(/Review/)
   await expect(page.getByText('Test the bank sync against three months of history')).toBeVisible()
-  await expect(page.getByText('AGENT · REVIEW').first()).toBeVisible()
+  await expect(page.getByText('Agent, review').first()).toBeVisible()
   // The view is in the URL, which is what lets it survive the reload shoot()
   // does to switch themes. Without it the shot would show Today and the test
   // would still pass.
@@ -1368,16 +1371,17 @@ test('tasks, the six views and the month grid', async ({ page }) => {
     const dot = pane.locator('button:has(> span.rounded-full)').first()
     const title = (await dot.getAttribute('aria-label')) ?? ''
     await dot.click()
-    await expect(page.getByRole('dialog', { name: /Tasks \/ Edit/ })).toBeVisible()
+    // The drawer is named by the task's title now, not the crumb.
+    await expect(page.getByRole('dialog', { name: title })).toBeVisible()
     await expect(page.getByRole('dialog').getByLabel('Title')).toHaveValue(title)
   }
 })
 
 test('tasks, completing one emits the event that earns XP', async ({ page }) => {
-  // The dashboard's Tasks tile reads the latest digest, and every write tool
-  // recomputes it (v1.1 Phase 5), so the count moves without Run now.
+  // Today's work on the dashboard reads the latest tasks digest, and every
+  // write tool recomputes it (v1.1 Phase 5), so the count moves without Run now.
   await page.goto('/')
-  const tasksMeta = page.getByRole('main').getByRole('link', { name: /of \d+ done/ })
+  const tasksMeta = page.getByTestId('dashboard-today').getByText(/of \d+ done/)
   const before = await tasksMeta.textContent()
 
   await page.goto('/tasks')
@@ -1402,7 +1406,7 @@ test('tasks, completing one emits the event that earns XP', async ({ page }) => 
   await expect(page.getByText('Read DDIA ch. 5, Replication', { exact: true })).toBeVisible()
 })
 
-test('tasks, a skill linked by hand shows MANUAL, survives a reload and reaches the tree', async ({ page }) => {
+test('tasks, a skill linked by hand shows Manual, survives a reload and reaches the tree', async ({ page }) => {
   // On the phone the row itself opens the drawer; on the desktop it expands
   // and EDIT opens it.
   const mobile = (page.viewportSize()?.width ?? 0) < 768
@@ -1428,7 +1432,7 @@ test('tasks, a skill linked by hand shows MANUAL, survives a reload and reaches 
   // The chip is optimistic, so wait for the action's POST before reloading.
   const saved = page.waitForResponse((r) => r.request().method() === 'POST' && r.ok())
   await drawer.getByRole('combobox', { name: 'Skill' }).selectOption('negotiation')
-  const chip = drawer.locator('span').filter({ hasText: /^NegotiationMANUAL×$/ })
+  const chip = drawer.locator('span').filter({ hasText: /^NegotiationManual×$/ })
   await expect(chip).toBeVisible()
   await saved
 
@@ -1450,7 +1454,7 @@ test('tasks, a skill linked by hand shows MANUAL, survives a reload and reaches 
   await removed
 })
 
-test('travel, a skill linked by hand on a trip shows MANUAL and survives a reload', async ({ page }) => {
+test('travel, a skill linked by hand on a trip shows Manual and survives a reload', async ({ page }) => {
   await page.goto('/travel')
   await page.waitForLoadState('networkidle')
   await page.getByTestId('travel-sections').getByRole('button', { name: /Tokyo/ }).first().click()
@@ -1471,7 +1475,7 @@ test('travel, a skill linked by hand on a trip shows MANUAL and survives a reloa
   // The chip is optimistic, so wait for the action's POST before reloading.
   const saved = page.waitForResponse((r) => r.request().method() === 'POST' && r.ok())
   await drawer.getByRole('combobox', { name: 'Skill' }).selectOption('negotiation')
-  const chip = drawer.locator('span').filter({ hasText: /^NegotiationMANUAL×$/ })
+  const chip = drawer.locator('span').filter({ hasText: /^NegotiationManual×$/ })
   await expect(chip).toBeVisible()
   await saved
 
@@ -1616,10 +1620,10 @@ test('goals, progress by area with the rule behind each status', async ({ page }
   await expect(page.getByText(/Pace .* vs .* needed \(\d+%\)\./).first()).toBeVisible()
 
   // The demo history is shaped so every rule is on screen at once.
-  // The card badges, not the band's "1 STALLED", which the phone does not draw.
-  await expect(page.getByText('STALLED', { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('AT RISK', { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('ON TRACK', { exact: true }).first()).toBeVisible()
+  // The card badges, not the band's "1 stalled", which the phone does not draw.
+  await expect(page.getByText('Stalled', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('At risk', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('On track', { exact: true }).first()).toBeVisible()
 
   // The card names the next linked task, which Tasks answers through core.
   await expect(netWorth.getByText(/^Next: /)).toBeVisible()
@@ -1750,18 +1754,22 @@ test('weekly review, six steps and a note built from the answers', async ({ page
   // whatever the server rendered rather than on what the click did.
   await page.waitForLoadState('networkidle')
 
-  // The band's theme button, as the artboard draws it beside the duration. It
-  // names the theme you are on and shares the setting with the sidebar row,
-  // so one click moves both. Desktop only: the sidebar is not on a phone.
+  // The band's theme control: System, Light, Dark. It shares the setting
+  // with the sidebar's control, so one press moves both. System removes the
+  // attribute and the page follows the device. Desktop only: the sidebar is
+  // not on a phone.
   if ((page.viewportSize()?.width ?? 0) >= 768) {
     // shoot() leaves the cookie on dark but the page on its last shot, light.
     await page.reload()
     await page.waitForLoadState('networkidle')
-    const band = page.locator('header').getByRole('button', { name: /^dark$/i })
-    await band.click()
+    const band = page.locator('header').getByRole('group', { name: 'Theme' })
+    const rail = page.getByRole('navigation', { name: 'Sections' }).getByRole('group', { name: 'Theme' })
+    await band.getByRole('button', { name: 'Light', exact: true }).click()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
-    await expect(page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Light', exact: true })).toBeVisible()
-    await page.locator('header').getByRole('button', { name: /^light$/i }).click()
+    await expect(rail.getByRole('button', { name: 'Light', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await band.getByRole('button', { name: 'System', exact: true }).click()
+    await expect(page.locator('html')).not.toHaveAttribute('data-theme')
+    await band.getByRole('button', { name: 'Dark', exact: true }).click()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   }
 
@@ -1858,7 +1866,9 @@ test('finance, net worth and the budget pace marks', async ({ page }) => {
       .getByRole('button')
       .first()
       .evaluate((el) => getComputedStyle(el).padding)
-    expect(rowPadding).toBe('9px 0px')
+    // Rows sit inside the grouped surface with a 16px inset; the overview keeps
+    // its 9px row height (`overviewRow`): a dense table stays dense (Holon plan, section 4).
+    expect(rowPadding).toBe('9px 16px')
     await expect(page.getByRole('button', { name: /edit limits/i })).toBeVisible()
   }
 
@@ -2139,7 +2149,7 @@ test('second brain, the inbox holds a draft beside its source', async ({ page })
     await expect(page.getByText(/^\d+ notes$/)).toBeVisible()
   }
   await expect(page.getByRole('button', { name: /^Ingest/ })).toBeVisible()
-  const folders = page.getByTestId('brain-folders').getByRole('button')
+  const folders = page.getByTestId('brain-folders').getByRole('radio')
   await expect(folders).toHaveText(
     [/^Inbox/, /^Reading list/, /^articles/, /^books/, /^videos/, /^notes/, /^projects/, /^people/, /^daily/],
   )
@@ -2171,7 +2181,7 @@ test('second brain, a URL can be read into a draft', async ({ page }) => {
 
   const drawer = page.getByRole('dialog')
   await expect(drawer.getByText(/^Second Brain\s*\/\s*Ingest$/)).toBeVisible()
-  await expect(drawer.getByTestId('brain-ingest-kinds').getByRole('button')).toHaveText([
+  await expect(drawer.getByTestId('brain-ingest-kinds').getByRole('radio')).toHaveText([
     'URL',
     'YouTube',
     'Book',
@@ -2216,10 +2226,10 @@ test('second brain, the reading list is what was finished', async ({ page }) => 
 
   // Adding a book or an article here means it was read, so every accepted one
   // carries the date it was accepted and there is no button to press.
-  await expect(page.getByText('Reading list', { exact: true }).nth(1)).toBeVisible()
+  await expect(page.getByText('Reading list', { exact: true })).toBeVisible()
   await expect(page.getByText(/^\d+ finished$/)).toBeVisible()
   const row = page.getByRole('button', { name: /Designing Data-Intensive Applications, ch\. 5/ })
-  await expect(row).toContainText(/FINISHED · \w{3} \d+/)
+  await expect(row).toContainText(/Finished · \w{3} \d+/)
   await expect(page.getByRole('button', { name: /Mark finished/ })).toHaveCount(0)
 
   await shoot(page, 'second-brain-reading')
@@ -2235,7 +2245,7 @@ test('second brain, accepting a draft moves it into the vault', async ({ page })
   await page.goto('/brain?folder=article')
   const row = page.getByRole('button', { name: /Postgres full text search, briefly/ })
   await expect(row).toBeVisible()
-  await expect(row).toContainText(/FINISHED · \w{3} \d+/)
+  await expect(row).toContainText(/Finished · \w{3} \d+/)
   await expect(page.getByRole('button', { name: 'Send back to the inbox' })).toHaveCount(0)
 })
 
@@ -2244,7 +2254,7 @@ test('second brain, accepting a draft moves it into the vault', async ({ page })
 test('second brain, the capture box saves a note and shows related while typing', async ({ page }) => {
   await page.goto('/brain')
   const box = page.getByTestId('brain-capture')
-  await expect(page.getByTestId('brain-hubs').getByRole('button', { name: /^Unfiled/ })).toBeVisible()
+  await expect(page.getByTestId('brain-hubs').getByRole('radio', { name: /^Unfiled/ })).toBeVisible()
 
   const title = `Captured ${Date.now()}`
   await box.getByRole('textbox', { name: 'Capture' }).fill(`${title}\nHybrid search over notes.`)
@@ -2438,10 +2448,10 @@ test('travel, cents per point uses only numbers you supply', async ({ page }) =>
 
   // 64000 cents over 35000 points is 1.83 cents each, which is worth using.
   await expect(page.getByText('1.83c')).toBeVisible()
-  await expect(page.getByText('worth using points')).toBeVisible()
+  await expect(page.getByText('Worth using points')).toBeVisible()
 
   await page.getByLabel('Points required').fill('60000')
-  await expect(page.getByText('pay cash', { exact: true })).toBeVisible()
+  await expect(page.getByText('Pay cash', { exact: true })).toBeVisible()
   await shoot(page, 'travel-loyalty')
 })
 
@@ -2723,12 +2733,12 @@ test('health, one page with the artboard\'s panes and the status in the band', a
 
   // Body weight belongs to Fitness and the tile says so; clinical readings show
   // where they came from, and a delta only against a real previous reading.
-  await expect(page.getByText('FITNESS', { exact: true })).toBeVisible()
+  await expect(page.getByText('lb · from Fitness', { exact: true })).toBeVisible()
   await expect(page.getByText('118/74')).toBeVisible()
-  await expect(page.getByText(/-8 · since \w{3} \d{4}/)).toBeVisible()
+  await expect(page.getByText(/-8 · since \w{3} \d{4} · lab/)).toBeVisible()
 
-  // Appointments as month-day cards with the status tag; Upcoming and History
-  // are pills, not a page tab.
+  // Appointments as rows with the status chip; Upcoming and History are the
+  // shared TabBar.
   await expect(page.getByRole('tab', { name: 'Upcoming' })).toBeVisible()
   const physical = page.getByRole('button', { name: /Annual physical/ }).first()
   await expect(physical).toBeVisible()
@@ -2738,8 +2748,8 @@ test('health, one page with the artboard\'s panes and the status in the band', a
   await page.getByRole('tab', { name: 'Upcoming' }).click()
 
   // Records carry their type, date and whether a file is behind them.
-  await expect(page.getByText('RECORD', { exact: true })).toBeVisible()
-  await expect(page.getByText('NO FILE').first()).toBeVisible()
+  await expect(page.getByText('Vision', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('No file').first()).toBeVisible()
 
   await shoot(page, 'health')
 })
@@ -2748,8 +2758,8 @@ test('health, a weight posted to the Apple webhook shows on the page', async ({ 
   // The secret lives in core.connections and the card is the one place it is
   // shown, so the test reads it where the owner would.
   await page.goto('/settings/connections')
-  const card = page.locator('div.border').filter({ has: page.getByText('Health Auto Export', { exact: true }) }).first()
-  await card.getByRole('button', { name: 'REVEAL' }).click()
+  const card = page.locator('div.glass').filter({ has: page.getByText('Health Auto Export', { exact: true }) }).first()
+  await card.getByRole('button', { name: 'Reveal' }).click()
   const secret = (await card.locator('span.flex-1.break-all').textContent())?.trim() ?? ''
   expect(secret.length).toBeGreaterThan(10)
 
@@ -2763,7 +2773,7 @@ test('health, a weight posted to the Apple webhook shows on the page', async ({ 
   expect(res.status()).toBe(200)
 
   await page.goto('/health')
-  const weight = page.locator('div.border').filter({ has: page.getByText('FITNESS', { exact: true }) })
+  const weight = page.getByText('lb · from Fitness', { exact: true }).locator('..')
   await expect(weight.getByText('178', { exact: true })).toBeVisible()
 
   // And the Fitness band now says when Apple data last arrived.
@@ -2777,11 +2787,14 @@ test('health, the rail says what is owed with the app\'s own actions', async ({ 
 
   // Never is its own state, not folded into overdue: a screening you have
   // never had is a different conversation from one you are late for.
-  await expect(page.getByText('NEVER DONE', { exact: true })).toBeVisible()
-  // A screening whose appointment is booked reads SCHEDULED and opens it.
-  await expect(page.getByText('SCHEDULED').first()).toBeVisible()
+  // The chip, not the card's caption, which also reads "Never done".
+  await expect(
+    page.locator('article').filter({ hasText: 'Never done' }).locator('span').filter({ hasText: /^Never done$/ }).first(),
+  ).toBeVisible()
+  // A screening whose appointment is booked reads Scheduled and opens it.
+  await expect(page.getByText('Scheduled', { exact: true }).first()).toBeVisible()
   await page.getByRole('button', { name: 'View appointment' }).first().click()
-  await expect(page.getByRole('dialog').getByText('PREP', { exact: true })).toBeVisible()
+  await expect(page.getByRole('dialog').getByText('Prep', { exact: true })).toBeVisible()
   await expect(page.getByRole('dialog').getByText(/Fast twelve hours/)).toBeVisible()
   await expect(page).toHaveURL(/appt=/)
   await shoot(page, 'health-drawer')
@@ -2812,7 +2825,7 @@ test('health, log a visit files a past date under records', async ({ page }) => 
   const drawer = page.getByRole('dialog')
   await drawer.getByRole('radio', { name: 'Lab' }).click()
   await drawer.getByPlaceholder('Annual physical').fill('Ferritin')
-  await drawer.getByLabel('DATE').fill('2026-06-01')
+  await drawer.getByLabel('Date').fill('2026-06-01')
   await drawer.getByPlaceholder('$40 copay').fill('$12')
   await expect(drawer.getByText('Past date: this files under Records.')).toBeVisible()
   await drawer.getByRole('button', { name: 'Save entry' }).click()
@@ -2840,9 +2853,9 @@ test('meals, a plan is not a log', async ({ page }) => {
   await expect(tabs).toHaveText([/^Week/, /^Recipes/])
 
   // Monday to Sunday as columns, slots as rows, a totals row under them.
-  await expect(page.getByText('MON', { exact: true })).toBeVisible()
-  await expect(page.getByText('SUN', { exact: true })).toBeVisible()
-  await expect(page.getByText('TOTAL', { exact: true })).toBeVisible()
+  await expect(page.getByText('Mon', { exact: true })).toBeVisible()
+  await expect(page.getByText('Sun', { exact: true })).toBeVisible()
+  await expect(page.getByText('Total', { exact: true })).toBeVisible()
 
   // Today: what was eaten, against the one target the app has. A plan is not
   // a log until the meal is ticked.
@@ -2886,7 +2899,7 @@ test('meals, an imported recipe waits in the inbox', async ({ page }) => {
 
   // A draft is a card at the top of the grid, tagged, with the decision on it.
   await expect(page.getByText('Sheet pan salmon')).toBeVisible()
-  await expect(page.getByText('draft', { exact: true })).toBeVisible()
+  await expect(page.getByText('Draft', { exact: true })).toBeVisible()
 
   // A pasted URL is read for its Recipe JSON-LD. A private address is refused
   // before anything is fetched: the fetch runs from inside the deployment.
@@ -2899,7 +2912,7 @@ test('meals, an imported recipe waits in the inbox', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Accept', exact: true }).first().click()
   await expect(page.getByText('Added to the library')).toBeVisible()
-  await expect(page.getByText('draft', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Draft', { exact: true })).toHaveCount(0)
 
   // The filter is in the URL. Favourites is the one that is not a tag.
   await page.goto('/meals?tab=recipes&tag=favorites')
@@ -2944,14 +2957,14 @@ test('ideas, four stage columns with the scores on every card', async ({ page })
   // Quick wins first. Voice capture is cheap and high impact; the card carries
   // the quadrant, both scores and how long it has sat in its stage.
   const voice = page.locator('article').filter({ hasText: 'Voice capture for tasks' })
-  await expect(voice.getByText('QUICK WIN')).toBeVisible()
-  await expect(voice.getByText('IMPACT')).toBeVisible()
-  await expect(voice.getByText('EFFORT')).toBeVisible()
+  await expect(voice.getByText('Quick win')).toBeVisible()
+  await expect(voice.getByText('Impact')).toBeVisible()
+  await expect(voice.getByText('Effort')).toBeVisible()
   await expect(voice.getByText(/\d+d in stage/)).toBeVisible()
   await expect(voice.getByText('#voice')).toBeVisible()
 
   // Sitting still for two months is named on the card, not decided for you.
-  await expect(page.getByText(/STALE · \d+d in stage/)).toBeVisible()
+  await expect(page.getByText(/Stale · \d+d in stage/)).toBeVisible()
 
   await shoot(page, 'ideas')
 })
@@ -2964,7 +2977,7 @@ test('ideas, the capture line reads tags and scores', async ({ page }) => {
   await expect(page.getByText('Captured. Pocket receipt scanner')).toBeVisible()
 
   const card = page.locator('article').filter({ hasText: 'Pocket receipt scanner' })
-  await expect(card.getByText('QUICK WIN')).toBeVisible()
+  await expect(card.getByText('Quick win')).toBeVisible()
   await expect(card.getByText('#capture')).toBeVisible()
 
   // And Delete takes a capture that was never an idea away again.
@@ -2979,7 +2992,7 @@ test('ideas, the effort and impact matrix places every live idea', async ({ page
   await page.goto('/ideas')
   await page.waitForLoadState('networkidle')
 
-  await page.getByRole('button', { name: 'Effort × impact' }).click()
+  await page.getByRole('tab', { name: 'Effort × impact' }).click()
   await expect(page).toHaveURL(/view=matrix/)
 
   // The corners are named for what they mean, and an idea sits in the corner
@@ -3014,7 +3027,7 @@ test('ideas, the drawer shows the stage, the moves and the Agent card', async ({
 
 test('home, the calendar is worked out from the history', async ({ page }) => {
   await page.goto('/home')
-  await expect(page.getByRole('heading', { name: 'Home & assets' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Home & Property' })).toBeVisible()
 
   // The band: the crumb on the left, the month's summary with its dot on the
   // right, and the page's one primary in the title block.
@@ -3027,24 +3040,24 @@ test('home, the calendar is worked out from the history', async ({ page }) => {
   await expect(page.getByText('$743,140')).toHaveCount(0)
 
   // Every asset kind as a card: kind, state, name, the two cells.
-  await expect(page.getByRole('button', { name: /^PROPERTY.*2412 Example Street/ })).toBeVisible()
-  await expect(page.getByRole('button', { name: /^VEHICLE.*OVERDUE.*2021 pickup/ })).toBeVisible()
-  await expect(page.getByText('VALUE', { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('ANNUAL COST', { exact: true }).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Property.*2412 Example Street/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Vehicle.*Overdue.*2021 pickup/ })).toBeVisible()
+  await expect(page.getByText('Value', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Annual cost', { exact: true }).first()).toBeVisible()
 
   // The oil change was last done seven months ago on a six month interval, so
   // it is overdue. Nothing stored that: it falls out of the interval and the
   // date it was last done.
   await expect(page.getByText('Oil change and rotation').first()).toBeVisible()
-  await expect(page.getByText('OVERDUE', { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('DUE NOW', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Overdue', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Due now', { exact: true }).first()).toBeVisible()
 
   // Twelve months, including the empty ones, because an empty month is
   // information. The selected month is written out in full under them.
-  await expect(page.getByRole('button', { name: /^[A-Z]{3} \d\d /  })).toHaveCount(12)
-  await expect(page.getByText(/^[A-Z]{3} \d{4}$/).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: /^[A-Z][a-z]{2} \d\d / })).toHaveCount(12)
+  await expect(page.getByText(/^[A-Z][a-z]{2} \d{4}$/).first()).toBeVisible()
 
-  await expect(page.getByText('COVER · EXPIRES · FILE')).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Roof workmanship.*10 yr labour/ })).toBeVisible()
 
   await shoot(page, 'home')
 })
@@ -3065,7 +3078,7 @@ test('home, a warranty with no expiry is not a missing date', async ({ page }) =
 
   const deed = page.getByRole('button', { name: /^Deed, survey and permits/ })
   await expect(deed).toBeVisible()
-  await expect(page.getByText('NO EXPIRY', { exact: true })).toBeVisible()
+  await expect(page.getByText('No expiry', { exact: true })).toBeVisible()
 
   // And the drawer carries the paperwork rather than a judgement about it.
   await deed.click()
@@ -3096,11 +3109,11 @@ test('home, logging service moves the schedule it belongs to', async ({ page }) 
   await expect(page.getByText(/The next one lands 3 months out/)).toBeVisible()
   await page.getByRole('button', { name: 'Save service' }).click()
 
-  await expect(page.getByText(/Next one scheduled for [A-Z]{3} \d{4}/)).toBeVisible()
+  await expect(page.getByText(/Next one scheduled for [A-Z][a-z]{2} \d{4}/)).toBeVisible()
 
   // One schedule, not a second one beside it: logging a job that is already on
   // the calendar moves the row it belongs to.
-  const month = page.getByRole('button', { name: /^[A-Z]{3} \d\d / }).nth(3)
+  const month = page.getByRole('button', { name: /^[A-Z][a-z]{2} \d\d / }).nth(3)
   await month.click()
   await expect(page.getByText('Gutter clean before the autumn')).toHaveCount(1)
 })
@@ -3122,9 +3135,9 @@ test('insurance, sorted by what expires first with numbers masked', async ({ pag
   // inside the Policy cell, so the row's text starts with it.
   const rows = page.getByRole('button', { name: /Lemonade|Apple|Progressive/ })
   await expect(rows.first()).toContainText('Lemonade')
-  await expect(rows.first()).toHaveText(/^RENTERS/)
+  await expect(rows.first()).toHaveText(/^Renters/)
   await expect(rows.first()).toContainText(/\d+ days/)
-  await expect(rows.first()).toContainText('EXPIRING')
+  await expect(rows.first()).toContainText('Expiring')
 
   await shoot(page, 'insurance')
 })
@@ -3138,10 +3151,10 @@ test('insurance, a policy number is revealed only when asked for', async ({ page
   // The drawer is in the URL, so it survives the reloads.
   await expect(page).toHaveURL(/policy=/)
   await shoot(page, 'insurance-drawer')
-  await dialog.getByRole('button', { name: /REVEAL/ }).click()
+  await dialog.getByRole('button', { name: /Reveal/ }).click()
   await expect(dialog.getByText('LMD-48211-7730')).toBeVisible()
 
-  await dialog.getByRole('button', { name: /HIDE/ }).click()
+  await dialog.getByRole('button', { name: /Hide/ }).click()
   await expect(page.getByText('LMD-48211-7730')).toHaveCount(0)
 
   // The rest of the drawer, as the artboard draws it.
@@ -3302,7 +3315,7 @@ test('ideas, research shows its sources and what it cost', async ({ page }) => {
   // The verdict, how sure it says it is, and the bill, because a run spends
   // real money and an idea board is where it is tempting to press it forty
   // times.
-  await expect(page.getByText('park', { exact: true })).toBeVisible()
+  await expect(page.getByText('Park', { exact: true })).toBeVisible()
   await expect(page.getByText('55% confident')).toBeVisible()
   await expect(page.getByText(/4 searches, 0.06 dollars/)).toBeVisible()
 

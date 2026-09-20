@@ -1,8 +1,21 @@
 'use client'
 
 import { useTransition } from 'react'
-import { ActionButton, BandSearch, SearchButton, useToast, type SkillLink } from '@/components/pos'
-import { BackControl } from '@/components/pos/BackControl'
+import {
+  ActionButton,
+  Card,
+  CardHead,
+  EmptyState,
+  Eyebrow,
+  MetricStrip,
+  MetricTile,
+  PageHeader,
+  Row,
+  RowList,
+  StatusChip,
+  useToast,
+  type SkillLink,
+} from '@/components/pos'
 import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
 import { deleteTrip, setTripStatus, type ActionResult } from './actions'
@@ -158,82 +171,80 @@ export function Travel({ data }: { data: TravelData }) {
 
   return (
     <>
-      <header className="-mx-[18px] -mt-[18px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 md:-mx-7 md:-mt-7 md:h-14 md:flex-nowrap md:px-7 md:py-0">
-        <BackControl />
-        <span className="eyebrow shrink-0 whitespace-nowrap text-ink-3">
-          Travel <span className="text-ink-4">/</span> Trips
-        </span>
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-4">
-          <SearchButton className="md:hidden" />
-          <BandSearch className="hidden min-w-[160px] flex-1 md:flex" placeholder="Search travel" />
-          <span className="eyebrow hidden shrink-0 whitespace-nowrap text-ink-3 md:inline-flex">
-            <span className="status-dot" data-tone={upcoming.length > 0 ? 'brand' : 'idle'} aria-hidden />
+      <PageHeader
+        eyebrow={
+          <>
+            Travel <span className="text-ink-4">/</span> Trips
+          </>
+        }
+        title="Travel"
+        lede="Upcoming trips in blue, past in grey, wishlist dotted. Drag to rotate, scroll to zoom, tap a pin to open it, double-click to fly in."
+        status={
+          <Eyebrow dot={upcoming.length > 0 ? 'brand' : 'idle'} className="whitespace-nowrap">
             {upcoming.length} upcoming · {nightsAway} nights away
-          </span>
-        </div>
-      </header>
+          </Eyebrow>
+        }
+        actions={
+          <>
+            <ActionButton onClick={() => setParams({ new: 'wish', trip: null }, { push: true })}>Add to wishlist</ActionButton>
+            <ActionButton variant="solid" size="xl" onClick={() => setParams({ new: 'trip', trip: null }, { push: true })}>
+              New trip <span aria-hidden="true">&rarr;</span>
+            </ActionButton>
+          </>
+        }
+        phoneAction={
+          <>
+            <ActionButton size="pill" aria-label="Add to wishlist" onClick={() => setParams({ new: 'wish', trip: null }, { push: true })}>
+              Wishlist
+            </ActionButton>
+            <ActionButton size="pill" variant="solid" onClick={() => setParams({ new: 'trip', trip: null }, { push: true })}>
+              New trip
+            </ActionButton>
+          </>
+        }
+      />
 
-      {/* The loyalty strip: one cell per program, the balance with its move
-        * since the last entry, and Manage on the last cell. */}
+      {/* The loyalty strip: one tile per program, the balance with its move
+        * since the last entry, and Manage on the last tile. Under the header
+        * now rather than between the band and the title. */}
       {data.loyalty.length > 0 && (
-        <div
-          data-testid="travel-loyalty"
-          className="-mx-[18px] grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-px border-b border-rule bg-rule md:-mx-7"
-        >
+        <MetricStrip data-testid="travel-loyalty" className="mt-[18px]">
           {data.loyalty.map((l, i) => {
             const delta = l.previousBalance === null ? null : l.balance - l.previousBalance
+            const last = i === data.loyalty.length - 1
             return (
-              <div key={l.id} className="flex min-w-0 flex-col gap-0.5 bg-bg px-5 py-2.5">
-                <span className="flex justify-between gap-2 truncate text-[11px] text-ink-3">
-                  <span className="truncate">{l.name}</span>
-                  {i === data.loyalty.length - 1 && (
-                    <button
-                      type="button"
-                      onClick={() => setParams({ loyalty: '1' }, { push: true })}
-                      className="shrink-0 text-ink-4 hover:text-ink"
-                    >
-                      Manage →
-                    </button>
-                  )}
-                </span>
-                <span className="num whitespace-nowrap text-[14px] text-ink">
-                  {l.balance.toLocaleString('en-US')}
-                  {delta !== null && delta !== 0 && (
-                    <span className={cn('ml-1 text-[10px]', delta > 0 ? 'text-ok' : 'text-bad')}>
-                      {delta > 0 ? '+' : ''}
-                      {delta.toLocaleString('en-US')}
-                    </span>
-                  )}
-                </span>
-              </div>
+              <MetricTile
+                key={l.id}
+                size="sm"
+                label={
+                  <span className="flex min-w-0 flex-wrap items-center justify-between gap-x-2">
+                    <span className="min-w-0">{l.name}</span>
+                    {last && (
+                      <ActionButton
+                        size="sm"
+                        variant="quiet"
+                        className="-my-2 -mr-2 shrink-0"
+                        onClick={() => setParams({ loyalty: '1' }, { push: true })}
+                      >
+                        Manage →
+                      </ActionButton>
+                    )}
+                  </span>
+                }
+                value={l.balance.toLocaleString('en-US')}
+                delta={
+                  delta !== null && delta !== 0
+                    ? `${delta > 0 ? '+' : ''}${delta.toLocaleString('en-US')}`
+                    : undefined
+                }
+                deltaTone={delta !== null && delta < 0 ? 'bad' : 'ok'}
+              />
             )
           })}
-        </div>
+        </MetricStrip>
       )}
 
-      <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-[28px] font-normal leading-none tracking-[-0.03em] text-ink">Travel</h1>
-          <p className="mt-2 hidden text-[13px] text-ink-3 md:block">
-            Upcoming trips in green, past in grey, wishlist dotted. Drag to rotate, scroll to zoom,
-            tap a pin to open it, double-click to fly in.
-          </p>
-        </div>
-        <div className="flex shrink-0 gap-2">
-          <button
-            type="button"
-            onClick={() => setParams({ new: 'wish', trip: null }, { push: true })}
-            className="whitespace-nowrap border border-rule-2 px-3 py-2 text-[12px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink"
-          >
-            Add to wishlist
-          </button>
-          <ActionButton variant="solid" size="xl" className="h-11 gap-2 px-3.5 text-[13px] md:h-[51px] md:px-[22px] md:text-[15px]" onClick={() => setParams({ new: 'trip', trip: null }, { push: true })}>
-            New trip <span aria-hidden="true">&rarr;</span>
-          </ActionButton>
-        </div>
-      </div>
-
-      <div data-testid="travel-globe" className="relative mt-[18px] h-[clamp(240px,38vh,420px)] border border-rule bg-bg-elev">
+      <div data-testid="travel-globe" className="relative mt-[18px] h-[clamp(240px,38vh,420px)] border border-rule bg-bg-elev rounded-[18px]">
         <Globe
           pins={pins}
           onPick={(id) => {
@@ -243,8 +254,8 @@ export function Travel({ data }: { data: TravelData }) {
           }}
           alert={
             data.alert && (
-              <div className="flex items-center gap-2.5 border border-warn bg-bg px-3 py-2">
-                <span className="label shrink-0 text-[9px] tracking-[0.08em] text-warn">Alert</span>
+              <div className="glass flex items-center gap-2.5 rounded-[18px] px-3 py-2 ring-1 ring-warn">
+                <StatusChip tone="warn">Alert</StatusChip>
                 <span className="min-w-0 text-[12px] text-ink">{data.alert.title}</span>
               </div>
             )
@@ -254,9 +265,9 @@ export function Travel({ data }: { data: TravelData }) {
 
       <div data-testid="travel-sections" className="mt-[18px] flex flex-col gap-5 pb-7">
         <section>
-          <SectionHead title="Upcoming" meta={upcoming.length === 0 ? 'nothing booked' : `${upcoming.length} ${upcoming.length === 1 ? 'trip' : 'trips'} · next in ${daysUntil(upcoming[0].startsOn ?? today, today)} days`} className="mb-3" />
+          <CardHead label="Upcoming" plainMeta meta={upcoming.length === 0 ? 'nothing booked' : `${upcoming.length} ${upcoming.length === 1 ? 'trip' : 'trips'} · next in ${daysUntil(upcoming[0].startsOn ?? today, today)} days`} className="mb-3" />
           {upcoming.length === 0 ? (
-            <p className="text-[12px] text-ink-4">No trip is planned. New trip starts one.</p>
+            <EmptyState headline="Nothing planned">No trip is planned. New trip starts one.</EmptyState>
           ) : (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))] gap-3.5">
               {upcoming.map((t) => {
@@ -272,11 +283,18 @@ export function Travel({ data }: { data: TravelData }) {
                         ? `Pack · ${toPack} ${toPack === 1 ? 'item' : 'items'} left`
                         : ''
                 return (
-                  <button
+                  <Card
                     key={t.id}
-                    type="button"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setParams({ trip: t.id, new: null }, { push: true })}
-                    className="border border-rule bg-bg-elev px-[18px] py-4 text-left transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-rule-2"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setParams({ trip: t.id, new: null }, { push: true })
+                      }
+                    }}
+                    className="cursor-pointer px-[18px] text-left transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-glass-strong"
                   >
                     <div className="flex items-start justify-between gap-2.5">
                       <div className="min-w-0">
@@ -286,9 +304,9 @@ export function Travel({ data }: { data: TravelData }) {
                         </span>
                       </div>
                       {t.startsOn && (
-                        <span className="num shrink-0 text-[18px] font-light leading-none text-brand">
+                        <span className="num shrink-0 text-[18px] font-light leading-none text-action">
                           {daysUntil(t.startsOn, today)}
-                          <span className="text-[10px] text-ink-3"> d</span>
+                          <span className="text-[11px] text-ink-3"> d</span>
                         </span>
                       )}
                     </div>
@@ -311,11 +329,11 @@ export function Travel({ data }: { data: TravelData }) {
                     </div>
                     {next && (
                       <div className="mt-2.5 truncate border-t border-rule pt-2.5 text-[12px] text-ink-2">
-                        <span className="text-ink-4">Next · </span>
+                        <span className="text-ink-3">Next · </span>
                         {next}
                       </div>
                     )}
-                  </button>
+                  </Card>
                 )
               })}
             </div>
@@ -324,56 +342,64 @@ export function Travel({ data }: { data: TravelData }) {
 
         <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,320px),1fr))] gap-5">
           <section>
-            <SectionHead title="Past" meta={`${past.length} ${past.length === 1 ? 'trip' : 'trips'} · ${money(pastSpend)} total`} className="mb-1.5" />
-            {past.length === 0 && <p className="py-2.5 text-[12px] text-ink-4">Nothing yet.</p>}
-            {past.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setParams({ trip: t.id, new: null }, { push: true })}
-                className="grid w-full grid-cols-[1fr_auto] gap-2.5 border-b border-rule py-2.5 text-left text-ink transition-colors duration-150 hover:text-brand"
-              >
-                <span className="min-w-0 text-[13px]">
-                  <span className="block">{t.name}</span>
-                  <span className="mt-0.5 block text-[11px] text-ink-3">
-                    {dateRange(t, today)} · {nights(t)} nights
-                  </span>
-                </span>
-                <span className="num whitespace-nowrap text-[12px] text-ink-3">{money(t.spentCents)}</span>
-              </button>
-            ))}
+            <CardHead label="Past" plainMeta meta={`${past.length} ${past.length === 1 ? 'trip' : 'trips'} · ${money(pastSpend)} total`} className="mb-3" />
+            {past.length === 0 ? (
+              <EmptyState headline="Nothing yet">A trip moves here once it is done.</EmptyState>
+            ) : (
+              <RowList>
+                {past.map((t) => (
+                  <Row
+                    key={t.id}
+                    title={t.name}
+                    meta={`${dateRange(t, today)} · ${nights(t)} nights`}
+                    amount={money(t.spentCents)}
+                    onClick={() => setParams({ trip: t.id, new: null }, { push: true })}
+                  />
+                ))}
+              </RowList>
+            )}
           </section>
 
           <section>
-            <SectionHead title="Wishlist" meta={`${wishlist.length} ${wishlist.length === 1 ? 'place' : 'places'}`} className="mb-1.5" />
-            {wishlist.length === 0 && <p className="py-2.5 text-[12px] text-ink-4">Nothing yet. Add to wishlist keeps a place for later.</p>}
-            {wishlist.map((w) => (
-              <div key={w.id} className="grid grid-cols-[1fr_auto] items-center gap-2.5 border-b border-rule py-2.5">
-                <button type="button" onClick={() => setParams({ trip: w.id, new: null }, { push: true })} className="min-w-0 text-left text-[13px] text-ink hover:text-brand">
-                  <span className="block">{w.name}</span>
-                  {w.notes && <span className="mt-0.5 block text-[11px] text-ink-3">{w.notes}</span>}
-                </button>
-                <div className="flex gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => run(() => setTripStatus(w.id, 'planned'), `${w.name} is planned`)}
-                    className="border border-brand px-[9px] py-1 text-[11px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg"
-                  >
-                    Plan
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`Remove ${w.name}`}
-                    onClick={() => {
-                      if (window.confirm(`Remove ${w.name} from the wishlist?`)) run(() => deleteTrip(w.id), 'Removed')
-                    }}
-                    className="border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-            ))}
+            <CardHead label="Wishlist" plainMeta meta={`${wishlist.length} ${wishlist.length === 1 ? 'place' : 'places'}`} className="mb-3" />
+            {wishlist.length === 0 ? (
+              <EmptyState headline="Nothing yet">Add to wishlist keeps a place for later.</EmptyState>
+            ) : (
+              <RowList>
+                {wishlist.map((w) => (
+                  <Row
+                    key={w.id}
+                    title={w.name}
+                    meta={w.notes || undefined}
+                    onClick={() => setParams({ trip: w.id, new: null }, { push: true })}
+                    right={
+                      <>
+                        <ActionButton
+                          size="sm"
+                          variant="accent"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            run(() => setTripStatus(w.id, 'planned'), `${w.name} is planned`)
+                          }}
+                        >
+                          Plan
+                        </ActionButton>
+                        <ActionButton
+                          size="sm"
+                          aria-label={`Remove ${w.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (window.confirm(`Remove ${w.name} from the wishlist?`)) run(() => deleteTrip(w.id), 'Removed')
+                          }}
+                        >
+                          ✕
+                        </ActionButton>
+                      </>
+                    }
+                  />
+                ))}
+              </RowList>
+            )}
           </section>
         </div>
       </div>
@@ -392,14 +418,5 @@ export function Travel({ data }: { data: TravelData }) {
       {openPlace && <PlaceDrawer place={openPlace} onClose={() => setParams({ place: null })} />}
       {loyaltyOpen && <LoyaltyDrawer loyalty={data.loyalty} onClose={() => setParams({ loyalty: null })} />}
     </>
-  )
-}
-
-function SectionHead({ title, meta, className }: { title: string; meta: string; className?: string }) {
-  return (
-    <div className={cn('flex items-baseline justify-between border-b border-rule-2 pb-2', className)}>
-      <span className="text-[15px] text-ink">{title}</span>
-      <span className="num text-[11px] text-ink-3">{meta}</span>
-    </div>
   )
 }

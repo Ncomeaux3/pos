@@ -1,7 +1,7 @@
 'use client'
 
 import { useTransition } from 'react'
-import { Switch, useToast } from '@/components/pos'
+import { MetricStrip, Switch, useToast } from '@/components/pos'
 import type { Channel } from '@/core/notification-rules'
 import { cn } from '@/lib/utils'
 import type { CellState } from './ChannelGrid'
@@ -21,12 +21,12 @@ export function Channels({
   const toast = useToast()
 
   return (
-    <div className="mt-3 grid gap-px border border-rule bg-rule sm:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
+    <MetricStrip className="mt-3 sm:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
       {channels.map((c) => (
-        <div key={c.value} className="flex items-center justify-between gap-2.5 bg-bg px-3.5 py-3">
+        <div key={c.value} className="flex items-center justify-between gap-2.5 px-3.5 py-3">
           <span>
             <span className="block text-[13px] text-ink">{c.label}</span>
-            <span className="text-[11px] text-ink-3">{c.sub}</span>
+            <span className="t-caption text-ink-3">{c.sub}</span>
           </span>
           <Switch
             label={c.label}
@@ -43,6 +43,6 @@ export function Channels({
           />
         </div>
       ))}
-    </div>
+    </MetricStrip>
   )
 }

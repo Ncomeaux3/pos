@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ComeauxverseLockup, Eyebrow, fieldClass } from '@/components/pos'
+import { Eyebrow, HolonLockup, fieldClass } from '@/components/pos'
 import { sendCode, verifyCode } from './actions'
 import { CodeInput } from './CodeInput'
 import { Countdown } from './Countdown'
@@ -22,14 +22,14 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      {/* The artboard's top band: the lockup, and what this install is. */}
-      <header className="flex h-14 shrink-0 flex-wrap items-center justify-between gap-3 px-7">
-        <ComeauxverseLockup className="h-5 text-ink" />
-        <Eyebrow dot="brand">POS · single owner · v0.1</Eyebrow>
+      {/* The top band: the lockup, and what this install is. */}
+      <header className="flex h-16 shrink-0 flex-wrap items-center justify-between gap-3 px-7">
+        <HolonLockup size={32} />
+        <Eyebrow>Single owner</Eyebrow>
       </header>
 
       <main className="grid flex-1 place-items-center p-6">
-      <div className="w-full max-w-[440px] border border-rule-2 bg-bg-elev p-9 pb-7">
+      <div className="glass w-full max-w-[440px] rounded-[24px] p-9 pb-7">
         {sent ? (
           <div className="space-y-5">
             <div className="space-y-3">
@@ -54,12 +54,12 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
               */}
             <form action={verifyCode} className="space-y-3">
               <input type="hidden" name="email" value={email} />
-              <label htmlFor="code" className="label block text-[10px] tracking-[0.1em] text-ink-3">
+              <label htmlFor="code" className="label block text-ink-3">
                 Sign in code
               </label>
               <CodeInput invalid={error === 'code'} />
               {error === 'code' && (
-                <p className="label text-[10px] tracking-[0.1em] text-bad">
+                <p className="label text-bad">
                   That code is wrong or expired. Enter all of it, or ask for another.
                 </p>
               )}
@@ -69,7 +69,7 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
             </form>
 
             <div className="flex items-baseline justify-between border-y border-rule py-3">
-              <span className="label text-[10px] tracking-[0.1em] text-ink-3">Expires</span>
+              <span className="label text-ink-3">Expires</span>
               <span className="num text-[13px]">
                 <Countdown seconds={CODE_TTL_SECONDS} />
               </span>
@@ -83,14 +83,14 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
                 <input type="hidden" name="email" value={email} />
                 <button
                   type="submit"
-                  className="label text-[10px] tracking-[0.1em] text-ink-3 transition-colors hover:text-ink"
+                  className="label text-ink-3 transition-colors hover:text-ink"
                 >
                   Resend
                 </button>
               </form>
             </div>
 
-            <p className="t-caption text-ink-4">
+            <p className="t-caption text-ink-3">
               The same email carries a link. It signs in the browser that opens it, so use it on
               the machine that asked and the code everywhere else.
             </p>
@@ -101,8 +101,8 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
               * you are signing in to is the heading. */}
             <div className="space-y-3">
               <Eyebrow>Sign in</Eyebrow>
-              <h1 className="text-[30px] font-normal leading-[1.05] tracking-[-0.03em] text-ink">
-                Personal Operating System
+              <h1 className="text-[36px] font-semibold leading-[1.05] tracking-[-0.03em] text-ink">
+                Your life. One system.
               </h1>
               <p className="t-caption text-ink-3">
                 One owner, one login. Use the passkey on this device, or have a sign in code sent
@@ -118,7 +118,7 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
               <div className="space-y-1.5">
                 <label
                   htmlFor="email"
-                  className="label block text-[10px] tracking-[0.1em] text-ink-3"
+                  className="label block text-ink-3"
                 >
                   Owner email
                 </label>
@@ -139,18 +139,18 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
                   />
                 </div>
                 {error === 'invalid' && (
-                  <p className="label text-[10px] tracking-[0.1em] text-bad">
+                  <p className="label text-bad">
                     Enter a valid email
                   </p>
                 )}
                 {error === 'expired' && (
-                  <p className="label text-[10px] tracking-[0.1em] text-bad">
+                  <p className="label text-bad">
                     That link expired, or it opened in a different browser than the one that asked
                     for it. Send a code instead.
                   </p>
                 )}
                 {error === 'missing_code' && (
-                  <p className="label text-[10px] tracking-[0.1em] text-bad">
+                  <p className="label text-bad">
                     That link was incomplete. Send a code instead.
                   </p>
                 )}
@@ -162,10 +162,10 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
             </form>
 
             <div className="flex flex-wrap justify-between gap-2 border-t border-rule pt-3">
-              <span className="label text-[10px] tracking-[0.1em] text-ink-4">
+              <span className="label text-ink-3">
                 Code expires in 15 min
               </span>
-              <span className="label text-[10px] tracking-[0.1em] text-ink-4">
+              <span className="label text-ink-3">
                 No passwords · no signup
               </span>
             </div>

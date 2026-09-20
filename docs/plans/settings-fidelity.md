@@ -1,5 +1,8 @@
 # Settings to the artboard
 
+Superseded for styling on 2026-09-19 by the Holon redesign (docs/plans/holon-product-redesign.md, section 4): colour, type, radii, surfaces and control shapes now come from the Holon design contract and the shared components in `components/pos/`. This plan still governs what each screen shows and how it is laid out.
+
+
 ## Context
 
 Screen thirteen of the fidelity pass (method: docs/plans/weekly-review-fidelity.md). `POS Settings.dc.html` captured at 1440 into `/private/tmp/pos-handoff-sources/settings/` (Connections dark and light, General dark and light, Agents & MCP, Notifications, Skills). The other session is on Home in a worktree; Settings lives under `app/(app)/settings/` with shared primitives it does not touch. This pass edits those five routes, `tabs.tsx`, two additive lines in `components/pos/TabBar.tsx` (a `tabClassName` on `TabLinks`, matching `TabBar`) and `core/mcp.ts` (`listTools()` with descriptions), plus the settings e2e tests.

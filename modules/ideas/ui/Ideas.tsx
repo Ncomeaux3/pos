@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { useToast, type SkillLink } from '@/components/pos'
+import { Card, Chip, StatusChip, TabBar, useToast, type ChipTone, type SkillLink } from '@/components/pos'
+import { actionButtonBase, actionButtonSizes, actionButtonVariants } from '@/components/pos/Button'
+import { fieldClass } from '@/components/pos/field'
 import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
 import { boardScore, parseCapture, quadrant, type Level, type Quadrant } from '../quadrant'
@@ -53,22 +55,22 @@ export type IdeasData = {
 export type Stage = 'exploring' | 'validated' | 'building' | 'killed'
 export const STAGES: { key: Stage; label: string; className: string }[] = [
   { key: 'exploring', label: 'Exploring', className: 'text-ink' },
-  { key: 'validated', label: 'Validated', className: 'text-brand' },
-  { key: 'building', label: 'Building', className: 'text-ok' },
-  { key: 'killed', label: 'Killed', className: 'text-ink-4' },
+  { key: 'validated', label: 'Validated', className: 'text-ink' },
+  { key: 'building', label: 'Building', className: 'text-ink' },
+  { key: 'killed', label: 'Killed', className: 'text-ink-3' },
 ]
 
 export const QUADRANT_TEXT: Record<Quadrant, string> = {
-  'quick-win': 'QUICK WIN',
-  'big-bet': 'BIG BET',
-  filler: 'FILL-IN',
-  'money-pit': 'MONEY PIT',
+  'quick-win': 'Quick win',
+  'big-bet': 'Big bet',
+  filler: 'Fill-in',
+  'money-pit': 'Money pit',
 }
-export const QUADRANT_CLASS: Record<Quadrant, string> = {
-  'quick-win': 'text-ok border-ok',
-  'big-bet': 'text-brand border-brand',
-  filler: 'text-ink-3 border-ink-3',
-  'money-pit': 'text-bad border-bad',
+const QUADRANT_TONE: Record<Quadrant, ChipTone> = {
+  'quick-win': 'ok',
+  'big-bet': 'brand',
+  filler: 'quiet',
+  'money-pit': 'bad',
 }
 export const QUADRANT_BG: Record<Quadrant, string> = {
   'quick-win': 'bg-ok',
@@ -78,16 +80,13 @@ export const QUADRANT_BG: Record<Quadrant, string> = {
 }
 export const LEVEL_TEXT: Record<Level, string> = { 1: 'Low', 2: 'Med', 3: 'High' }
 
-export const ghost =
-  'shrink-0 whitespace-nowrap border border-rule-2 px-3 py-2 text-[12px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink'
-export const ghostAccent =
-  'shrink-0 whitespace-nowrap border border-brand px-3 py-2 text-[12px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg'
-export const mini =
-  'shrink-0 whitespace-nowrap border border-rule-2 px-[9px] py-1 text-[11px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink'
-export const miniAccent =
-  'shrink-0 whitespace-nowrap border border-brand px-[9px] py-1 text-[11px] text-ink transition-colors duration-150 hover:bg-brand hover:text-bg'
-export const field =
-  'w-full min-w-0 border border-rule-2 bg-bg px-3 py-[9px] text-[13px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand'
+// The button system's pills, as Board.tsx composes them: md for a row of
+// actions, sm inline in a card or a band.
+export const ghost = cn(actionButtonBase, actionButtonSizes.md, actionButtonVariants.outline)
+export const ghostAccent = cn(actionButtonBase, actionButtonSizes.md, actionButtonVariants.accent)
+export const mini = cn(actionButtonBase, actionButtonSizes.sm, actionButtonVariants.outline)
+export const miniAccent = cn(actionButtonBase, actionButtonSizes.sm, actionButtonVariants.brand)
+export const field = fieldClass
 
 /** The artboard's 30 by 6 three-segment bar, filled to the level. */
 export function LevelBar({ level, tone }: { level: Level; tone: 'brand' | 'ink' }) {
@@ -106,12 +105,12 @@ export function LevelBar({ level, tone }: { level: Level; tone: 'brand' | 'ink' 
   )
 }
 
-/** The outlined quadrant mark. */
+/** The quadrant mark: a state chip, so a colour always comes with its word. */
 export function QuadrantPill({ q, className }: { q: Quadrant; className?: string }) {
   return (
-    <span className={cn('num shrink-0 whitespace-nowrap border px-1.5 py-0.5 text-[9px] tracking-[0.08em]', QUADRANT_CLASS[q], className)}>
+    <StatusChip tone={QUADRANT_TONE[q]} className={cn('shrink-0 whitespace-nowrap', className)}>
       {QUADRANT_TEXT[q]}
-    </span>
+    </StatusChip>
   )
 }
 
@@ -130,27 +129,21 @@ export function IdeasCrumb() {
   )
 }
 
-/** Board | Effort × impact, the ink-filled segment beside the title. */
+/** Board | Effort × impact, the segmented control Tasks uses for its views. */
 export function ViewSwitch() {
   const { params, setParams } = useParams()
   const view = params.get('view') === 'matrix' ? 'matrix' : 'board'
   return (
-    <div className="flex shrink-0 border border-rule-2">
-      {(['board', 'matrix'] as const).map((v) => (
-        <button
-          key={v}
-          type="button"
-          aria-pressed={view === v}
-          onClick={() => setParams({ view: v === 'board' ? null : v })}
-          className={cn(
-            'px-3.5 py-2 text-[12px] transition-colors duration-150',
-            view === v ? 'bg-ink text-bg' : 'text-ink-3 hover:text-ink',
-          )}
-        >
-          {v === 'board' ? 'Board' : 'Effort × impact'}
-        </button>
-      ))}
-    </div>
+    <TabBar
+      label="View"
+      value={view}
+      onChange={(v) => setParams({ view: v === 'board' ? null : v })}
+      tabs={[
+        { value: 'board', label: 'Board' },
+        { value: 'matrix', label: 'Effort × impact' },
+      ]}
+      className="shrink-0"
+    />
   )
 }
 
@@ -200,28 +193,31 @@ export function Ideas({ data }: { data: IdeasData }) {
           onChange={(e) => setDraft(e.target.value)}
           aria-label="Capture an idea"
           placeholder="Capture an idea… add #tags, effort:low impact:high"
-          className="min-w-0 flex-1 basis-[240px] border border-rule-2 bg-bg-elev px-3.5 py-[11px] text-[14px] text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand"
+          className={cn(fieldClass, 'min-w-0 flex-1 basis-[240px] md:text-[14px]')}
         />
-        <button type="submit" className={ghostAccent}>
-          Add
-        </button>
-        <button
-          type="button"
-          className={ghost}
-          onClick={() => {
-            const parsed = parseCapture(draft)
-            setParams({ idea: 'new', edit: null, title: parsed.title || null }, { push: true })
-            setDraft('')
-          }}
-        >
-          Full form
-        </button>
+        {/* The two buttons wrap together under the field on a phone. */}
+        <div className="flex gap-2">
+          <button type="submit" className={ghostAccent}>
+            Add
+          </button>
+          <button
+            type="button"
+            className={ghost}
+            onClick={() => {
+              const parsed = parseCapture(draft)
+              setParams({ idea: 'new', edit: null, title: parsed.title || null }, { push: true })
+              setDraft('')
+            }}
+          >
+            Full form
+          </button>
+        </div>
       </form>
 
       {pairA && pairB && !dismissed && (
-        <div className="mt-3.5 flex flex-wrap items-center justify-between gap-3.5 border border-brand px-3.5 py-2.5 duration-300 animate-in fade-in">
+        <Card selected className="mt-3.5 flex flex-wrap items-center justify-between gap-3.5 px-3.5 py-2.5 duration-300 animate-in fade-in">
           <div className="flex min-w-0 items-center gap-2.5">
-            <span className="num shrink-0 text-[9px] tracking-[0.08em] text-brand">AGENT</span>
+            <StatusChip tone="brand">Agent</StatusChip>
             <span className="min-w-0 text-[13px] text-ink-2">
               Similar ideas: <span className="text-ink">{pairA.title}</span> and{' '}
               <span className="text-ink">{pairB.title}</span> · {Math.round(data.pair!.similarity * 100)}% overlap
@@ -239,7 +235,7 @@ export function Ideas({ data }: { data: IdeasData }) {
               Keep separate
             </button>
           </div>
-        </div>
+        </Card>
       )}
 
       <div className="pt-[18px]">
@@ -267,13 +263,13 @@ export function Ideas({ data }: { data: IdeasData }) {
                     run(() => saveIdea({ id, stage: stage.key }), `Moved to ${stage.label}`)
                   }}
                 >
-                  <div className="flex items-baseline justify-between border-b border-rule-2 px-1 pb-2.5">
-                    <span className={cn('text-[14px]', stage.className)}>{stage.label}</span>
-                    <span className="num text-[11px] text-ink-3">{list.length}</span>
+                  <div className="flex items-baseline justify-between gap-3 px-1 pb-2.5">
+                    <h2 className={cn('text-[15px] font-semibold leading-tight', stage.className)}>{stage.label}</h2>
+                    <span className="num text-[13px] text-ink-3">{list.length}</span>
                   </div>
                   <div className="flex flex-col gap-2 pt-2.5">
                     {list.map((idea) => (
-                      <Card
+                      <IdeaCard
                         key={idea.id}
                         idea={idea}
                         onOpen={() => openIdea(idea.id)}
@@ -285,7 +281,7 @@ export function Ideas({ data }: { data: IdeasData }) {
                       />
                     ))}
                     {list.length === 0 && (
-                      <div className={cn('border border-dashed p-[18px] text-center text-[12px] text-ink-4', dragging ? 'border-brand' : 'border-rule')}>
+                      <div className={cn('border border-dashed p-[18px] text-center text-[12px] text-ink-4 rounded-[18px]', dragging ? 'border-brand' : 'border-rule')}>
                         Drop here
                       </div>
                     )}
@@ -315,7 +311,7 @@ export function Ideas({ data }: { data: IdeasData }) {
   )
 }
 
-function Card({
+function IdeaCard({
   idea,
   onOpen,
   onDragStart,
@@ -329,23 +325,24 @@ function Card({
   const q = quadrant(idea.effort, idea.impact)
   const killed = idea.stage === 'killed'
   return (
-    <article
+    <Card
+      as="article"
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onOpen}
-      className="min-w-0 cursor-grab border border-rule bg-bg-elev px-3.5 py-3 transition-[border-color,transform] duration-150 hover:-translate-y-px hover:border-rule-2 active:cursor-grabbing"
+      className="lift min-w-0 cursor-grab px-3.5 py-3 active:cursor-grabbing"
     >
       <button type="button" className={cn('block text-left text-[13.5px] leading-[1.35] tracking-[-0.01em]', killed ? 'text-ink-3' : 'text-ink')}>
         {idea.title}
       </button>
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <QuadrantPill q={q} />
-        <span className="num inline-flex items-center gap-1 text-[9px] tracking-[0.06em] text-ink-3" title="Impact">
-          IMPACT <LevelBar level={idea.impact} tone="brand" />
+        <span className="label inline-flex items-center gap-1.5 text-ink-3" title="Impact">
+          Impact <LevelBar level={idea.impact} tone="brand" />
         </span>
-        <span className="num inline-flex items-center gap-1 text-[9px] tracking-[0.06em] text-ink-3" title="Effort">
-          EFFORT <LevelBar level={idea.effort} tone="ink" />
+        <span className="label inline-flex items-center gap-1.5 text-ink-3" title="Effort">
+          Effort <LevelBar level={idea.effort} tone="ink" />
         </span>
       </div>
       {(idea.pitch || (killed && idea.killedReason)) && (
@@ -356,29 +353,29 @@ function Card({
       {(idea.tags.length > 0 || idea.skills.length > 0) && (
         <div className="mt-2.5 flex flex-wrap items-center gap-1">
           {idea.tags.map((t) => (
-            <span key={t} className="num border border-rule px-[5px] py-px text-[9.5px] text-ink-3">
+            <Chip key={t} tone="quiet" className="num px-2 py-1 text-[11px]">
               #{t}
-            </span>
+            </Chip>
           ))}
           {idea.skills.map((s) => (
-            <span key={s.id} className="num border border-brand-soft px-[5px] py-px text-[9.5px] text-brand">
+            <Chip key={s.id} tone="brand" className="px-2 py-1 text-[11px]">
               {s.name}
-            </span>
+            </Chip>
           ))}
         </div>
       )}
-      <div className={cn('mt-2.5 flex justify-between text-[10.5px]', idea.stale ? 'text-warn' : 'text-ink-4')}>
+      <div className={cn('t-caption mt-2.5 flex justify-between', idea.stale ? 'text-warn' : 'text-ink-3')}>
         <span>
-          {idea.stale ? 'STALE · ' : ''}
+          {idea.stale ? 'Stale · ' : ''}
           {idea.daysInStage}d in stage
         </span>
         {idea.related.length > 0 && (
-          <span className="text-ink-4">
+          <span className="text-ink-3">
             {idea.related.length} {idea.related.length === 1 ? 'note' : 'notes'}
           </span>
         )}
       </div>
-    </article>
+    </Card>
   )
 }
 
@@ -404,7 +401,7 @@ function Matrix({
         Impact →
       </div>
 
-      <div className="relative min-h-[420px] border border-rule-2">
+      <Card className="relative min-h-[420px] p-0">
         <div className="absolute inset-x-0 top-1/2 h-px bg-rule" aria-hidden />
         <div className="absolute inset-y-0 left-1/2 w-px bg-rule" aria-hidden />
 
@@ -435,16 +432,16 @@ function Matrix({
                 top: `calc(${(3 - idea.impact) * 33 + 17}% + ${jitter * 0.6}px)`,
               }}
               className={cn(
-                'absolute flex max-w-[220px] -translate-x-1/2 -translate-y-1/2 items-center gap-2 border bg-bg-elev px-2.5 py-1.5 text-left transition-colors duration-150',
+                'absolute flex max-w-[min(220px,34%)] -translate-x-1/2 -translate-y-1/2 items-center gap-2 border bg-bg-elev px-2.5 py-1.5 text-left transition-colors duration-150 rounded-full',
                 openId === idea.id ? 'z-[2] border-brand' : 'border-rule-2 hover:z-[3] hover:border-ink',
               )}
             >
               <span aria-hidden className={cn('size-2 shrink-0', QUADRANT_BG[q])} />
-              <span className="max-w-[180px] truncate text-[11px] text-ink">{idea.title}</span>
+              <span className="min-w-0 truncate text-[11px] text-ink">{idea.title}</span>
             </button>
           )
         })}
-      </div>
+      </Card>
 
       <span />
       <div className="eyebrow text-center text-ink-3">Effort →</div>

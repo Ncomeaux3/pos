@@ -1,5 +1,8 @@
 # Tasks to the artboard
 
+Superseded for styling on 2026-09-19 by the Holon redesign (docs/plans/holon-product-redesign.md, section 4): colour, type, radii, surfaces and control shapes now come from the Holon design contract and the shared components in `components/pos/`. This plan still governs what each screen shows and how it is laid out.
+
+
 ## Context
 
 Screen six of the fidelity pass (method: docs/plans/weekly-review-fidelity.md). `POS Tasks.dc.html` captured at 1440 into `/private/tmp/pos-handoff-sources/tasks/` (Today, By goal, By project, Calendar, Review, Done, and Today with a row expanded). The app already has the right bones (URL view tabs, quick add parser, `columnsFor`, month grid, a drawer, `write`/`complete`/`approve` tools). What differs: a title block the artboard does not have, the band's right-hand count, the quick-add row's exact shape, the tab row's style and order (Calendar sits before Review), the column card and its rows (chips, EDIT mini, expand in place), no delete anywhere, no skill links on screen, and a field-by-field-on-blur drawer where the artboard has a form with Save and Delete.

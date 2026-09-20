@@ -114,13 +114,9 @@ export function PlanDrawer({ plan, onClose }: { plan: Plan | null; onClose: () =
       }
       footer={
         <>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-[13px] text-ink-3 transition-colors duration-150 hover:text-ink"
-          >
+          <ActionButton variant="outline" size="md" onClick={onClose}>
             Cancel
-          </button>
+          </ActionButton>
           <ActionButton variant="solid" disabled={invalid || pending} onClick={save}>
             Save plan
           </ActionButton>
@@ -196,14 +192,15 @@ export function PlanDrawer({ plan, onClose }: { plan: Plan | null; onClose: () =
                     maxLength={200}
                     className={fieldClass}
                   />
-                  <button
-                    type="button"
+                  <ActionButton
+                    variant="quiet"
+                    size="sm"
                     aria-label={`Remove exercise ${i + 1}`}
                     onClick={() => setItems((rows) => rows.filter((r) => r.key !== row.key))}
-                    className="self-center text-[13px] text-ink-3 transition-colors duration-150 hover:text-bad"
+                    className="self-center"
                   >
                     &#10005;
-                  </button>
+                  </ActionButton>
                 </div>
                 <div className="grid grid-cols-3 gap-1.5">
                   <label className="flex items-center gap-1.5 text-[11px] text-ink-3">
@@ -243,13 +240,14 @@ export function PlanDrawer({ plan, onClose }: { plan: Plan | null; onClose: () =
               </div>
             ))}
           </div>
-          <button
-            type="button"
+          <ActionButton
+            variant="outline"
+            size="sm"
+            className="mt-2"
             onClick={() => setItems((rows) => [...rows, blankItem()])}
-            className="mt-2 text-[13px] text-ink-3 transition-colors duration-150 hover:text-ink"
           >
             + Add exercise
-          </button>
+          </ActionButton>
         </div>
 
         <p className="text-[11px] leading-[1.5] text-ink-2">

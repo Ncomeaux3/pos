@@ -24,7 +24,7 @@ export function sendingAllowed(): boolean {
  * only to its own signup address (verified 2026-09-05). That is exactly the
  * digest, so Phase 1 needs no domain. Set RESEND_FROM once you verify one.
  */
-export const DEFAULT_FROM = 'POS <onboarding@resend.dev>'
+export const DEFAULT_FROM = 'Holon <onboarding@resend.dev>'
 
 export async function sendEmail(args: {
   to: string

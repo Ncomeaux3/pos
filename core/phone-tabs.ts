@@ -4,7 +4,7 @@ import type { NavItem } from './nav'
 // because the tab bar is a client component and core/nav.ts reads the database.
 
 /** The last phone tab: the page that lists everything the bar has no room for. */
-export const BROWSE: NavItem = { href: '/browse', label: 'Browse', code: '··' }
+export const BROWSE: NavItem = { href: '/browse', label: 'Browse', group: 'utilities' }
 
 /**
  * The three the phone gets by name, then Browse. Filtered against the nav
@@ -21,9 +21,5 @@ export function phoneTabs(nav: NavItem[]): NavItem[] {
     (n): n is NavItem => n !== undefined,
   )
   const spare = nav.filter((n) => !wanted.includes(n) && n.href !== '/review')
-  return [...wanted, ...spare]
-    .slice(0, PHONE_TABS.length)
-    // The rail says Dashboard; the phone's first tab is Home, as decision 3 has it.
-    .map((n) => (n.href === '/' ? { ...n, label: 'Home' } : n))
-    .concat(BROWSE)
+  return [...wanted, ...spare].slice(0, PHONE_TABS.length).concat(BROWSE)
 }

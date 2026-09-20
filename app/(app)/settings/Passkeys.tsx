@@ -27,7 +27,7 @@ export async function Passkeys() {
       {off ? (
         <p className="t-caption text-ink-3">
           Passkeys are not switched on for this Supabase project. Turn on Authentication &gt;
-          Passkeys and set the relying party to the domain POS is served from, then this becomes a
+          Passkeys and set the relying party to the domain Holon is served from, then this becomes a
           button. Signing in with a code by email is unaffected either way.
         </p>
       ) : (
@@ -58,7 +58,7 @@ export async function Passkeys() {
       )}
 
       <p className="t-caption text-ink-3">
-        A passkey is bound to the domain it was created on. Moving POS to another domain makes
+        A passkey is bound to the domain it was created on. Moving Holon to another domain makes
         every passkey here unusable and each one has to be added again, so add them after the
         domain is settled. The email code is the way back in if a device is lost.
       </p>

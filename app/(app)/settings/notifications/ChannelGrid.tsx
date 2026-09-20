@@ -1,7 +1,7 @@
 'use client'
 
 import { useTransition } from 'react'
-import { Switch, useToast } from '@/components/pos'
+import { DataRow, DataTable, Switch, useToast } from '@/components/pos'
 import type { Channel } from '@/core/notification-rules'
 import { cn } from '@/lib/utils'
 import { setModuleChannel, setModuleDigest } from './actions'
@@ -35,7 +35,9 @@ export function ChannelGrid({ rows, paused }: { rows: ModuleRow[]; paused: boole
     })
 
   const cell = (row: ModuleRow, state: CellState, label: string, write: (on: boolean) => void) => (
-    <div className="flex items-center justify-center">
+    <div className="flex items-center gap-2 lg:justify-center">
+      {/* Below lg the head is hidden, so the switch names its channel. */}
+      <span className="label w-14 text-ink-3 lg:hidden">{label}</span>
       <Switch
         label={`${label} for ${row.label}`}
         disabled={pending}
@@ -46,49 +48,60 @@ export function ChannelGrid({ rows, paused }: { rows: ModuleRow[]; paused: boole
     </div>
   )
 
+  // The three switch columns are headed by their channel; the phone drops the
+  // head, so each switch keeps its own "Digest for Finance" name.
   return (
-    <div className="overflow-x-auto">
-      <div className="min-w-[520px]">
-        <div className="mt-2 grid grid-cols-[1.2fr_repeat(3,48px)_1.6fr] items-center gap-x-3.5 border-b border-rule-2 py-2 text-[10px] tracking-[0.08em] text-ink-3">
-          <span>MODULE</span>
-          <span className="text-center">DIGEST</span>
-          <span className="text-center">PUSH</span>
-          <span className="text-center">IN-APP</span>
-          <span>WHAT TRIGGERS IT</span>
-        </div>
+    <DataTable
+      className="mt-2"
+      cols="1.2fr repeat(3, 56px) 1.6fr"
+      head={[
+        'Module',
+        <span key="d" className="block text-center">
+          Digest
+        </span>,
+        <span key="p" className="block text-center">
+          Push
+        </span>,
+        <span key="i" className="block text-center">
+          In-app
+        </span>,
+        'What triggers it',
+      ]}
+    >
+      {rows.map((row) => (
+        <DataRow
+          key={row.id}
+          // Below lg: a stacked card (module, three named switches, the
+          // triggers) rather than DataRow's first-and-last-on-one-line reflow,
+          // which put a switch over the trigger text.
+          className="text-[13px] max-lg:flex max-lg:flex-col max-lg:gap-2"
+        >
+          <span className={cn('min-w-0 truncate', paused ? 'text-ink-3' : 'text-ink')}>{row.label}</span>
 
-        {rows.map((row) => (
-          <div
-            key={row.id}
-            className="grid grid-cols-[1.2fr_repeat(3,48px)_1.6fr] items-center gap-x-3.5 border-b border-rule py-2.5 text-[13px]"
-          >
-            <span className={cn('min-w-0 truncate', paused ? 'text-ink-3' : 'text-ink')}>{row.label}</span>
+          {cell(row, row.digest, 'Digest', (on) =>
+            run(
+              () => setModuleDigest(row.id, on),
+              on
+                ? `${row.label} batches into the morning digest.`
+                : `${row.label} delivers immediately.`,
+            ),
+          )}
+          {cell(row, row.push, 'Push', (on) =>
+            run(
+              () => setModuleChannel(row.id, 'push' satisfies Channel, on),
+              `Push ${on ? 'on' : 'off'} for ${row.label}.`,
+            ),
+          )}
+          {cell(row, row.inapp, 'In-app', (on) =>
+            run(
+              () => setModuleChannel(row.id, 'inapp' satisfies Channel, on),
+              `In-app ${on ? 'on' : 'off'} for ${row.label}.`,
+            ),
+          )}
 
-            {cell(row, row.digest, 'Digest', (on) =>
-              run(
-                () => setModuleDigest(row.id, on),
-                on
-                  ? `${row.label} batches into the morning digest.`
-                  : `${row.label} delivers immediately.`,
-              ),
-            )}
-            {cell(row, row.push, 'Push', (on) =>
-              run(
-                () => setModuleChannel(row.id, 'push' satisfies Channel, on),
-                `Push ${on ? 'on' : 'off'} for ${row.label}.`,
-              ),
-            )}
-            {cell(row, row.inapp, 'In-app', (on) =>
-              run(
-                () => setModuleChannel(row.id, 'inapp' satisfies Channel, on),
-                `In-app ${on ? 'on' : 'off'} for ${row.label}.`,
-              ),
-            )}
-
-            <p className="min-w-0 text-[11px] text-ink-3">{row.triggers}</p>
-          </div>
-        ))}
-      </div>
-    </div>
+          <p className="t-caption min-w-0 text-ink-3 max-lg:text-left!">{row.triggers}</p>
+        </DataRow>
+      ))}
+    </DataTable>
   )
 }

@@ -5,7 +5,7 @@ import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
 import { deleteTask, findOrCreateProject, listByGoal, patchProject, patchTask } from './data'
 import { nightlyDigest, rollCounts, rollForward } from './jobs/nightly-digest'
-import { dueLabel, loadLabel, slipMeta } from './shape'
+import { dueLabel, hoursLabel, loadLabel, slipMeta } from './shape'
 import TasksPage from './ui/TasksPage'
 import { TasksTile } from './ui/Tile'
 
@@ -346,12 +346,16 @@ export default defineModule({
 
   /** See ModuleManifest.tile: the module says how its own numbers read. */
   tile: TasksTile,
-  // "Tasks · today" over "0 of 4 done", the artboard's head for this tile.
+  // "Today" over "0 of 4 done, about 2 h": the count and the planned time
+  // beside the section's heading.
   tileHead: (payload) => {
     const n = (key: string) => (typeof payload[key] === 'number' ? (payload[key] as number) : 0)
+    const planned = n('plannedMinutes')
     return {
-      label: 'Tasks · today',
-      meta: `${n('completedToday')} of ${n('dueToday') + n('completedToday')} done`,
+      label: 'Today',
+      meta:
+        `${n('completedToday')} of ${n('dueToday') + n('completedToday')} done` +
+        (planned > 0 ? `, about ${hoursLabel(planned)}` : ''),
     }
   },
 
