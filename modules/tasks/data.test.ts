@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from '@/core/db'
-import { listByGoal, listTasks } from './data'
+import { listByGoal, listTasks, patchTask } from './data'
 
 // Against pos_test, because the thing worth proving is one SQL expression:
 // coalesce(task.goal_ref, project.goal_ref). The board and the Goals drawer
@@ -25,7 +25,31 @@ async function task(title: string, projectId: string | null, goalRef: string | n
 beforeEach(async () => {
   await db().query('delete from tasks.task')
   await db().query('delete from tasks.project')
-  await db().query(`delete from core.entities where module = 'goals'`)
+  await db().query(`delete from core.entities where module in ('goals', 'tasks')`)
+})
+
+describe('patchTask', () => {
+  // v1.2 phase 1b: the Skill Tree listed a completion under a title the owner
+  // had since changed, because the registry row kept the name from creation.
+  it('renames the registry row with the task', async () => {
+    const { rows } = await db().query<{ id: string }>(
+      `insert into tasks.task (title) values ('POS Skills Version 1.3') returning id`,
+    )
+    const id = rows[0].id
+    await db().query(
+      `insert into core.entities (module, entity_type, entity_id, title)
+       values ('tasks', 'task', $1, 'POS Skills Version 1.3')`,
+      [id],
+    )
+
+    await patchTask(id, { title: 'Skill Tree v2 spec' })
+
+    const entity = await db().query<{ title: string }>(
+      `select title from core.entities where module = 'tasks' and entity_type = 'task' and entity_id = $1`,
+      [id],
+    )
+    expect(entity.rows[0].title).toBe('Skill Tree v2 spec')
+  })
 })
 
 describe('a project linked to a goal', () => {

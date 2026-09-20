@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { balance, compactMoney, monthPace, percent, signedMoney, transactionAmount } from './money'
+import { balance, budgetTone, compactMoney, monthPace, percent, signedMoney, transactionAmount } from './money'
 
 describe('money rendering', () => {
   it('separates a debt from a fall, because the same glyph means two things', () => {
@@ -35,6 +35,26 @@ describe('percent', () => {
 
   it('caps, because a bar cannot be four thousand percent long', () => {
     expect(percent(4_000_000, 1000)).toBe(999)
+  })
+
+  it('floors at zero: a month of refunds is not negative use', () => {
+    expect(percent(-4000, 20_000)).toBe(0)
+  })
+})
+
+describe('budgetTone', () => {
+  it('reads under, near and over the limit in three tones', () => {
+    expect(budgetTone(12_400, 20_000, 80, false)).toEqual({ pct: 62, tone: 'ok', label: '62% used · $76 left' })
+    expect(budgetTone(17_600, 20_000, 80, false)).toEqual({ pct: 88, tone: 'warn', label: '88% used · $24 left' })
+    expect(budgetTone(43_600, 20_000, 80, false)).toEqual({ pct: 218, tone: 'bad', label: '218% used · $236 over' })
+  })
+
+  it('never shows a minus: a net credit month is 0% used', () => {
+    expect(budgetTone(-4000, 20_000, 80, false)).toEqual({ pct: 0, tone: 'ok', label: '0% used · $240 left' })
+  })
+
+  it('keeps a fixed cost calm at its limit', () => {
+    expect(budgetTone(20_000, 20_000, 80, true).tone).toBe('fixed')
   })
 })
 

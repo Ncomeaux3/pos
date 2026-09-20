@@ -25,6 +25,29 @@ export function annualCents(premiumCents: number, cadence: Cadence): number {
   return premiumCents * PER_YEAR[cadence]
 }
 
+export type TypeBreakdown = Record<string, { annualCents: number; active: number; expiring: number }>
+
+/**
+ * The digest's per-kind figures, so a reader such as Health can pick the
+ * kinds that are its business (health, dental, vision) and skip the car.
+ * Only active policies count; `expiring` is inside sixty days or already past.
+ */
+export function byType(
+  policies: { kind: string; status: string; premium_cents: number; cadence: string; expires_on: string | null }[],
+  todayIso: string,
+): TypeBreakdown {
+  const out: TypeBreakdown = {}
+  for (const p of policies) {
+    if (p.status !== 'active') continue
+    const row = (out[p.kind] ??= { annualCents: 0, active: 0, expiring: 0 })
+    row.annualCents += annualCents(p.premium_cents, p.cadence as Cadence)
+    row.active += 1
+    const status = policyStatus(p.expires_on, todayIso)
+    if (status === 'expired' || status === 'renew-now' || status === 'expiring') row.expiring += 1
+  }
+  return out
+}
+
 export const CADENCE_LABELS: Record<Cadence, string> = {
   monthly: 'Monthly',
   quarterly: 'Quarterly',

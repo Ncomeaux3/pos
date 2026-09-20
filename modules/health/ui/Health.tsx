@@ -458,7 +458,7 @@ export function Health({ data }: { data: HealthData }) {
             </RowList>
           )}
           <p className="mt-3 text-[12px] leading-[1.5] text-ink-3">
-            {data.coverage.length === 0 ? 'Nothing from Insurance yet: its nightly digest is where these come from. ' : ''}
+            {data.coverage.length === 0 ? 'No health, dental or vision policy from Insurance yet: its nightly digest is where these come from. ' : ''}
             Plan details live in{' '}
             <Link href="/insurance" className="border-b border-rule-2 text-ink-3 hover:text-ink">
               Insurance
