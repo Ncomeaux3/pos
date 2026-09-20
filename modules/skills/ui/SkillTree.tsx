@@ -212,7 +212,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
         * start under the band. The heading is drawn nowhere and present all
         * the same, because a page with no heading is one a screen reader
         * cannot announce. */}
-      <header className="-mx-[18px] -mt-[18px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 md:-mx-7 md:-mt-7 md:px-7 lg:h-14 lg:flex-nowrap lg:py-0">
+      <header className="-mx-[18px] -mt-[max(18px,calc(var(--inset-t)+8px))] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 md:-mx-7 md:-mt-7 md:px-7 lg:h-14 lg:flex-nowrap lg:py-0">
         <BackControl />
         <h1 className="sr-only">Skills</h1>
         {/* The view name is desktop only: there is one view, and with the
