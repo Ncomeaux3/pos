@@ -22,7 +22,7 @@ import { fieldClass } from '@/components/pos/field'
 import { useSearchState } from '@/components/pos/searchState'
 import type { Day } from '@/core/series'
 import { cn } from '@/lib/utils'
-import { WORKOUT_PAGE, distance, duration, mass, pace, sourcesLabel } from '../units'
+import { WORKOUT_PAGE, distance, duration, mass, pace, shortDate, sourcesLabel } from '../units'
 import { readMetricSeries, readWorkouts } from './actions'
 import { PlanDrawer } from './PlanDrawer'
 
@@ -30,6 +30,8 @@ import { PlanDrawer } from './PlanDrawer'
 // it survives a refresh and can be linked to.
 
 export type FitnessData = {
+  /** The owner's zone: row dates are printed in it on the server and the device alike. */
+  timeZone: string
   /** Every workout on file; `workouts` is the first page of them. */
   total: number
   workouts: {
@@ -79,8 +81,6 @@ export type FitnessData = {
   skills: [string, string][]
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
 const right = (label: string) => (
   <span key={label} className="block text-right">
     {label}
@@ -104,10 +104,6 @@ function detailOf(w: FitnessData['workouts'][number]): string {
     .join(' · ')
 }
 
-const shortDate = (iso: string) => {
-  const d = new Date(iso)
-  return `${MONTHS[d.getMonth()]} ${String(d.getDate()).padStart(2, '0')}`
-}
 
 /** How a body metric reads. Each kind is stored in its own unit, so each reads differently. */
 function metricValue(kind: string, value: number): string {
@@ -338,7 +334,7 @@ export function Fitness({ data }: { data: FitnessData }) {
                       selected={expanded === w.id}
                       onClick={() => setExpanded(expanded === w.id ? null : w.id)}
                     >
-                      <span className="num text-[12px] text-ink-3">{shortDate(w.startedAt)}</span>
+                      <span className="num text-[12px] text-ink-3">{shortDate(w.startedAt, data.timeZone)}</span>
                       <span className="min-w-0 text-ink">
                         {w.name} <span className="text-[12px] text-ink-3">{detailOf(w)}</span>
                       </span>

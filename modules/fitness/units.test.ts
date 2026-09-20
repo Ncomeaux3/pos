@@ -8,6 +8,7 @@ import {
   mass,
   pace,
   screenState,
+  shortDate,
   sourcesLabel,
   toGrams,
   whenLabel,
@@ -26,6 +27,14 @@ describe('mass', () => {
 
   it('rounds kilograms to the half, because plates come in 1.25s', () => {
     expect(mass(102_300, 'kg')).toBe('102.5 kg')
+  })
+})
+
+describe('shortDate', () => {
+  it('dates a row in the owner\'s zone, not the renderer\'s', () => {
+    // 20:30 on Sep 12 in Chicago is 01:30 on Sep 13 in UTC, where the server runs.
+    expect(shortDate('2026-09-13T01:30:00.000Z', 'America/Chicago')).toBe('Sep 12')
+    expect(shortDate('2026-09-13T01:30:00.000Z', 'UTC')).toBe('Sep 13')
   })
 })
 

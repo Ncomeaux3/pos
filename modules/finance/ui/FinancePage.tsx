@@ -1,5 +1,6 @@
 import { PageHeader, SyncBand } from '@/components/pos'
 import { syncState } from '@/core/sync'
+import { getSettings } from '@/core/settings'
 import { ownerToday } from '@/core/today'
 import {
   categorySpend,
@@ -23,7 +24,7 @@ function bandDate(iso: string): string {
 }
 
 export default async function FinancePage() {
-  const [accounts, series, spend, upcoming, transactions, todayIso, sync, alertThreshold] =
+  const [accounts, series, spend, upcoming, transactions, todayIso, sync, alertThreshold, settings] =
     await Promise.all([
       listAccounts(),
       netWorthSeries(30),
@@ -33,6 +34,7 @@ export default async function FinancePage() {
       ownerToday(),
       syncState('finance'),
       getAlertThreshold(),
+      getSettings(),
     ])
 
   const netWorth = accounts.reduce((sum, a) => sum + Number(a.balance_cents), 0)
@@ -119,6 +121,7 @@ export default async function FinancePage() {
       at={sync.at}
       status={sync.status}
       connected={sync.connected}
+      timeZone={settings.timezone}
       onSync={syncFinance}
     />
   )

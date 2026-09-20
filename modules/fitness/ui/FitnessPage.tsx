@@ -5,6 +5,7 @@ import { getSkillNames } from '@/core/modules'
 import { listProposals } from '@/core/proposals'
 import { syncState } from '@/core/sync'
 import { spine } from '@/core/series'
+import { getSettings } from '@/core/settings'
 import { ownerToday } from '@/core/today'
 import {
   activePlan,
@@ -57,7 +58,7 @@ const Sub = ({ children }: { children: string }) => (
 )
 
 export default async function FitnessPage() {
-  const [workouts, week, metrics, exercises, plan, pending, sync, span, goal, todayIso, connections, names, arrived, weightSeries] =
+  const [workouts, week, metrics, exercises, plan, pending, sync, span, goal, todayIso, connections, names, arrived, weightSeries, settings] =
     await Promise.all([
       screenWorkouts(),
       thisWeek(),
@@ -75,6 +76,7 @@ export default async function FitnessPage() {
       // Weight is the Trends tab's default and the one metric worth a round
       // trip before its kind is known; another first kind costs one more below.
       metricSeries('weight', 30),
+      getSettings(),
     ])
 
   const items = plan ? await listPlanItems(plan.id) : []
@@ -86,6 +88,7 @@ export default async function FitnessPage() {
       : { kind: trendKind, days: spine(trendKind === 'weight' ? weightSeries : await metricSeries(trendKind, 30), 30, todayIso) }
 
   const data: FitnessData = {
+    timeZone: settings.timezone,
     workouts,
     total: span.count,
     weekWorkouts: week.length,
@@ -147,6 +150,7 @@ export default async function FitnessPage() {
             status={sync.status}
             connected={sync.connected}
             arrived={arrived}
+            timeZone={settings.timezone}
             onSync={syncFitness}
           />
         }
@@ -158,6 +162,7 @@ export default async function FitnessPage() {
             at={sync.at}
             status={sync.status}
             connected={sync.connected}
+            timeZone={settings.timezone}
             onSync={syncFitness}
           />
         }
