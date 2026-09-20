@@ -254,9 +254,21 @@ export function TripDrawer({
 
 type Run = (action: () => Promise<ActionResult>, ok?: string, then?: () => void) => void
 
-function Itinerary({ trip, items, run }: { trip: Trip; items: TravelData['itinerary']; run: Run }) {
+function Itinerary({ trip, items: allItems, run }: { trip: Trip; items: TravelData['itinerary']; run: Run }) {
   const [draft, setDraft] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
+  // An item leaves the moment ✕ is pressed, same shape as Inbox.tsx's act():
+  // optimistic, reverted with a toast on failure.
+  const [gone, setGone] = useState<string[]>([])
+  const items = allItems.filter((i) => !gone.includes(i.id))
+  const remove = (id: string) => {
+    setGone((g) => [...g, id])
+    run(async () => {
+      const result = await deleteItem(id)
+      if (!result.ok) setGone((g) => g.filter((x) => x !== id))
+      return result
+    }, 'Removed')
+  }
   const n = trip.startsOn && trip.endsOn ? Math.max(1, nights(trip) + 1) : 0
   const days = trip.startsOn
     ? Array.from({ length: Math.max(n, 1) }, (_, i) => isoPlus(trip.startsOn!, i))
@@ -298,7 +310,7 @@ function Itinerary({ trip, items, run }: { trip: Trip; items: TravelData['itiner
         </button>
         <span className="flex items-center gap-2">
           <Chip tone={KIND_TONE[it.kind] ?? 'quiet'}>{cap(it.kind)}</Chip>
-          <button type="button" aria-label={`Remove ${it.title}`} onClick={() => run(() => deleteItem(it.id), 'Removed')} className="text-[11px] text-ink-4 hover:text-bad">
+          <button type="button" aria-label={`Remove ${it.title}`} onClick={() => remove(it.id)} className="text-[11px] text-ink-4 hover:text-bad">
             ✕
           </button>
         </span>
@@ -425,7 +437,7 @@ const DEFAULT_LINES = ['Flights', 'Lodging', 'Food', 'Transit', 'Activities']
 function Budget({
   trip,
   items,
-  lines,
+  lines: allLines,
   run,
 }: {
   trip: Trip
@@ -434,6 +446,18 @@ function Budget({
   run: Run
 }) {
   const [draft, setDraft] = useState('')
+  // A line leaves the moment ✕ is pressed, same shape as Inbox.tsx's act():
+  // optimistic, reverted with a toast on failure.
+  const [gone, setGone] = useState<string[]>([])
+  const lines = allLines.filter((l) => !gone.includes(l.id))
+  const removeLine = (l: TravelData['budgetLines'][number]) => {
+    setGone((g) => [...g, l.id])
+    run(async () => {
+      const result = await deleteBudgetLine(trip.id, l.category)
+      if (!result.ok) setGone((g) => g.filter((x) => x !== l.id))
+      return result
+    }, 'Removed')
+  }
   const shaped = lines.map((l) => ({ ...l, planned_cents: l.plannedCents, actual_override_cents: l.actualOverrideCents }))
   const itemShapes = items.map((i) => ({ kind: i.kind, status: i.status, amount_cents: i.amountCents }))
   const totals = budgetTotals(shaped, itemShapes, trip.budgetCents)
@@ -517,7 +541,7 @@ function Budget({
                   }}
                   className={cn(inlineInput, 'num text-right')}
                 />
-                <button type="button" aria-label={`Remove ${l.category}`} onClick={() => run(() => deleteBudgetLine(trip.id, l.category), 'Removed')} className="text-[11px] text-ink-4 hover:text-bad">
+                <button type="button" aria-label={`Remove ${l.category}`} onClick={() => removeLine(l)} className="text-[11px] text-ink-4 hover:text-bad">
                   ✕
                 </button>
               </div>
@@ -570,8 +594,32 @@ function Budget({
   )
 }
 
-function Packing({ trip, packing, run }: { trip: Trip; packing: TravelData['packing']; run: Run }) {
+function Packing({ trip, packing: allPacking, run }: { trip: Trip; packing: TravelData['packing']; run: Run }) {
   const [draft, setDraft] = useState('')
+  // The checkbox flips and a removed row leaves immediately, reverted with a
+  // toast on failure, same shape as Inbox.tsx's act().
+  const [packedOverride, setPackedOverride] = useState<Record<string, boolean>>({})
+  const [gone, setGone] = useState<string[]>([])
+  const packing = allPacking
+    .filter((p) => !gone.includes(p.id))
+    .map((p) => ({ ...p, packed: packedOverride[p.id] ?? p.packed }))
+  const toggle = (p: (typeof packing)[number]) => {
+    const next = !p.packed
+    setPackedOverride((o) => ({ ...o, [p.id]: next }))
+    run(async () => {
+      const result = await savePacking({ id: p.id, packed: next })
+      if (!result.ok) setPackedOverride((o) => ({ ...o, [p.id]: !next }))
+      return result
+    })
+  }
+  const remove = (p: (typeof packing)[number]) => {
+    setGone((g) => [...g, p.id])
+    run(async () => {
+      const result = await savePacking({ id: p.id, remove: true })
+      if (!result.ok) setGone((g) => g.filter((x) => x !== p.id))
+      return result
+    }, 'Removed')
+  }
   const packed = packing.filter((p) => p.packed).length
   return (
     <>
@@ -588,7 +636,7 @@ function Packing({ trip, packing, run }: { trip: Trip; packing: TravelData['pack
               type="button"
               role="checkbox"
               aria-checked={p.packed}
-              onClick={() => run(() => savePacking({ id: p.id, packed: !p.packed }))}
+              onClick={() => toggle(p)}
               className="flex min-w-0 flex-1 items-center gap-2.5 py-[7px] text-left"
             >
               <span aria-hidden className={cn('grid size-3.5 shrink-0 place-items-center border rounded-full', p.packed ? 'border-brand bg-brand' : 'border-ink-3')}>
@@ -596,7 +644,7 @@ function Packing({ trip, packing, run }: { trip: Trip; packing: TravelData['pack
               </span>
               <span className={cn('truncate text-[12px]', p.packed ? 'text-ink-4 line-through' : 'text-ink')}>{p.label}</span>
             </button>
-            <button type="button" aria-label={`Remove ${p.label}`} onClick={() => run(() => savePacking({ id: p.id, remove: true }), 'Removed')} className="px-0.5 text-[11px] text-ink-4 hover:text-bad">
+            <button type="button" aria-label={`Remove ${p.label}`} onClick={() => remove(p)} className="px-0.5 text-[11px] text-ink-4 hover:text-bad">
               ✕
             </button>
           </div>
@@ -625,7 +673,20 @@ function Packing({ trip, packing, run }: { trip: Trip; packing: TravelData['pack
   )
 }
 
-function Inbox({ pending, run }: { pending: TravelData['itinerary']; run: Run }) {
+function Inbox({ pending: allPending, run }: { pending: TravelData['itinerary']; run: Run }) {
+  // A parsed booking leaves the inbox the moment Add or Dismiss is pressed,
+  // same shape as Inbox.tsx's act(): optimistic, reverted with a toast on
+  // failure.
+  const [gone, setGone] = useState<string[]>([])
+  const pending = allPending.filter((m) => !gone.includes(m.id))
+  const decide = (id: string, accept: boolean) => {
+    setGone((g) => [...g, id])
+    run(async () => {
+      const result = await decideItem(id, accept)
+      if (!result.ok) setGone((g) => g.filter((x) => x !== id))
+      return result
+    }, accept ? 'Added to the trip' : 'Dismissed')
+  }
   return (
     <>
       <p className="text-[12px] leading-[1.5] text-ink-3">
@@ -646,10 +707,10 @@ function Inbox({ pending, run }: { pending: TravelData['itinerary']; run: Run })
             {m.confidence !== null ? ` · confidence ${Math.round(m.confidence * 100)}%` : ''}
           </div>
           <div className="flex gap-1.5">
-            <ActionButton size="sm" variant="accent" onClick={() => run(() => decideItem(m.id, true), 'Added to the trip')}>
+            <ActionButton size="sm" variant="accent" onClick={() => decide(m.id, true)}>
               Add
             </ActionButton>
-            <ActionButton size="sm" onClick={() => run(() => decideItem(m.id, false), 'Dismissed')}>
+            <ActionButton size="sm" onClick={() => decide(m.id, false)}>
               Dismiss
             </ActionButton>
           </div>

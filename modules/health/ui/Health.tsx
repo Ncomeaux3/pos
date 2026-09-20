@@ -189,6 +189,23 @@ export function Health({ data }: { data: HealthData }) {
       else if (ok) toast(ok)
     })
 
+  // A screening leaves the Due & overdue rail the moment Mark done or Snooze
+  // is pressed, same shape as Inbox.tsx's act(): optimistic, reverted with a
+  // toast on failure.
+  const [gone, setGone] = useState<string[]>([])
+  const flip = (id: string, action: () => Promise<ActionResult>, ok: string) => {
+    setGone((g) => [...g, id])
+    start(async () => {
+      const result = await action()
+      if (result.ok) toast(ok)
+      else {
+        setGone((g) => g.filter((x) => x !== id))
+        toast(result.error)
+      }
+    })
+  }
+  const screenings = data.screenings.filter((s) => !gone.includes(s.id))
+
   const now = new Date()
   const isPast = (a: Appointment) => a.status === 'done' || a.status === 'cancelled' || new Date(a.startsAt) < now
   const upcoming = data.appointments.filter((a) => !isPast(a))
@@ -367,7 +384,7 @@ export function Health({ data }: { data: HealthData }) {
       <aside className="flex min-w-0 flex-[1_1_320px] flex-col gap-[26px] border-t border-rule px-[18px] pb-10 pt-[22px] xl:max-w-[400px] md:px-6">
         <section>
           <Eyebrow>Due &amp; overdue</Eyebrow>
-          {data.screenings.map((s) => {
+          {screenings.map((s) => {
             const status = screeningStatus(s, data.todayIso)
             const booked = upcoming.find((a) => a.what.toLowerCase() === s.name.toLowerCase())
             const state: ScreeningStatus | 'scheduled' = booked ? 'scheduled' : status
@@ -399,10 +416,10 @@ export function Health({ data }: { data: HealthData }) {
                     </ActionButton>
                   ) : (
                     <>
-                      <ActionButton size="sm" variant="accent" onClick={() => run(() => completeScreening(s.id), `${s.name} recorded`)}>
+                      <ActionButton size="sm" variant="accent" onClick={() => flip(s.id, () => completeScreening(s.id), `${s.name} recorded`)}>
                         Mark done
                       </ActionButton>
-                      <ActionButton size="sm" onClick={() => run(() => snoozeScreening(s.id, 3), 'Pushed out three months')}>
+                      <ActionButton size="sm" onClick={() => flip(s.id, () => snoozeScreening(s.id, 3), 'Pushed out three months')}>
                         Snooze 3 mo
                       </ActionButton>
                     </>
@@ -411,7 +428,7 @@ export function Health({ data }: { data: HealthData }) {
               </Card>
             )
           })}
-          {data.screenings.every((s) => ['ok', 'snoozed'].includes(screeningStatus(s, data.todayIso))) && (
+          {screenings.every((s) => ['ok', 'snoozed'].includes(screeningStatus(s, data.todayIso))) && (
             <p className="mt-3 text-[12px] text-ink-4">Nothing is owed.</p>
           )}
         </section>

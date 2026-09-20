@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import {
   ActionButton,
   Card,
@@ -154,13 +154,31 @@ export function Home({ data }: { data: HomeData }) {
       else if (ok) toast(ok)
     })
 
+  // A job leaves the calendar and the attention rail the moment Mark done or
+  // Snooze is pressed, same shape as Inbox.tsx's act(): optimistic, reverted
+  // with a toast on failure.
+  const [gone, setGone] = useState<string[]>([])
+  const flip = (id: string, action: () => Promise<ActionResult>, ok: string) => {
+    setGone((g) => [...g, id])
+    start(async () => {
+      const result = await action()
+      if (result.ok) toast(ok)
+      else {
+        setGone((g) => g.filter((x) => x !== id))
+        toast(result.error)
+      }
+    })
+  }
+  const services = data.services.filter((s) => !gone.includes(s.id))
+
   const done = (job: Service) =>
-    run(
+    flip(
+      job.id,
       () => markDone(job.id, job.assetId, job.title),
       'Marked done. It moves to the service history and reschedules on its interval.',
     )
 
-  const scheduled = data.services.filter((s) => s.dueOn !== null)
+  const scheduled = services.filter((s) => s.dueOn !== null)
   const months = next12Months(
     scheduled.map((s) => ({ dueOn: s.dueOn!, costEstimateCents: s.costEstimateCents })),
     data.todayIso,
@@ -173,7 +191,7 @@ export function Home({ data }: { data: HomeData }) {
   const monthJobs = jobsIn(month)
   const monthCents = monthJobs.reduce((sum, s) => sum + s.costEstimateCents, 0)
 
-  const attention = data.services
+  const attention = services
     .filter((s) => s.status === 'overdue' || s.status === 'due')
     .sort((a, b) => (a.status === b.status ? byDue(a, b) : a.status === 'overdue' ? -1 : 1))
   const dueCents = attention.reduce((sum, s) => sum + s.costEstimateCents, 0)
@@ -470,7 +488,8 @@ export function Home({ data }: { data: HomeData }) {
                       <ActionButton
                         size="sm"
                         onClick={() =>
-                          run(
+                          flip(
+                            job.id,
                             () => snoozeService(job.id, 30),
                             'Snoozed 30 days. It comes back, it does not go away.',
                           )
