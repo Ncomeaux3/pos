@@ -201,6 +201,36 @@ test('dashboard shell', async ({ page }) => {
   await shoot(page, 'dashboard')
 })
 
+test('the collapsed rail keeps its controls inside 72px and on one centre line', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'The rail is a desktop thing')
+  await page.goto('/')
+  const rail = page.getByRole('navigation', { name: 'Modules' }).locator('xpath=..')
+  const footer = page.getByRole('navigation', { name: /sections/i })
+  await footer.getByRole('button', { name: 'Collapse' }).click()
+  await expect.poll(async () => (await rail.boundingBox())?.width).toBe(72)
+  const railBox = (await rail.boundingBox())!
+  const centre = railBox.x + railBox.width / 2
+
+  // The theme control shows one pressed option; it must not spill past its track.
+  const group = footer.getByRole('group', { name: 'Theme' })
+  const pressed = group.getByRole('button', { name: /^Theme: System/ })
+  const [g, b] = await Promise.all([group.boundingBox(), pressed.boundingBox()])
+  expect(b!.x + b!.width).toBeLessThanOrEqual(g!.x + g!.width)
+
+  // Every icon in the rail, the footer grid aside, sits on the rail's centre line.
+  for (const name of ['Today', 'Tasks', 'Finance']) {
+    const icon = await page.getByRole('navigation', { name: 'Modules' }).getByRole('link', { name }).locator('svg').boundingBox()
+    expect(Math.abs(icon!.x + icon!.width / 2 - centre)).toBeLessThanOrEqual(1)
+  }
+  const chevron = await footer.getByRole('button', { name: 'Collapse' }).locator('svg').boundingBox()
+  expect(Math.abs(chevron!.x + chevron!.width / 2 - centre)).toBeLessThanOrEqual(1)
+
+  // Expanding restores the labels.
+  await footer.getByRole('button', { name: 'Collapse' }).click()
+  await expect.poll(async () => (await rail.boundingBox())?.width).toBe(232)
+  await expect(group.getByRole('button', { name: 'System', exact: true })).toBeVisible()
+})
+
 test('browse lists the rail groups', async ({ page }) => {
   await page.goto('/browse')
   // Same source as the rail, in the rail's groups, minus Today (the first

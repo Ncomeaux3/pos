@@ -6,6 +6,8 @@ import {
   Bell,
   Brain,
   CalendarCheck,
+  ChevronsLeft,
+  ChevronsRight,
   Compass,
   House,
   Inbox,
@@ -65,8 +67,10 @@ function NavRow({
     <Link
       href={item.href}
       aria-current={active ? 'page' : undefined}
+      title={collapsed ? item.label : undefined}
       className={cn(
         rowClass,
+        collapsed && collapsedRow,
         active
           ? 'bg-glass-strong font-semibold text-ink shadow-[inset_0_1px_0_var(--glass-edge),var(--lift),0_0_0_1px_var(--glass-line)]'
           : 'text-ink-2 hover:bg-glass hover:text-ink',
@@ -76,12 +80,14 @@ function NavRow({
       <span className={cn('grid w-5 shrink-0 place-items-center', active && 'text-action')} aria-hidden>
         <Icon size={19} strokeWidth={1.8} />
       </span>
-      <span className={cn('min-w-0 flex-1 truncate text-[14px]', fadeClass(collapsed))}>{item.label}</span>
+      <span className={cn('min-w-0 truncate text-[14px]', collapsed ? 'w-0' : 'flex-1', fadeClass(collapsed))}>
+        {item.label}
+      </span>
       {badge !== undefined && badge > 0 && (
         <span
           className={cn(
             'num grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-action px-1.5 text-[11px] font-semibold leading-none text-action-fg',
-            fadeClass(collapsed),
+            collapsed && 'hidden',
           )}
         >
           {badge}
@@ -93,6 +99,10 @@ function NavRow({
 
 const rowClass =
   'mx-2 flex h-[38px] shrink-0 items-center gap-2.5 rounded-[10px] px-3 text-left transition-[background-color,color,box-shadow] duration-150 ease-[var(--ease)]'
+
+// Collapsed, the pill is a 56px square with the icon on the rail's centre line.
+// The label keeps its text (a screen reader still reads it) at no width.
+const collapsedRow = 'justify-center gap-0 px-0'
 
 function fadeClass(collapsed: boolean) {
   return cn('transition-opacity duration-200', collapsed && 'pointer-events-none opacity-0')
@@ -172,7 +182,7 @@ export function Sidebar({
           two when collapsed), the theme control, then Collapse. Rows for all
           of them plus the grouped rail was 130px too tall for a 900px window. */}
       <nav aria-label="Sections" className="flex flex-col gap-0.5 py-2.5">
-        <div className={cn('mx-3 grid gap-1', collapsed ? 'grid-cols-2' : 'grid-cols-4')}>
+        <div className={cn('mx-2 grid gap-1', collapsed ? 'grid-cols-2' : 'grid-cols-4')}>
           {utilities.map((item) => {
             const Icon = NAV_ICON[item.href] ?? LayoutGrid
             const active = isActive(pathname, item.href)
@@ -196,19 +206,19 @@ export function Sidebar({
           })}
         </div>
 
-        <ThemeSwitch theme={theme} onChange={onTheme} compact={collapsed} className="mx-3 my-1.5" />
+        <ThemeSwitch theme={theme} onChange={onTheme} compact={collapsed} className="mx-2 my-1.5" />
 
         <button
           type="button"
           disabled={pending}
           aria-expanded={!collapsed}
           onClick={() => start(() => void onToggleCollapse(!collapsed))}
-          className={cn(rowClass, 'text-[13px] text-ink-3 hover:bg-glass hover:text-ink')}
+          className={cn(rowClass, collapsed && collapsedRow, 'text-[13px] text-ink-3 hover:bg-glass hover:text-ink')}
         >
-          <span aria-hidden className="grid w-5 shrink-0 place-items-center text-[13px]">
-            {collapsed ? '›' : '‹'}
+          <span aria-hidden className="grid w-5 shrink-0 place-items-center">
+            {collapsed ? <ChevronsRight size={19} strokeWidth={1.8} /> : <ChevronsLeft size={19} strokeWidth={1.8} />}
           </span>
-          <span className={cn('min-w-0 flex-1 truncate', fadeClass(collapsed))}>Collapse</span>
+          <span className={cn('min-w-0 truncate', collapsed ? 'w-0' : 'flex-1', fadeClass(collapsed))}>Collapse</span>
         </button>
       </nav>
     </aside>
