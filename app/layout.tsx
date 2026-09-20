@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   },
 }
 
-const CANVAS = { light: '#F7F6F2', dark: '#202927' }
+const CANVAS = { light: '#F2F2F7', dark: '#000000' }
 
 // The address bar matches the page ground of the theme that is actually
 // rendered: a forced theme gives one colour, system gives the media pair.
