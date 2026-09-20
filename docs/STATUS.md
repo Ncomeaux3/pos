@@ -82,7 +82,12 @@ and a title on both, the Health card reads `byType.health`, `dental` and
 empties its suggestion list instead of refetching it. Seven checks, one per
 bug: three unit tests, one against pos_test, three e2e assertions (the date
 glyph by pixels, since Chromium hides that pseudo-element from
-`getComputedStyle`), and the Projects wait measured before and after.
+`getComputedStyle`), and the Projects wait measured before and after. Also
+in this PR, because main's `screens` job was red under it: the `Passkey
+removed.` toast #106 dropped and #108's test expects is back, and the Review
+dismiss test waits on the toast rather than the optimistic chip, whose early
+appearance let the next navigation abort the dismissal and, through
+Playwright's reseed on worker restart, fail `inbox clear` behind it.
 
 **v1.2 Phase 1a: the nightly digest and the passkey, diagnosed** (2026-09-20,
 branch `phase-1a-digest-passkey`). Two causes, both from evidence.

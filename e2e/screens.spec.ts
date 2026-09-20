@@ -1069,7 +1069,9 @@ test('review, dismiss and undo keep the row', async ({ page }) => {
   const coach = page.getByRole('button', { name: /Add a little weight/ })
   await coach.click()
   await page.getByRole('button', { name: 'Dismiss' }).click()
-  await expect(page.getByText('Dismissed', { exact: true })).toBeVisible()
+  // The toast, not the panel's chip: the chip flips before the server answers
+  // (optimistic since #106), and navigating on it aborts the dismissal in flight.
+  await expect(page.locator('[aria-live="polite"]').getByText('Dismissed', { exact: true })).toBeVisible()
 
   await page.goto('/review?tab=dismissed')
   await expect(page.getByText('Dismissed. The agent will not re-propose this for 30 days. Undo puts it back in the inbox.')).toBeVisible()
