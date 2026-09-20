@@ -1,6 +1,6 @@
 'use client'
 
-import { DataRow, DataTable, Switch } from '@/components/pos'
+import { DataRow, DataTable, Switch, useToast } from '@/components/pos'
 import { useOptimisticAction } from '@/components/pos/useOptimisticAction'
 import type { Channel } from '@/core/notification-rules'
 import { cn } from '@/lib/utils'
@@ -28,11 +28,18 @@ type Patch = { id: string; field: Field; state: CellState }
  * whole row on rather than toggling to the majority.
  */
 export function ChannelGrid({ rows, paused }: { rows: ModuleRow[]; paused: boolean }) {
+  const toast = useToast()
   const [shown, run] = useOptimisticAction<ModuleRow[], Patch, ActionResult>(rows, (state, patch) =>
     state.map((r) => (r.id === patch.id ? { ...r, [patch.field]: patch.state } : r)),
   )
 
-  const cell = (row: ModuleRow, field: Field, label: string, write: (on: boolean) => Promise<ActionResult>) => {
+  const cell = (
+    row: ModuleRow,
+    field: Field,
+    label: string,
+    write: (on: boolean) => Promise<ActionResult>,
+    note: (on: boolean) => string,
+  ) => {
     const state = row[field]
     return (
       <div className="flex items-center gap-2 lg:justify-center">
@@ -43,7 +50,11 @@ export function ChannelGrid({ rows, paused }: { rows: ModuleRow[]; paused: boole
           checked={state === 'on'}
           onChange={() => {
             const on = state !== 'on'
-            run({ id: row.id, field, state: on ? 'on' : 'off' }, () => write(on))
+            run({ id: row.id, field, state: on ? 'on' : 'off' }, async () => {
+              const result = await write(on)
+              if (result.ok) toast(note(on))
+              return result
+            })
           }}
           className={cn(state === 'some' && 'border-warn')}
         />
@@ -81,9 +92,27 @@ export function ChannelGrid({ rows, paused }: { rows: ModuleRow[]; paused: boole
         >
           <span className={cn('min-w-0 truncate', paused ? 'text-ink-3' : 'text-ink')}>{row.label}</span>
 
-          {cell(row, 'digest', 'Digest', (on) => setModuleDigest(row.id, on))}
-          {cell(row, 'push', 'Push', (on) => setModuleChannel(row.id, 'push' satisfies Channel, on))}
-          {cell(row, 'inapp', 'In-app', (on) => setModuleChannel(row.id, 'inapp' satisfies Channel, on))}
+          {cell(
+            row,
+            'digest',
+            'Digest',
+            (on) => setModuleDigest(row.id, on),
+            (on) => (on ? `${row.label} batches into the morning digest.` : `${row.label} delivers immediately.`),
+          )}
+          {cell(
+            row,
+            'push',
+            'Push',
+            (on) => setModuleChannel(row.id, 'push' satisfies Channel, on),
+            (on) => `Push ${on ? 'on' : 'off'} for ${row.label}.`,
+          )}
+          {cell(
+            row,
+            'inapp',
+            'In-app',
+            (on) => setModuleChannel(row.id, 'inapp' satisfies Channel, on),
+            (on) => `In-app ${on ? 'on' : 'off'} for ${row.label}.`,
+          )}
 
           <p className="t-caption min-w-0 text-ink-3 max-lg:text-left!">{row.triggers}</p>
         </DataRow>

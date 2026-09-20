@@ -1,6 +1,6 @@
 'use client'
 
-import { MetricStrip, Switch } from '@/components/pos'
+import { MetricStrip, Switch, useToast } from '@/components/pos'
 import { useOptimisticAction } from '@/components/pos/useOptimisticAction'
 import type { Channel } from '@/core/notification-rules'
 import { cn } from '@/lib/utils'
@@ -16,6 +16,7 @@ type Patch = { value: Channel; state: CellState }
  * and pressing it turns the channel on everywhere.
  */
 export function Channels({ channels }: { channels: Row[] }) {
+  const toast = useToast()
   const [shown, run] = useOptimisticAction<Row[], Patch, ActionResult>(channels, (state, patch) =>
     state.map((c) => (c.value === patch.value ? { ...c, state: patch.state } : c)),
   )
@@ -34,7 +35,11 @@ export function Channels({ channels }: { channels: Row[] }) {
             className={cn(c.state === 'some' && 'border-warn')}
             onChange={() => {
               const on = c.state !== 'on'
-              run({ value: c.value, state: on ? 'on' : 'off' }, () => setChannelEverywhere(c.value, on))
+              run({ value: c.value, state: on ? 'on' : 'off' }, async () => {
+                const result = await setChannelEverywhere(c.value, on)
+                if (result.ok) toast(`${c.label} ${on ? 'on' : 'off'} for every rule.`)
+                return result
+              })
             }}
           />
         </div>

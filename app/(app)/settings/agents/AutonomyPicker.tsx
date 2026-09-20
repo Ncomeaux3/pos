@@ -1,6 +1,6 @@
 'use client'
 
-import { PillGroup } from '@/components/pos'
+import { PillGroup, useToast } from '@/components/pos'
 import { useOptimisticAction } from '@/components/pos/useOptimisticAction'
 import { AUTONOMY_LABELS, type Autonomy } from '@/core/autonomy'
 import { setAutonomy, type ActionResult } from './actions'
@@ -11,6 +11,7 @@ const OPTIONS = (Object.keys(AUTONOMY_LABELS) as Autonomy[]).map((value) => ({
 }))
 
 export function AutonomyPicker({ value }: { value: Autonomy }) {
+  const toast = useToast()
   const [current, run] = useOptimisticAction<Autonomy, Autonomy, ActionResult>(
     value,
     (_, next) => next,
@@ -21,7 +22,13 @@ export function AutonomyPicker({ value }: { value: Autonomy }) {
       label="Agent autonomy"
       value={current}
       options={OPTIONS}
-      onChange={(next) => run(next, () => setAutonomy(next))}
+      onChange={(next) =>
+        run(next, async () => {
+          const result = await setAutonomy(next)
+          if (result.ok) toast(`Autonomy: ${AUTONOMY_LABELS[next]}`)
+          return result
+        })
+      }
     />
   )
 }
