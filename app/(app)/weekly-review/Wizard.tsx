@@ -35,7 +35,6 @@ import {
 } from '@/core/reviews-shape'
 import { cn } from '@/lib/utils'
 import { ThemeSwitch } from '@/components/pos/ThemeSwitch'
-import { setThemeAction } from '../shell-actions'
 import { close, save } from './actions'
 
 // Six steps over one set of answers. Every step writes into the same object and
@@ -292,7 +291,7 @@ export function Wizard({ data }: { data: WeekData }) {
       // The artboard's band has the theme button beside the duration, and
       // the sidebar has its own row; both go through the same setting.
       // 38px, the artboard's control height on desktop; 44 on a phone.
-      themeToggle={<ThemeSwitch theme={data.theme} onChange={setThemeAction} />}
+      themeToggle={<ThemeSwitch theme={data.theme} />}
       onBack={index > 0 ? () => setStep(STEPS[index - 1].key) : undefined}
       onNext={index === STEPS.length - 1 ? finish : () => setStep(STEPS[index + 1].key)}
       nextLabel={

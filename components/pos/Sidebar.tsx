@@ -28,10 +28,11 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useTransition } from 'react'
+import { useState } from 'react'
 import { NAV_GROUPS, type NavItem } from '@/core/nav-groups'
 import { phoneTabs } from '@/core/phone-tabs'
 import type { Theme } from '@/core/theme'
+import { setSidebarCookie } from '@/core/theme-client'
 import { cn } from '@/lib/utils'
 import { HolonMark, HolonWordmark } from './Logo'
 import { ThemeSwitch } from './ThemeSwitch'
@@ -111,22 +112,28 @@ function fadeClass(collapsed: boolean) {
 export function Sidebar({
   nav,
   footer,
-  collapsed,
+  collapsed: initialCollapsed,
   theme,
   reviewCount,
-  onToggleCollapse,
-  onTheme,
 }: {
   nav: NavItem[]
   footer: NavItem[]
   collapsed: boolean
   theme: Theme
   reviewCount: number
-  onToggleCollapse: (next: boolean) => Promise<void>
-  onTheme: (theme: Theme) => Promise<void>
 }) {
   const pathname = usePathname()
-  const [pending, start] = useTransition()
+  // Seeded from the cookie for the first paint; every toggle after that
+  // moves this state and the shared --rail variable directly (see below), so
+  // the rail's width never waits on a server round trip.
+  const [collapsed, setCollapsed] = useState(initialCollapsed)
+
+  function toggle() {
+    const next = !collapsed
+    setCollapsed(next)
+    document.documentElement.style.setProperty('--rail', next ? '72px' : '232px')
+    setSidebarCookie(next)
+  }
 
   // Weekly review files under the Review heading with Review itself; the
   // rest of the footer is Utilities.
@@ -206,13 +213,12 @@ export function Sidebar({
           })}
         </div>
 
-        <ThemeSwitch theme={theme} onChange={onTheme} compact={collapsed} className="mx-2 my-1.5" />
+        <ThemeSwitch theme={theme} compact={collapsed} className="mx-2 my-1.5" />
 
         <button
           type="button"
-          disabled={pending}
           aria-expanded={!collapsed}
-          onClick={() => start(() => void onToggleCollapse(!collapsed))}
+          onClick={toggle}
           className={cn(rowClass, collapsed && collapsedRow, 'text-[13px] text-ink-3 hover:bg-glass hover:text-ink')}
         >
           <span aria-hidden className="grid w-5 shrink-0 place-items-center">

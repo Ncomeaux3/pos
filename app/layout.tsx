@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
-import { getTheme } from '@/core/theme'
+import { getSidebarCollapsed, getTheme } from '@/core/theme'
 import './globals.css'
 
 // Geist, one family, served from the repo under its OFL licence (app/fonts).
@@ -54,10 +54,18 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
   // Written on the server so the first paint is already the right theme.
   // System is the absence of the attribute: the stylesheet's color-scheme then
   // follows the device and the dark: variant matches through the media query.
-  const theme = await getTheme()
+  // The rail width is read here too: the desktop Collapse toggle sets it on
+  // this element directly (Sidebar.tsx), so the first paint and every later
+  // toggle share the one CSS variable with no server round trip between them.
+  const [theme, collapsed] = await Promise.all([getTheme(), getSidebarCollapsed()])
 
   return (
-    <html lang="en" data-theme={theme === 'system' ? undefined : theme} className={`${geist.variable} h-full`}>
+    <html
+      lang="en"
+      data-theme={theme === 'system' ? undefined : theme}
+      style={{ ['--rail' as string]: collapsed ? '72px' : '232px' }}
+      className={`${geist.variable} h-full`}
+    >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   )
