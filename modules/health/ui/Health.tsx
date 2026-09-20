@@ -20,6 +20,7 @@ import {
   type SkillLink,
 } from '@/components/pos'
 import { useSearchState } from '@/components/pos/searchState'
+import { useOptimisticAction } from '@/components/pos/useOptimisticAction'
 import { cn } from '@/lib/utils'
 import { dueOn, screeningStatus, type ScreeningStatus } from '../screening'
 import { completeScreening, markMedication, snoozeScreening, type ActionResult } from './actions'
@@ -195,7 +196,21 @@ export function Health({ data }: { data: HealthData }) {
   const past = data.appointments.filter(isPast)
   const shownAppts = tab === 'upcoming' ? upcoming : past
 
-  const active = data.medications.filter((m) => !m.ended)
+  // Marking a medication taken flips it right away; the shape matches
+  // Board's task-done reducer, one row patched in an array bound to a prop.
+  const [medications, runMedication] = useOptimisticAction<
+    HealthData['medications'],
+    { id: string; taken: boolean },
+    ActionResult
+  >(data.medications, (state, patch) =>
+    state.map((m) =>
+      m.id === patch.id
+        ? { ...m, taken: patch.taken ? [...m.taken, data.todayIso] : m.taken.filter((d) => d !== data.todayIso) }
+        : m,
+    ),
+  )
+
+  const active = medications.filter((m) => !m.ended)
   const takenToday = active.filter((m) => m.taken.includes(data.todayIso)).length
   const lowest = active
     .filter((m) => m.refillOn)
@@ -301,7 +316,7 @@ export function Health({ data }: { data: HealthData }) {
                           variant={taken ? 'brand' : 'outline'}
                           aria-pressed={taken}
                           aria-label={`Taken today, ${m.name}`}
-                          onClick={() => run(() => markMedication(m.id, !taken))}
+                          onClick={() => runMedication({ id: m.id, taken: !taken }, () => markMedication(m.id, !taken))}
                         >
                           {taken ? 'Taken today' : 'Mark taken'}
                         </ActionButton>

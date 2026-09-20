@@ -2,7 +2,8 @@
 
 import { useTransition } from 'react'
 import { ActionButton, timeFieldClass as timeField, useToast } from '@/components/pos'
-import { setQuiet } from './actions'
+import { useOptimisticAction } from '@/components/pos/useOptimisticAction'
+import { setQuiet, type ActionResult } from './actions'
 
 export function QuietHours({
   from,
@@ -15,13 +16,14 @@ export function QuietHours({
 }) {
   const [pending, start] = useTransition()
   const toast = useToast()
+  const [urgent, runUrgent] = useOptimisticAction<boolean, boolean, ActionResult>(
+    urgentOverride,
+    (_, next) => next,
+  )
 
-  const save = (key: 'quiet_from' | 'quiet_to' | 'quiet_urgent_override', value: string | boolean) =>
+  const save = (key: 'quiet_from' | 'quiet_to', value: string) =>
     start(async () => {
-      const result = await setQuiet(
-        key,
-        value as never,
-      )
+      const result = await setQuiet(key, value)
       if (!result.ok) toast(result.error)
     })
 
@@ -50,16 +52,15 @@ export function QuietHours({
       </div>
 
       <ActionButton
-        variant={urgentOverride ? 'brand' : 'outline'}
-        disabled={pending}
-        onClick={() => save('quiet_urgent_override', !urgentOverride)}
+        variant={urgent ? 'brand' : 'outline'}
+        onClick={() => runUrgent(!urgent, () => setQuiet('quiet_urgent_override', !urgent))}
       >
-        {urgentOverride ? 'Urgent breaks through' : 'Nothing breaks through'}
+        {urgent ? 'Urgent breaks through' : 'Nothing breaks through'}
       </ActionButton>
 
       <p className="text-[12px] text-ink-3">
         Held, not dropped: a queued alert goes out on the next run after the window closes.
-        {urgentOverride
+        {urgent
           ? ' A rule marked urgent is the exception, and there are four of them.'
           : ' Nothing is excepted right now, including a failed nightly job.'}
       </p>

@@ -1,10 +1,10 @@
 'use client'
 
-import { useTransition } from 'react'
-import { DataRow, DataTable, Switch, useToast } from '@/components/pos'
+import { DataRow, DataTable, Switch } from '@/components/pos'
+import { useOptimisticAction } from '@/components/pos/useOptimisticAction'
 import type { Channel } from '@/core/notification-rules'
 import { cn } from '@/lib/utils'
-import { setModuleChannel, setModuleDigest } from './actions'
+import { setModuleChannel, setModuleDigest, type ActionResult } from './actions'
 
 export type CellState = 'on' | 'off' | 'some'
 
@@ -19,34 +19,37 @@ export type ModuleRow = {
   ruleCount: number
 }
 
+type Field = 'digest' | 'push' | 'inapp'
+type Patch = { id: string; field: Field; state: CellState }
+
 /**
  * Module down the side, the three coarse switches across. A cell writes every
  * rule in its row, so `some` is a real third state and pressing it turns the
  * whole row on rather than toggling to the majority.
  */
 export function ChannelGrid({ rows, paused }: { rows: ModuleRow[]; paused: boolean }) {
-  const [pending, start] = useTransition()
-  const toast = useToast()
-
-  const run = (action: () => Promise<{ ok: boolean; error?: string }>, note: string) =>
-    start(async () => {
-      const result = await action()
-      toast(result.ok ? note : (result.error ?? 'Failed'))
-    })
-
-  const cell = (row: ModuleRow, state: CellState, label: string, write: (on: boolean) => void) => (
-    <div className="flex items-center gap-2 lg:justify-center">
-      {/* Below lg the head is hidden, so the switch names its channel. */}
-      <span className="label w-14 text-ink-3 lg:hidden">{label}</span>
-      <Switch
-        label={`${label} for ${row.label}`}
-        disabled={pending}
-        checked={state === 'on'}
-        onChange={() => write(state !== 'on')}
-        className={cn(state === 'some' && 'border-warn')}
-      />
-    </div>
+  const [shown, run] = useOptimisticAction<ModuleRow[], Patch, ActionResult>(rows, (state, patch) =>
+    state.map((r) => (r.id === patch.id ? { ...r, [patch.field]: patch.state } : r)),
   )
+
+  const cell = (row: ModuleRow, field: Field, label: string, write: (on: boolean) => Promise<ActionResult>) => {
+    const state = row[field]
+    return (
+      <div className="flex items-center gap-2 lg:justify-center">
+        {/* Below lg the head is hidden, so the switch names its channel. */}
+        <span className="label w-14 text-ink-3 lg:hidden">{label}</span>
+        <Switch
+          label={`${label} for ${row.label}`}
+          checked={state === 'on'}
+          onChange={() => {
+            const on = state !== 'on'
+            run({ id: row.id, field, state: on ? 'on' : 'off' }, () => write(on))
+          }}
+          className={cn(state === 'some' && 'border-warn')}
+        />
+      </div>
+    )
+  }
 
   // The three switch columns are headed by their channel; the phone drops the
   // head, so each switch keeps its own "Digest for Finance" name.
@@ -68,7 +71,7 @@ export function ChannelGrid({ rows, paused }: { rows: ModuleRow[]; paused: boole
         'What triggers it',
       ]}
     >
-      {rows.map((row) => (
+      {shown.map((row) => (
         <DataRow
           key={row.id}
           // Below lg: a stacked card (module, three named switches, the
@@ -78,26 +81,9 @@ export function ChannelGrid({ rows, paused }: { rows: ModuleRow[]; paused: boole
         >
           <span className={cn('min-w-0 truncate', paused ? 'text-ink-3' : 'text-ink')}>{row.label}</span>
 
-          {cell(row, row.digest, 'Digest', (on) =>
-            run(
-              () => setModuleDigest(row.id, on),
-              on
-                ? `${row.label} batches into the morning digest.`
-                : `${row.label} delivers immediately.`,
-            ),
-          )}
-          {cell(row, row.push, 'Push', (on) =>
-            run(
-              () => setModuleChannel(row.id, 'push' satisfies Channel, on),
-              `Push ${on ? 'on' : 'off'} for ${row.label}.`,
-            ),
-          )}
-          {cell(row, row.inapp, 'In-app', (on) =>
-            run(
-              () => setModuleChannel(row.id, 'inapp' satisfies Channel, on),
-              `In-app ${on ? 'on' : 'off'} for ${row.label}.`,
-            ),
-          )}
+          {cell(row, 'digest', 'Digest', (on) => setModuleDigest(row.id, on))}
+          {cell(row, 'push', 'Push', (on) => setModuleChannel(row.id, 'push' satisfies Channel, on))}
+          {cell(row, 'inapp', 'In-app', (on) => setModuleChannel(row.id, 'inapp' satisfies Channel, on))}
 
           <p className="t-caption min-w-0 text-ink-3 max-lg:text-left!">{row.triggers}</p>
         </DataRow>

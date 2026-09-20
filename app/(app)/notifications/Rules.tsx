@@ -15,10 +15,13 @@ import {
   timeFieldClass as timeField,
   useToast,
 } from '@/components/pos'
-import { isLive, leadLabel, leadOptions, ruleState, type Rule } from '@/core/notification-rules'
+import { useOptimisticAction } from '@/components/pos/useOptimisticAction'
+import { isLive, leadLabel, leadOptions, ruleState, type Rule, type RulePatch } from '@/core/notification-rules'
 import { cn } from '@/lib/utils'
 import { snooze, updateRule, updateSchedule } from './actions'
 import type { ActionResult } from './actions'
+
+type RulesPatch = { id: string; changes: RulePatch }
 
 // The rules table, the schedule above it and the preview rail all read the same
 // rule set, and the rail follows the row you last touched, so the three are one
@@ -99,20 +102,28 @@ export function Notifications({
   const [pending, start] = useTransition()
   const toast = useToast()
 
-  // Every write goes through here so a refusal is spoken once, in one place,
-  // rather than swallowed per control.
+  // Every schedule write goes through here so a refusal is spoken once, in
+  // one place, rather than swallowed per control.
   const run = (action: () => Promise<ActionResult>) =>
     start(async () => {
       const result = await action()
       if (!result.ok) toast(result.error)
     })
 
-  const modules = [...new Set(rules.map((r) => r.module))]
-  const shown = filter === 'all' ? rules : rules.filter((r) => r.module === filter)
-  const selectedRule = rules.find((r) => r.id === selected) ?? rules[0]
+  // Per-rule edits flip the row immediately: this table is the whole reason
+  // for optimistic UI here, since a rule's own screen is where its state is
+  // read back, not just glanced at.
+  const [liveRules, runRule] = useOptimisticAction<Rule[], RulesPatch, ActionResult>(
+    rules,
+    (state, patch) => state.map((r) => (r.id === patch.id ? { ...r, ...patch.changes } : r)),
+  )
+
+  const modules = [...new Set(liveRules.map((r) => r.module))]
+  const shown = filter === 'all' ? liveRules : liveRules.filter((r) => r.module === filter)
+  const selectedRule = liveRules.find((r) => r.id === selected) ?? liveRules[0]
 
   const liveCount = (timing: Rule['timing']) =>
-    rules.filter((r) => isLive(r, schedule.paused) && r.timing === timing).length
+    liveRules.filter((r) => isLive(r, schedule.paused) && r.timing === timing).length
 
   return (
     <div className="flex flex-wrap items-start gap-x-8 gap-y-7">
@@ -222,11 +233,11 @@ export function Notifications({
               value={filter}
               onChange={setFilter}
               options={[
-                { value: 'all', label: 'All', count: rules.length },
+                { value: 'all', label: 'All', count: liveRules.length },
                 ...modules.map((m) => ({
                   value: m,
                   label: moduleLabels[m] ?? m,
-                  count: rules.filter((r) => r.module === m).length,
+                  count: liveRules.filter((r) => r.module === m).length,
                 })),
               ]}
             />
@@ -294,15 +305,14 @@ export function Notifications({
                           label={`Channels for ${rule.label}`}
                           value={rule.channels}
                           options={CHANNELS}
-                          onChange={(next) =>
-                            run(() =>
-                              updateRule(rule.id, {
-                                channels: rule.channels.includes(next)
-                                  ? rule.channels.filter((c) => c !== next)
-                                  : [...rule.channels, next],
-                              }),
+                          onChange={(next) => {
+                            const channels = rule.channels.includes(next)
+                              ? rule.channels.filter((c) => c !== next)
+                              : [...rule.channels, next]
+                            runRule({ id: rule.id, changes: { channels } }, () =>
+                              updateRule(rule.id, { channels }),
                             )
-                          }
+                          }}
                         />
                       </div>
 
@@ -312,7 +322,9 @@ export function Notifications({
                           label={`Timing for ${rule.label}`}
                           value={rule.timing}
                           options={TIMINGS}
-                          onChange={(timing) => run(() => updateRule(rule.id, { timing }))}
+                          onChange={(timing) =>
+                            runRule({ id: rule.id, changes: { timing } }, () => updateRule(rule.id, { timing }))
+                          }
                         />
                       </div>
 
@@ -322,9 +334,12 @@ export function Notifications({
                           label={`Lead time for ${rule.label}`}
                           value={String(rule.lead_days)}
                           options={leads.map((v) => ({ value: String(v), label: leadLabel(v) }))}
-                          onChange={(v) =>
-                            run(() => updateRule(rule.id, { lead_days: Number(v) }))
-                          }
+                          onChange={(v) => {
+                            const lead_days = Number(v)
+                            runRule({ id: rule.id, changes: { lead_days } }, () =>
+                              updateRule(rule.id, { lead_days }),
+                            )
+                          }}
                         />
                       </div>
 
@@ -332,7 +347,10 @@ export function Notifications({
                         <Eyebrow>Urgency</Eyebrow>
                         <ActionButton
                           variant={rule.urgent ? 'brand' : 'outline'}
-                          onClick={() => run(() => updateRule(rule.id, { urgent: !rule.urgent }))}
+                          onClick={() => {
+                            const urgent = !rule.urgent
+                            runRule({ id: rule.id, changes: { urgent } }, () => updateRule(rule.id, { urgent }))
+                          }}
                         >
                           {rule.urgent ? 'Breaks quiet hours' : 'Respects quiet hours'}
                         </ActionButton>
@@ -349,18 +367,20 @@ export function Notifications({
                           {[1, 7].map((days) => (
                             <ActionButton
                               key={days}
-                              onClick={() => run(() => snooze(rule.id, days))}
+                              onClick={() => {
+                                const snooze_until = new Date(Date.now() + days * 86_400_000)
+                                runRule({ id: rule.id, changes: { snooze_until } }, () => snooze(rule.id, days))
+                              }}
                             >
                               {days}d
                             </ActionButton>
                           ))}
                           <ActionButton
                             variant={rule.muted ? 'brand' : 'outline'}
-                            onClick={() =>
-                              run(() =>
-                                updateRule(rule.id, { muted: !rule.muted, snooze_until: null }),
-                              )
-                            }
+                            onClick={() => {
+                              const changes = { muted: !rule.muted, snooze_until: null }
+                              runRule({ id: rule.id, changes }, () => updateRule(rule.id, changes))
+                            }}
                           >
                             {rule.muted ? 'Unmute' : 'Mute'}
                           </ActionButton>
