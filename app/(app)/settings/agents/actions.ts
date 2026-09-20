@@ -5,14 +5,21 @@ import { requireOwner } from '@/core/auth'
 import { setSetting } from '@/core/settings'
 import { AUTONOMY_LEVELS, type Autonomy } from '@/core/autonomy'
 
-export async function setAutonomy(level: Autonomy): Promise<void> {
+export type ActionResult = { ok: true } | { ok: false; error: string }
+
+export async function setAutonomy(level: Autonomy): Promise<ActionResult> {
   await requireOwner()
   // Validated rather than trusted: this decides whether an agent may write to
   // the owner's data without asking.
-  if (!AUTONOMY_LEVELS.includes(level)) throw new Error(`Not an autonomy level: ${level}`)
+  if (!AUTONOMY_LEVELS.includes(level)) return { ok: false, error: `Not an autonomy level: ${level}` }
 
-  await setSetting('agent_autonomy', level)
-  revalidatePath('/settings/agents')
+  try {
+    await setSetting('agent_autonomy', level)
+    revalidatePath('/settings/agents')
+    return { ok: true }
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'Failed' }
+  }
 }
 
 /**

@@ -249,14 +249,44 @@ export function Finance({ data }: { data: FinanceData }) {
       else if (ok) toast(ok)
     })
 
-  const upcomingTotal = data.upcoming.reduce((sum, u) => sum + u.amountCents, 0)
+  // Like run(), but hands the result back so a caller (recategorise's label,
+  // below) can revert its own optimistic state on failure.
+  const runFor = (action: () => Promise<ActionResult>, ok?: string): Promise<ActionResult> =>
+    new Promise((resolve) => {
+      start(async () => {
+        const result = await action()
+        if (!result.ok) toast(result.error)
+        else if (ok) toast(ok)
+        resolve(result)
+      })
+    })
+
+  // A cancelled subscription leaves the Upcoming list and its KPI count the
+  // moment Cancel is pressed, same shape as Inbox.tsx's act(): optimistic,
+  // reverted with a toast on failure.
+  const [gone, setGone] = useState<string[]>([])
+  const cancel = (u: FinanceData['upcoming'][number]) => {
+    setGone((g) => [...g, u.id])
+    start(async () => {
+      const result = await setSubscriptionStatus(u.id, 'cancelled')
+      if (result.ok) toast(`${u.name} cancelled`)
+      else {
+        setGone((g) => g.filter((x) => x !== u.id))
+        toast(result.error)
+      }
+    })
+  }
+  const upcoming = data.upcoming.filter((u) => !gone.includes(u.id))
+  const kpiData = gone.length > 0 ? { ...data, upcoming } : data
+
+  const upcomingTotal = upcoming.reduce((sum, u) => sum + u.amountCents, 0)
   const hot = data.budgets.filter(
     (b) => !b.isFixed && b.limitCents && percent(b.spentCents, b.limitCents) >= data.alertThreshold,
   )
   const daysLeft = daysLeftInMonth(data.todayIso)
   // What the fortnight's charges cost per month: a yearly one contributes a
   // twelfth, a weekly one four and a third.
-  const monthlySubscriptions = data.upcoming.reduce(
+  const monthlySubscriptions = upcoming.reduce(
     (sum, u) => sum + u.amountCents * (u.cadence === 'yearly' ? 1 / 12 : u.cadence === 'weekly' ? 52 / 12 : 1),
     0,
   )
@@ -278,14 +308,14 @@ export function Finance({ data }: { data: FinanceData }) {
               t.value === 'accounts'
                 ? data.accounts.length
                 : t.value === 'subscriptions'
-                  ? data.upcoming.length
+                  ? upcoming.length
                   : undefined,
           }))}
         >
           {tab === 'overview' && (
             <div className="mt-[18px] space-y-3.5">
               <MetricStrip>
-                <KpiStrip data={data} hot={hot} upcomingTotal={upcomingTotal} daysLeft={daysLeft} />
+                <KpiStrip data={kpiData} hot={hot} upcomingTotal={upcomingTotal} daysLeft={daysLeft} />
               </MetricStrip>
               <Card className={cn(overviewCard, 'flex min-h-[260px] flex-col')}>
                 <NetWorthCard data={data} />
@@ -305,7 +335,7 @@ export function Finance({ data }: { data: FinanceData }) {
                 />
                 <Row
                   title="Subscriptions"
-                  meta={`${data.upcoming.length} due in 14 days · ${money(upcomingTotal, true)}`}
+                  meta={`${upcoming.length} due in 14 days · ${money(upcomingTotal, true)}`}
                   onClick={() => setParams({ tab: 'subscriptions' }, { local: true })}
                   right={<span aria-hidden="true" className="text-ink-3">&rarr;</span>}
                 />
@@ -399,7 +429,7 @@ export function Finance({ data }: { data: FinanceData }) {
 
           {tab === 'subscriptions' && (
             <div className="mt-[18px] space-y-3">
-              {data.upcoming.length === 0 ? (
+              {upcoming.length === 0 ? (
                 <EmptyState headline="Nothing detected">
                   A subscription is three charges from the same merchant, within ten percent of each
                   other, on a regular cadence. The nightly job promotes what it finds; two charges is a
@@ -407,7 +437,7 @@ export function Finance({ data }: { data: FinanceData }) {
                 </EmptyState>
               ) : (
                 <RowList>
-                  {data.upcoming.map((u) => (
+                  {upcoming.map((u) => (
                     <Row
                       key={u.id}
                       title={u.name}
@@ -415,13 +445,7 @@ export function Finance({ data }: { data: FinanceData }) {
                       amount={money(u.amountCents, true)}
                       right={
                         <>
-                          <ActionButton
-                            onClick={() =>
-                              run(() => setSubscriptionStatus(u.id, 'cancelled'), `Cancelled ${u.name}`)
-                            }
-                          >
-                            Cancel
-                          </ActionButton>
+                          <ActionButton onClick={() => cancel(u)}>Cancel</ActionButton>
                         </>
                       }
                     />
@@ -436,7 +460,7 @@ export function Finance({ data }: { data: FinanceData }) {
               transactions={data.transactions}
               categories={data.budgets.map((b) => ({ id: b.id, name: b.name }))}
               onRecategorise={(id, categoryId) =>
-                run(() => recategorise(id, categoryId), 'Filed, and the rule learned it')
+                runFor(() => recategorise(id, categoryId), 'Filed, and the rule learned it')
               }
             />
           )}
@@ -450,7 +474,7 @@ export function Finance({ data }: { data: FinanceData }) {
           * through its segments; the desktop through the drawers. */}
         <div data-testid="finance-kpis">
           <MetricStrip className="sm:grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))]">
-            <KpiStrip data={data} hot={hot} upcomingTotal={upcomingTotal} daysLeft={daysLeft} />
+            <KpiStrip data={kpiData} hot={hot} upcomingTotal={upcomingTotal} daysLeft={daysLeft} />
           </MetricStrip>
         </div>
 
@@ -513,13 +537,13 @@ export function Finance({ data }: { data: FinanceData }) {
                 meta={`${shortDate(data.todayIso)} → ${shortDate(plusDays(data.todayIso, 14))}`}
                 className="mb-1"
               />
-              {data.upcoming.length === 0 ? (
+              {upcoming.length === 0 ? (
                 <EmptyState headline="Nothing booked" className="border-0">
                   No active subscription is due in the next fortnight.
                 </EmptyState>
               ) : (
                 <DataTable head={['Date', 'Charge', 'Amount']} cols="82px minmax(0,1fr) auto">
-                  {data.upcoming.map((u) => (
+                  {upcoming.map((u) => (
                     <DataRow key={u.id} className={cn(overviewRow, 'md:gap-x-3')}>
                       <span className="num text-[12px] text-ink">
                         {shortDate(u.nextChargeOn)}
@@ -544,7 +568,7 @@ export function Finance({ data }: { data: FinanceData }) {
                           aria-label={`Cancel ${u.name}`}
                           onClick={(e) => {
                             e.stopPropagation()
-                            run(() => setSubscriptionStatus(u.id, 'cancelled'), `${u.name} cancelled`)
+                            cancel(u)
                           }}
                         >
                           Cancel
@@ -555,7 +579,7 @@ export function Finance({ data }: { data: FinanceData }) {
                   <DataRow className="border-b-0 md:gap-x-3 md:pb-0.5 md:pt-2.5">
                     <span className="label text-[11px] text-ink-3">Total</span>
                     <span className="text-[12px] text-ink-3">
-                      {data.upcoming.length} {data.upcoming.length === 1 ? 'charge' : 'charges'} ·{' '}
+                      {upcoming.length} {upcoming.length === 1 ? 'charge' : 'charges'} ·{' '}
                       {money(monthlySubscriptions, true)}/mo in subscriptions
                     </span>
                     <span className="num text-right text-[13px] text-ink">{money(upcomingTotal, true)}</span>
@@ -666,7 +690,7 @@ export function Finance({ data }: { data: FinanceData }) {
             transactions={accountTx}
             categories={data.budgets.map((b) => ({ id: b.id, name: b.name }))}
             onRecategorise={(id, categoryId) =>
-              run(() => recategorise(id, categoryId), 'Filed, and the rule learned it')
+              runFor(() => recategorise(id, categoryId), 'Filed, and the rule learned it')
             }
           />
         </Overlay>
@@ -718,7 +742,7 @@ export function Finance({ data }: { data: FinanceData }) {
             transactions={data.transactions.filter((t) => t.categoryName === openBudget.name)}
             categories={data.budgets.map((b) => ({ id: b.id, name: b.name }))}
             onRecategorise={(id, categoryId) =>
-              run(() => recategorise(id, categoryId), 'Filed, and the rule learned it')
+              runFor(() => recategorise(id, categoryId), 'Filed, and the rule learned it')
             }
           />
         </Overlay>
@@ -849,9 +873,12 @@ function TransactionList({
 }: {
   transactions: FinanceData['transactions']
   categories: { id: string; name: string }[]
-  onRecategorise: (id: string, categoryId: string) => void
+  onRecategorise: (id: string, categoryId: string) => Promise<ActionResult>
 }) {
   const [editing, setEditing] = useState<string | null>(null)
+  // The category label flips the moment one is picked, reverted on failure,
+  // same shape as Inbox.tsx's act() with a map instead of a list.
+  const [override, setOverride] = useState<Record<string, string>>({})
 
   if (transactions.length === 0) {
     return (
@@ -895,10 +922,10 @@ function TransactionList({
                     className={cn(
                       // A text link in a dense row: the hit area grows on a coarse pointer without moving the row.
                       'underline-offset-2 hover:text-ink hover:underline pointer-coarse:-my-3 pointer-coarse:py-3',
-                      t.categoryName ? (t.isManual ? 'text-ink-2' : 'text-ink-3') : 'text-warn',
+                      (override[t.id] ?? t.categoryName) ? (t.isManual ? 'text-ink-2' : 'text-ink-3') : 'text-warn',
                     )}
                   >
-                    {t.categoryName ?? 'Uncategorised'}
+                    {override[t.id] ?? t.categoryName ?? 'Uncategorised'}
                   </button>{' '}
                   {(t.isManual || t.classifiedBy === 'model' || t.classifiedBy === 'rule') && (
                     <StatusChip tone={t.classifiedBy === 'model' && !t.isManual ? 'brand' : 'quiet'}>
@@ -922,10 +949,19 @@ function TransactionList({
                 {categories.map((c) => (
                   <ActionButton
                     key={c.id}
-                    variant={t.categoryName === c.name ? 'brand' : 'outline'}
+                    variant={(override[t.id] ?? t.categoryName) === c.name ? 'brand' : 'outline'}
                     onClick={() => {
-                      onRecategorise(t.id, c.id)
+                      setOverride((o) => ({ ...o, [t.id]: c.name }))
                       setEditing(null)
+                      onRecategorise(t.id, c.id).then((result) => {
+                        if (!result.ok) {
+                          setOverride((o) => {
+                            const next = { ...o }
+                            delete next[t.id]
+                            return next
+                          })
+                        }
+                      })
                     }}
                   >
                     {c.name}

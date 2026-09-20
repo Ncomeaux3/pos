@@ -431,10 +431,13 @@ function Card({
 }) {
   const p = goal.progress
   const [value, setValue] = useState('')
+  // Struck through the moment Mark done or Reopen is pressed, reverted on
+  // failure, same shape as Inbox.tsx's act() with a boolean instead of a list.
+  const [doneOverride, setDoneOverride] = useState<boolean | null>(null)
   const next = goal.tasks.find((t) => !t.done)
   const fin = finish(goal, todayIso)
   const manual = !goal.metricSource
-  const done = p.status === 'done'
+  const done = doneOverride ?? p.status === 'done'
 
   return (
     <article className="glass min-w-0 rounded-[18px] px-[18px] py-4 transition-[border-color,transform] duration-200 hover:-translate-y-0.5">
@@ -524,9 +527,15 @@ function Card({
           <button
             type="button"
             className={miniAccent}
-            onClick={() =>
-              onRun(() => recordCheckin(goal.id, done ? 0 : 1), done ? 'Reopened' : 'Marked done')
-            }
+            onClick={() => {
+              const nextDone = !done
+              setDoneOverride(nextDone)
+              onRun(async () => {
+                const result = await recordCheckin(goal.id, nextDone ? 1 : 0)
+                if (!result.ok) setDoneOverride(!nextDone)
+                return result
+              }, nextDone ? 'Marked done' : 'Reopened')
+            }}
           >
             {done ? 'Reopen' : 'Mark done'}
           </button>

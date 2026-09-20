@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useOptimistic, useRef, useState, useTransition } from 'react'
+import type { ActionResult } from '@/app/(app)/settings/skills/actions'
 import { linkSkill, unlinkSkill } from '@/app/(app)/settings/skills/actions'
 import { cn } from '@/lib/utils'
 import { fieldClass } from './field'
@@ -60,14 +61,11 @@ export function SkillPicker({
   const linked = new Set(shown.map((l) => l.id))
   const unlinked = skills.filter(([id]) => !linked.has(id))
 
-  const run = (patch: Patch, action: () => Promise<void>) =>
+  const run = (patch: Patch, action: () => Promise<ActionResult>) =>
     start(async () => {
       apply(patch)
-      try {
-        await action()
-      } catch (err) {
-        toast(err instanceof Error ? err.message : 'Could not save the skill link.')
-      }
+      const result = await action()
+      if (!result.ok) toast(result.error)
     })
 
   return (

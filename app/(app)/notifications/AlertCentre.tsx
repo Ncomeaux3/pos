@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { ActionButton, EmptyState, Eyebrow, StatusDot, useToast } from '@/components/pos'
+import { useState } from 'react'
+import { ActionButton, EmptyState, Eyebrow, StatusDot } from '@/components/pos'
 import type { DotTone } from '@/components/pos'
-import { readAlert, readAllAlerts } from './actions'
+import { useOptimisticAction } from '@/components/pos/useOptimisticAction'
+import { readAlert, readAllAlerts, type ActionResult } from './actions'
 
 export type AlertItem = {
   id: string
@@ -16,38 +17,31 @@ export type AlertItem = {
   read: boolean
 }
 
+type Patch = { id: string } | 'all'
+
 /**
  * Unread first with the accent fill, then history. History is ink-3 rather than
  * faded: the design's rule is that a de-emphasised row keeps full opacity so its
  * text and any button inside stay readable.
  */
-export function AlertCentre({ alerts }: { alerts: AlertItem[] }) {
+export function AlertCentre({ alerts: initialAlerts }: { alerts: AlertItem[] }) {
   const [showHistory, setShowHistory] = useState(true)
-  const [, start] = useTransition()
-  const toast = useToast()
 
-  // The per-row Read button leaves the row the moment it's pressed, same
-  // shape as Inbox.tsx's act(): optimistic, reverted with a toast on failure.
-  const [gone, setGone] = useState<string[]>([])
-  const read = (id: string) => {
-    setGone((g) => [...g, id])
-    start(async () => {
-      const result = await readAlert(id)
-      if (!result.ok) {
-        setGone((g) => g.filter((x) => x !== id))
-        toast(result.error)
-      }
-    })
-  }
+  // The per-row Read button and Mark all read both flip through one
+  // optimistic reducer, same shape as Inbox.tsx's act(): a row (or the whole
+  // list) leaves the moment it's pressed, reverted with a toast on failure.
+  const [alerts, run] = useOptimisticAction<AlertItem[], Patch, ActionResult>(
+    initialAlerts,
+    (state, patch) =>
+      patch === 'all'
+        ? state.map((a) => ({ ...a, read: true }))
+        : state.map((a) => (a.id === patch.id ? { ...a, read: true } : a)),
+  )
 
-  const unread = alerts.filter((a) => !a.read && !gone.includes(a.id))
+  const unread = alerts.filter((a) => !a.read)
   const history = alerts.filter((a) => a.read)
 
-  const run = (action: () => Promise<{ ok: boolean; error?: string }>) =>
-    start(async () => {
-      const result = await action()
-      if (!result.ok && result.error) toast(result.error)
-    })
+  const read = (id: string) => run({ id }, () => readAlert(id))
 
   return (
     <section className="space-y-3">
@@ -56,7 +50,7 @@ export function AlertCentre({ alerts }: { alerts: AlertItem[] }) {
           Alert centre · {unread.length} unread
         </Eyebrow>
         <div className="flex gap-2">
-          <ActionButton disabled={unread.length === 0} onClick={() => run(readAllAlerts)}>
+          <ActionButton disabled={unread.length === 0} onClick={() => run('all', readAllAlerts)}>
             Mark all read
           </ActionButton>
           <ActionButton onClick={() => setShowHistory(!showHistory)}>

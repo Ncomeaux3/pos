@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { ActionButton, Card, Chip, ConfirmButton, Eyebrow, fieldClass, InlineEdit } from '@/components/pos'
+import { ActionButton, Card, Chip, ConfirmButton, Eyebrow, fieldClass, InlineEdit, useToast } from '@/components/pos'
 import type { MergedSkill } from '@/modules/skills/tree'
 import { cn } from '@/lib/utils'
+import type { ActionResult } from './actions'
 import { addSkill, deleteSkill, renameSkill, resetTree, restoreSkill, setKeywords } from './actions'
 
 type Group = { attribute: MergedSkill; skills: MergedSkill[] }
@@ -20,7 +21,12 @@ function toId(name: string): string {
 export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overrideCount: number }) {
   const [showDeleted, setShowDeleted] = useState(false)
   const [pending, startTransition] = useTransition()
-  const run = (fn: () => Promise<void>) => startTransition(() => void fn())
+  const toast = useToast()
+  const run = (fn: () => Promise<ActionResult>) =>
+    startTransition(async () => {
+      const result = await fn()
+      if (!result.ok) toast(result.error)
+    })
   const deletedCount = groups.reduce((n, g) => n + g.skills.filter((s) => s.deleted).length, 0)
 
   return (

@@ -21,9 +21,20 @@ const layoutSchema = z
   })
   .nullable()
 
+export type ActionResult = { ok: true } | { ok: false; error: string }
+
+function failed(error: unknown): ActionResult {
+  return { ok: false, error: error instanceof Error ? error.message : 'Failed' }
+}
+
 /** The key is fixed here: the client says what the layout is, not where it goes. */
-export async function saveDashboardLayout(layout: Settings['dashboard_layout']) {
+export async function saveDashboardLayout(layout: Settings['dashboard_layout']): Promise<ActionResult> {
   await requireOwner()
-  await setSetting('dashboard_layout', layoutSchema.parse(layout))
-  revalidatePath('/', 'layout')
+  try {
+    await setSetting('dashboard_layout', layoutSchema.parse(layout))
+    revalidatePath('/', 'layout')
+    return { ok: true }
+  } catch (error) {
+    return failed(error)
+  }
 }
