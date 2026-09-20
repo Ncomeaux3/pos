@@ -628,12 +628,35 @@ export function DraftActions({
   run: (action: () => Promise<ActionResult>, ok?: string) => void
   className?: string
 }) {
+  // Flips to a plain label the moment Accept or Discard is pressed, reverted
+  // to the buttons on failure, same shape as ForgetPasskey.tsx: this
+  // component is shared by a list card and a drawer, neither of which owns
+  // the recipe array to remove the row from directly.
+  const [decided, setDecided] = useState<'accepted' | 'discarded' | null>(null)
+
+  if (decided) {
+    return (
+      <span className={cn('text-[12px] text-ink-3', className)} onClick={(e) => e.stopPropagation()}>
+        {decided === 'accepted' ? 'Added' : 'Discarded'}
+      </span>
+    )
+  }
+
+  const decide = (accept: boolean) => {
+    setDecided(accept ? 'accepted' : 'discarded')
+    run(async () => {
+      const result = await decideRecipe(id, accept)
+      if (!result.ok) setDecided(null)
+      return result
+    }, accept ? 'Added to the library' : 'Discarded')
+  }
+
   return (
     <div className={cn('flex gap-1.5', className)} onClick={(e) => e.stopPropagation()}>
-      <ActionButton size="sm" variant="accent" onClick={() => run(() => decideRecipe(id, true), 'Added to the library')}>
+      <ActionButton size="sm" variant="accent" onClick={() => decide(true)}>
         Accept
       </ActionButton>
-      <ActionButton size="sm" onClick={() => run(() => decideRecipe(id, false), 'Discarded')}>
+      <ActionButton size="sm" onClick={() => decide(false)}>
         Discard
       </ActionButton>
     </div>

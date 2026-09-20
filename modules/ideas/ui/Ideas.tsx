@@ -227,7 +227,20 @@ export function Ideas({ data }: { data: IdeasData }) {
             <button
               type="button"
               className={miniAccent}
-              onClick={() => run(() => mergeIdeas(pairA.id, pairB.id), `Merged into ${pairA.title}`)}
+              onClick={() => {
+                // The suggestion card leaves the moment Merge is pressed, same
+                // shape as Inbox.tsx's act(): optimistic, reverted with a
+                // toast on failure.
+                setDismissed(true)
+                start(async () => {
+                  const result = await mergeIdeas(pairA.id, pairB.id)
+                  if (result.ok) toast(`Merged into ${pairA.title}`)
+                  else {
+                    setDismissed(false)
+                    toast(result.error)
+                  }
+                })
+              }}
             >
               Merge
             </button>
