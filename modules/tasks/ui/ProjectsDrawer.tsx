@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ActionButton, Eyebrow, Field, Overlay, useFormErrors } from '@/components/pos'
+import { ActionButton, Eyebrow, Overlay, useFormErrors } from '@/components/pos'
 import { ConfirmButton, InlineEdit } from '@/components/pos/edit'
 import { fieldClass } from '@/components/pos/field'
 import { cn } from '@/lib/utils'
@@ -27,7 +27,7 @@ export function ProjectsDrawer({
 }) {
   const [name, setName] = useState('')
   const { errors, ref: formRef, submit } = useFormErrors(() => ({
-    name: name.trim() ? undefined : 'New project is required',
+    name: name.trim() ? undefined : 'Project name is required',
   }))
 
   const add = () => {
@@ -48,28 +48,31 @@ export function ProjectsDrawer({
       }
     >
       <form
-        className="flex items-center gap-2"
+        className="flex flex-col gap-1.5"
         ref={formRef}
         onSubmit={(e) => {
           e.preventDefault()
           add()
         }}
       >
-        <Field label="New project" required error={errors.name} className="flex-1">
+        <div className="flex items-center gap-2">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="New project"
-            className={fieldClass}
+            aria-label="New project"
+            aria-invalid={errors.name ? true : undefined}
+            className={cn(fieldClass, errors.name && 'border-bad focus-visible:border-bad')}
           />
-        </Field>
-        <ActionButton
-          variant="solid"
-          type="submit"
-          className="h-[38px] shrink-0 sm:h-[38px]"
-        >
-          Add
-        </ActionButton>
+          <ActionButton variant="solid" type="submit" className="h-[38px] shrink-0 sm:h-[38px]">
+            Add
+          </ActionButton>
+        </div>
+        {errors.name && (
+          <span role="alert" className="text-[12px] leading-[1.4] text-bad">
+            {errors.name}
+          </span>
+        )}
       </form>
 
       <div className="glass mt-4 flex flex-col overflow-hidden rounded-[18px]">

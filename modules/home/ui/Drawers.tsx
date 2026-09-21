@@ -170,7 +170,7 @@ export function LogServiceDrawer({
     notes !== ''
   const formId = useId()
   const { errors, ref: formRef, submit } = useFormErrors(() => ({
-    what: what.trim() ? undefined : 'What was done is required',
+    what: what.trim() ? undefined : 'Say what was done',
     doneOn: doneOn ? undefined : 'Date is required',
     cost: cost.trim() && parseNumber(cost) === null ? 'Cost must be a number' : undefined,
   }))
