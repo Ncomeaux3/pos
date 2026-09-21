@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { ActionButton, Eyebrow, Overlay, useToast } from '@/components/pos'
+import { useId, useState, useTransition } from 'react'
+import { ActionButton, Eyebrow, Field, Overlay, submitOnModEnter, useFormErrors, useToast } from '@/components/pos'
 import { fieldClass } from '@/components/pos/field'
 import { toGrams } from '../units'
 import { writePlan } from './actions'
@@ -69,15 +69,28 @@ export function PlanDrawer({ plan, onClose }: { plan: Plan | null; onClose: () =
         }))
       : [blankItem()],
   )
+  const [initialItems] = useState(items)
   const [pending, start] = useTransition()
   const toast = useToast()
 
   const patch = (key: string, next: Partial<ItemRow>) =>
     setItems((rows) => rows.map((r) => (r.key === key ? { ...r, ...next } : r)))
 
-  const invalid = !name.trim() || items.some((r) => !r.exercise.trim())
+  const dirty =
+    name !== (plan?.name ?? '') ||
+    goal !== (plan?.goal ?? '') ||
+    daysPerWeek !== String(plan?.daysPerWeek ?? 3) ||
+    startedOn !== (plan?.startedOn ?? '') ||
+    notes !== (plan?.notes ?? '') ||
+    JSON.stringify(items) !== JSON.stringify(initialItems)
+  const formId = useId()
+  const { errors, ref: formRef, submit } = useFormErrors(() => ({
+    name: name.trim() ? undefined : 'Name is required',
+    exercises: items.some((r) => !r.exercise.trim()) ? 'Every exercise needs a name' : undefined,
+  }))
 
-  const save = () =>
+  const save = () => {
+    if (!submit()) return
     start(async () => {
       const result = await writePlan({
         ...(plan ? { id: plan.id } : {}),
@@ -101,12 +114,14 @@ export function PlanDrawer({ plan, onClose }: { plan: Plan | null; onClose: () =
         onClose()
       }
     })
+  }
 
   return (
     <Overlay
       open
       narrow
       onClose={onClose}
+      dirty={dirty}
       eyebrow={
         <>
           Fitness <span className="text-ink-4">/</span> {plan ? 'Edit plan' : 'New plan'}
@@ -117,17 +132,24 @@ export function PlanDrawer({ plan, onClose }: { plan: Plan | null; onClose: () =
           <ActionButton variant="outline" size="md" onClick={onClose}>
             Cancel
           </ActionButton>
-          <ActionButton variant="solid" disabled={invalid || pending} onClick={save}>
+          <ActionButton variant="solid" disabled={pending} type="submit" form={formId}>
             Save plan
           </ActionButton>
         </>
       }
     >
-      <div className="flex flex-col gap-3.5">
-        <label className="flex flex-col gap-1.5">
-          <Eyebrow>Name</Eyebrow>
+      <form
+        id={formId}
+        ref={formRef}
+        className="flex flex-col gap-3.5"
+        onSubmit={(e) => {
+          e.preventDefault()
+          save()
+        }}
+      >
+        <Field label="Name" required error={errors.name}>
           <input aria-label="Plan name" value={name} onChange={(e) => setName(e.target.value)} className={fieldClass} />
-        </label>
+        </Field>
         <label className="flex flex-col gap-1.5">
           <Eyebrow>Goal</Eyebrow>
           <input aria-label="Goal" value={goal} onChange={(e) => setGoal(e.target.value)} className={fieldClass} />
@@ -162,6 +184,7 @@ export function PlanDrawer({ plan, onClose }: { plan: Plan | null; onClose: () =
             aria-label="Notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
+            onKeyDown={submitOnModEnter}
             rows={3}
             className={fieldClass}
           />
@@ -240,6 +263,11 @@ export function PlanDrawer({ plan, onClose }: { plan: Plan | null; onClose: () =
               </div>
             ))}
           </div>
+          {errors.exercises && (
+            <span role="alert" className="text-[12px] leading-[1.4] text-bad">
+              {errors.exercises}
+            </span>
+          )}
           <ActionButton
             variant="outline"
             size="sm"
@@ -254,7 +282,7 @@ export function PlanDrawer({ plan, onClose }: { plan: Plan | null; onClose: () =
           Saving a new plan archives the one in force. The coach proposes changes to it; only this
           form and an approved proposal write it.
         </p>
-      </div>
+      </form>
     </Overlay>
   )
 }
