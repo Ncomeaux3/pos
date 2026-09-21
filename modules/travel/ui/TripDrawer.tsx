@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useEffect, useId, useRef, useState, useTransition } from 'react'
 import {
   ActionButton,
   Card,
@@ -9,6 +9,7 @@ import {
   Chip,
   EmptyState,
   Eyebrow,
+  Field,
   MetricStrip,
   MetricTile,
   Overlay,
@@ -18,6 +19,7 @@ import {
   StatusChip,
   TabBar,
   fieldClass,
+  useFormErrors,
   useToast,
   type ChipTone,
 } from '@/components/pos'
@@ -883,26 +885,38 @@ function TripForm({
   onClose: () => void
   run: Run
 }) {
-  const [f, setF] = useState({
+  const initial = {
     name: trip?.name ?? '',
     budget: trip ? String(Math.round(trip.budgetCents / 100)) : '',
     travellers: trip ? String(trip.travellers) : '2',
     notes: trip?.notes ?? '',
-  })
+  }
+  const [f, setF] = useState(initial)
   const set = (key: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF((v) => ({ ...v, [key]: e.target.value }))
 
   // The destination list. Initialised once, from the trip's rows or, for a
   // trip that predates them, from its own place; never from nothing, or the
   // first save would wipe what the trip already said.
   const [rows, setRows] = useState<Row[]>(() => rowsFor(trip, destinations))
+  const [initialRows] = useState(rows)
   const title = trip ? 'Edit details' : mode === 'wish' ? 'Add to wishlist' : 'New trip'
 
   // The wishlist is one place you would like to go, not an itinerary, so it
   // keeps a single row and no dates.
   const many = mode === 'trip'
+  const nameLabel = mode === 'wish' ? 'Place' : 'Trip'
+  const dirty =
+    (Object.keys(initial) as (keyof typeof initial)[]).some((k) => f[k] !== initial[k]) ||
+    JSON.stringify(rows) !== JSON.stringify(initialRows)
+  const formId = useId()
+  const { errors, ref: formRef, submit } = useFormErrors(() => ({
+    name: f.name.trim() ? undefined : `${nameLabel} is required`,
+    budget: f.budget.trim() && parseNumber(f.budget) === null ? 'Budget must be a number' : undefined,
+    travellers: f.travellers.trim() && parseNumber(f.travellers) === null ? 'Travelers must be a number' : undefined,
+  }))
 
   const save = () => {
-    if (!f.name.trim()) return
+    if (!submit()) return
     run(
       () =>
         saveTrip({
@@ -932,6 +946,7 @@ function TripForm({
       open
       wide
       onClose={onClose}
+      dirty={dirty}
       eyebrow={`Travel / ${title}`}
       title={title}
       footer={
@@ -942,17 +957,24 @@ function TripForm({
             </ActionButton>
             <span className="text-[11px] leading-none text-ink-2">Location search by Open-Meteo and GeoNames</span>
           </div>
-          <ActionButton variant="solid" size="lg" className="h-[38px] gap-2 px-3.5 text-[13px]" onClick={save}>
+          <ActionButton variant="solid" size="lg" className="h-[38px] gap-2 px-3.5 text-[13px]" type="submit" form={formId}>
             {trip ? 'Save' : mode === 'wish' ? 'Add' : 'Create'} <span aria-hidden="true">&rarr;</span>
           </ActionButton>
         </>
       }
     >
-      <div className="flex flex-col gap-3.5">
-        <label className="flex flex-col gap-1.5">
-          <Eyebrow>{mode === 'wish' ? 'Place' : 'Trip'}</Eyebrow>
+      <form
+        id={formId}
+        ref={formRef}
+        className="flex flex-col gap-3.5"
+        onSubmit={(e) => {
+          e.preventDefault()
+          save()
+        }}
+      >
+        <Field label={nameLabel} required error={errors.name}>
           <input value={f.name} onChange={set('name')} placeholder="e.g. Tokyo · November" className={cn(field, 'text-[15px]')} />
-        </label>
+        </Field>
 
         {rows.map((row, i) => (
           <DestinationFields
@@ -982,14 +1004,12 @@ function TripForm({
 
         {many ? (
           <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1.5">
-              <Eyebrow>Budget</Eyebrow>
+            <Field label="Budget" error={errors.budget}>
               <input value={f.budget} onChange={set('budget')} placeholder="$" className={cn(field, 'num')} />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <Eyebrow>Travelers</Eyebrow>
+            </Field>
+            <Field label="Travelers" error={errors.travellers}>
               <input value={f.travellers} onChange={set('travellers')} className={cn(field, 'num')} />
-            </label>
+            </Field>
           </div>
         ) : (
           <label className="flex flex-col gap-1.5">
@@ -1001,7 +1021,7 @@ function TripForm({
           The trip&apos;s dates are the span of its destinations. Coordinates place each pin on the globe;
           without them a destination is listed and not drawn.
         </p>
-      </div>
+      </form>
     </Overlay>
   )
 }
