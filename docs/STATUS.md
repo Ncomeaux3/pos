@@ -38,7 +38,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-20 (v1.2 Phase 3b: the Apple shell, capsule tab bar and avatar menu). Branch `main`, production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-21 (v1.2 Phase 3c: phone push, pop and tab fade, and the row swipes). Branch `main`, production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -63,6 +63,25 @@ and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
 ## Done
+
+**v1.2 Phase 3c: motion and row swipes** (2026-09-21, branch
+`phase-3c-motion-swipes`). On the phone a route change is an iOS push or
+pop and a tab change a cross-fade; the desktop keeps the reveal stagger.
+Push and the fade are React `ViewTransition` (`components/pos/PageTransition.tsx`
+keyed by pathname in the app layout, `transitionTypes` on the capsule's
+links and scrub). Pop is not: React flushes a transition started in a
+`popstate` event synchronously and never animates it, measured with and
+without a tagging listener, so `goBack()` wraps `history.back()` in the
+browser's `startViewTransition`, names the leaving page inline and keys the
+CSS off `html[data-nav="back"]`; BackControl and EdgeBack call it. The page
+column took main's padding, `min-h-dvh` and the canvas colour below md so
+each snapshot is one opaque card. `SwipeRow` is Board's gesture lifted out:
+Tasks right completes and left snoozes to tomorrow (a done row's left still
+reopens), Review right approves and left dismisses on pending unguarded
+cards, Notifications right reads and left snoozes a day, with `listAlerts`
+now leaving snoozed rows out. Owner phone check pending; the plan's ceiling
+stands: Safari may differ on transition types and no animation is the
+fallback.
 
 **v1.2 Phase 3a: the look mockup gate** (2026-09-20, branch
 `phase-3a-look-mockup`, approved by the owner on the before-and-after page

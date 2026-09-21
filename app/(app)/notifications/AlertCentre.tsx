@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { ActionButton, EmptyState, Eyebrow, StatusDot } from '@/components/pos'
 import type { DotTone } from '@/components/pos'
+import { SwipeRow } from '@/components/pos/SwipeRow'
 import { useOptimisticAction } from '@/components/pos/useOptimisticAction'
-import { readAlert, readAllAlerts, type ActionResult } from './actions'
+import { readAlert, readAllAlerts, snoozeAlert, type ActionResult } from './actions'
 
 export type AlertItem = {
   id: string
@@ -17,7 +18,7 @@ export type AlertItem = {
   read: boolean
 }
 
-type Patch = { id: string } | 'all'
+type Patch = { id: string; snoozed?: boolean } | 'all'
 
 /**
  * Unread first with the accent fill, then history. History is ink-3 rather than
@@ -27,21 +28,27 @@ type Patch = { id: string } | 'all'
 export function AlertCentre({ alerts: initialAlerts }: { alerts: AlertItem[] }) {
   const [showHistory, setShowHistory] = useState(true)
 
-  // The per-row Read button and Mark all read both flip through one
-  // optimistic reducer, same shape as Inbox.tsx's act(): a row (or the whole
-  // list) leaves the moment it's pressed, reverted with a toast on failure.
+  // The per-row Read button, the swipes and Mark all read all flip through
+  // one optimistic reducer, same shape as Inbox.tsx's act(): a row (or the
+  // whole list) leaves the moment it's pressed, reverted with a toast on
+  // failure. A snoozed row is gone from the list, not read: the query behind
+  // this screen leaves it out until the snooze ends, as the dashboard does.
   const [alerts, run] = useOptimisticAction<AlertItem[], Patch, ActionResult>(
     initialAlerts,
     (state, patch) =>
       patch === 'all'
         ? state.map((a) => ({ ...a, read: true }))
-        : state.map((a) => (a.id === patch.id ? { ...a, read: true } : a)),
+        : patch.snoozed
+          ? state.filter((a) => a.id !== patch.id)
+          : state.map((a) => (a.id === patch.id ? { ...a, read: true } : a)),
   )
 
   const unread = alerts.filter((a) => !a.read)
   const history = alerts.filter((a) => a.read)
 
   const read = (id: string) => run({ id }, () => readAlert(id))
+  // The dashboard's shorter snooze, one day, is the swipe's.
+  const snooze = (id: string) => run({ id, snoozed: true }, () => snoozeAlert(id, 1))
 
   return (
     <section className="space-y-3">
@@ -66,24 +73,27 @@ export function AlertCentre({ alerts: initialAlerts }: { alerts: AlertItem[] }) 
       ) : (
         <div>
           {unread.map((a) => (
-            <div
+            <SwipeRow
               key={a.id}
-              className="flex flex-wrap items-start gap-x-3.5 gap-y-2 border-b border-rule bg-brand-soft px-3 py-3.5"
+              right={{ label: 'Read', onCommit: () => read(a.id) }}
+              left={{ label: 'Snooze', onCommit: () => snooze(a.id) }}
             >
-              <StatusDot tone={a.tone} className="mt-2" />
-              <div className="min-w-0 flex-1 basis-[180px] space-y-1">
-                <div className="flex flex-wrap items-baseline gap-x-2.5">
-                  <span className="label text-action">{a.module}</span>
-                  <span className="t-caption text-ink-3">{a.via}</span>
+              <div className="flex flex-wrap items-start gap-x-3.5 gap-y-2 border-b border-rule bg-brand-soft px-3 py-3.5">
+                <StatusDot tone={a.tone} className="mt-2" />
+                <div className="min-w-0 flex-1 basis-[180px] space-y-1">
+                  <div className="flex flex-wrap items-baseline gap-x-2.5">
+                    <span className="label text-action">{a.module}</span>
+                    <span className="t-caption text-ink-3">{a.via}</span>
+                  </div>
+                  <p className="t-body text-ink">{a.title}</p>
+                  {a.body && <p className="t-caption text-ink-3">{a.body}</p>}
                 </div>
-                <p className="t-body text-ink">{a.title}</p>
-                {a.body && <p className="t-caption text-ink-3">{a.body}</p>}
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="t-caption num text-ink-3">{a.time}</span>
+                  <ActionButton onClick={() => read(a.id)}>Read</ActionButton>
+                </div>
               </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <span className="t-caption num text-ink-3">{a.time}</span>
-                <ActionButton onClick={() => read(a.id)}>Read</ActionButton>
-              </div>
-            </div>
+            </SwipeRow>
           ))}
         </div>
       )}

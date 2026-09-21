@@ -2,8 +2,9 @@
 
 import { ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { PHONE_TAB_HREFS } from '@/core/phone-tabs'
+import { goBack } from './PageTransition'
 
 /**
  * The phone header's back control, drawn on every screen that is not a tab
@@ -16,18 +17,18 @@ import { PHONE_TAB_HREFS } from '@/core/phone-tabs'
  */
 export function BackControl() {
   const pathname = usePathname()
-  const router = useRouter()
   if (PHONE_TAB_HREFS.includes(pathname)) return null
 
   return (
     <Link
       href="/browse"
+      transitionTypes={['back']}
       aria-label="Back"
       className="-ml-2.5 grid size-11 shrink-0 place-items-center rounded-lg text-ink transition-colors duration-150 hover:bg-brand-soft md:hidden"
       onClick={(e) => {
         if (window.history.length > 1) {
           e.preventDefault()
-          router.back()
+          goBack()
         }
       }}
     >

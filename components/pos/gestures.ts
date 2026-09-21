@@ -6,9 +6,10 @@ import { edgeBack, fromEdge, isLongPress, LONG_PRESS_MS, swipeOf } from '@/core/
 // The pointer half of the gestures. The decision about what counts as a swipe
 // lives in core/gestures.ts, where it can be tested without a browser.
 //
-// Five gestures: swipe between segments, swipe a task to complete it, pull down
-// to refresh, long press a dashboard tile to arrange, and drag from the left
-// edge to go back.
+// Six gestures: swipe between segments, swipe a row (SwipeRow: complete or
+// snooze a task, approve or dismiss a proposal, read or snooze an alert),
+// scrub the tab capsule, pull down to refresh, long press a dashboard tile to
+// arrange, and drag from the left edge to go back.
 
 export type SwipeHandlers = {
   onPointerDown: (event: ReactPointerEvent) => void

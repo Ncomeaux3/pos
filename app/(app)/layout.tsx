@@ -9,6 +9,7 @@ import { ShellProvider } from '@/components/pos/AvatarMenu'
 import { CommandPalette } from '@/components/pos/CommandPalette'
 import { MobileTabBar, Sidebar } from '@/components/pos/Sidebar'
 import { ToastProvider } from '@/components/pos'
+import { PageTransition } from '@/components/pos/PageTransition'
 import { PullToRefresh } from '@/components/pos/PullToRefresh'
 import { EdgeBack } from '@/components/pos/EdgeBack'
 
@@ -55,9 +56,14 @@ export default async function AppLayout({ children }: LayoutProps<'/'>) {
         // column that was already truncating its own rows. The top clears
         // the status bar and Dynamic Island in standalone mode; a browser
         // tab reports a zero inset and gets the flat 18px.
-        className="reveal min-w-0 flex-1 px-[18px] pt-[max(18px,calc(var(--inset-t)+8px))] pb-[calc(var(--tabbar)+18px)] md:px-10 md:py-7 md:[margin-left:var(--rail)]"
+        className="min-w-0 flex-1 md:[margin-left:var(--rail)]"
       >
-        {children}
+        {/* The padding sits on the page, not on main, so the phone's push and
+          * pop snapshot one opaque full-height column in the canvas colour
+          * (components/pos/PageTransition.tsx). */}
+        <PageTransition className="page reveal min-h-dvh px-[18px] pt-[max(18px,calc(var(--inset-t)+8px))] pb-[calc(var(--tabbar)+18px)] md:px-10 md:py-7">
+          {children}
+        </PageTransition>
       </main>
       </ShellProvider>
     </ToastProvider>

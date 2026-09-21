@@ -240,12 +240,16 @@ export type Alert = {
  * The screen splits this into unread and history rather than asking twice.
  */
 export async function listAlerts(limit = 60): Promise<Alert[]> {
+  // A snoozed row is out until the snooze ends, as it is on the dashboard:
+  // the Notifications row's left swipe snoozes, and a row that came straight
+  // back as unread would read as a swipe that did nothing.
   const { rows } = await db().query<Alert>(
     `select n.id, n.title, n.body, n.channel, n.urgency, n.due_at, n.read_at,
             r.module, r.label as rule_label
        from core.notifications n
        left join core.notification_rules r on r.id = n.rule_id
       where n.due_at <= now()
+        and (n.snooze_until is null or n.snooze_until < now())
       order by n.due_at desc
       limit $1`,
     [limit],
@@ -353,7 +357,8 @@ export async function snoozeRule(id: string, days: number): Promise<void> {
 export async function countUnread(): Promise<number> {
   const { rows } = await db().query<{ count: string }>(
     `select count(*)::text as count from core.notifications
-      where read_at is null and due_at <= now()`,
+      where read_at is null and due_at <= now()
+        and (snooze_until is null or snooze_until < now())`,
   )
   return Number(rows[0]?.count ?? 0)
 }

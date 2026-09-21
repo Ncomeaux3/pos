@@ -331,6 +331,16 @@ test('the tab capsule shrinks on scroll down and grows back on scroll up', async
   await expect.poll(async () => (await bar.boundingBox())!.height).toBe(56)
 })
 
+test('the page pushes and pops on the phone and only there', async ({ page }, testInfo) => {
+  // The phone's push, pop and tab fade (components/pos/PageTransition.tsx)
+  // hang off the page column's view-transition-name; the desktop keeps the
+  // reveal stagger and names nothing. Computed style, not a screenshot: an
+  // animation is not something a still can prove.
+  await page.goto('/')
+  const name = () => page.evaluate(() => getComputedStyle(document.querySelector('.page')!).viewTransitionName)
+  expect(await name()).toBe(testInfo.project.name === 'mobile' ? 'page' : 'none')
+})
+
 test('a swipe on the tab capsule moves one tab and a mouse drag does not', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile', 'Touch gestures are a phone thing')
   await page.goto('/')
@@ -1137,11 +1147,51 @@ test('review inbox, list and sticky detail panel', async ({ page }) => {
   await expect(page).toHaveURL(/tab=approved/)
 })
 
-test('approving a proposal runs the tool and moves the row', async ({ page }) => {
+test('review, a swipe dismisses an unguarded row and a guarded one holds', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Touch gestures are a phone thing')
   await page.goto('/review')
 
-  await page.getByRole('button', { name: /Add a pitch to a bare idea/ }).click()
-  await page.getByRole('button', { name: /^approve$/i }).click()
+  // Left on the unguarded card: gone before the server answers, the toast
+  // once it has, and Undo from the dismissed tab puts it back for the tests
+  // that follow.
+  const bare = page.getByRole('button', { name: /Add a pitch to a bare idea/ })
+  const box = (await bare.boundingBox())!
+  const y = box.y + box.height / 2
+  await bare.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: box.x + box.width - 10, clientY: y })
+  await bare.dispatchEvent('pointerup', { pointerType: 'touch', clientX: box.x + 20, clientY: y })
+  await expect(bare).toHaveCount(0)
+  await expect(page.locator('[aria-live="polite"]').getByText('Dismissed', { exact: true })).toBeVisible()
+
+  // The same gesture on a guarded card does nothing: the panel is the only
+  // way to decide one.
+  const guarded = page.getByRole('button', { name: /Draft a weekly summary idea/ })
+  const gbox = (await guarded.boundingBox())!
+  await guarded.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: gbox.x + gbox.width - 10, clientY: gbox.y + 10 })
+  await guarded.dispatchEvent('pointerup', { pointerType: 'touch', clientX: gbox.x + 20, clientY: gbox.y + 10 })
+  await expect(guarded).toBeVisible()
+
+  await page.goto('/review?tab=dismissed')
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await expect(page.getByText('Back in the inbox', { exact: true })).toBeVisible()
+  await page.goto('/review')
+  await expect(page.getByRole('button', { name: /Add a pitch to a bare idea/ })).toBeVisible()
+})
+
+test('approving a proposal runs the tool and moves the row', async ({ page }, testInfo) => {
+  await page.goto('/review')
+
+  const bare = page.getByRole('button', { name: /Add a pitch to a bare idea/ })
+  if (testInfo.project.name === 'mobile') {
+    // A right swipe on the card approves it (v1.2 phase 3c); the desktop
+    // keeps the panel's button.
+    const box = (await bare.boundingBox())!
+    const y = box.y + box.height / 2
+    await bare.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: box.x + 20, clientY: y })
+    await bare.dispatchEvent('pointerup', { pointerType: 'touch', clientX: box.x + box.width - 10, clientY: y })
+  } else {
+    await bare.click()
+    await page.getByRole('button', { name: /^approve$/i }).click()
+  }
 
   await expect(page.getByText(/^Approved:/)).toBeVisible()
 
@@ -1317,17 +1367,20 @@ test('notifications, rules table and the alert centre', async ({ page }) => {
   // carries real alerts from nightly runs alongside the seeded ones, so the
   // fixture is deterministic in content, not in total.
   //
-  // The title appears twice on purpose, once as the alert row and once in the
-  // push preview of the rule behind it.
-  await expect(page.getByText('Chase Sapphire due in 3 days')).toHaveCount(2)
+  // The Chase title is at least the Statement due rule's push preview. Its
+  // alert row is usually the one the dashboard test snoozed for a day (the
+  // first warning row, urgent and newest), and a snoozed row is out of this
+  // list until then (v1.2 phase 3c); a nightly run can raise a newer urgent
+  // row that takes the snooze instead, so the row itself is not asserted.
+  await expect(page.getByText('Chase Sapphire due in 3 days').first()).toBeVisible()
   await expect(page.getByText(/^Alert centre · \d+ unread/)).toBeVisible()
   await expect(page.getByText(/^History ·/)).toBeVisible()
   await expect(page.getByText('Backup complete, 30 snapshots kept')).toBeVisible()
 
   // An unread alert's module label is flat accent, like the artboard, not the
   // rules table's per-module colour and not the old flat green.
-  const chaseAlert = page.locator('div.bg-brand-soft', { hasText: 'Chase Sapphire due in 3 days' })
-  await expect(chaseAlert.getByText('Finance', { exact: true })).toHaveClass(/text-action/)
+  const landlordAlert = page.locator('div.bg-brand-soft', { hasText: 'Landlord policy renews 21 Sep' })
+  await expect(landlordAlert.getByText('Insurance', { exact: true })).toHaveClass(/text-action/)
 
   // The email digest's section header is a plain accent label and a plain
   // item count, not the shared Eyebrow (fixed ink-3) or a Chip pill.
@@ -1336,6 +1389,56 @@ test('notifications, rules table and the alert centre', async ({ page }) => {
   await expect(digestCard.getByText('1 item').first()).toBeVisible()
 
   await shoot(page, 'notifications')
+})
+
+test('notifications, a swipe reads a row and the other way snoozes it', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Touch gestures are a phone thing')
+  await page.goto('/notifications')
+
+  // Relative counts: a nightly run in the dev database can raise an alert with
+  // the same title as a seeded one, and the digest preview card quotes them.
+  const unreadRow = (title: string) => page.locator('div.bg-brand-soft', { hasText: title })
+  const anyRow = (title: string) => page.locator('div.border-b.border-rule', { hasText: title })
+  // Each swipe's row goes optimistically; the swipe resolves once the server
+  // action has answered, so the reload below cannot race the write it proves.
+  const swipe = async (row: Locator, toRight: boolean) => {
+    const box = (await row.boundingBox())!
+    const y = box.y + box.height / 2
+    const [from, to] = toRight ? [box.x + 20, box.x + box.width - 10] : [box.x + box.width - 10, box.x + 20]
+    const acted = page.waitForResponse(
+      (r) => r.request().method() === 'POST' && 'next-action' in r.request().headers(),
+    )
+    await row.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: from, clientY: y })
+    await row.dispatchEvent('pointerup', { pointerType: 'touch', clientX: to, clientY: y })
+    return acted
+  }
+
+  // Right reads: out of the unread half and into History, so one fewer
+  // unread row and the same number of rows.
+  const dining = 'Dining budget at 94%'
+  const diningUnread = await unreadRow(dining).count()
+  const diningRows = await anyRow(dining).count()
+  expect(diningUnread).toBeGreaterThan(0)
+  const readActed = await swipe(unreadRow(dining).first(), true)
+  await expect(unreadRow(dining)).toHaveCount(diningUnread - 1)
+  await expect(anyRow(dining)).toHaveCount(diningRows)
+  await readActed
+
+  // Left snoozes for a day: one fewer row altogether, not a History row, and
+  // still gone after a reload, so the query behind the screen agrees with
+  // the swipe.
+  const pace = 'Ship POS v1 projects to 12 Nov'
+  const paceUnread = await unreadRow(pace).count()
+  const paceRows = await anyRow(pace).count()
+  expect(paceUnread).toBeGreaterThan(0)
+  const snoozeActed = await swipe(unreadRow(pace).first(), false)
+  await expect(unreadRow(pace)).toHaveCount(paceUnread - 1)
+  await expect(anyRow(pace)).toHaveCount(paceRows - 1)
+  await snoozeActed
+  await page.reload()
+  await expect(page.getByText(/^Alert centre · \d+ unread/)).toBeVisible()
+  await expect(unreadRow(pace)).toHaveCount(paceUnread - 1)
+  await expect(anyRow(pace)).toHaveCount(paceRows - 1)
 })
 
 // The expander is the whole editing surface, so it gets its own shot.
@@ -3737,6 +3840,20 @@ test('gestures, a swiped task reads as done before the server answers', async ({
   await expect(page.getByText(/^Done\. Lower, deadlift/)).toHaveCount(0)
   release()
   await expect(page.getByText(/^Done\. Lower, deadlift/)).toBeVisible()
+
+  // The other way snoozes: the row is due tomorrow and out of Today at once,
+  // and the week view has it under This week once the server has answered.
+  // DDIA, because the test above completed Sketch the week ahead.
+  const ddia = page.locator('article').filter({ hasText: 'Read DDIA ch. 5' }).first()
+  const dbox = (await ddia.boundingBox())!
+  await ddia.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: dbox.x + dbox.width - 10, clientY: dbox.y + 8 })
+  await ddia.dispatchEvent('pointerup', { pointerType: 'touch', clientX: dbox.x + 20, clientY: dbox.y + 8 })
+  await expect(ddia).toHaveCount(0)
+  await expect(page.getByText('Snoozed to tomorrow')).toBeVisible()
+
+  await page.goto('/tasks?view=week')
+  const moved = page.locator('article').filter({ hasText: 'Read DDIA ch. 5' }).first()
+  await expect(moved).toContainText('Tomorrow')
 })
 
 test('a drawer is a history entry, so Back closes it', async ({ page }) => {

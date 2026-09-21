@@ -1,9 +1,8 @@
 'use client'
 
 import { useEdgeBack } from './gestures'
+import { goBack } from './PageTransition'
 import { useIsPhone } from './useIsPhone'
-
-const back = () => window.history.back()
 
 /**
  * An installed PWA on iOS has no browser edge swipe, so the app owns it: a
@@ -12,6 +11,6 @@ const back = () => window.history.back()
  */
 export function EdgeBack() {
   const phone = useIsPhone()
-  useEdgeBack(phone ? back : null)
+  useEdgeBack(phone ? goBack : null)
   return null
 }
