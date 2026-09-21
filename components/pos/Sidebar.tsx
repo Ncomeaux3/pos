@@ -28,7 +28,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState } from 'react'
 import { NAV_GROUPS, type NavItem } from '@/core/nav-groups'
 import { phoneTabs } from '@/core/phone-tabs'
 import { setSidebarCookie } from '@/core/theme-client'
@@ -237,11 +237,12 @@ export const NAV_ICON: Record<string, LucideIcon> = {
  * rest of the app; there is no More sheet. The utilities are behind the
  * avatar on each tab root.
  *
- * Inset from the edges and sitting on the home indicator, the way Apple Music
- * on iOS 26 draws its bar. Scrolling down past 32px shrinks it to a centred
- * pill of icons (`data-tabbar="compact"` on <html>, styled in globals.css);
- * any scroll up, the top of the page, a new page or a tap on the pill
- * expands it again. Direction based, so the status bar's scroll timeline
+ * Inset from the edges and sitting just above the home indicator, the way
+ * Instagram's bar hugs the bottom. Scrolling down past 32px lowers it to 48px
+ * and fades the labels (`data-tabbar="compact"` on <html>, styled in
+ * globals.css); any scroll up, the top of the page or a new page restores it.
+ * A tap on a compact tab is a tap on that tab, since the width and targets
+ * do not change. Direction based, so the status bar's scroll timeline
  * (position based) is not the mechanism. A horizontal swipe on the capsule
  * moves to the neighbouring tab, bounded at both ends like TabBar.
  */
@@ -278,14 +279,7 @@ export function MobileTabBar({ nav, reviewCount }: { nav: NavItem[]; reviewCount
   return (
     <nav
       aria-label="Sections"
-      style={{ '--tabs': tabs.length } as CSSProperties}
       className="tabbar glass-panel fixed bottom-[var(--inset-b)] left-1/2 z-40 flex w-[calc(100%-32px)] -translate-x-1/2 items-stretch rounded-full px-1.5 shadow-[inset_0_1px_0_var(--glass-edge),var(--pop)] md:hidden"
-      onClickCapture={(e) => {
-        // A tap on the compact pill expands it and does nothing else.
-        if (document.documentElement.dataset.tabbar !== 'compact') return
-        e.preventDefault()
-        delete document.documentElement.dataset.tabbar
-      }}
       {...swipe}
     >
       {tabs.map((item, i) => {

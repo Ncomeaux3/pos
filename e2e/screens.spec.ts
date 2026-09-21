@@ -307,22 +307,27 @@ test('the tab capsule shrinks on scroll down and grows back on scroll up', async
   const html = page.locator('html')
   const viewport = page.viewportSize()!
 
-  // Floating: inset from both edges, its bottom one inset above the screen edge.
+  // Floating: inset from both edges, 8px off the screen edge in a browser
+  // tab (a phone reports its home indicator and the bar sits just above it).
   const box = (await bar.boundingBox())!
   expect(box.height).toBe(56)
   expect(box.x).toBe(16)
   expect(box.x + box.width).toBe(viewport.width - 16)
-  expect(box.y + box.height).toBeLessThan(viewport.height)
+  expect(viewport.height - (box.y + box.height)).toBe(8)
   await expect(html).not.toHaveAttribute('data-tabbar')
+  const label = bar.getByRole('link', { name: 'Tasks' }).locator('.tabbar-label')
+  await expect(label).toHaveCSS('opacity', '1')
 
-  // Down past 32px: compact, a 44px pill of icons, the labels still named.
+  // Down past 32px: compact is subtle. 48px, the same width, the labels
+  // faded out but still in the tree so every tab keeps its name.
   await page.mouse.move(200, 400)
   await page.mouse.wheel(0, 200)
   await expect(html).toHaveAttribute('data-tabbar', 'compact')
-  await expect.poll(async () => (await bar.boundingBox())!.height).toBe(44)
+  await expect.poll(async () => (await bar.boundingBox())!.height).toBe(48)
   const compact = (await bar.boundingBox())!
-  expect(compact.width).toBeLessThan(box.width)
-  expect(Math.abs(compact.x + compact.width / 2 - viewport.width / 2)).toBeLessThanOrEqual(1)
+  expect(compact.width).toBe(box.width)
+  expect(compact.x).toBe(box.x)
+  await expect(label).toHaveCSS('opacity', '0')
   await expect(bar.getByRole('link', { name: 'Tasks' })).toBeVisible()
 
   // Any scroll up expands it.

@@ -61,7 +61,7 @@ export default async function AppLayout({ children }: LayoutProps<'/'>) {
         {/* The padding sits on the page, not on main, so the phone's push and
           * pop snapshot one opaque full-height column in the canvas colour
           * (components/pos/PageTransition.tsx). */}
-        <PageTransition className="page reveal min-h-dvh px-[18px] pt-[max(18px,calc(var(--inset-t)+8px))] pb-[calc(var(--tabbar)+18px)] md:px-10 md:py-7">
+        <PageTransition className="page reveal min-h-dvh px-[18px] pt-[max(18px,calc(var(--inset-t)+16px))] pb-[calc(var(--tabbar)+18px)] md:px-10 md:py-7">
           {children}
         </PageTransition>
       </main>
