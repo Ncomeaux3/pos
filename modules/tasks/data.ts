@@ -152,6 +152,15 @@ export async function patchTask(id: string, patch: TaskPatch): Promise<void> {
     id,
     ...fields.map((f) => patch[f]),
   ])
+  // The registry row is what the Skill Tree and search name a task by, and
+  // register() only runs at creation, so a rename has to reach it here.
+  if ('title' in patch) {
+    await db().query(
+      `update core.entities set title = $2
+        where module = 'tasks' and entity_type = 'task' and entity_id = $1`,
+      [id, patch.title],
+    )
+  }
 }
 
 /** Same guard as PATCHABLE, for the project table. */

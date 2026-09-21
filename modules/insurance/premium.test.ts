@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   annualCents,
+  byType,
   cadenceTag,
   daysLabel,
   daysUntil,
@@ -14,6 +15,22 @@ import {
   remindersDueToday,
   shortDate,
 } from './premium'
+
+describe('byType', () => {
+  it('sums active policies per kind and leaves the car out of health', () => {
+    const policies = [
+      { kind: 'health', status: 'active', premium_cents: 32_000, cadence: 'monthly', expires_on: '2026-12-31' },
+      { kind: 'dental', status: 'active', premium_cents: 4_000, cadence: 'monthly', expires_on: '2026-10-05' },
+      { kind: 'auto', status: 'active', premium_cents: 90_000, cadence: 'semiannual', expires_on: '2027-03-01' },
+      { kind: 'health', status: 'cancelled', premium_cents: 50_000, cadence: 'monthly', expires_on: null },
+    ]
+    expect(byType(policies, '2026-09-20')).toEqual({
+      health: { annualCents: 384_000, active: 1, expiring: 0 },
+      dental: { annualCents: 48_000, active: 1, expiring: 1 },
+      auto: { annualCents: 180_000, active: 1, expiring: 0 },
+    })
+  })
+})
 
 describe('annualCents', () => {
   it('multiplies by how often the cadence bills', () => {

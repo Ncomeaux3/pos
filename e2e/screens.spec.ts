@@ -1070,7 +1070,9 @@ test('review, dismiss and undo keep the row', async ({ page }) => {
   const coach = page.getByRole('button', { name: /Add a little weight/ })
   await coach.click()
   await page.getByRole('button', { name: 'Dismiss' }).click()
-  await expect(page.getByText('Dismissed', { exact: true })).toBeVisible()
+  // The toast, not the panel's chip: the chip flips before the server answers
+  // (optimistic since #106), and navigating on it aborts the dismissal in flight.
+  await expect(page.locator('[aria-live="polite"]').getByText('Dismissed', { exact: true })).toBeVisible()
 
   await page.goto('/review?tab=dismissed')
   await expect(page.getByText('Dismissed. The agent will not re-propose this for 30 days. Undo puts it back in the inbox.')).toBeVisible()
@@ -2029,7 +2031,8 @@ test('finance, net worth and the budget pace marks', async ({ page }) => {
       /Budgets over \d+%/,
     ])
     const accounts = page.getByTestId('finance-accounts')
-    await expect(accounts.locator('[data-table-head] span')).toHaveText(['Account', 'Institution', 'Balance', '30d', 'Share'])
+    await expect(accounts.locator('[data-table-head] > span')).toHaveText(['Account', 'Institution', 'Balance', '30d change', 'Share'])
+    await expect(accounts.locator('[data-table-head] [title]')).toHaveAttribute('title', /last 30 days/)
     const rowPadding = await accounts
       .getByRole('button')
       .first()
@@ -2645,6 +2648,44 @@ test('travel, typing a destination suggests places and fills the coordinates', a
   await destination.fill(label)
   await expect(row.getByLabel('Lat', { exact: true })).toHaveValue(/^-?\d+(\.\d+)?$/)
   await expect(row.getByLabel('Lon', { exact: true })).toHaveValue(/^-?\d+(\.\d+)?$/)
+
+  // v1.2 Phase 1b: a pick empties the list rather than refetching it, so the
+  // browser has nothing to pop back up under the city it just filled in.
+  await page.waitForTimeout(500)
+  await expect(row.locator('datalist option')).toHaveCount(0)
+
+  // And the date picker glyph is drawn in the field's own ink through a mask,
+  // in either theme, rather than left to the browser's colour scheme guess
+  // (the owner's Chrome drew it dark on the dark field).
+  // Chromium does not expose that pseudo-element to getComputedStyle, so the
+  // check is on pixels: the right end of the field holds a glyph that stands
+  // off the field's background in both themes.
+  const arrive = row.getByLabel('Arrive', { exact: true })
+  for (const scheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme: scheme })
+    const shot = (await arrive.screenshot()).toString('base64')
+    const inked = await arrive.evaluate(async (el, png) => {
+      const img = new Image()
+      img.src = `data:image/png;base64,${png}`
+      await img.decode()
+      const canvas = document.createElement('canvas')
+      canvas.width = img.width
+      canvas.height = img.height
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(img, 0, 0)
+      const strip = Math.round(img.width * 0.2)
+      const { data } = ctx.getImageData(img.width - strip, 0, strip, img.height)
+      // The field's own colour: the strip's left edge, halfway down, clear of the border.
+      const mid = 4 * Math.floor(img.height / 2) * strip
+      const bg = [data[mid], data[mid + 1], data[mid + 2]]
+      let hits = 0
+      for (let i = 0; i < data.length; i += 4) {
+        if (Math.abs(data[i] - bg[0]) + Math.abs(data[i + 1] - bg[1]) + Math.abs(data[i + 2] - bg[2]) > 120) hits++
+      }
+      return hits
+    }, shot)
+    expect(inked, `${scheme}: glyph pixels off the field background`).toBeGreaterThan(20)
+  }
 })
 
 // v1.1 Phase 9. A trip held one destination, so four trips to the same country

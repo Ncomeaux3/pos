@@ -25,6 +25,7 @@ import {
   approveTask,
   completeTask,
   deleteTask,
+  writeProject,
   writeTask,
   type ActionResult,
   type WriteInput,
@@ -93,7 +94,7 @@ export function BoardCrumb() {
 
 export function Board({
   tasks: serverTasks,
-  projects,
+  projects: serverProjects,
   goals,
   skills,
   reminderChannels,
@@ -121,6 +122,13 @@ export function Board({
   // swiped, and the server's answer replaces the guess when it lands.
   const [tasks, flip] = useOptimistic(serverTasks, (state, patch: { id: string; done: boolean }) =>
     state.map((t) => (t.id === patch.id ? { ...t, status: patch.done ? 'done' : 'open' } : t)),
+  )
+
+  // A project added in the Projects drawer is in every project select at
+  // once. The row with no id is the guess; the server's row replaces it when
+  // the page revalidates, which on production is the second the owner waited.
+  const [projects, addProject] = useOptimistic(serverProjects, (state, name: string) =>
+    state.some((p) => p.name === name) ? state : [...state, { id: '', name, goalRef: null }],
   )
 
   // The expanded row rides in the URL with the view and the drawer, for the
@@ -431,6 +439,12 @@ export function Board({
           goals={goals}
           onClose={() => setShowProjects(false)}
           onSave={run}
+          onAdd={(name) =>
+            run(() => {
+              addProject(name)
+              return writeProject({ name })
+            }, `Added. ${name}`)
+          }
         />
       )}
     </div>

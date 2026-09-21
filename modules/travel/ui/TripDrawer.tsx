@@ -763,6 +763,13 @@ function DestinationFields({
       ...(picked ? { lat: String(picked.lat), lon: String(picked.lon) } : {}),
     })
     if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (picked) {
+      // The field now holds "Paris" and the list still held "Paris, France",
+      // so the browser matched it and popped the list back up over the pick.
+      latestQuery.current = value
+      setHits([])
+      return
+    }
     debounceRef.current = setTimeout(() => {
       // A slow answer to an earlier query must not replace a newer list.
       suggestPlaces(value).then((found) => {

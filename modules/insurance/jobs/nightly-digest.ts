@@ -1,6 +1,6 @@
 import { queue } from '@/core/notify'
 import { listPolicies, ownerToday } from '../data'
-import { annualCents, expiryLabel, policyStatus, remindersDueToday, type Cadence } from '../premium'
+import { annualCents, byType, expiryLabel, policyStatus, remindersDueToday, type Cadence, type TypeBreakdown } from '../premium'
 
 export type InsuranceDigest = {
   /** Expiring inside sixty days, or already expired. */
@@ -8,6 +8,8 @@ export type InsuranceDigest = {
   /** What a year of every active policy comes to, in cents. */
   annualCents: number
   active: number
+  /** The same three figures per policy kind, for a reader that wants only some kinds. */
+  byType: TypeBreakdown
   /** Reminders queued by this run. */
   remindersSent: number
 }
@@ -39,6 +41,7 @@ export async function nightlyDigest(): Promise<InsuranceDigest> {
       0,
     ),
     active: active.length,
+    byType: byType(policies, today),
     remindersSent: 0,
   }
 }

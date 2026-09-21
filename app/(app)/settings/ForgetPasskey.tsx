@@ -21,7 +21,9 @@ export function ForgetPasskey({ id }: { id: string }) {
         setGone(true)
         start(async () => {
           const result = await forgetPasskey(id)
-          if (!result.ok) {
+          // The flip above is the guess; the toast is the server's word.
+          if (result.ok) toast('Passkey removed.')
+          else {
             setGone(false)
             toast(result.error)
           }

@@ -97,7 +97,8 @@ export async function loadSkillTree(): Promise<SkillTreeData> {
       `select
          e.entity_ref,
          sl.skill_id,
-         coalesce(e.title_snapshot, 'Untitled') as title,
+         -- The entity's title as it is now; the snapshot only once the row is gone.
+         coalesce(en.title, e.title_snapshot, 'Untitled') as title,
          e.event_type,
          sl.classified_by,
          sl.is_manual,
@@ -106,6 +107,7 @@ export async function loadSkillTree(): Promise<SkillTreeData> {
        from core.events e
        join core.skill_links sl on sl.entity_ref = e.entity_ref
        join skills.xp_weight w on w.event_type = e.event_type
+       left join core.entities en on en.id = e.entity_ref
        where e.occurred_at >= now() - interval '90 days'
        order by e.occurred_at desc`,
     ),

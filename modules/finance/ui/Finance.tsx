@@ -28,13 +28,18 @@ import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
 import {
   balance,
+  budgetTone,
   compactMoney,
   money,
   percent,
   signedMoney,
   transactionAmount,
+  type BudgetTone,
 } from '../money'
 import { recategorise, saveBudget, saveThreshold, setSubscriptionStatus, type ActionResult } from './actions'
+
+/** What the accounts table's change column means, on the head and on a row with none. */
+const CHANGE_NOTE = 'Balance change over the last 30 days. An account added inside that window has no history yet.'
 
 // Five tabs over one dataset, plus two drawer kinds. The tab and the open
 // drawer live in the URL, so both survive a refresh and a shared link opens
@@ -368,7 +373,7 @@ export function Finance({ data }: { data: FinanceData }) {
                       >
                         {/* Not tracked is not the same as no change, and must not
                             render as one. */}
-                        {a.changeCents === null ? 'new' : signedMoney(a.changeCents)}
+                        {a.changeCents === null ? <span title={CHANGE_NOTE}>no history yet</span> : signedMoney(a.changeCents)}
                       </span>
                     </>
                   }
@@ -402,19 +407,22 @@ export function Finance({ data }: { data: FinanceData }) {
                 limit you set here applies to this month only, so raising one in March does not rewrite
                 what February was measured against.
               </p>
-              {data.budgets.map((b) => (
+              {data.budgets.map((b) => {
+                const used = b.limitCents ? budgetTone(b.spentCents, b.limitCents, data.alertThreshold, b.isFixed) : null
+                const tone = used === null || used.tone === 'fixed' ? null : toneText(used.tone)
+                return (
                 <Card key={b.id} className="space-y-2.5">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                     <button
                       type="button"
                       onClick={() => setParams({ budget: b.id }, { push: true })}
-                      className="t-body text-left text-ink pointer-coarse:-my-3 pointer-coarse:py-3"
+                      className={cn('t-body text-left pointer-coarse:-my-3 pointer-coarse:py-3', tone ?? 'text-ink')}
                     >
                       {b.name}
                     </button>
                     <div className="flex items-center gap-2">
                       {b.isFixed && <Chip tone="quiet">Fixed</Chip>}
-                      <span className="num text-[12px] text-ink-3">
+                      <span className={cn('num text-[12px]', tone ?? 'text-ink-3')}>
                         {money(b.spentCents)}
                         {b.limitCents ? ` of ${money(b.limitCents)}` : ' spent, no limit'}
                       </span>
@@ -423,7 +431,8 @@ export function Finance({ data }: { data: FinanceData }) {
                   <BudgetBar budget={b} pace={data.monthPace} threshold={data.alertThreshold} />
                   <p className="t-caption text-ink-3">{b.description}</p>
                 </Card>
-              ))}
+                )
+              })}
             </div>
           )}
 
@@ -490,8 +499,8 @@ export function Finance({ data }: { data: FinanceData }) {
             <Card data-testid="finance-accounts" className={overviewCard}>
               <CardHead label="Accounts" meta="share of assets" className="mb-1" />
               <DataTable
-                head={['Account', 'Institution', 'Balance', '30d', 'Share']}
-                cols="minmax(0,1.3fr) minmax(0,1fr) minmax(0,.9fr) minmax(0,.7fr) minmax(0,1fr)"
+                head={['Account', 'Institution', 'Balance', <span key="30d" title={CHANGE_NOTE}>30d change</span>, 'Share']}
+                cols="minmax(0,1.2fr) minmax(0,.9fr) minmax(0,.9fr) minmax(0,.9fr) minmax(0,1fr)"
               >
                 {data.accounts.map((a) => (
                   <DataRow key={a.id} onClick={() => setParams({ account: a.id }, { push: true })} className={overviewRow}>
@@ -513,7 +522,13 @@ export function Finance({ data }: { data: FinanceData }) {
                     >
                       {/* Not tracked is not the same as no change, and must not
                           render as one. */}
-                      {a.changeCents === null ? 'new' : a.changeCents === 0 ? 'flat' : signedMoney(a.changeCents)}
+                      {a.changeCents === null ? (
+                        <span title={CHANGE_NOTE} className="label whitespace-nowrap text-[11px]">no history yet</span>
+                      ) : a.changeCents === 0 ? (
+                        'flat'
+                      ) : (
+                        signedMoney(a.changeCents)
+                      )}
                     </span>
                     <span className="flex items-center justify-end gap-2">
                       <span className="h-0.5 w-14 bg-rule-2" aria-hidden>
@@ -608,16 +623,9 @@ export function Finance({ data }: { data: FinanceData }) {
                 <>
                   <DataTable head={['Category', 'Spent / limit', 'Used']} cols="minmax(0,1fr) auto 44px">
                     {data.budgets.map((b) => {
-                      const used = b.limitCents ? (b.spentCents / b.limitCents) * 100 : null
-                      const over = used !== null && !b.isFixed && used >= data.alertThreshold
-                      const tone =
-                        used === null
-                          ? 'text-ink-3'
-                          : over && used >= 100
-                            ? 'text-bad'
-                            : over
-                              ? 'text-warn'
-                              : 'text-ink'
+                      const used = b.limitCents ? budgetTone(b.spentCents, b.limitCents, data.alertThreshold, b.isFixed) : null
+                      const over = used !== null && (used.tone === 'warn' || used.tone === 'bad')
+                      const tone = used === null || used.tone === 'fixed' ? 'text-ink' : toneText(used.tone)
                       return (
                         <DataRow
                           key={b.id}
@@ -625,7 +633,7 @@ export function Finance({ data }: { data: FinanceData }) {
                           className={cn(overviewRow, 'lg:block lg:py-1.5')}
                         >
                           <span className="grid items-baseline gap-x-3.5 lg:grid-cols-[minmax(0,1fr)_auto_44px]">
-                            <span className="min-w-0 truncate text-[13px] text-ink">
+                            <span className={cn('min-w-0 truncate text-[13px]', tone)}>
                               {b.name}
                               {b.isFixed ? (
                                 <StatusChip tone="quiet" className="ml-1.5">Fixed</StatusChip>
@@ -638,7 +646,7 @@ export function Finance({ data }: { data: FinanceData }) {
                               <span className="text-ink-3">/ {b.limitCents ? money(b.limitCents) : 'no limit'}</span>
                             </span>
                             <span className={cn('num text-right text-[12px]', tone)}>
-                              {used === null ? '\u2014' : `${Math.round(used)}%`}
+                              {used === null ? '\u2014' : `${used.pct}%`}
                             </span>
                           </span>
                           <BudgetBar budget={b} pace={data.monthPace} threshold={data.alertThreshold} compact />
@@ -710,7 +718,7 @@ export function Finance({ data }: { data: FinanceData }) {
               {
                 label: 'Used',
                 value: openBudget.limitCents ? `${percent(openBudget.spentCents, openBudget.limitCents)}%` : '\u2014',
-                tone: openBudget.limitCents && !openBudget.isFixed && percent(openBudget.spentCents, openBudget.limitCents) >= data.alertThreshold ? 'warn' : undefined,
+                tone: openBudget.limitCents ? statTone(budgetTone(openBudget.spentCents, openBudget.limitCents, data.alertThreshold, openBudget.isFixed).tone) : undefined,
               },
               {
                 label: 'Remaining',
@@ -788,10 +796,7 @@ function BudgetBar({
     )
   }
 
-  const pct = percent(budget.spentCents, budget.limitCents)
-  // A fixed cost at its limit is not over budget, it is rent. Flagging it every
-  // month would train the reader to ignore the flag.
-  const over = !budget.isFixed && pct >= threshold
+  const { pct, tone, label } = budgetTone(budget.spentCents, budget.limitCents, threshold, budget.isFixed)
 
   return (
     <div className={cn(!compact && 'space-y-1.5', compact && 'mt-[5px]')}>
@@ -799,23 +804,24 @@ function BudgetBar({
         value={pct}
         max={100}
         pace={pace}
-        tone={budget.isFixed ? 'brand' : pct > 100 ? 'bad' : over ? 'warn' : 'brand'}
+        tone={tone === 'bad' || tone === 'warn' ? tone : 'brand'}
         className={cn(compact && 'h-0.5 rounded-none [&>div]:rounded-none')}
       />
       {compact ? null : (
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className={cn('label text-[11px]', pct > 100 ? 'text-bad' : over ? 'text-warn' : 'text-ink-3')}>
-          {pct}% used
-        </span>
-        <span className="label text-[11px] text-ink-3">
-          {budget.limitCents - budget.spentCents >= 0
-            ? `${money(budget.limitCents - budget.spentCents)} left`
-            : `${money(budget.spentCents - budget.limitCents)} over`}
-        </span>
-      </div>
+        <span className={cn('label block text-[11px]', toneText(tone))}>{label}</span>
       )}
     </div>
   )
+}
+
+/** A drawer stat cell only colours trouble: ok and fixed read in ink. */
+function statTone(tone: BudgetTone): 'warn' | 'bad' | undefined {
+  return tone === 'warn' || tone === 'bad' ? tone : undefined
+}
+
+/** The text colour a budget's number and name read in. Fixed costs stay quiet. */
+function toneText(tone: BudgetTone): string {
+  return tone === 'bad' ? 'text-bad' : tone === 'warn' ? 'text-warn' : tone === 'ok' ? 'text-ok' : 'text-ink-3'
 }
 
 /**
@@ -1063,20 +1069,20 @@ function LimitsDrawer({
         <span className="label text-right text-[11px] text-ink-3">Monthly limit</span>
       </div>
       {budgets.map((b) => {
-        const used = b.limitCents ? percent(b.spentCents, b.limitCents) : null
-        const over = used !== null && !b.isFixed && used >= threshold
+        const used = b.limitCents ? budgetTone(b.spentCents, b.limitCents, threshold, b.isFixed) : null
+        const tone = used === null || used.tone === 'fixed' ? null : toneText(used.tone)
         return (
           <div key={b.id} className="grid grid-cols-[minmax(0,1fr)_auto_130px] items-center gap-x-3.5 border-b border-rule py-2.5 text-[13px]">
             <span className="min-w-0">
-              <span className="block truncate text-ink">{b.name}</span>
+              <span className={cn('block truncate', tone ?? 'text-ink')}>{b.name}</span>
               <span className="mt-0.5 block truncate text-[11px] text-ink-3">
                 {b.isFixed && !/^fixed\b/i.test(b.description) ? `Fixed${b.description ? ' · ' : ''}` : ''}
                 {b.description}
               </span>
             </span>
-            <span className={cn('num text-right text-[12px]', over ? 'text-warn' : 'text-ink-2')}>
+            <span className={cn('num text-right text-[12px]', tone ?? 'text-ink-2')}>
               {money(b.spentCents)}
-              {used !== null ? ` · ${used}%` : ''}
+              {used !== null ? ` · ${used.pct}%` : ''}
             </span>
             <span className="flex items-center justify-end gap-1.5">
               <span className="num text-[13px] text-ink-3">$</span>

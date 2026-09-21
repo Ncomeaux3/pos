@@ -54,10 +54,34 @@ export function transactionAmount(cents: number): { text: string; incoming: bool
   return { text: `${incoming ? '+' : '-'}${money(cents, true)}`, incoming }
 }
 
-/** Whole percent, and never past 999: a budget at 40x its limit is a data problem, not a bar. */
+/**
+ * Whole percent, never below 0 and never past 999: a budget at 40x its limit
+ * is a data problem, not a bar, and a month where refunds outran spending is
+ * not negative use.
+ */
 export function percent(spent: number, limit: number): number {
   if (limit <= 0) return 0
-  return Math.min(999, Math.round((spent / limit) * 100))
+  return Math.max(0, Math.min(999, Math.round((spent / limit) * 100)))
+}
+
+export type BudgetTone = 'ok' | 'warn' | 'bad' | 'fixed'
+
+/**
+ * "62% used · $76 left" and the tone it reads in. Warn from the alert
+ * threshold, bad past the limit. A fixed cost at its limit is rent, not a
+ * flag, so it keeps the brand tone whatever the number.
+ */
+export function budgetTone(
+  spent: number,
+  limit: number,
+  threshold: number,
+  isFixed: boolean,
+): { pct: number; tone: BudgetTone; label: string } {
+  const pct = percent(spent, limit)
+  const left = limit - spent
+  const label = `${pct}% used · ${left >= 0 ? `${money(left)} left` : `${money(-left)} over`}`
+  const tone = isFixed ? 'fixed' : pct > 100 ? 'bad' : pct >= threshold ? 'warn' : 'ok'
+  return { pct, tone, label }
 }
 
 /**

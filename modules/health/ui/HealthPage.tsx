@@ -57,9 +57,14 @@ export default async function HealthPage() {
   const money = (cents: number) =>
     `$${Math.round(cents / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
 
-  const annual = typeof insurance?.annualCents === 'number' ? insurance.annualCents : null
-  const active = typeof insurance?.active === 'number' ? insurance.active : null
-  const expiring = Array.isArray(insurance?.expiring) ? insurance.expiring.length : null
+  // Health-type policies only (v1.2): the digest's whole-module totals put the
+  // car on this card. Summed over the kinds that are health cost; a digest
+  // written before byType existed, or one with no such policy, shows nothing.
+  const byType = insurance?.byType as Record<string, { annualCents: number; active: number; expiring: number }> | undefined
+  const health = ['health', 'dental', 'vision'].map((kind) => byType?.[kind]).filter((row) => row !== undefined)
+  const annual = health.length > 0 ? health.reduce((sum, r) => sum + r.annualCents, 0) : null
+  const active = health.length > 0 ? health.reduce((sum, r) => sum + r.active, 0) : null
+  const expiring = health.length > 0 ? health.reduce((sum, r) => sum + r.expiring, 0) : null
 
   const data: HealthData = {
     todayIso,

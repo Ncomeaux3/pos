@@ -38,7 +38,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-20 (v1.2 Phase 1a: digest and passkey diagnosed). Branch `main`, production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-20 (v1.2 Phase 1b: reported module bugs). Branch `main`, production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -63,6 +63,31 @@ and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
 ## Done
+
+**v1.2 Phase 1b: the seven reported module bugs** (2026-09-20, branch
+`phase-1b-module-bugs`). Four of the seven causes in the plan were guesses
+that the code did not bear out, and each was re-diagnosed before the fix:
+the budget minus was a net-credit month reaching a raw ratio (`percent`
+floors at 0, `budgetTone` carries the copy and tone for every row, name and
+number coloured together); the "phantom" skill event was a completion logged
+under a task's old name, since `core.entities.title` was written only at
+creation (a rename now reaches it, and the events list reads the live title
+first); the date glyph was fine in Chromium but dark on the owner's dark
+Chrome (a CSS mask in `currentColor` now draws it); the Projects select
+already read from props, and what was slow was a new project waiting for the
+server (the board holds an optimistic list, 30 ms to a row). The three that
+matched the plan: the accounts head reads "30d change" with "no history yet"
+and a title on both, the Health card reads `byType.health`, `dental` and
+`vision` from the Insurance digest and nothing else, and a picked destination
+empties its suggestion list instead of refetching it. Seven checks, one per
+bug: three unit tests, one against pos_test, three e2e assertions (the date
+glyph by pixels, since Chromium hides that pseudo-element from
+`getComputedStyle`), and the Projects wait measured before and after. Also
+in this PR, because main's `screens` job was red under it: the `Passkey
+removed.` toast #106 dropped and #108's test expects is back, and the Review
+dismiss test waits on the toast rather than the optimistic chip, whose early
+appearance let the next navigation abort the dismissal and, through
+Playwright's reseed on worker restart, fail `inbox clear` behind it.
 
 **v1.2 Phase 1a: the nightly digest and the passkey, diagnosed** (2026-09-20,
 branch `phase-1a-digest-passkey`). Two causes, both from evidence.
