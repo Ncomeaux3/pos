@@ -33,8 +33,10 @@ Order: bugs, then look and forms, then data pulls, then Calendar and integration
 | 1b Reported module bugs | Budget percent and colours, 30d column, Health insurance by type, phantom skill event, travel date icon and suggestion re-pop, Projects select speed | medium | 1a, 2 | 0 | Done 2026-09-21: four causes re-diagnosed (net-credit month, renamed task, Chrome's glyph colour, the wait for a new project), all seven fixed with a check each | #110 |
 | 2 Errors tab and diagnostics | Agent log Errors tab, client_errors table, Settings diagnostics card | medium | 1a, 1b | 0 | | |
 | 3a Look: mockup gate | Today and one drawer, before and after, light and dark, owner approves | low | 2 | 1b | PR open 2026-09-20: tokens measured and left (ink-2 and ink-3 already pass), secondary border on a solid fill, ghost border on hover, pointer from one base rule, row and card chevron with a 6 percent hover tint; owner approved on the comparison page | #113 |
-| 3b Look: affordance and contrast rollout | Every button, row link and tile visibly clickable; ink tokens AA at every size; whole goal card opens | high | none | 3a | | |
-| 4 Forms: required fields and keyboard | Missing field highlighted with a message; Enter submits, Tab order, first field focused | medium | 5a | 3b | | |
+| 3b Apple shell | Floating glass capsule tab bar (Home, Tasks, Finance, Calendar, Browse) that shrinks on scroll down and scrubs between tabs; initials avatar on tab roots opening Settings, Notifications, Agent log, theme and Sign out; utilities out of Browse and the rail footer; system font first | medium | 2 | 3a, #112 | | |
+| 3c Motion and row swipes | Phone push, pop and tab cross-fade through React `ViewTransition`, the stagger kept on desktop; one `SwipeRow` on Review, Notifications and Tasks (snooze) | medium | 2 | 3b | | |
+| 3d Look: affordance and contrast rollout | Every button, row link and tile visibly clickable; ink tokens AA at every size; whole goal card opens | high | none | 3c | | |
+| 4 Forms: required fields and keyboard | Missing field highlighted with a message; Enter submits, Tab order, first field focused | medium | 5a | 3d | | |
 | 5a Finance: full pull, pending, categories | 90-day re-pull button, pending marked, transfers out of spending, credits net, new categories, rule offer on manual override | high | 4 | 1b | | |
 | 5b Finance: three new views | Cash flow by month, Upcoming 14 days, Category trend in the desktop corner | medium | 6a | 5a | | |
 | 6a Calendar module | `calendar` schema, the `calendar` manifest seam on nine modules, month grid with day list, recurring rules drawn | high | 5b | 4 | | |
@@ -138,11 +140,43 @@ Complexity: low. Files: `app/globals.css` (a scratch branch), `components/pos/Bu
 
 - [x] Token pass on a branch: `--ink-2` and `--ink-3` measured with the existing contrast script (Holon Phase 7 has one under `e2e/.scratch/p7-*`) against `--bg`, `--bg-elev` and the glass surface in both themes; raise each until 4.5:1 at 11px; darken the dark wash one step if the glass surface fails.
 - [x] Button treatment: primary filled; secondary 1px `--rule-2` border on a `--bg-elev` fill; ghost gets a border on hover and always a pointer; focus ring 2px `--accent`; disabled 50 percent with `cursor: not-allowed`. Row and card links: hover `--bg-elev`, a trailing `›` in `--ink-3`, pointer; the whole row is the link, not the title.
-- [x] Four screenshots at 1440 (Today, a task drawer, light and dark) before and after, plus 402 for Today. Present to the owner in one message. Approval is the gate for 3b; changes requested are applied on this branch first.
+- [x] Four screenshots at 1440 (Today, a task drawer, light and dark) before and after, plus 402 for Today. Present to the owner in one message. Approval is the gate for 3d; changes requested are applied on this branch first.
 
 Exit: owner's written approval in the PR; no merge until then (the PR carries only tokens and the three primitives).
 
-## Phase 3b: look, rollout
+## Phase 3b: Apple shell
+
+Goal: the phone reads like Apple Music on iOS 26: a floating glass capsule for the tabs, an avatar top right on the tab roots that holds the utilities, and the system font. Decided 2026-09-20 in a four-round interview (decisions/log.md); this and 3c replace the earlier 3b, which is now 3d.
+Complexity: medium. Files: `core/phone-tabs.ts`, `components/pos/Sidebar.tsx` (`MobileTabBar` and the rail footer), `components/pos/PageHeader.tsx`, new `components/pos/Avatar.tsx` and `components/pos/AvatarMenu.tsx`, `app/(app)/browse/page.tsx`, `app/globals.css`, `e2e/screens.spec.ts`. No migration; the PR carries `db push: not needed`. Branch from main after #112 (the standalone viewport fix) merges; the two touch the same bar.
+
+- [ ] Tabs: `PHONE_TABS` becomes `/`, `/tasks`, `/finance`, `/calendar`; `phoneTabs` returns the ones present in the nav plus Browse and no longer tops up from other modules, so the bar holds four until Phase 6a ships Calendar. Update the unit test.
+- [ ] Capsule: `MobileTabBar` is `fixed inset-x-4 bottom-[var(--inset-b)] rounded-full glass-panel`, 56px tall, a 1px `--glass-line` border and the `--pop` shadow, the active tab in `--action` on an `--accent-soft` pill. `aria-label="Sections"`, `aria-current` and the badge on the first tab stay. `--tabbar` becomes `calc(56px + 2 * var(--inset-b))`; check every `var(--tabbar)` reader.
+- [ ] Shrink: a passive scroll listener in `MobileTabBar` sets `data-tabbar="compact"` on `<html>` when scrolling down past 32px and clears it on any scroll up or at the top. Compact hides the labels and narrows the capsule to a centred 44px pill; 240ms `var(--ease)`, no transition under `prefers-reduced-motion`; a tap on the compact pill expands it. Direction based, so the `.statusbar` scroll timeline (position based) does not apply.
+- [ ] Scrub: `useSwipe` on the capsule; left and right push the neighbouring tab, bounded at both ends, the pattern `TabBar.tsx` uses. Page-body swipes stay with segments and rows.
+- [ ] Avatar: `Avatar.tsx` is a 32px `--accent-soft` circle with the initials of `settings.owner_name` (first letters of the first two words; one letter for one word; `?` when empty), `aria-label="Account"`. `AvatarMenu.tsx` opens the existing `Overlay` (sheet on the phone, drawer on desktop) holding Settings, Notifications with the unread count, Agent log, `ThemeSwitch`, and a Sign out form over the existing `signOut` server action.
+- [ ] Placement: `PageHeader` renders the menu at the end of the phone row on tab roots only (`PHONE_TAB_HREFS`, the same test `BackControl` uses) and at the far right of desktop band one on every page. `owner_name` comes from the request-scoped `getSettings()` in a server component, never a client read. Brain and Skill Tree draw their own headers and are not tab roots, so they need nothing.
+- [ ] Duplicates: Browse drops its Utilities group; the rail footer keeps Collapse only. Delete `ThemeSwitch`'s `compact` variant if nothing uses it.
+- [ ] Font: `--font-sans` puts `-apple-system, BlinkMacSystemFont` before Geist; `--font-brand` stays Geist. Check tabular figures on SF.
+- [ ] e2e: the dashboard shell, collapsed rail, Browse groups, tab bar bounding box and theme-group tests move with the shell; new checks for the avatar on `/` and not on a detail page, the menu contents, compact after a 200px scroll down and expanded after scroll up, and a capsule scrub that moves one tab while a mouse drag does not.
+
+Exit: ui-verifier at 402 and 1440 on Home, Tasks, Finance and a task detail, both themes; owner check on the phone in standalone (capsule on the home indicator, shrink, scrub, menu, sign out).
+
+## Phase 3c: motion and row swipes
+
+Goal: pages push and pop like iOS on the phone, and the rows the owner acts on most take a swipe.
+Complexity: medium. Files: `app/(app)/layout.tsx`, `components/pos/BackControl.tsx`, `components/pos/EdgeBack.tsx`, `components/pos/Sidebar.tsx`, `app/globals.css`, new `components/pos/SwipeRow.tsx`, `modules/tasks/ui/Board.tsx`, `app/(app)/review/ReviewList.tsx`, `app/(app)/notifications/AlertCentre.tsx`, `e2e/screens.spec.ts`. No migration; `db push: not needed`. Read `node_modules/next/dist/docs/01-app/02-guides/view-transitions.md` first: React 19.3 ships `ViewTransition` and Next 16.3 needs no config.
+
+- [ ] Transitions: `{children}` in the app layout wrapped in `<ViewTransition>`; `BackControl`, `EdgeBack` and the capsule add a transition type (`back`, `tab`) inside `startTransition` before navigating, so a plain `Link` to a detail page is the forward case. CSS under `@media (max-width: 767px)`: forward slides in from the right with the old page moving 30 percent left and dimming, back reverses, tab cross-fades, 300ms `var(--ease)`, cross-fade only under `prefers-reduced-motion`. `.reveal` is `animation: none` below md so the two never stack; desktop keeps the stagger. `PullToRefresh` and `Overlay` untouched.
+- [ ] `SwipeRow`: the task row's swipe lifted out of `Board.tsx` (`useSwipe` with `onMove`, the word behind the row, `translateX` capped at 80px, `data-swipes`). Props `left` and `right`, each `{ label, tone, onCommit }`; the caller owns its optimistic state as Board does. Touch and pen only, as `useSwipe` enforces.
+- [ ] Tasks: right completes as today, left snoozes to tomorrow through `writeTask` with the new due; a done row's left swipe still reopens.
+- [ ] Review: right approves, left dismisses, both through `review/actions.ts`; guarded proposals are excluded and keep the panel.
+- [ ] Notifications: right marks read, left dismisses through the screen's existing snooze default.
+- [ ] Brain archive and pin are out: `brain.note` has no such columns and the migration belongs to Brain's next phase.
+- [ ] e2e: the swiped task test gains a left swipe asserting the due moved; a review row swipe approves and a notification row swipe marks read; the page root carries `view-transition-name` at 402 and not at 1440 (computed style, not a screenshot).
+
+Exit: owner check on the phone (push, pop, tab fade, the three swipes) in iOS 26 Safari standalone; the Next guide warns Safari can differ on transition types, and no animation is the accepted fallback.
+
+## Phase 3d: look, rollout
 
 Goal: every clickable thing on every screen reads as clickable in both themes at both widths; nothing decorative does.
 Complexity: high. Files: every module `ui/` that renders its own `<button>` or `<Link>` outside the primitives; `modules/goals/ui/GoalList.tsx` (whole card opens the drawer); `components/pos/*`.

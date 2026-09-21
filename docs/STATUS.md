@@ -79,10 +79,10 @@ the default cursor); disabled is 50 percent; interactive rows and the new
 `--bg-elev` did not read on the light glass, and `--bg-deep` made the chips
 vanish). Row is shared, so every interactive row on every screen has the
 chevron and the new hover; the three Finance overview rows that drew their
-own arrow in `right` dropped it. Screens are otherwise untouched, and 3b
+own arrow in `right` dropped it. Screens are otherwise untouched, and 3d
 spreads the treatment to the raw buttons, `DataTable` rows and the
 title-only cards. Shot script and pairs under `e2e/.scratch/look/`; the
-e2e assertion on pointer, border and fill is 3b's, as its checklist says.
+e2e assertion on pointer, border and fill is 3d's, as its checklist says.
 
 **v1.2 Phase 1b: the seven reported module bugs** (2026-09-20, branch
 `phase-1b-module-bugs`). Four of the seven causes in the plan were guesses
