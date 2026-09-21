@@ -5,6 +5,7 @@ import {
   DataTable,
   DataRow,
   ActionButton,
+  CHEVRON,
   Card,
   CardHead,
   Chip,
@@ -17,6 +18,8 @@ import {
   PaceBar,
   Row,
   RowList,
+  STRETCH,
+  STRETCH_WRAP,
   StatusChip,
   fieldClass,
   useToast,
@@ -408,12 +411,12 @@ export function Finance({ data }: { data: FinanceData }) {
                 const used = b.limitCents ? budgetTone(b.spentCents, b.limitCents, data.alertThreshold, b.isFixed) : null
                 const tone = used === null || used.tone === 'fixed' ? null : toneText(used.tone)
                 return (
-                <Card key={b.id} className="space-y-2.5">
+                <Card key={b.id} className={cn(STRETCH_WRAP, 'space-y-2.5')}>
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                     <button
                       type="button"
                       onClick={() => setParams({ budget: b.id }, { push: true })}
-                      className={cn('t-body text-left pointer-coarse:-my-3 pointer-coarse:py-3', tone ?? 'text-ink')}
+                      className={cn(STRETCH, 't-body text-left', tone ?? 'text-ink')}
                     >
                       {b.name}
                     </button>
@@ -422,6 +425,9 @@ export function Finance({ data }: { data: FinanceData }) {
                       <span className={cn('num text-[12px]', tone ?? 'text-ink-3')}>
                         {money(b.spentCents)}
                         {b.limitCents ? ` of ${money(b.limitCents)}` : ' spent, no limit'}
+                      </span>
+                      <span aria-hidden="true" className={CHEVRON}>
+                        &rsaquo;
                       </span>
                     </div>
                   </div>
