@@ -183,11 +183,11 @@ Built 2026-09-21. Two things later phases should know. Pop does not go through R
 Goal: every clickable thing on every screen reads as clickable in both themes at both widths; nothing decorative does.
 Complexity: high. Files: every module `ui/` that renders its own `<button>` or `<Link>` outside the primitives; `modules/goals/ui/GoalList.tsx` (whole card opens the drawer); `components/pos/*`.
 
-- [ ] Replace raw `<button>` and clickable `<div>` with `Button` or the row-link class: `grep -rn "<button" modules app components | grep -v components/pos` is the worklist; each file is one commit.
-- [ ] Goals: the card is one `<button>` opening the drawer; inner actions (check-in field) `stopPropagation`. Same for any card whose title alone was the link (Finance accounts, Insurance rows, Home assets, Travel trips: verify each).
-- [ ] The Skills constellation and the Travel globe are excluded by the 2026-09-18 decision.
-- [ ] a11y script from Holon Phase 7 rerun over 24 routes: no unlabelled control, contrast pass at 11px and 12px added to it.
-- [ ] e2e: a sample of five screens asserts `cursor: pointer` and a visible border or fill on each button role; the goal card opens its drawer from a click on its body.
+- [x] Replace raw `<button>` and clickable `<div>` with `Button` or the row-link class: `grep -rn "<button" modules app components | grep -v components/pos` is the worklist; each file is one commit.
+- [x] Goals: the card is one `<button>` opening the drawer; inner actions (check-in field) `stopPropagation`. Same for any card whose title alone was the link (Finance accounts, Insurance rows, Home assets, Travel trips: verify each).
+- [x] The Skills constellation and the Travel globe are excluded by the 2026-09-18 decision.
+- [x] a11y script from Holon Phase 7 rerun over 24 routes: no unlabelled control, contrast pass at 11px and 12px added to it.
+- [x] e2e: a sample of five screens asserts `cursor: pointer` and a visible border or fill on each button role; the goal card opens its drawer from a click on its body.
 
 Exit: ui-verifier six-width pass as in Holon Phase 7; owner spot check on the monitor that prompted this.
 

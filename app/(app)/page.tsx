@@ -205,7 +205,7 @@ export default async function DashboardPage() {
         return {
           id: m.module,
           node: (
-            <Card className={cn(tileClass, 'hover:border-rule-2')}>
+            <Card className={tileClass}>
               <TileHead href={href} name={head.label ?? name} meta={head.meta} />
               {/* The module says how its own numbers read. Core only places
                 * the result: it has no way to know what a finance payload

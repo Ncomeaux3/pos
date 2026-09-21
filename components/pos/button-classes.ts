@@ -34,8 +34,10 @@ export const VARIANT = {
     'shadow-[inset_0_1px_0_rgba(255,255,255,.35),0_6px_16px_color-mix(in_srgb,var(--action)_35%,transparent)] hover:bg-[var(--action)]',
   /** Selected: the soft action fill. Never opacity. */
   brand: 'border-transparent bg-brand-soft text-ink',
-  /** Ghost: no border until hovered, so it still reads as a control. Cancel. */
-  quiet: 'border-transparent text-ink-3 hover:border-rule-2 hover:bg-glass hover:text-ink',
-  danger: 'border-transparent text-bad hover:bg-bad/10',
+  /** Ghost: no border until hovered, so it still reads as a control. Cancel.
+   * A touch screen never hovers, so there the border is on from the start
+   * (v1.2 phase 3d). */
+  quiet: 'border-transparent text-ink-3 hover:border-rule-2 hover:bg-glass hover:text-ink pointer-coarse:border-rule-2',
+  danger: 'border-transparent text-bad hover:bg-bad/10 pointer-coarse:border-rule-2',
 } as const
 

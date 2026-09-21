@@ -146,8 +146,8 @@ const monthLabel = (iso: string) => {
 
 /** The artboard's card: 1px rule on the elevated ground, 14px 20px inside. */
 const overviewCard = 'border-rule px-5 py-3.5'
-/** Its rows: 9px, and the accent wash on hover. */
-const overviewRow = 'lg:py-[9px] lg:gap-y-0 hover:bg-brand-soft'
+/** Its rows: 9px; the hover tint is DataRow's own, on the rows that open something. */
+const overviewRow = 'lg:py-[9px] lg:gap-y-0'
 
 /** One cell of the KPI strip: eyebrow, 34px figure, an 11px tracked line. */
 /** The KPI strip's four cells: the phone's overview summary and the desktop's one-page dashboard share them. */

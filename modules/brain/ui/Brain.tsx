@@ -1,7 +1,7 @@
 'use client'
 
 import { useTransition } from 'react'
-import { ActionButton, BandSearch, PillGroup, SearchButton, StatusChip, useToast } from '@/components/pos'
+import { ActionButton, BandSearch, CHEVRON, PillGroup, SearchButton, StatusChip, useToast } from '@/components/pos'
 import { BackControl } from '@/components/pos/BackControl'
 import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
@@ -215,7 +215,12 @@ export function Brain({ data }: { data: BrainData }) {
                 >
                   <span className="flex items-baseline justify-between gap-2">
                     <span className="min-w-0 truncate text-[14.5px] font-medium leading-[1.35] text-ink">{n.title}</span>
-                    <span className="num t-caption shrink-0 text-ink-4">{ago(n.updatedAt)}</span>
+                    <span className="flex shrink-0 items-baseline gap-2">
+                      <span className="num t-caption text-ink-4">{ago(n.updatedAt)}</span>
+                      <span aria-hidden="true" className={CHEVRON}>
+                        &rsaquo;
+                      </span>
+                    </span>
                   </span>
                   <span className="t-caption mt-0.5 block truncate text-ink-3">{subLine(n)}</span>
                   <span className="mt-1.5 flex items-center gap-1.5">
