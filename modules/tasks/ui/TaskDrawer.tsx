@@ -214,13 +214,13 @@ export function TaskDrawer({
             <div className="flex items-center gap-2">
               <input type="time" value={draft.time} onChange={set('time')} className={cn(field, 'num')} />
               {draft.time && (
-                <button
-                  type="button"
+                <ActionButton
+                  variant="quiet"
+                  size="sm"
                   onClick={() => setDraft((d) => ({ ...d, time: '' }))}
-                  className="text-[12px] text-ink-3 transition-colors duration-150 hover:text-ink"
                 >
                   Clear
-                </button>
+                </ActionButton>
               )}
             </div>
           </label>
