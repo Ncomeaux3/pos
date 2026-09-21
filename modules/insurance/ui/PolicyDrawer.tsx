@@ -339,7 +339,7 @@ function PolicyView({
                 <button
                   key={d.id}
                   type="button"
-                  className={cn(row, 'w-full text-left hover:text-brand')}
+                  className={cn(row, '-mx-1.5 w-[calc(100%+12px)] rounded-md px-1.5 text-left transition-colors duration-150 hover:bg-ink/[.06]')}
                   onClick={() =>
                     start(async () => {
                       const result = await documentUrl(d.id)
@@ -471,13 +471,9 @@ function PolicyForm({
       eyebrow={policy ? 'Insurance / Edit' : 'Insurance / New policy'}
       footer={
         <>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="text-[13px] text-ink-3 transition-colors duration-150 hover:text-ink"
-          >
+          <ActionButton variant="quiet" onClick={onCancel}>
             Cancel
-          </button>
+          </ActionButton>
           <ActionButton variant="solid" size="xl" disabled={!form.name.trim()} onClick={save}>
             {policy ? 'Save' : 'Create'} <span aria-hidden="true">&rarr;</span>
           </ActionButton>

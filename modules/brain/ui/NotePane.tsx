@@ -258,7 +258,7 @@ export function NotePane({
           onClick={() =>
             void noteFileUrl(note.id).then((r) => (r.ok ? window.open(r.url, '_blank', 'noopener') : toast(r.error)))
           }
-          className="flex min-h-11 items-center gap-1 self-start text-[12px] text-ink-3 transition-colors duration-150 hover:text-brand md:min-h-0"
+          className="flex min-h-11 items-center gap-1 self-start text-[12px] text-ink-3 underline-offset-2 transition-colors duration-150 hover:text-ink hover:underline md:min-h-0"
         >
           File <span aria-hidden="true">&rarr;</span> {note.filePath.slice(note.filePath.indexOf('/') + 1)}
         </button>
