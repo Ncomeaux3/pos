@@ -180,7 +180,7 @@ export function Overlay({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="grid size-9 shrink-0 place-items-center rounded-full text-ink-3 transition-colors duration-150 hover:bg-glass-strong hover:text-ink"
+              className="grid size-9 shrink-0 place-items-center rounded-full border border-transparent text-ink-3 transition-[background-color,border-color,color] duration-150 hover:border-rule-2 hover:bg-glass hover:text-ink"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" aria-hidden>
                 <path d="M4 4l8 8M12 4l-8 8" />

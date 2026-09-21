@@ -30,9 +30,9 @@ Order: bugs, then look and forms, then data pulls, then Calendar and integration
 |---|---|---|---|---|---|---|
 | 0 Housekeeping and baseline tag | main pulled, branches pruned, STATUS rewritten, package.json 1.1.0 and tag v1.1.0, SPEC v1.2 amendments | low | all | none | Done 2026-09-20 | #100 |
 | 1a Diagnose: nightly digest and passkey | Both explained with production evidence and fixed | medium | 1b, 2 | 0 | Done 2026-09-20: digest was a stale core.jobs row for the deleted notes module, pruned nightly now; passkey autofill, named passkeys, local CSP | #108 |
-| 1b Reported module bugs | Budget percent and colours, 30d column, Health insurance by type, phantom skill event, travel date icon and suggestion re-pop, Projects select speed | medium | 1a, 2 | 0 | PR open 2026-09-20: four causes re-diagnosed (net-credit month, renamed task, Chrome's glyph colour, the wait for a new project), all seven fixed with a check each | #110 |
+| 1b Reported module bugs | Budget percent and colours, 30d column, Health insurance by type, phantom skill event, travel date icon and suggestion re-pop, Projects select speed | medium | 1a, 2 | 0 | Done 2026-09-21: four causes re-diagnosed (net-credit month, renamed task, Chrome's glyph colour, the wait for a new project), all seven fixed with a check each | #110 |
 | 2 Errors tab and diagnostics | Agent log Errors tab, client_errors table, Settings diagnostics card | medium | 1a, 1b | 0 | | |
-| 3a Look: mockup gate | Today and one drawer, before and after, light and dark, owner approves | low | 2 | 1b | | |
+| 3a Look: mockup gate | Today and one drawer, before and after, light and dark, owner approves | low | 2 | 1b | PR open 2026-09-20: tokens measured and left (ink-2 and ink-3 already pass), secondary border on a solid fill, ghost border on hover, pointer from one base rule, row and card chevron with a 6 percent hover tint; owner approved on the comparison page | |
 | 3b Look: affordance and contrast rollout | Every button, row link and tile visibly clickable; ink tokens AA at every size; whole goal card opens | high | none | 3a | | |
 | 4 Forms: required fields and keyboard | Missing field highlighted with a message; Enter submits, Tab order, first field focused | medium | 5a | 3b | | |
 | 5a Finance: full pull, pending, categories | 90-day re-pull button, pending marked, transfers out of spending, credits net, new categories, rule offer on manual override | high | 4 | 1b | | |
@@ -136,9 +136,9 @@ Exit: tab live; the Diagnostics card shows the version string.
 Goal: the owner approves the affordance and contrast treatment on two surfaces before it spreads.
 Complexity: low. Files: `app/globals.css` (a scratch branch), `components/pos/Button.tsx`, `components/pos/Card.tsx`, `components/pos/Overlay.tsx`; screenshots under `e2e/.scratch/look/`.
 
-- [ ] Token pass on a branch: `--ink-2` and `--ink-3` measured with the existing contrast script (Holon Phase 7 has one under `e2e/.scratch/p7-*`) against `--bg`, `--bg-elev` and the glass surface in both themes; raise each until 4.5:1 at 11px; darken the dark wash one step if the glass surface fails.
-- [ ] Button treatment: primary filled; secondary 1px `--rule-2` border on a `--bg-elev` fill; ghost gets a border on hover and always a pointer; focus ring 2px `--accent`; disabled 50 percent with `cursor: not-allowed`. Row and card links: hover `--bg-elev`, a trailing `›` in `--ink-3`, pointer; the whole row is the link, not the title.
-- [ ] Four screenshots at 1440 (Today, a task drawer, light and dark) before and after, plus 402 for Today. Present to the owner in one message. Approval is the gate for 3b; changes requested are applied on this branch first.
+- [x] Token pass on a branch: `--ink-2` and `--ink-3` measured with the existing contrast script (Holon Phase 7 has one under `e2e/.scratch/p7-*`) against `--bg`, `--bg-elev` and the glass surface in both themes; raise each until 4.5:1 at 11px; darken the dark wash one step if the glass surface fails.
+- [x] Button treatment: primary filled; secondary 1px `--rule-2` border on a `--bg-elev` fill; ghost gets a border on hover and always a pointer; focus ring 2px `--accent`; disabled 50 percent with `cursor: not-allowed`. Row and card links: hover `--bg-elev`, a trailing `›` in `--ink-3`, pointer; the whole row is the link, not the title.
+- [x] Four screenshots at 1440 (Today, a task drawer, light and dark) before and after, plus 402 for Today. Present to the owner in one message. Approval is the gate for 3b; changes requested are applied on this branch first.
 
 Exit: owner's written approval in the PR; no merge until then (the PR carries only tokens and the three primitives).
 

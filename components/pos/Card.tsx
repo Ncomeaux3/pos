@@ -1,4 +1,5 @@
 import type { ComponentProps, ReactNode } from 'react'
+import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { Eyebrow, type DotTone } from './text'
 
@@ -29,6 +30,33 @@ export function Card({
     >
       {children}
     </Tag>
+  )
+}
+
+/**
+ * A whole card that is one link: the sunken fill on hover, a trailing
+ * chevron, and the pointer on every pixel. For a record whose title alone
+ * used to be the link, so the rest of the card was dead space that looked
+ * clickable (v1.2 phase 3a).
+ */
+export function CardLink({
+  children,
+  className,
+  ...rest
+}: ComponentProps<typeof Link> & { children: ReactNode; className?: string }) {
+  return (
+    <Link
+      {...rest}
+      className={cn(
+        'glass flex items-center gap-3 rounded-[18px] px-5 py-4 transition-colors duration-150 ease-[var(--ease)] hover:bg-ink/[.06]',
+        className,
+      )}
+    >
+      <div className="min-w-0 flex-1">{children}</div>
+      <span aria-hidden="true" className="select-none text-[16px] leading-none text-ink-3">
+        &rsaquo;
+      </span>
+    </Link>
   )
 }
 
