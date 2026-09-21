@@ -1,8 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
-import { ActionButton, Eyebrow, Overlay, SkillPicker, StatusChip } from '@/components/pos'
+import { useId, useState } from 'react'
+import {
+  ActionButton,
+  Eyebrow,
+  Field,
+  Overlay,
+  SkillPicker,
+  StatusChip,
+  submitOnModEnter,
+  useFormErrors,
+} from '@/components/pos'
 import type { Metric } from '@/core/metrics'
 import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
@@ -327,7 +336,7 @@ function Form({
   onRun: (action: () => Promise<ActionResult>, ok?: string) => void
   onSaved: () => void
 }) {
-  const [d, setD] = useState({
+  const initial = {
     title: goal?.title ?? draft.title,
     kind: (goal?.kind ?? 'number') as GoalKind,
     area: goal?.area ?? 'Life ops',
@@ -337,15 +346,23 @@ function Form({
     start: goal ? String(goal.startValue) : '0',
     metric: goal?.metricSource ?? '',
     notes: goal?.notes ?? '',
-  })
+  }
+  const [d, setD] = useState(initial)
+  const dirty = (Object.keys(initial) as (keyof typeof initial)[]).some((k) => d[k] !== initial[k])
   const set = (key: keyof typeof d) => (e: { target: { value: string } }) =>
     setD((prev) => ({ ...prev, [key]: e.target.value }))
   const milestone = d.kind === 'milestone'
   const target = parseNumber(d.target) ?? 0
-  const ready = d.title.trim() !== '' && d.deadline !== '' && (milestone || target > 0)
+  const formId = useId()
+  const { errors, ref: formRef, submit } = useFormErrors(() => ({
+    title: d.title.trim() ? undefined : 'Title is required',
+    deadline: d.deadline ? undefined : 'Deadline is required',
+    target: milestone || target > 0 ? undefined : 'Target must be a number above zero',
+    start: milestone || !d.start.trim() || parseNumber(d.start) !== null ? undefined : 'Starting value must be a number',
+  }))
 
   const save = () => {
-    if (!ready) return
+    if (!submit()) return
     const input: GoalInput = {
       ...(goal && { id: goal.id }),
       title: d.title.trim(),
@@ -368,6 +385,7 @@ function Form({
     <Overlay
       open
       onClose={onCancel}
+      dirty={dirty}
       eyebrow={
         <>
           Goals <span className="text-ink-4">/</span> {goal ? 'Edit' : 'New goal'}
@@ -378,23 +396,24 @@ function Form({
           <ActionButton variant="quiet" onClick={onCancel}>
             Cancel
           </ActionButton>
-          <ActionButton variant="solid" className="h-[38px] gap-2 px-3.5 text-[13px]" disabled={!ready} onClick={save}>
+          <ActionButton variant="solid" className="h-[38px] gap-2 px-3.5 text-[13px]" type="submit" form={formId}>
             {goal ? 'Save' : 'Create'} <span aria-hidden="true">&rarr;</span>
           </ActionButton>
         </>
       }
     >
       <form
+        id={formId}
+        ref={formRef}
         className="flex flex-col gap-[18px]"
         onSubmit={(e) => {
           e.preventDefault()
           save()
         }}
       >
-        <label className="flex flex-col gap-1.5">
-          <Eyebrow>Title</Eyebrow>
+        <Field label="Title" required error={errors.title}>
           <input value={d.title} onChange={set('title')} className={cn(field, 'px-3 py-2.5 text-[15px]')} />
-        </label>
+        </Field>
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1.5">
             <Eyebrow>Type</Eyebrow>
@@ -417,25 +436,22 @@ function Form({
           </label>
           {!milestone && (
             <>
-              <label className="flex flex-col gap-1.5">
-                <Eyebrow>{d.kind === 'streak' ? 'Times per week' : 'Target'}</Eyebrow>
+              <Field label={d.kind === 'streak' ? 'Times per week' : 'Target'} required error={errors.target}>
                 <input inputMode="decimal" value={d.target} onChange={set('target')} className={cn(field, 'num')} />
-              </label>
+              </Field>
               <label className="flex flex-col gap-1.5">
                 <Eyebrow>Unit</Eyebrow>
                 <input value={d.unit} onChange={set('unit')} placeholder="$, lb, books, /wk" className={cn(field, 'num')} />
               </label>
             </>
           )}
-          <label className="flex flex-col gap-1.5">
-            <Eyebrow>Deadline</Eyebrow>
+          <Field label="Deadline" required error={errors.deadline}>
             <input type="date" value={d.deadline} onChange={set('deadline')} className={cn(field, 'num py-2')} />
-          </label>
+          </Field>
           {!milestone && (
-            <label className="flex flex-col gap-1.5">
-              <Eyebrow>Starting value</Eyebrow>
+            <Field label="Starting value" error={errors.start}>
               <input inputMode="decimal" value={d.start} onChange={set('start')} className={cn(field, 'num')} />
-            </label>
+            </Field>
           )}
         </div>
         <div>
@@ -462,7 +478,13 @@ function Form({
         </div>
         <label className="flex flex-col gap-1.5">
           <Eyebrow>Notes</Eyebrow>
-          <textarea value={d.notes} onChange={set('notes')} rows={3} className={cn(field, 'resize-y px-3 py-2.5 leading-[1.5]')} />
+          <textarea
+            value={d.notes}
+            onChange={set('notes')}
+            onKeyDown={submitOnModEnter}
+            rows={3}
+            className={cn(field, 'resize-y px-3 py-2.5 leading-[1.5]')}
+          />
         </label>
       </form>
     </Overlay>

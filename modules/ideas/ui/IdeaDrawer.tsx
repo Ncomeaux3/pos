@@ -1,8 +1,22 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
-import { ActionButton, Card, Chip, Eyebrow, MetricStrip, Overlay, PillGroup, SkillPicker, StatusChip, type ChipTone } from '@/components/pos'
+import { useId, useState } from 'react'
+import {
+  ActionButton,
+  Card,
+  Chip,
+  Eyebrow,
+  Field,
+  MetricStrip,
+  Overlay,
+  PillGroup,
+  SkillPicker,
+  StatusChip,
+  submitOnModEnter,
+  useFormErrors,
+  type ChipTone,
+} from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { quadrant, type Level } from '../quadrant'
 import { deleteIdea, draftTask, researchIdea, saveIdea, type ActionResult, type IdeaInput } from './actions'
@@ -399,7 +413,7 @@ function Form({
   onRun: (action: () => Promise<ActionResult>, ok?: string) => void
   onSaved: () => void
 }) {
-  const [d, setD] = useState({
+  const initial = {
     title: idea?.title ?? draftTitle,
     pitch: idea?.pitch ?? '',
     notes: idea?.notes ?? '',
@@ -408,13 +422,18 @@ function Form({
     stage: (idea?.stage ?? 'exploring') as Stage,
     goal: idea?.goalRef ?? '',
     tags: idea?.tags.join(', ') ?? '',
-  })
+  }
+  const [d, setD] = useState(initial)
+  const dirty = (Object.keys(initial) as (keyof typeof initial)[]).some((k) => d[k] !== initial[k])
   const set = (key: keyof typeof d) => (e: { target: { value: string } }) =>
     setD((prev) => ({ ...prev, [key]: e.target.value }))
-  const ready = d.title.trim() !== ''
+  const formId = useId()
+  const { errors, ref: formRef, submit } = useFormErrors(() => ({
+    title: d.title.trim() ? undefined : 'Idea is required',
+  }))
 
   const save = () => {
-    if (!ready) return
+    if (!submit()) return
     const input: IdeaInput = {
       ...(idea && { id: idea.id }),
       title: d.title.trim(),
@@ -437,6 +456,7 @@ function Form({
     <Overlay
       open
       onClose={onCancel}
+      dirty={dirty}
       eyebrow={
         <>
           Ideas <span className="text-ink-4">/</span> {idea ? 'Edit' : 'New idea'}
@@ -447,30 +467,37 @@ function Form({
           <ActionButton variant="quiet" onClick={onCancel}>
             Cancel
           </ActionButton>
-          <ActionButton variant="solid" className="h-[38px] gap-2 px-3.5 text-[13px]" disabled={!ready} onClick={save}>
+          <ActionButton variant="solid" className="h-[38px] gap-2 px-3.5 text-[13px]" type="submit" form={formId}>
             {idea ? 'Save' : 'Create'} <span aria-hidden="true">&rarr;</span>
           </ActionButton>
         </>
       }
     >
       <form
+        id={formId}
+        ref={formRef}
         className="flex flex-col gap-[18px]"
         onSubmit={(e) => {
           e.preventDefault()
           save()
         }}
       >
-        <label className="flex flex-col gap-1.5">
-          <Eyebrow>Idea</Eyebrow>
+        <Field label="Idea" required error={errors.title}>
           <input value={d.title} onChange={set('title')} placeholder="Short name" className={cn(field, 'px-3 py-2.5 text-[15px]')} />
-        </label>
+        </Field>
         <label className="flex flex-col gap-1.5">
           <Eyebrow>One-line pitch</Eyebrow>
           <input value={d.pitch} onChange={set('pitch')} placeholder="What it does, in a sentence" className={field} />
         </label>
         <label className="flex flex-col gap-1.5">
           <Eyebrow>Problem · who it&apos;s for</Eyebrow>
-          <textarea value={d.notes} onChange={set('notes')} rows={3} className={cn(field, 'resize-y leading-[1.5]')} />
+          <textarea
+            value={d.notes}
+            onChange={set('notes')}
+            onKeyDown={submitOnModEnter}
+            rows={3}
+            className={cn(field, 'resize-y leading-[1.5]')}
+          />
         </label>
         <div className="grid grid-cols-2 gap-3">
           <Segment label="Effort" value={d.effort} onChange={(effort) => setD((p) => ({ ...p, effort }))} />
