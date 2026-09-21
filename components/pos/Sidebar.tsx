@@ -27,15 +27,14 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { NAV_GROUPS, type NavItem } from '@/core/nav-groups'
 import { phoneTabs } from '@/core/phone-tabs'
-import type { Theme } from '@/core/theme'
 import { setSidebarCookie } from '@/core/theme-client'
 import { cn } from '@/lib/utils'
+import { useSwipe } from './gestures'
 import { HolonMark, HolonWordmark } from './Logo'
-import { ThemeSwitch } from './ThemeSwitch'
 
 // 232px, collapsing to 72px. Labels fade rather than unmount, so the collapsed
 // rail keeps its accessible names and a screen reader still reads the nav.
@@ -113,13 +112,11 @@ export function Sidebar({
   nav,
   footer,
   collapsed: initialCollapsed,
-  theme,
   reviewCount,
 }: {
   nav: NavItem[]
   footer: NavItem[]
   collapsed: boolean
-  theme: Theme
   reviewCount: number
 }) {
   const pathname = usePathname()
@@ -136,9 +133,8 @@ export function Sidebar({
   }
 
   // Weekly review files under the Review heading with Review itself; the
-  // rest of the footer is Utilities.
+  // utilities are behind the avatar in band one, not on the rail.
   const main = [...nav, ...footer.filter((f) => f.group === 'review')]
-  const utilities = footer.filter((f) => f.group !== 'review')
 
   return (
     <aside
@@ -185,36 +181,9 @@ export function Sidebar({
         })}
       </nav>
 
-      {/* The footer: the four utilities as one row of icon buttons (a grid of
-          two when collapsed), the theme control, then Collapse. Rows for all
-          of them plus the grouped rail was 130px too tall for a 900px window. */}
+      {/* The footer is Collapse alone: Settings, Notifications, the Agent log
+          and the theme control moved behind the avatar in band one. */}
       <nav aria-label="Sections" className="flex flex-col gap-0.5 py-2.5">
-        <div className={cn('mx-2 grid gap-1', collapsed ? 'grid-cols-2' : 'grid-cols-4')}>
-          {utilities.map((item) => {
-            const Icon = NAV_ICON[item.href] ?? LayoutGrid
-            const active = isActive(pathname, item.href)
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-label={item.label}
-                title={item.label}
-                aria-current={active ? 'page' : undefined}
-                className={cn(
-                  'grid h-9 place-items-center rounded-[10px] transition-[background-color,color,box-shadow] duration-150 ease-[var(--ease)]',
-                  active
-                    ? 'bg-glass-strong text-action shadow-[inset_0_1px_0_var(--glass-edge),var(--lift),0_0_0_1px_var(--glass-line)]'
-                    : 'text-ink-3 hover:bg-glass hover:text-ink',
-                )}
-              >
-                <Icon size={19} strokeWidth={1.8} aria-hidden />
-              </Link>
-            )
-          })}
-        </div>
-
-        <ThemeSwitch theme={theme} compact={collapsed} className="mx-2 my-1.5" />
-
         <button
           type="button"
           aria-expanded={!collapsed}
@@ -263,39 +232,80 @@ export const NAV_ICON: Record<string, LucideIcon> = {
 }
 
 /**
- * Below 768px the sidebar is a bottom tab bar: Home, Tasks, Finance, Browse.
- * Browse is a page listing the rest of the app; there is no More sheet.
+ * Below 768px the sidebar is a floating capsule of tabs: Today, Tasks,
+ * Finance, Calendar once it exists, and Browse. Browse is a page listing the
+ * rest of the app; there is no More sheet. The utilities are behind the
+ * avatar on each tab root.
  *
- * Measured off PosPhone.dc.html: 56px rows on `8px 6px` padding, an 18px
- * glyph over a 9px label, accent for the current tab. The bottom inset is the
- * home indicator's, and without it the labels sat on the very edge of the
- * screen under it.
+ * Inset from the edges and sitting on the home indicator, the way Apple Music
+ * on iOS 26 draws its bar. Scrolling down past 32px shrinks it to a centred
+ * pill of icons (`data-tabbar="compact"` on <html>, styled in globals.css);
+ * any scroll up, the top of the page, a new page or a tap on the pill
+ * expands it again. Direction based, so the status bar's scroll timeline
+ * (position based) is not the mechanism. A horizontal swipe on the capsule
+ * moves to the neighbouring tab, bounded at both ends like TabBar.
  */
 export function MobileTabBar({ nav, reviewCount }: { nav: NavItem[]; reviewCount: number }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const tabs = phoneTabs(nav)
+  const index = tabs.findIndex((t) => isActive(pathname, t.href))
+
+  const swipe = useSwipe({
+    onLeft: () => index >= 0 && index < tabs.length - 1 && router.push(tabs[index + 1].href),
+    onRight: () => index > 0 && router.push(tabs[index - 1].href),
+  })
+
+  useEffect(() => {
+    const html = document.documentElement
+    let last = window.scrollY
+    const onScroll = () => {
+      const y = window.scrollY
+      if (y <= 0 || y < last) delete html.dataset.tabbar
+      else if (y > 32 && y > last) html.dataset.tabbar = 'compact'
+      last = y
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      // A new page opens at the top and may be too short to scroll.
+      delete html.dataset.tabbar
+    }
+  }, [pathname])
 
   return (
     <nav
       aria-label="Sections"
-      className="glass-panel fixed inset-x-0 bottom-0 z-40 flex rounded-none border-x-0 border-b-0 px-1.5 pb-[var(--inset-b)] pt-2 shadow-none md:hidden"
+      style={{ '--tabs': tabs.length } as CSSProperties}
+      className="tabbar glass-panel fixed bottom-[var(--inset-b)] left-1/2 z-40 flex w-[calc(100%-32px)] -translate-x-1/2 items-stretch rounded-full px-1.5 shadow-[inset_0_1px_0_var(--glass-edge),var(--pop)] md:hidden"
+      onClickCapture={(e) => {
+        // A tap on the compact pill expands it and does nothing else.
+        if (document.documentElement.dataset.tabbar !== 'compact') return
+        e.preventDefault()
+        delete document.documentElement.dataset.tabbar
+      }}
+      {...swipe}
     >
-      {phoneTabs(nav).map((item, i) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          aria-current={isActive(pathname, item.href) ? 'page' : undefined}
-          className={cn(
-            'flex min-h-[56px] flex-1 flex-col items-center justify-center gap-[5px] px-0.5 py-1.5',
-            isActive(pathname, item.href) ? 'text-action' : 'text-ink-3',
-          )}
-        >
-          {/* The count rides the first tab, which is where a proposal lands.
-            * It used to be the More tab's top line, where it read as that
-            * tab's own label rather than as something waiting. */}
-          <TabGlyph item={item} badge={i === 0 ? reviewCount : 0} />
-          <span className="max-w-full truncate text-[11px] font-medium">{item.label}</span>
-        </Link>
-      ))}
+      {tabs.map((item, i) => {
+        const active = isActive(pathname, item.href)
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            aria-current={active ? 'page' : undefined}
+            className={cn(
+              'my-1.5 flex min-w-0 flex-1 flex-col items-center justify-center gap-[3px] rounded-full px-0.5 transition-[background-color,color] duration-150',
+              active ? 'bg-brand-soft text-action' : 'text-ink-3',
+            )}
+          >
+            {/* The count rides the first tab, which is where a proposal lands.
+              * It used to be the More tab's top line, where it read as that
+              * tab's own label rather than as something waiting. */}
+            <TabGlyph item={item} badge={i === 0 ? reviewCount : 0} />
+            <span className="tabbar-label max-w-full truncate text-[10.5px] font-medium">{item.label}</span>
+          </Link>
+        )
+      })}
     </nav>
   )
 }
@@ -307,9 +317,9 @@ function TabGlyph({ item, badge }: { item: NavItem; badge: number }) {
   return (
     <span className="relative grid place-items-center">
       {item.href === '/' ? (
-        <HolonMark size={24} />
+        <HolonMark size={22} />
       ) : (
-        <Icon size={23} strokeWidth={1.8} aria-hidden />
+        <Icon size={21} strokeWidth={1.8} aria-hidden />
       )}
       {badge > 0 && (
         <span className="num absolute -right-2.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-action px-1 text-[9px] text-action-fg">

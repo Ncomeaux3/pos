@@ -7,19 +7,18 @@ import type { NavItem } from './nav'
 export const BROWSE: NavItem = { href: '/browse', label: 'Browse', group: 'utilities' }
 
 /**
- * The three the phone gets by name, then Browse. Filtered against the nav
- * rather than hardcoded into it, so a module the owner has disabled drops out
- * and the list tops up in rail order instead of leaving a hole.
+ * The four the phone gets by name, then Browse. Filtered against the nav
+ * rather than hardcoded into it, so a module the owner has disabled (or one
+ * not built yet: Calendar arrives in v1.2 Phase 6a) drops out. No top-up
+ * from the rest of the rail: the capsule holds these and Browse, nothing else.
  */
-const PHONE_TABS = ['/', '/tasks', '/finance']
+const PHONE_TABS = ['/', '/tasks', '/finance', '/calendar']
 
 /** Every tab root, Browse included: the screens that draw no back control. */
 export const PHONE_TAB_HREFS = [...PHONE_TABS, BROWSE.href]
 
 export function phoneTabs(nav: NavItem[]): NavItem[] {
-  const wanted = PHONE_TABS.map((href) => nav.find((n) => n.href === href)).filter(
-    (n): n is NavItem => n !== undefined,
-  )
-  const spare = nav.filter((n) => !wanted.includes(n) && n.href !== '/review')
-  return [...wanted, ...spare].slice(0, PHONE_TABS.length).concat(BROWSE)
+  return PHONE_TABS.map((href) => nav.find((n) => n.href === href))
+    .filter((n): n is NavItem => n !== undefined)
+    .concat(BROWSE)
 }

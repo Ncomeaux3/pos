@@ -18,10 +18,16 @@ describe('phoneTabs', () => {
     expect(phoneTabs(nav).map((t) => t.label)).toEqual(['Today', 'Tasks', 'Finance', 'Browse'])
   })
 
-  it('drops a disabled module and keeps Browse last', () => {
-    // Finance disabled: the bar tops up from rail order and Browse stays the
-    // last tab, because Browse is where the rest of the app is.
+  it('drops a disabled module without topping up and keeps Browse last', () => {
+    // Finance disabled: the capsule holds three, not a module from the rail
+    // in its place, and Browse stays last because it is where the rest of
+    // the app is.
     const tabs = phoneTabs(nav.filter((n) => n.href !== '/finance'))
-    expect(tabs.map((t) => t.href)).toEqual(['/', '/tasks', '/skills', '/browse'])
+    expect(tabs.map((t) => t.href)).toEqual(['/', '/tasks', '/browse'])
+  })
+
+  it('adds Calendar once the module exists', () => {
+    const tabs = phoneTabs([...nav, item('/calendar', 'Calendar')])
+    expect(tabs.map((t) => t.href)).toEqual(['/', '/tasks', '/finance', '/calendar', '/browse'])
   })
 })

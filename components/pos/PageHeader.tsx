@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { AvatarMenu } from './AvatarMenu'
 import { BackControl } from './BackControl'
 import { BandSearch } from './BandSearch'
 import { Eyebrow, type DotTone } from './text'
@@ -8,14 +9,14 @@ import { Eyebrow, type DotTone } from './text'
  * The two bands every prototype opens with, and the phone's one row.
  *
  * Below md there is no band: a 44px back control when the screen is not a tab
- * root, the title, and at most one action on the right. Breadcrumb, search,
- * lede and status are the desktop's; the phone reaches search through Browse
- * and the palette.
+ * root, the title, at most one action on the right, and on a tab root the
+ * avatar that holds the utilities. Breadcrumb, search, lede and status are
+ * the desktop's; the phone reaches search through Browse and the palette.
  *
  * Band one is the thin row across the top of the column: a breadcrumb on the
- * left, the search box in the middle, and the module's status or its one
- * primary action on the right. No rule under it: the page ground is one
- * surface and the glass below is what separates.
+ * left, the search box in the middle, the module's status or its one primary
+ * action, and the avatar at the far right. No rule under it: the page ground
+ * is one surface and the glass below is what separates.
  *
  * Band two is the page proper: a 600 weight title at 30px, one grey sentence
  * under it, and the record making actions right aligned against it.
@@ -73,6 +74,7 @@ export function PageHeader({
         {(phoneAction ?? actions) && (
           <div className="ml-auto flex shrink-0 items-center gap-2">{phoneAction ?? actions}</div>
         )}
+        <AvatarMenu phone className="-mr-1.5" />
       </div>
 
       <div className="-mt-3 hidden min-h-10 flex-wrap items-center gap-x-4 gap-y-2 md:flex">
@@ -86,6 +88,7 @@ export function PageHeader({
           />
         )}
         {status && <div className="ml-auto flex shrink-0 items-center gap-3 whitespace-nowrap">{status}</div>}
+        <AvatarMenu className={cn(!search && !status && 'ml-auto')} />
       </div>
 
       {hideTitle ? (

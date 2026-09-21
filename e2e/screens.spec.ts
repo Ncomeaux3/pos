@@ -186,13 +186,13 @@ test('dashboard shell', async ({ page }) => {
     // The band's search, with the artboard's question rather than PageHeader's default.
     await expect(page.getByRole('button', { name: /What are you looking for/ })).toBeVisible()
 
-    // The footer holds the three-way theme control and the Collapse row.
+    // The footer holds the Collapse row alone: the utilities and the theme
+    // control are behind the avatar at the end of band one (v1.2 Phase 3b).
     const footer = page.getByRole('navigation', { name: /sections/i })
-    const themeGroup = footer.getByRole('group', { name: 'Theme' })
-    await expect(themeGroup.getByRole('button', { name: 'System', exact: true })).toBeVisible()
-    // No cookie yet, so the page follows the device and System is pressed.
-    await expect(themeGroup.getByRole('button', { name: 'System', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(footer.getByRole('link')).toHaveCount(0)
+    await expect(footer.getByRole('group', { name: 'Theme' })).toHaveCount(0)
     await expect(footer.getByRole('button', { name: 'Collapse' })).toBeVisible()
+    await expect(page.getByRole('main').getByRole('button', { name: 'Account' })).toBeVisible()
     const labelSize = await footer
       .getByRole('button', { name: 'Collapse' })
       .evaluate((b) => getComputedStyle(b).fontSize)
@@ -212,13 +212,7 @@ test('the collapsed rail keeps its controls inside 72px and on one centre line',
   const railBox = (await rail.boundingBox())!
   const centre = railBox.x + railBox.width / 2
 
-  // The theme control shows one pressed option; it must not spill past its track.
-  const group = footer.getByRole('group', { name: 'Theme' })
-  const pressed = group.getByRole('button', { name: /^Theme: System/ })
-  const [g, b] = await Promise.all([group.boundingBox(), pressed.boundingBox()])
-  expect(b!.x + b!.width).toBeLessThanOrEqual(g!.x + g!.width)
-
-  // Every icon in the rail, the footer grid aside, sits on the rail's centre line.
+  // Every icon in the rail sits on the rail's centre line.
   for (const name of ['Today', 'Tasks', 'Finance']) {
     const icon = await page.getByRole('navigation', { name: 'Modules' }).getByRole('link', { name }).locator('svg').boundingBox()
     expect(Math.abs(icon!.x + icon!.width / 2 - centre)).toBeLessThanOrEqual(1)
@@ -229,26 +223,25 @@ test('the collapsed rail keeps its controls inside 72px and on one centre line',
   // Expanding restores the labels.
   await footer.getByRole('button', { name: 'Collapse' }).click()
   await expect.poll(async () => (await rail.boundingBox())?.width).toBe(232)
-  await expect(group.getByRole('button', { name: 'System', exact: true })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Modules' }).getByRole('link', { name: 'Today' }).locator('.truncate')).toHaveCSS('opacity', '1')
 })
 
 test('browse lists the rail groups', async ({ page }) => {
   await page.goto('/browse')
   // Same source as the rail, in the rail's groups, minus Today (the first
-  // tab) and Search (the band above). Plan, Knowledge, Life, Review, Utilities.
+  // tab), Search (the band above) and the utilities (behind the avatar).
+  // Plan, Knowledge, Life, Review.
   const lists = page.getByRole('list')
-  await expect(lists).toHaveCount(5)
+  await expect(lists).toHaveCount(4)
   await expect(lists.nth(0).getByRole('link')).toHaveCount(3)
   await expect(lists.nth(2).getByRole('link')).toHaveCount(7)
   await expect(lists.nth(2).getByRole('link', { name: 'Finance' })).toBeVisible()
   // Not in the list: the desktop rail beside it still has its own Today.
   await expect(page.getByRole('main').getByRole('link', { name: 'Today' })).toHaveCount(0)
-
-  const utilities = await lists.last().getByRole('link').evaluateAll((links) =>
-    links.map((a) => a.textContent?.trim()),
-  )
-  expect(utilities).toEqual(['Notifications', 'Agent log', 'Settings'])
-  await expect(lists.nth(3).getByRole('link', { name: /^Review/ })).toBeVisible()
+  await expect(page.getByRole('main').getByRole('link', { name: 'Settings' })).toHaveCount(0)
+  await expect(lists.last().getByRole('link', { name: /^Review/ })).toBeVisible()
+  // Browse is a tab root, so the avatar is here too.
+  await expect(page.getByRole('main').getByRole('button', { name: 'Account' })).toBeVisible()
   await shoot(page, 'browse')
 })
 
@@ -264,6 +257,106 @@ test('phone header shows back off a tab root and not on one', async ({ page }, t
   const back = page.getByRole('link', { name: 'Back' })
   await expect(back).toBeVisible()
   await expect(back).toHaveAttribute('href', '/browse')
+})
+
+test('the avatar holds the utilities and the theme', async ({ page }) => {
+  await page.goto('/')
+  await page.waitForLoadState('networkidle')
+  const avatar = page.getByRole('main').getByRole('button', { name: 'Account' })
+  await expect(avatar).toBeVisible()
+  // The seed's owner has a two word name, so two initials.
+  await expect(avatar).toHaveText(/^[A-Z?]{1,2}$/)
+
+  await avatar.click()
+  const menu = page.getByRole('dialog', { name: /./ })
+  await expect(menu).toBeVisible()
+  const labels = await menu.getByRole('link').evaluateAll((links) => links.map((a) => a.textContent?.trim()))
+  expect(labels.map((l) => l?.replace(/\d+$/, '').trim())).toEqual(['Settings', 'Notifications', 'Agent log'])
+  await expect(menu.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/settings')
+  await expect(menu.getByRole('button', { name: 'Sign out' })).toBeVisible()
+
+  // The theme control moved here from the rail and still writes the page's
+  // attribute the instant it is pressed.
+  const group = menu.getByRole('group', { name: 'Theme' })
+  await group.getByRole('button', { name: 'Light', exact: true }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+  await expect(group.getByRole('button', { name: 'Light', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await group.getByRole('button', { name: 'System', exact: true }).click()
+  await expect(page.locator('html')).not.toHaveAttribute('data-theme')
+
+  // A row closes the menu and goes there.
+  await menu.getByRole('link', { name: 'Settings' }).click()
+  await expect(page).toHaveURL(/\/settings$/)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('the phone avatar sits on tab roots and not on a detail page', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'The phone header is a phone thing')
+  await page.goto('/')
+  await expect(page.getByRole('main').getByRole('button', { name: 'Account' })).toBeVisible()
+  await page.goto('/goals')
+  await expect(page.getByRole('link', { name: 'Back' })).toBeVisible()
+  await expect(page.getByRole('main').getByRole('button', { name: 'Account' })).toHaveCount(0)
+})
+
+test('the tab capsule shrinks on scroll down and grows back on scroll up', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'The capsule is a phone thing')
+  await page.goto('/')
+  await page.waitForLoadState('networkidle')
+  const bar = page.getByRole('navigation', { name: 'Sections' })
+  const html = page.locator('html')
+  const viewport = page.viewportSize()!
+
+  // Floating: inset from both edges, its bottom one inset above the screen edge.
+  const box = (await bar.boundingBox())!
+  expect(box.height).toBe(56)
+  expect(box.x).toBe(16)
+  expect(box.x + box.width).toBe(viewport.width - 16)
+  expect(box.y + box.height).toBeLessThan(viewport.height)
+  await expect(html).not.toHaveAttribute('data-tabbar')
+
+  // Down past 32px: compact, a 44px pill of icons, the labels still named.
+  await page.mouse.move(200, 400)
+  await page.mouse.wheel(0, 200)
+  await expect(html).toHaveAttribute('data-tabbar', 'compact')
+  await expect.poll(async () => (await bar.boundingBox())!.height).toBe(44)
+  const compact = (await bar.boundingBox())!
+  expect(compact.width).toBeLessThan(box.width)
+  expect(Math.abs(compact.x + compact.width / 2 - viewport.width / 2)).toBeLessThanOrEqual(1)
+  await expect(bar.getByRole('link', { name: 'Tasks' })).toBeVisible()
+
+  // Any scroll up expands it.
+  await page.mouse.wheel(0, -100)
+  await expect(html).not.toHaveAttribute('data-tabbar')
+  await expect.poll(async () => (await bar.boundingBox())!.height).toBe(56)
+})
+
+test('a swipe on the tab capsule moves one tab and a mouse drag does not', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Touch gestures are a phone thing')
+  await page.goto('/')
+  await page.waitForLoadState('networkidle')
+  const bar = page.getByRole('navigation', { name: 'Sections' })
+  const box = (await bar.boundingBox())!
+  const y = box.y + box.height / 2
+  const swipe = async (fromX: number, toX: number, pointerType: 'touch' | 'mouse') => {
+    await bar.dispatchEvent('pointerdown', { pointerType, clientX: fromX, clientY: y })
+    await bar.dispatchEvent('pointerup', { pointerType, clientX: toX, clientY: y })
+  }
+
+  // Left goes to the next tab, and only one.
+  await swipe(box.x + box.width - 20, box.x + 40, 'touch')
+  await expect(page).toHaveURL(/\/tasks$/)
+  await expect(bar.getByRole('link', { name: 'Tasks' })).toHaveAttribute('aria-current', 'page')
+
+  // Right comes back; another right at the first tab stays put.
+  await swipe(box.x + 40, box.x + box.width - 20, 'touch')
+  await expect(page).toHaveURL(/\/$/)
+  await swipe(box.x + 40, box.x + box.width - 20, 'touch')
+  await expect(page).toHaveURL(/\/$/)
+
+  // A mouse drag is a text selection, not a gesture.
+  await swipe(box.x + box.width - 20, box.x + 40, 'mouse')
+  await expect(page).toHaveURL(/\/$/)
 })
 
 test('home shows Run now on the phone', async ({ page }, testInfo) => {
@@ -1925,18 +2018,17 @@ test('weekly review, six steps and a note built from the answers', async ({ page
   await page.waitForLoadState('networkidle')
 
   // The band's theme control: System, Light, Dark. It shares the setting
-  // with the sidebar's control, so one press moves both. System removes the
-  // attribute and the page follows the device. Desktop only: the sidebar is
-  // not on a phone.
+  // with the avatar menu's control (the shell test proves that one). System
+  // removes the attribute and the page follows the device. Desktop only: the
+  // band is not on a phone.
   if ((page.viewportSize()?.width ?? 0) >= 768) {
     // shoot() leaves the cookie on dark but the page on its last shot, light.
     await page.reload()
     await page.waitForLoadState('networkidle')
     const band = page.locator('header').getByRole('group', { name: 'Theme' })
-    const rail = page.getByRole('navigation', { name: 'Sections' }).getByRole('group', { name: 'Theme' })
     await band.getByRole('button', { name: 'Light', exact: true }).click()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
-    await expect(rail.getByRole('button', { name: 'Light', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(band.getByRole('button', { name: 'Light', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await band.getByRole('button', { name: 'System', exact: true }).click()
     await expect(page.locator('html')).not.toHaveAttribute('data-theme')
     await band.getByRole('button', { name: 'Dark', exact: true }).click()

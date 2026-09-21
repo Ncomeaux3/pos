@@ -348,3 +348,12 @@ export async function snoozeRule(id: string, days: number): Promise<void> {
     [id, days],
   )
 }
+
+/** The avatar menu's badge: raised and not yet read, the screen's unread list counted. */
+export async function countUnread(): Promise<number> {
+  const { rows } = await db().query<{ count: string }>(
+    `select count(*)::text as count from core.notifications
+      where read_at is null and due_at <= now()`,
+  )
+  return Number(rows[0]?.count ?? 0)
+}

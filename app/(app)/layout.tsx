@@ -1,7 +1,11 @@
 import { requireOwner } from '@/core/auth'
 import { getNav, getOffRailNav, NAV_FOOTER } from '@/core/nav'
+import { initials } from '@/core/initials'
+import { countUnread } from '@/core/notify'
 import { countPending } from '@/core/proposals'
+import { getSettings } from '@/core/settings'
 import { getSidebarCollapsed, getTheme } from '@/core/theme'
+import { ShellProvider } from '@/components/pos/AvatarMenu'
 import { CommandPalette } from '@/components/pos/CommandPalette'
 import { MobileTabBar, Sidebar } from '@/components/pos/Sidebar'
 import { ToastProvider } from '@/components/pos'
@@ -11,18 +15,23 @@ import { EdgeBack } from '@/components/pos/EdgeBack'
 export default async function AppLayout({ children }: LayoutProps<'/'>) {
   await requireOwner()
 
-  const [nav, offRail, collapsed, theme, reviewCount] = await Promise.all([
+  const [nav, offRail, collapsed, theme, reviewCount, settings, unread] = await Promise.all([
     getNav(),
     getOffRailNav(),
     getSidebarCollapsed(),
     getTheme(),
     // The same count Browse and Review show: a snoozed proposal is not a badge.
     countPending(),
+    // The avatar's initials and its menu's unread badge (PageHeader places
+    // the avatar; this is where the request-scoped reads happen).
+    getSettings(),
+    countUnread(),
   ])
 
   return (
     <ToastProvider>
-      <Sidebar nav={nav} footer={NAV_FOOTER} collapsed={collapsed} theme={theme} reviewCount={reviewCount} />
+      <ShellProvider value={{ initials: initials(settings.owner_name), ownerName: settings.owner_name, unread, theme }}>
+      <Sidebar nav={nav} footer={NAV_FOOTER} collapsed={collapsed} reviewCount={reviewCount} />
       <MobileTabBar nav={nav} reviewCount={reviewCount} />
       <CommandPalette nav={[...nav, ...NAV_FOOTER, ...offRail]} />
       <PullToRefresh />
@@ -50,6 +59,7 @@ export default async function AppLayout({ children }: LayoutProps<'/'>) {
       >
         {children}
       </main>
+      </ShellProvider>
     </ToastProvider>
   )
 }

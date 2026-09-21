@@ -38,7 +38,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-20 (v1.2 Phase 3a: the look mockup gate). Branch `main`, production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-20 (v1.2 Phase 3b: the Apple shell, capsule tab bar and avatar menu). Branch `main`, production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
