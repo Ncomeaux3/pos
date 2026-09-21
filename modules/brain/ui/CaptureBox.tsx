@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { ActionButton, Eyebrow, useToast } from '@/components/pos'
+import { ActionButton, CHEVRON, Eyebrow, useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { fieldClass } from '@/components/pos/field'
 import type { Related } from '../related'
@@ -174,10 +174,15 @@ export function CaptureBox({ notes, setParams }: { notes: BrainNote[]; setParams
                 key={r.id}
                 type="button"
                 onClick={() => setParams({ note: r.slug })}
-                className="flex min-h-11 items-baseline justify-between gap-2 border-b border-rule py-1.5 text-left text-[12px] text-ink-2 transition-colors duration-150 hover:text-ok md:min-h-0"
+                className="-mx-1.5 flex min-h-11 items-baseline justify-between gap-2 border-b border-rule px-1.5 py-1.5 text-left text-[12px] text-ink-2 transition-colors duration-150 hover:bg-ink/[.06] md:min-h-0"
               >
                 <span className="min-w-0 truncate">{r.title}</span>
-                <span className="label shrink-0 text-ink-4">{hubNames(r.id)}</span>
+                <span className="flex shrink-0 items-baseline gap-2">
+                  <span className="label text-ink-4">{hubNames(r.id)}</span>
+                  <span aria-hidden="true" className={CHEVRON}>
+                    &rsaquo;
+                  </span>
+                </span>
               </button>
             ))
           )}
