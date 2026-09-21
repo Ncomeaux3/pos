@@ -33,7 +33,7 @@ export default async function AppLayout({ children }: LayoutProps<'/'>) {
         * height of the inset, zero in a browser tab, none on the desktop. */}
       <div
         aria-hidden
-        className="glass-panel pointer-events-none fixed inset-x-0 top-0 z-40 h-[var(--inset-t)] rounded-none border-0 shadow-none md:hidden"
+        className="glass-panel statusbar pointer-events-none fixed inset-x-0 top-0 z-40 h-[var(--inset-t)] rounded-none border-0 shadow-none md:hidden"
       />
 
       <main

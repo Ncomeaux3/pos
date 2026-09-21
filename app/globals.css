@@ -288,6 +288,19 @@ html {
     -webkit-backdrop-filter: saturate(180%) blur(40px);
     backdrop-filter: saturate(180%) blur(40px);
   }
+  /* The strip behind the phone's status bar (app/(app)/layout.tsx): clear at
+   * the top of the page, material once the page scrolls under it, the way an
+   * iOS bar behaves. A scroll-driven animation, so no scroll listener; a
+   * browser without scroll timelines shows the strip at all times. */
+  .statusbar {
+    animation: statusbar-fill linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 32px;
+  }
+  @keyframes statusbar-fill {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
   @media (prefers-reduced-transparency: reduce) {
     .glass,
     .glass-strong,
