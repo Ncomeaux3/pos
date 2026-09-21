@@ -357,7 +357,13 @@ function Form({
   const { errors, ref: formRef, submit } = useFormErrors(() => ({
     title: d.title.trim() ? undefined : 'Title is required',
     deadline: d.deadline ? undefined : 'Deadline is required',
-    target: milestone || target > 0 ? undefined : 'Target must be a number above zero',
+    target: milestone
+      ? undefined
+      : !d.target.trim()
+        ? 'Target is required'
+        : target > 0
+          ? undefined
+          : 'Target must be a number above zero',
     start: milestone || !d.start.trim() || parseNumber(d.start) !== null ? undefined : 'Starting value must be a number',
   }))
 
