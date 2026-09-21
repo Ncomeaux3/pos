@@ -44,9 +44,10 @@
   --inset-t: env(safe-area-inset-top, 0px);
   /* The phone's home indicator, with a floor for browsers that report zero. */
   --inset-b: max(env(safe-area-inset-bottom), 12px);
-  /* The tab bar: 1px rule, 8px top, 56px buttons, the inset. Everything that must clear
-     it (toasts, sheets, the page bottom) measures from this. */
-  --tabbar: calc(65px + var(--inset-b));
+  /* The tab capsule: 56px tall, floating one inset above the home indicator.
+     Everything that must clear it (toasts, sheets, the page bottom) measures
+     from this. */
+  --tabbar: calc(56px + 2 * var(--inset-b));
 
   --bg: light-dark(#f2f2f7, #000000);
   --bg-elev: light-dark(#ffffff, #1c1c1e);
@@ -193,8 +194,10 @@ html {
   --color-sidebar-primary-foreground: var(--action-fg);
   --color-sidebar-ring: var(--action);
 
-  /* Geist, one family, served from app/fonts. No monospace anywhere. */
-  --font-sans: var(--font-geist), system-ui, sans-serif;
+  /* The system font first (SF on Apple devices, which honours tabular
+     figures through .num), then Geist served from app/fonts; the brand stays
+     Geist. No monospace anywhere. */
+  --font-sans: -apple-system, BlinkMacSystemFont, var(--font-geist), system-ui, sans-serif;
   --font-brand: var(--font-geist), system-ui, sans-serif;
 
   /* 10px small controls and rail rows, 12px inputs, 18px cards and grouped
@@ -328,6 +331,31 @@ html {
   @keyframes statusbar-fill {
     from { opacity: 0; }
     to { opacity: 1; }
+  }
+  /* The phone's tab capsule (MobileTabBar). Scrolling down sets
+   * data-tabbar="compact" on <html> and the capsule becomes a centred 44px
+   * pill of icons; the labels stay in the tree for their accessible names.
+   * The width comes from the tab count the bar sets in --tabs. The global
+   * reduced-motion rule zeroes the transition. Height and width live here
+   * rather than in utilities so the compact rule can override them. */
+  .tabbar {
+    height: 56px;
+    max-width: calc(100% - 32px);
+    transition:
+      height 240ms var(--ease),
+      max-width 240ms var(--ease);
+  }
+  html[data-tabbar='compact'] .tabbar {
+    height: 44px;
+    max-width: calc(var(--tabs) * 56px);
+  }
+  html[data-tabbar='compact'] .tabbar-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   @media (prefers-reduced-transparency: reduce) {
     .glass,
