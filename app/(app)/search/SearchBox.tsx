@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
+import { ActionButton } from '@/components/pos'
 import { cn } from '@/lib/utils'
 
 /**
@@ -56,16 +57,17 @@ export function SearchBox({ initial }: { initial: string }) {
           className="min-w-0 flex-1 bg-transparent text-[18px] text-ink outline-none placeholder:text-ink-4"
         />
         {value && (
-          <button
-            type="button"
+          <ActionButton
+            variant="quiet"
+            size="sm"
             onClick={() => {
               setValue('')
               submit('')
             }}
-            className="shrink-0 px-4 text-[12px] text-ink-3 transition-colors duration-150 hover:text-ink"
+            className="mr-2 shrink-0"
           >
             Clear
-          </button>
+          </ActionButton>
         )}
       </div>
     </form>
