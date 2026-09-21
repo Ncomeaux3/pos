@@ -18,7 +18,7 @@ import {
   type View,
 } from '../shape'
 import { Segments } from '@/components/pos/Segments'
-import { useSwipe } from '@/components/pos/gestures'
+import { SwipeRow } from '@/components/pos/SwipeRow'
 import { useIsPhone } from '@/components/pos/useIsPhone'
 import { useSearchState } from '@/components/pos/searchState'
 import {
@@ -119,9 +119,20 @@ export function Board({
   const filtered = FILTER_VIEWS.some((v) => v.value === view)
 
   // A completed task reads as done the moment the box is ticked or the row is
-  // swiped, and the server's answer replaces the guess when it lands.
-  const [tasks, flip] = useOptimistic(serverTasks, (state, patch: { id: string; done: boolean }) =>
-    state.map((t) => (t.id === patch.id ? { ...t, status: patch.done ? 'done' : 'open' } : t)),
+  // swiped, and a snoozed one is due tomorrow the moment it is swiped the
+  // other way; the server's answer replaces the guess when it lands.
+  const [tasks, flip] = useOptimistic(
+    serverTasks,
+    (state, patch: { id: string; done?: boolean; dueInDays?: number }) =>
+      state.map((t) =>
+        t.id !== patch.id
+          ? t
+          : {
+              ...t,
+              ...(patch.done !== undefined && { status: patch.done ? 'done' : 'open' }),
+              ...(patch.dueInDays !== undefined && { dueInDays: patch.dueInDays, dueAt: null }),
+            },
+      ),
   )
 
   // A project added in the Projects drawer is in every project select at
@@ -390,6 +401,12 @@ export function Board({
                             )
                           }}
                           onApprove={() => run(() => approveTask(task.id), 'Approved')}
+                          onSnooze={() =>
+                            run(() => {
+                              flip({ id: task.id, dueInDays: 1 })
+                              return writeTask({ id: task.id, ...dropPatch({ dueInDays: 1 }) })
+                            }, 'Snoozed to tomorrow')
+                          }
                         />
                       ))
                     )}
@@ -488,6 +505,7 @@ function Row({
   onDelete,
   onComplete,
   onApprove,
+  onSnooze,
 }: {
   task: Task
   today: Date
@@ -505,6 +523,7 @@ function Row({
   onDelete: () => void
   onComplete: () => void
   onApprove: () => void
+  onSnooze: () => void
 }) {
   const done = task.status === 'done'
   const agent = task.status === 'review'
@@ -512,50 +531,26 @@ function Row({
   const remind = remindLabel(task.remindMinutes, task.dueAt)
   const by = task.skills[0]?.by ?? 'rule'
 
-  // Swipe right to complete, swipe left to reopen: the gesture every task app
-  // has, and the reason the checkbox does not have to be hit exactly with a
-  // thumb. Touch only, so a mouse drag over the text still selects it.
-  // The card follows the finger up to 80px in the direction that means
-  // something, with the word it is about to earn showing behind it.
-  const [dx, setDx] = useState(0)
-  const swipe = useSwipe({
-    onRight: () => !done && onComplete(),
-    onLeft: () => done && onComplete(),
-    onMove: (d) => setDx(done ? Math.max(-80, Math.min(0, d)) : Math.max(0, Math.min(80, d))),
-  })
-
   return (
-    <div
+    // Swipe right to complete, swipe left to snooze until tomorrow, and on a
+    // done row swipe left to reopen: the gestures every task app has, and the
+    // reason the checkbox does not have to be hit exactly with a thumb.
+    <SwipeRow
+      right={done ? undefined : { label: 'Done', onCommit: onComplete }}
+      left={done ? { label: 'Reopen', onCommit: onComplete } : { label: 'Snooze', onCommit: onSnooze }}
       className={cn(
         // The inset hairline between rows, drawn by every row but the first;
         // the selected row's soft fill takes its own and the next one's.
-        'relative overflow-hidden before:absolute before:inset-x-4 before:top-0 before:z-10 before:h-px before:bg-rule first:before:hidden',
+        'before:absolute before:inset-x-4 before:top-0 before:z-10 before:h-px before:bg-rule first:before:hidden',
         expanded && 'bg-brand-soft before:hidden [&+*]:before:hidden',
       )}
     >
-      {/* The word the swipe is about to earn, behind the row while it moves. */}
-      {dx !== 0 && (
-        <span
-          aria-hidden="true"
-          className={cn(
-            'absolute inset-y-0 flex w-20 items-center justify-center text-[12px] font-medium text-action',
-            done ? 'right-0' : 'left-0',
-          )}
-        >
-          {done ? 'Reopen' : 'Done'}
-        </span>
-      )}
       <article
-        data-swipes
         draggable={draggable}
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
-        {...swipe}
-        style={{ transform: dx ? `translateX(${dx}px)` : undefined }}
         className={cn(
-          'relative px-4 py-2.5 transition-colors duration-150 [touch-action:pan-y]',
-          !dx && 'transition-transform',
-          dx && 'bg-bg-elev',
+          'px-4 py-2.5 transition-colors duration-150',
           draggable && 'cursor-grab active:cursor-grabbing',
         )}
       >
@@ -692,7 +687,7 @@ function Row({
           </div>
         )}
       </article>
-    </div>
+    </SwipeRow>
   )
 }
 

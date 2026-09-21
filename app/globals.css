@@ -393,6 +393,14 @@ html {
       transform: none;
     }
   }
+  /* Below md the page pushes and pops instead (the view transitions after
+   * the reduced-motion block), so the stagger comes off: the two would stack
+   * and the page would rise inside its own slide. */
+  @media (max-width: 767px) {
+    .reveal > * {
+      animation: none;
+    }
+  }
 
   /* Interactive glass lifts a pixel under the pointer. */
   .lift {
@@ -515,6 +523,88 @@ html {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+/* The phone's page transitions (components/pos/PageTransition.tsx). A route
+ * change on the phone is an iOS push or pop: forward, the new page slides in
+ * from the right over the old one, which moves a third of the way left and
+ * darkens; back reverses it with the leaving page on top; a tab change
+ * cross-fades. Forward and tab are React's ViewTransition classes; back is
+ * the browser API with an attribute on <html> for its duration. The page paints its own canvas so each snapshot is one opaque
+ * card and the page underneath never shows through the gaps between cards.
+ * Untyped means forward, which is every plain link. The desktop keeps the
+ * .reveal stagger and runs none of this. Readers who ask for reduced motion
+ * get the fade for every case: the global rule above does not reach these
+ * pseudo-elements. */
+@media (max-width: 767px) {
+  .page {
+    background: var(--bg);
+    transition: background 160ms var(--ease);
+    view-transition-name: page;
+  }
+  /* Taps during the 300ms are not lost to the overlay. */
+  ::view-transition {
+    pointer-events: none;
+  }
+  ::view-transition-new(.vt-push-in) {
+    animation: vt-slide-side 300ms var(--ease) both reverse;
+  }
+  ::view-transition-old(.vt-push-out) {
+    animation: vt-slide-under 300ms var(--ease) both;
+  }
+  /* Back runs through the browser's own API (goBack in PageTransition.tsx):
+   * the leaving page is named `leaving` for the duration and pops off over
+   * the page it reveals. */
+  html[data-nav='back']::view-transition-group(leaving) {
+    z-index: 1;
+  }
+  html[data-nav='back']::view-transition-old(leaving) {
+    animation: vt-slide-side 300ms var(--ease) both;
+  }
+  html[data-nav='back']::view-transition-new(page) {
+    animation: vt-slide-under 300ms var(--ease) both reverse;
+  }
+  ::view-transition-old(.vt-fade) {
+    animation: vt-fade 300ms var(--ease) both reverse;
+  }
+  ::view-transition-new(.vt-fade) {
+    animation: vt-fade 300ms var(--ease) both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(.vt-push-out),
+    html[data-nav='back']::view-transition-old(leaving) {
+      animation: vt-fade 300ms var(--ease) both reverse;
+    }
+    ::view-transition-new(.vt-push-in),
+    html[data-nav='back']::view-transition-new(page) {
+      animation: vt-fade 300ms var(--ease) both;
+    }
+  }
+}
+/* The desktop keeps the .reveal stagger. React still snapshots the root when
+ * the page boundary is replaced, so the cross-fade it would play is zeroed
+ * and the transition is over on the next frame. */
+@media (min-width: 768px) {
+  ::view-transition {
+    pointer-events: none;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none;
+  }
+}
+@keyframes vt-slide-side {
+  from { transform: none; }
+  to { transform: translateX(100%); }
+}
+@keyframes vt-slide-under {
+  from { transform: none; filter: brightness(1); }
+  to { transform: translateX(-30%); filter: brightness(0.8); }
+}
+@keyframes vt-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @layer components {

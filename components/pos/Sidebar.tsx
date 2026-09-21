@@ -251,9 +251,11 @@ export function MobileTabBar({ nav, reviewCount }: { nav: NavItem[]; reviewCount
   const tabs = phoneTabs(nav)
   const index = tabs.findIndex((t) => isActive(pathname, t.href))
 
+  // A tab change cross-fades rather than pushing (PageTransition.tsx).
+  const go = (href: string) => router.push(href, { transitionTypes: ['tab'] })
   const swipe = useSwipe({
-    onLeft: () => index >= 0 && index < tabs.length - 1 && router.push(tabs[index + 1].href),
-    onRight: () => index > 0 && router.push(tabs[index - 1].href),
+    onLeft: () => index >= 0 && index < tabs.length - 1 && go(tabs[index + 1].href),
+    onRight: () => index > 0 && go(tabs[index - 1].href),
   })
 
   useEffect(() => {
@@ -292,6 +294,7 @@ export function MobileTabBar({ nav, reviewCount }: { nav: NavItem[]; reviewCount
           <Link
             key={item.href}
             href={item.href}
+            transitionTypes={['tab']}
             aria-current={active ? 'page' : undefined}
             className={cn(
               'my-1.5 flex min-w-0 flex-1 flex-col items-center justify-center gap-[3px] rounded-full px-0.5 transition-[background-color,color] duration-150',

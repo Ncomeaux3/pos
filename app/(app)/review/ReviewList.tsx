@@ -1,9 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, EmptyState, StatusChip, type ChipTone } from '@/components/pos'
+import { Card, EmptyState, StatusChip, useToast, type ChipTone } from '@/components/pos'
+import { SwipeRow } from '@/components/pos/SwipeRow'
+import { useOptimisticAction } from '@/components/pos/useOptimisticAction'
 import type { DiffEntry, ProposalStatus } from '@/core/proposals'
 import { cn } from '@/lib/utils'
+import { approveProposal, dismissProposal } from './actions'
 import { ProposalPanel } from './ProposalPanel'
 
 export type ReviewItem = {
@@ -45,7 +48,7 @@ export function StateChip({ status }: { status: ProposalStatus }) {
 }
 
 export function ReviewList({
-  items,
+  items: serverItems,
   status,
   sel,
   nightly,
@@ -58,7 +61,30 @@ export function ReviewList({
   nightly: string
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(sel)
+  // A swiped card leaves the list the moment the finger lifts; the server's
+  // list replaces the guess when the action revalidates, and a refusal puts
+  // the card back with its reason in a toast.
+  const [items, run] = useOptimisticAction(serverItems, (state, id: string) =>
+    state.filter((i) => i.id !== id),
+  )
+  const toast = useToast()
   const selected = items.find((i) => i.id === selectedId) ?? items[0] ?? null
+
+  const swipe = (item: ReviewItem) => {
+    // Guarded proposals (money, policy, goals) keep the panel: a decision
+    // that reads the diff is not a flick.
+    if (item.status !== 'pending' || item.guarded) return {}
+    const decide = (action: () => ReturnType<typeof approveProposal>, done: string) => () =>
+      run(item.id, async () => {
+        const result = await action()
+        if (result.ok) toast(done)
+        return result
+      })
+    return {
+      right: { label: 'Approve', onCommit: decide(() => approveProposal(item.id), `Approved: ${item.title}`) },
+      left: { label: 'Dismiss', tone: 'bad' as const, onCommit: decide(() => dismissProposal(item.id), 'Dismissed') },
+    }
+  }
 
   function select(id: string) {
     setSelectedId(id)
@@ -87,47 +113,48 @@ export function ReviewList({
           const on = item.id === selected?.id
           const decided = item.status !== 'pending'
           return (
-            <button
-              key={item.id}
-              type="button"
-              aria-pressed={on}
-              onClick={() => select(item.id)}
-              className="group block w-full text-left"
-            >
-              <Card
-                selected={on}
-                className={cn(
-                  'px-4 py-3.5 transition-colors duration-150',
-                  !on && 'border-rule group-hover:border-rule-2',
-                )}
+            <SwipeRow key={item.id} {...swipe(item)} rowClassName="rounded-[18px]">
+              <button
+                type="button"
+                aria-pressed={on}
+                onClick={() => select(item.id)}
+                className="group block w-full text-left"
               >
-                <div className="flex items-center justify-between gap-2.5">
-                  <span className="text-[11px] text-ink-3">
-                    {item.agent} <span className="text-ink-4">·</span> {item.when}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    {item.guarded && <StatusChip tone="warn">Guarded</StatusChip>}
-                    <StateChip status={item.status} />
-                  </span>
-                </div>
-                {/* Decided cards read quieter in ink, where the artboard fades
-                  * the whole card to 75%. */}
-                <p className={cn('mt-1.5 text-[14px] leading-[1.4]', decided ? 'text-ink-2' : 'text-ink')}>
-                  {item.title}
-                </p>
-                <div className={cn('mt-2 flex flex-wrap gap-3 text-[11px]', decided ? 'text-ink-4' : 'text-ink-3')}>
-                  <span>{item.moduleLabel}</span>
-                  <span className="num">
-                    {item.module}.{item.tool}
-                  </span>
-                  {item.confidence !== null && (
-                    <span className={cn('num', !decided && confidenceClass(item.confidence))}>
-                      {Math.round(item.confidence * 100)}% confident
-                    </span>
+                <Card
+                  selected={on}
+                  className={cn(
+                    'px-4 py-3.5 transition-colors duration-150',
+                    !on && 'border-rule group-hover:border-rule-2',
                   )}
-                </div>
-              </Card>
-            </button>
+                >
+                  <div className="flex items-center justify-between gap-2.5">
+                    <span className="text-[11px] text-ink-3">
+                      {item.agent} <span className="text-ink-4">·</span> {item.when}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      {item.guarded && <StatusChip tone="warn">Guarded</StatusChip>}
+                      <StateChip status={item.status} />
+                    </span>
+                  </div>
+                  {/* Decided cards read quieter in ink, where the artboard fades
+                    * the whole card to 75%. */}
+                  <p className={cn('mt-1.5 text-[14px] leading-[1.4]', decided ? 'text-ink-2' : 'text-ink')}>
+                    {item.title}
+                  </p>
+                  <div className={cn('mt-2 flex flex-wrap gap-3 text-[11px]', decided ? 'text-ink-4' : 'text-ink-3')}>
+                    <span>{item.moduleLabel}</span>
+                    <span className="num">
+                      {item.module}.{item.tool}
+                    </span>
+                    {item.confidence !== null && (
+                      <span className={cn('num', !decided && confidenceClass(item.confidence))}>
+                        {Math.round(item.confidence * 100)}% confident
+                      </span>
+                    )}
+                  </div>
+                </Card>
+              </button>
+            </SwipeRow>
           )
         })}
       </div>
