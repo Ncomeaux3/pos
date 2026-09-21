@@ -10,8 +10,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Your life. One system.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#F7F6F2',
-    theme_color: '#202927',
+    background_color: '#F2F2F7',
+    theme_color: '#000000',
     icons: [
       { src: '/brand/holon-app-dark-192.png', sizes: '192x192', type: 'image/png' },
       { src: '/brand/holon-app-dark-512.png', sizes: '512x512', type: 'image/png' },

@@ -942,7 +942,8 @@ test('a passkey made in Settings signs in from the login page', async ({ page, c
     .locator('xpath=ancestor::div[.//button[normalize-space()="Remove"]][1]')
     .getByRole('button', { name: 'Remove' })
     .click()
-  await expect(page.getByText('Passkey removed', { exact: false })).toBeVisible()
+  // Remove flips inline to "Removed" and the row leaves on revalidation (#106);
+  // there is no toast to wait for, the count coming back is the proof.
   await expect(rows).toHaveCount(before)
 })
 
