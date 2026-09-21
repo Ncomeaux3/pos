@@ -50,7 +50,10 @@ export function Row({
         'relative px-4 py-2.5 transition-colors duration-150 ease-[var(--ease)]',
         // The inset hairline between rows, drawn by the row below the first.
         'before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-rule first:before:hidden',
-        interactive && 'cursor-pointer hover:bg-glass-strong',
+        // A row that opens something takes the sunken fill on hover (the elevated
+        // one is a shade off the glass and did not read) and carries a trailing
+        // chevron: the affordance is the whole row, never the title alone (v1.2 phase 3a).
+        interactive && 'cursor-pointer hover:bg-ink/[.06]',
         selected && 'bg-brand-soft before:hidden [&+*]:before:hidden',
         className,
       )}
@@ -97,6 +100,17 @@ export function Row({
           </div>
         )}
         {right && <div className="flex flex-wrap items-center gap-2">{right}</div>}
+        {interactive && (
+          <span
+            aria-hidden="true"
+            className={cn(
+              'select-none text-[16px] leading-none text-ink-3 transition-transform duration-150',
+              expanded && 'rotate-90',
+            )}
+          >
+            &rsaquo;
+          </span>
+        )}
       </div>
       {children && <div className="mt-3">{children}</div>}
     </div>

@@ -38,7 +38,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-20 (v1.2 Phase 1b: reported module bugs). Branch `main`, production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-20 (v1.2 Phase 3a: the look mockup gate). Branch `main`, production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -63,6 +63,26 @@ and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
 ## Done
+
+**v1.2 Phase 3a: the look mockup gate** (2026-09-20, branch
+`phase-3a-look-mockup`, approved by the owner on the before-and-after page
+the same evening). The token pass was a measurement, not a change: `--ink-2`
+and `--ink-3` already clear 4.5:1 on the canvas, the elevated surface, the
+composited glass and the sunken fill in both themes (lowest 5.5:1, light
+ink-3 on `--bg-deep`), and `--ink-4` is placeholder ink that #111 raises. The
+treatment lives in four primitives and one base rule: the secondary button is
+a 1px `--rule-2` border on `--bg-elev`; ghost buttons and the drawer's close
+cross take the border on hover; `button:not(:disabled)` and `[role="button"]`
+get the pointer in `app/globals.css` (Tailwind v4's preflight gives buttons
+the default cursor); disabled is 50 percent; interactive rows and the new
+`CardLink` hover with a 6 percent ink tint and end in a chevron (the plan's
+`--bg-elev` did not read on the light glass, and `--bg-deep` made the chips
+vanish). Row is shared, so every interactive row on every screen has the
+chevron and the new hover; the three Finance overview rows that drew their
+own arrow in `right` dropped it. Screens are otherwise untouched, and 3d
+spreads the treatment to the raw buttons, `DataTable` rows and the
+title-only cards. Shot script and pairs under `e2e/.scratch/look/`; the
+e2e assertion on pointer, border and fill is 3d's, as its checklist says.
 
 **v1.2 Phase 1b: the seven reported module bugs** (2026-09-20, branch
 `phase-1b-module-bugs`). Four of the seven causes in the plan were guesses

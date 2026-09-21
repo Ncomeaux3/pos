@@ -232,6 +232,14 @@ html {
     border-radius: var(--radius-sm);
   }
 
+  /* Tailwind v4's preflight gives a button the default cursor. Every button
+   * and every element playing one gets the pointer here, once, so a raw
+   * `<button>` a module still renders reads as clickable too (v1.2 phase 3a). */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
+
   /* No background on html: body's propagates to the canvas, so a fixed
    * overlay would paint above it rather than under body's own. */
   html {

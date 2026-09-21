@@ -330,19 +330,16 @@ export function Finance({ data }: { data: FinanceData }) {
                   title="Accounts"
                   meta={`${data.accounts.length} ${data.accounts.length === 1 ? 'account' : 'accounts'} · ${balance(data.netWorthCents)}`}
                   onClick={() => setParams({ tab: 'accounts' }, { local: true })}
-                  right={<span aria-hidden="true" className="text-ink-3">&rarr;</span>}
                 />
                 <Row
                   title="Budgets"
                   meta={`${hot.length} over ${data.alertThreshold}% · ${money(budgetTotals.spent)} spent`}
                   onClick={() => setParams({ tab: 'budgets' }, { local: true })}
-                  right={<span aria-hidden="true" className="text-ink-3">&rarr;</span>}
                 />
                 <Row
                   title="Subscriptions"
                   meta={`${upcoming.length} due in 14 days · ${money(upcomingTotal, true)}`}
                   onClick={() => setParams({ tab: 'subscriptions' }, { local: true })}
-                  right={<span aria-hidden="true" className="text-ink-3">&rarr;</span>}
                 />
               </RowList>
             </div>
