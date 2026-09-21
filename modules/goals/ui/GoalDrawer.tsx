@@ -375,9 +375,9 @@ function Form({
       }
       footer={
         <>
-          <button type="button" onClick={onCancel} className="text-[13px] text-ink-3 transition-colors duration-150 hover:text-ink">
+          <ActionButton variant="quiet" onClick={onCancel}>
             Cancel
-          </button>
+          </ActionButton>
           <ActionButton variant="solid" className="h-[38px] gap-2 px-3.5 text-[13px]" disabled={!ready} onClick={save}>
             {goal ? 'Save' : 'Create'} <span aria-hidden="true">&rarr;</span>
           </ActionButton>
