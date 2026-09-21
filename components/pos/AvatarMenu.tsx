@@ -70,7 +70,7 @@ export function AvatarMenu({ phone = false, className }: { phone?: boolean; clas
               <Link
                 href={href}
                 onClick={() => setOpen(false)}
-                className="flex min-h-[52px] items-center gap-3.5 px-4 py-2.5 text-[15px] text-ink hover:bg-glass-strong"
+                className="flex min-h-[52px] items-center gap-3.5 px-4 py-2.5 text-[15px] text-ink hover:bg-ink/[.06]"
               >
                 <span className="grid size-6 shrink-0 place-items-center text-ink-3">
                   <Icon size={19} strokeWidth={1.8} aria-hidden />

@@ -298,7 +298,7 @@ export function Home({ data }: { data: HomeData }) {
                         }
                       }}
                       className={cn(
-                        'block w-full cursor-pointer px-[18px] text-left transition-colors duration-150 hover:bg-glass-strong active:scale-[.985]',
+                        'block w-full cursor-pointer px-[18px] text-left transition-colors duration-150 hover:bg-ink/[.06] active:scale-[.985]',
                         state !== 'good' && 'ring-1',
                         state === 'overdue' ? 'ring-bad' : state === 'due' ? 'ring-warn' : '',
                       )}
@@ -362,7 +362,7 @@ export function Home({ data }: { data: HomeData }) {
                     aria-pressed={selected}
                     className={cn(
                       'glass block w-full rounded-[18px] p-3 text-left transition-colors duration-150 active:scale-[.985]',
-                      selected ? 'bg-brand-soft ring-1 ring-action' : 'hover:bg-glass-strong',
+                      selected ? 'bg-brand-soft ring-1 ring-action' : 'hover:bg-ink/[.06]',
                     )}
                   >
                     <span className="flex items-baseline justify-between">

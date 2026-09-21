@@ -547,7 +547,7 @@ export function Meals({ data }: { data: MealsData }) {
                       setParams({ recipe: r.id, slot: null }, { push: true })
                     }
                   }}
-                  className="min-w-0 cursor-pointer px-4 py-3.5 text-left transition-colors duration-200 hover:bg-glass-strong"
+                  className="min-w-0 cursor-pointer px-4 py-3.5 text-left transition-colors duration-200 hover:bg-ink/[.06]"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <span className="min-w-0 text-[14.5px] leading-[1.3] tracking-[-0.01em]">{r.name}</span>
