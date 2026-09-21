@@ -36,7 +36,7 @@ Order: bugs, then look and forms, then data pulls, then Calendar and integration
 | 3b Apple shell | Floating glass capsule tab bar (Home, Tasks, Finance, Calendar, Browse) that shrinks on scroll down and scrubs between tabs; initials avatar on tab roots opening Settings, Notifications, Agent log, theme and Sign out; utilities out of Browse and the rail footer; system font first | medium | 2 | 3a, #112 | Done 2026-09-21: capsule, shrink, scrub, avatar menu through a shell context, Browse and rail trimmed, system font first | #114 |
 | 3c Motion and row swipes | Phone push, pop and tab cross-fade through React `ViewTransition`, the stagger kept on desktop; one `SwipeRow` on Review, Notifications and Tasks (snooze) | medium | 2 | 3b | Done 2026-09-21: push and tab fade through React `ViewTransition`, pop through the browser API (a popstate transition is flushed synchronously and never animates in React), `SwipeRow` on the three screens; the shell offsets fixed in #116 | #115 |
 | 3d Look: affordance and contrast rollout | Every button, row link and tile visibly clickable; ink tokens AA at every size; whole goal card opens | high | none | 3c | PR #118 open 2026-09-21: title targets stretched over the goal, budget, task and itinerary cards (`STRETCH` in Card.tsx), text-only buttons on the quiet and danger variants with a rest border on touch, one hover tint and chevron on every row and card, Today task rows link to the drawer; no ink token moved (measured) | #118 |
-| 4 Forms: required fields and keyboard | Missing field highlighted with a message; Enter submits, Tab order, first field focused | medium | 5a | 3d | | |
+| 4 Forms: required fields and keyboard | Missing field highlighted with a message; Enter submits, Tab order, first field focused | medium | 5a | 3d | Done 2026-09-21: `Field` and `useFormErrors` in `components/pos/FormField.tsx`, `ToolInputError` from `callTool` with one message per field, footer Save as the form's submit control, Overlay focuses the first field and guards a dirty form; ten forms swept, Recipe waits for Phase 12 | |
 | 5a Finance: full pull, pending, categories | 90-day re-pull button, pending marked, transfers out of spending, credits net, new categories, rule offer on manual override | high | 4 | 1b | | |
 | 5b Finance: three new views | Cash flow by month, Upcoming 14 days, Category trend in the desktop corner | medium | 6a | 5a | | |
 | 6a Calendar module | `calendar` schema, the `calendar` manifest seam on nine modules, month grid with day list, recurring rules drawn | high | 5b | 4 | | |
@@ -196,14 +196,16 @@ Exit: ui-verifier six-width pass as in Holon Phase 7; owner spot check on the mo
 Goal: a missing or invalid field is named and highlighted at the field; Enter submits; Tab moves in reading order; the first field is focused on open.
 Complexity: medium. Files: `components/pos/Field.tsx` (exists: verify; else new), `components/pos/Overlay.tsx`, every drawer form (`grep -rln "onSubmit\|action=" modules/*/ui app/(app)`), `core/tools.ts` (zod error shape).
 
-- [ ] `callTool` and server actions return zod issues as `{ error, fields: { [path]: message } }` (one mapping in `core/tools.ts`; today it is `{ error }` only).
-- [ ] `Field` takes `error?: string` and `required?: boolean`: a red 1px border, the message under the field in `--bad` at 12px, `aria-invalid`, `aria-describedby`. The form scrolls the first invalid field into view and focuses it.
-- [ ] Client-side check before send for `required` and type (date, number) so the message appears without a round trip; the server mapping stays the truth.
-- [ ] Keyboard: every drawer form is a `<form>` so Enter submits from any single-line field; textareas submit on Cmd or Ctrl Enter; `Overlay` focuses the first field on open (it already traps and returns focus); Escape closes only when the form is not dirty, else asks.
-- [ ] Sweep: the New task, New goal, New trip, Log service, Log a visit, Add policy, Capture, Idea, Recipe, Plan forms. One commit each.
-- [ ] e2e: New task with an empty title shows "Title is required" at the field; Enter in the title field creates the task; Tab from title lands on the next control.
+- [x] `callTool` and server actions return zod issues as `{ error, fields: { [path]: message } }` (one mapping in `core/tools.ts`; today it is `{ error }` only).
+- [x] `Field` takes `error?: string` and `required?: boolean`: a red 1px border, the message under the field in `--bad` at 12px, `aria-invalid`, `aria-describedby`. The form scrolls the first invalid field into view and focuses it.
+- [x] Client-side check before send for `required` and type (date, number) so the message appears without a round trip; the server mapping stays the truth.
+- [x] Keyboard: every drawer form is a `<form>` so Enter submits from any single-line field; textareas submit on Cmd or Ctrl Enter; `Overlay` focuses the first field on open (it already traps and returns focus); Escape closes only when the form is not dirty, else asks.
+- [x] Sweep: the New task, New goal, New trip, Log service, Log a visit, Add policy, Capture, Idea, Plan and Projects forms. One commit each. Recipe has no typed form until Phase 12 (Meals holds only the one-field URL ingest, already a form), so it is not in this sweep.
+- [x] e2e: New task with an empty title shows "Title is required" at the field; Enter in the title field creates the task; Tab from title lands on the next control.
 
 Exit: e2e above; ui-verifier on three forms in both themes.
+
+Built 2026-09-21. Notes for later phases: `Field`, `useFormErrors` and `submitOnModEnter` live in `components/pos/FormField.tsx` (named so `./Field` cannot resolve to `field.ts` on a case-insensitive disk); destructure the hook as `const { errors, ref: formRef, submit } = useFormErrors(...)`, since the react-hooks/refs rule rejects `form.ref`. A footer Save is `type="submit" form={formId}` and never disabled for a missing field: a disabled button cannot explain itself. Drawers close optimistically, so the server's `fields` reach the toast, not the form; the client check is what puts the message at the field. Escape and the dim tap ask before discarding a dirty form; the close control, Cancel and Save stay direct. Phase 12's recipe form and Phase 8's fitness forms should start from this pattern.
 
 ## Phase 5a: Finance, full pull, pending, categories
 
