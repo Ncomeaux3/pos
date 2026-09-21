@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { embed, VOYAGE_DIMENSIONS } from '@/integrations/voyage/client'
 import { db } from './db'
+import { recordError } from './log'
 
 // Hybrid search over core.entities: a vector query and a full text query merged
 // by reciprocal rank. Exposed as the core.search MCP tool and the Search page.
@@ -121,9 +122,11 @@ export async function embedChanged(limit = 256): Promise<EmbedResult> {
   let vectors: number[][]
   try {
     vectors = await embed(staleVector.map((r) => indexText(r.title, r.body)))
-  } catch {
+  } catch (error) {
     // Not connected, or the call failed. The text index is already written, so
-    // search still works; the vectors arrive on the next run.
+    // search still works; the vectors arrive on the next run. The reason is
+    // recorded, or "embedded: 0" every night would never say why.
+    await recordError('search.embed', error)
     return { scanned: rows.length, indexed: staleText.length, embedded: 0 }
   }
 

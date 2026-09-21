@@ -36,6 +36,8 @@ const CORE_TABLES = [
   'write_log',
   // 20260909130000_core_push.sql. One row per browser that turned push on.
   'push_subscription',
+  // 20260921112126_core_client_errors.sql. What error.tsx posts (v1.2 Phase 2).
+  'client_errors',
 ]
 
 // Columns added after core_init, listed so a dropped migration is caught here

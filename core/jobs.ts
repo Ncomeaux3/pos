@@ -225,7 +225,15 @@ export async function pruneStaleJobs(): Promise<{ deleted: number }> {
   return { deleted: rowCount ?? 0 }
 }
 
-async function prune(): Promise<{ requestLog: number; staleJobs: number }> {
-  const [log, jobs] = await Promise.all([pruneRequestLog(), pruneStaleJobs()])
-  return { requestLog: log.deleted, staleJobs: jobs.deleted }
+/** 30 days. A browser error older than that has either been fixed or forgotten. */
+export async function pruneClientErrors(): Promise<{ deleted: number }> {
+  const { rowCount } = await db().query(
+    `delete from core.client_errors where occurred_at < now() - interval '30 days'`,
+  )
+  return { deleted: rowCount ?? 0 }
+}
+
+async function prune(): Promise<{ requestLog: number; staleJobs: number; clientErrors: number }> {
+  const [log, jobs, client] = await Promise.all([pruneRequestLog(), pruneStaleJobs(), pruneClientErrors()])
+  return { requestLog: log.deleted, staleJobs: jobs.deleted, clientErrors: client.deleted }
 }

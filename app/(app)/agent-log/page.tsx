@@ -8,6 +8,7 @@ import { AutonomyPicker } from '../settings/agents/AutonomyPicker'
 import { jobLabel } from './format'
 import { RunLog } from './RunLog'
 import { RunNow } from '../RunNow'
+import { AgentLogTabs } from './tabs'
 
 function label(id: string): string {
   if (id === 'system') return 'System'
@@ -93,6 +94,8 @@ export default async function AgentLogPage() {
         lede="Every write is logged with the value before and after. Undo restores the previous value and pauses the rule that produced it for seven days."
         actions={<RunNow />}
       />
+
+      <AgentLogTabs current="/agent-log" />
 
       <div className="flex flex-wrap items-start gap-x-8 gap-y-7">
         <div className="min-w-0 flex-[1_1_520px]">

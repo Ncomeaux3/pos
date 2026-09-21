@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache'
 import { ActionButton, Card, Eyebrow, fieldClass, MetricStrip, MetricTile } from '@/components/pos'
 import { requireOwner } from '@/core/auth'
 import { db } from '@/core/db'
+import { getConnectionStatuses, getIntegrations } from '@/core/integrations'
 import { getSettings, setSetting } from '@/core/settings'
 import { clockIn, zoneAbbrIn } from '@/core/today'
 import { cn } from '@/lib/utils'
@@ -55,6 +56,20 @@ async function nightlyJobState() {
   return rows[0] ?? { last_run: null, last_status: null, n: '0' }
 }
 
+// The read-only facts a bug report needs. The round trip is one `select 1`
+// timed on its own, so it is the pooler and the network, not a query plan.
+async function diagnostics() {
+  const started = performance.now()
+  await db().query('select 1')
+  const roundTripMs = Math.round(performance.now() - started)
+  // A row in core.connections is a stored key, whether or not its last test
+  // passed; the Connections tab is where pass and fail are told apart.
+  const statuses = await getConnectionStatuses()
+  const providers = getIntegrations()
+  const connected = providers.filter((m) => statuses[m.id]).map((m) => m.label)
+  return { roundTripMs, connected, providerCount: providers.length }
+}
+
 const ZONES = [
   'America/Chicago',
   'America/New_York',
@@ -74,11 +89,12 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 const field = fieldClass
 
 export default async function SettingsPage({ searchParams }: PageProps<'/settings'>) {
-  const [params, settings, spendCents, job] = await Promise.all([
+  const [params, settings, spendCents, job, diag] = await Promise.all([
     searchParams,
     getSettings(),
     spendThisMonthCents(),
     nightlyJobState(),
+    diagnostics(),
   ])
 
   const capCents = settings.llm_soft_cap_cents
@@ -184,6 +200,28 @@ export default async function SettingsPage({ searchParams }: PageProps<'/setting
         * moment they are clicked, against Supabase Auth rather than
         * core.settings, so they have nothing to do with Save. */}
       <Passkeys />
+
+      {/* Read only: what to paste into a bug report. The last nightly run and
+        * its outcome are in the Nightly job card above; the region is where the
+        * round trip was measured from. */}
+      <Card className="max-w-[720px]">
+        <Eyebrow>Diagnostics</Eyebrow>
+        <MetricStrip className="mt-3">
+          <MetricTile label="Version" value={`v${process.env.NEXT_PUBLIC_APP_VERSION ?? 'unknown'}`} size="xs" />
+          <MetricTile
+            label="Database round trip"
+            value={`${diag.roundTripMs} ms`}
+            delta={`from ${process.env.VERCEL_REGION ?? 'local'}`}
+            size="xs"
+          />
+          <MetricTile
+            label="Connections with a key"
+            value={`${diag.connected.length} of ${diag.providerCount}`}
+            delta={diag.connected.length > 0 ? diag.connected.join(', ') : 'none saved'}
+            size="xs"
+          />
+        </MetricStrip>
+      </Card>
 
       <Session email={process.env.OWNER_EMAIL ?? ''} />
     </div>

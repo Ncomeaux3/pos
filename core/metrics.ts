@@ -1,3 +1,4 @@
+import { recordError } from './log'
 import { getModules } from './modules'
 
 // The registry Goals reads. A module says what it can compute; nothing else in
@@ -38,9 +39,10 @@ export async function readMetric(id: string): Promise<number | null> {
 
   try {
     return await metric.get()
-  } catch {
+  } catch (error) {
     // A metric that cannot compute is not a crash. The goal keeps its last
-    // check-in and the nightly job records the failure like any other.
+    // check-in; the failure goes to the Errors tab so it is not silent.
+    await recordError(`metric:${id}`, error)
     return null
   }
 }

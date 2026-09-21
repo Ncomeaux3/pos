@@ -833,6 +833,13 @@ test('settings', async ({ page }) => {
   await expect(page.getByText(/0 9 \* \* \* UTC · \d\d:\d\d \w+/)).toBeVisible()
   await expect(page.getByText('Jobs registered')).toBeVisible()
 
+  // Diagnostics is read only and names the version package.json carries,
+  // the semver source (v1.2 Phase 2). The round trip is a number of
+  // milliseconds, not a placeholder.
+  await expect(page.getByText('Diagnostics')).toBeVisible()
+  await expect(page.getByText(/^v\d+\.\d+\.\d+$/)).toBeVisible()
+  await expect(page.getByText(/^\d+ ms$/)).toBeVisible()
+
   // The app shipped with no way out at all: no sign out anywhere, which on a
   // single owner install is easy to miss and impossible to work around, and it
   // made the passkey path untestable because testing it starts signed out.
@@ -1540,6 +1547,46 @@ test('agent log, the run accordion and the rail', async ({ page }) => {
   expect(labels.indexOf('Skills')).toBeLessThan(labels.indexOf('Ideas'))
 
   await shoot(page, 'agent-log')
+})
+
+// The Errors tab (v1.2 Phase 2) reads three existing records: request_log at
+// 400 and above, the failed jobs inside a partial run, and what error.tsx
+// posted. The seed plants one of each; nothing new is written to show them.
+test('agent log, the errors tab', async ({ page, context }) => {
+  await page.goto('/agent-log')
+  await page.getByRole('navigation', { name: 'Agent log sections' }).getByRole('link', { name: 'Errors' }).click()
+  await expect(page).toHaveURL(/\/agent-log\/errors$/)
+  await expect(page.getByRole('heading', { name: 'What broke' })).toBeVisible()
+
+  // One row per section, each with the raw text rather than a paraphrase.
+  await expect(page.getByText('POST /api/demo/broken 500')).toBeVisible()
+  await expect(page.getByText('relation "demo.missing" does not exist')).toBeVisible()
+  await expect(page.getByText('core / brokerage-sync')).toBeVisible()
+  await expect(page.getByText(/auth_expired: refresh token rejected/)).toBeVisible()
+  await expect(page.getByText('/finance?view=budget')).toBeVisible()
+  await expect(page.getByText(/digest 1234567890/)).toBeVisible()
+
+  // The stack is there but folded: a row is one line until it is opened.
+  await expect(page.getByText(/at BudgetRow/)).toBeHidden()
+  await page.getByText('Stack', { exact: true }).click()
+  await expect(page.getByText(/at BudgetRow/)).toBeVisible()
+
+  // Copy puts route, time and text on the clipboard as one plain line.
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.getByRole('button', { name: 'Copy POST /api/demo/broken 500' }).click()
+  // The label gives way to the visible word so the change is announced.
+  await expect(page.getByRole('button', { name: 'Copied' })).toBeVisible()
+  const copied = await page.evaluate(() => navigator.clipboard.readText())
+  expect(copied).toMatch(/^POST \/api\/demo\/broken 500 · .+ · relation "demo.missing" does not exist$/)
+
+  // The module filter is a link, so the URL carries it: Finance keeps the
+  // browser error and drops the request and the job, both filed under System.
+  await page.getByRole('navigation', { name: 'Errors by module' }).getByRole('link', { name: 'Finance' }).click()
+  await expect(page).toHaveURL(/module=finance/)
+  await expect(page.getByText('/finance?view=budget')).toBeVisible()
+  await expect(page.getByText('POST /api/demo/broken 500')).toBeHidden()
+
+  await shoot(page, 'agent-log-errors')
 })
 
 // Undo is the screen's headline feature, and it has to actually revert the

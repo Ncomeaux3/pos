@@ -1,5 +1,6 @@
 import { db } from '@/core/db'
 import { complete } from '@/core/llm'
+import { recordError } from '@/core/log'
 import { loadTree, type SkillNode } from '../tree'
 import { clearUnclassified, link } from '../classify'
 
@@ -68,8 +69,10 @@ async function askModel(tree: string, batch: Parked[]): Promise<Answer[] | null>
       })
       const parsed = JSON.parse(answer.slice(answer.indexOf('['), answer.lastIndexOf(']') + 1))
       if (Array.isArray(parsed)) return parsed
-    } catch {
-      // Fall through to the retry, then leave the batch parked.
+    } catch (error) {
+      // Fall through to the retry, then leave the batch parked. Recorded so a
+      // parked batch has a reason on the Errors tab.
+      await recordError('skills.reclassify', error)
     }
   }
   return null

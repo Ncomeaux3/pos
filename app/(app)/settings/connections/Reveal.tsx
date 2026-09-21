@@ -1,8 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ActionButton } from '@/components/pos'
-import { Copy } from './Copy'
+import { ActionButton, Copy } from '@/components/pos'
 
 /** The webhook's shared secret: dots until asked for, so it is not on a screen left open. */
 export function Reveal({ value }: { value: string }) {
