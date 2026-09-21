@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { RowList } from '@/components/pos'
+import { CHEVRON, RowList } from '@/components/pos'
 
 // The week ahead, reading core and nothing else. A plain server component:
 // what it draws is a fact from a table, and nothing on it is clicked except a
@@ -44,7 +44,7 @@ export function SevenDays({ items, today }: { items: Item[]; today: string }) {
         <Link
           key={item.id}
           href={item.href ?? `/${item.module}`}
-          className="relative flex items-start gap-3 px-4 py-2.5 transition-colors duration-150 before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-rule first:before:hidden hover:bg-glass-strong"
+          className="relative flex items-start gap-3 px-4 py-2.5 transition-colors duration-150 before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-rule first:before:hidden hover:bg-ink/[.06]"
         >
           <span className="num w-11 shrink-0 pt-px text-[12px] text-ink-3">{when(item.at)}</span>
           <span className="min-w-0 flex-1">
@@ -52,6 +52,9 @@ export function SevenDays({ items, today }: { items: Item[]; today: string }) {
               {item.title}
             </span>
             <span className="t-caption mt-0.5 block truncate text-ink-3">{item.meta}</span>
+          </span>
+          <span aria-hidden="true" className={`${CHEVRON} self-center`}>
+            &rsaquo;
           </span>
         </Link>
       ))}
