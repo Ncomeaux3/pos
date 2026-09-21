@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ActionButton, Card, Eyebrow, SkillPicker, StatusChip, useToast } from '@/components/pos'
+import { ActionButton, CHEVRON, Card, Eyebrow, SkillPicker, StatusChip, useToast } from '@/components/pos'
 import { actionButtonBase, actionButtonSizes, actionButtonVariants } from '@/components/pos/Button'
 import { fieldClass } from '@/components/pos/field'
 import { cn } from '@/lib/utils'
@@ -316,9 +316,12 @@ export function NotePane({
                 key={b.id}
                 type="button"
                 onClick={() => setParams({ note: b.slug })}
-                className="min-h-11 border-b border-rule py-1.5 text-left text-[12px] text-ink-2 transition-colors duration-150 hover:text-ok md:min-h-0"
+                className="-mx-1.5 flex min-h-11 items-baseline justify-between gap-2 border-b border-rule px-1.5 py-1.5 text-left text-[12px] text-ink-2 transition-colors duration-150 hover:bg-ink/[.06] md:min-h-0"
               >
-                [[{b.title}]]
+                <span className="min-w-0 truncate">[[{b.title}]]</span>
+                <span aria-hidden="true" className={CHEVRON}>
+                  &rsaquo;
+                </span>
               </button>
             ))}
             {note.backlinks.length === 0 && <span className="text-[12px] text-ink-4">None yet</span>}
@@ -332,10 +335,15 @@ export function NotePane({
                 key={r.id}
                 type="button"
                 onClick={() => setParams({ note: r.slug })}
-                className="flex min-h-11 items-baseline justify-between gap-2 border-b border-rule py-1.5 text-left text-[12px] text-ink-2 transition-colors duration-150 hover:text-ok md:min-h-0"
+                className="-mx-1.5 flex min-h-11 items-baseline justify-between gap-2 border-b border-rule px-1.5 py-1.5 text-left text-[12px] text-ink-2 transition-colors duration-150 hover:bg-ink/[.06] md:min-h-0"
               >
                 <span className="min-w-0 truncate">{r.title}</span>
-                <span className="num shrink-0 text-[11px] text-ink-3">{Math.round(r.similarity * 100)}%</span>
+                <span className="flex shrink-0 items-baseline gap-2">
+                  <span className="num text-[11px] text-ink-3">{Math.round(r.similarity * 100)}%</span>
+                  <span aria-hidden="true" className={CHEVRON}>
+                    &rsaquo;
+                  </span>
+                </span>
               </button>
             ))}
             {(related === null || related.length === 0) && <span className="text-[12px] text-ink-4">None yet</span>}
