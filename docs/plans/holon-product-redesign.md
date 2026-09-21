@@ -63,11 +63,11 @@ The kit examples are illustrative compositions, not complete product specificati
 
 | Role | Light | Dark | Rule |
 | --- | --- | --- | --- |
-| Canvas | #F7F6F2 | #202927 | Quiet base |
-| Surface | #FFFFFF | #29332F | Panels, menus and sheets |
-| Primary text | #202927 | #F7F6F2 | Main content |
-| Secondary text | #59645F | #B9C5BE | Metadata that remains readable |
-| Border | #D9DED8 | #526159 | Surface separation; verify stronger control borders separately |
+| Canvas | #F2F2F7 | #000000 | Quiet base, flat, no wash |
+| Surface | #FFFFFF | #1C1C1E | Panels, menus and sheets |
+| Primary text | #1C1C1E | #F2F2F7 | Main content |
+| Secondary text | #5A5A60 | #AEAEB2 | Metadata that remains readable |
+| Border | #D1D1D6 | #48484A | Surface separation; verify stronger control borders separately |
 | Brand cobalt | #416ACA | #416ACA | Identity and selected data emphasis |
 | Action | #3157B7 | #9BB9FF | White text on light-theme action; charcoal text on dark-theme action |
 | Sand | #D6BB9A | #D6BB9A | Warm brand highlight, never generic warning or white-text button |
@@ -92,8 +92,8 @@ Map the existing `--bg`, `--ink`, `--rule`, Tailwind and shadcn aliases to the n
 
 What the eight phases actually settled, where it differs from or sharpens the proposal above. The tokens live in `app/globals.css`, the components in `components/pos/`.
 
-- Colour: one token set with `light-dark()` and `color-scheme`, following the OS unless the owner picks. Canvas `#F7F6F2` / `#202927`, surface `#FFFFFF` / `#29332F`, ink `#202927` / `#F7F6F2`, ink-3 `#59645F` / `#B9C5BE`, ink-4 `#7A8580` / `#8A9A91` (placeholders, disabled, separators; never copy the reader needs). Action `#3157B7` / `#9BB9FF` is what is interactive or selected; brand cobalt `#416ACA` is identity and the first chart series only, never small text (2.9:1 on the dark canvas). Status: positive `#116B33` / `#5DC98A`, attention `#875100` / `#E3B341`, risk `#B91C1C` / `#FB8A8A`, darkened or lightened from the kit so chip text on its 12 to 14% tint reads at 4.6:1 or better on every surface.
-- Surfaces are glass: a fixed cobalt and sand wash behind the canvas; cards, grouped lists, tables, the rail, the tab bar, the segmented control and the drawer are translucent with a backdrop blur. Borders are hairlines (`--rule`); `--rule-2` is the kit border for controls and sheet edges.
+- Colour: one token set with `light-dark()` and `color-scheme`, following the OS unless the owner picks. Canvas `#F2F2F7` / `#000000`, surface `#FFFFFF` / `#1C1C1E`, ink `#1C1C1E` / `#F2F2F7`, ink-3 `#5A5A60` / `#AEAEB2`, ink-4 `#78787E` / `#8E8E93` (placeholders, disabled, separators; never copy the reader needs). Action `#3157B7` / `#9BB9FF` is what is interactive or selected; brand cobalt `#416ACA` is identity and the first chart series only, never small text (2.9:1 on the dark canvas). Status: positive `#116B33` / `#5DC98A`, attention `#875100` / `#E3B341`, risk `#B91C1C` / `#FB8A8A`, darkened or lightened from the kit so chip text on its 12 to 14% tint reads at 4.6:1 or better on every surface.
+- Surfaces are glass over a flat canvas (the cobalt and sand wash was removed 2026-09-20; system greys, no tint): cards, grouped lists, tables, the rail, the tab bar, the segmented control and the drawer are translucent with a backdrop blur. Borders are hairlines (`--rule`); `--rule-2` is the kit border for controls and sheet edges.
 - Type: Geist alone, served locally; no monospace webfont, `.num` gives tabular figures. `.label` is 12px/500, `.eyebrow` 13px/500, `.t-caption` 12.5px; page h1 30px desktop and 24px phone (wrapping to three lines before it clips). Sentence case everywhere; the only tracked or uppercase text left is the Skills constellation, the Travel globe's legend, the Notifications lock-screen preview and the two count badges' 9 to 10px figures, all deliberate.
 - Shape: 18px cards, strips and drawers; 12px inputs; pills for buttons, chips and filter pills; 6px for a `StatusChip` so a state never reads as a removable tag.
 - Touch: every control is 44px tall below `sm`/`md` and shrinks to its desktop size above (buttons 24 to 48, tabs 32, pills 34, inputs 34 to 44). The `Switch` keeps its 44x26 track with a 44px hit area.
