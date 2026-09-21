@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireOwner } from '@/core/auth'
-import { callTool } from '@/core/tools'
+import { callTool, ToolInputError } from '@/core/tools'
 
 // Server actions are standalone POST endpoints addressed by id, so the (app)
 // layout does not run for them and each one authenticates independently.
@@ -11,10 +11,14 @@ import { callTool } from '@/core/tools'
 // implementation is shared with MCP and the orchestrator, and the module's own
 // validation runs whoever is calling.
 
-export type ActionResult = { ok: true; id?: string } | { ok: false; error: string }
+export type ActionResult = { ok: true; id?: string } | { ok: false; error: string; fields?: Record<string, string> }
 
 function failed(error: unknown): ActionResult {
-  return { ok: false, error: error instanceof Error ? error.message : 'Failed' }
+  return {
+    ok: false,
+    error: error instanceof Error ? error.message : 'Failed',
+    ...(error instanceof ToolInputError && { fields: error.fields }),
+  }
 }
 
 function done(id?: string): ActionResult {

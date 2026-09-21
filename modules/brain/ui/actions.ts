@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requireOwner } from '@/core/auth'
 import { db } from '@/core/db'
 import { signedUrl } from '@/core/files'
-import { callTool } from '@/core/tools'
+import { callTool, ToolInputError } from '@/core/tools'
 import { captureFile as captureFileNote } from '../capture'
 import { refileByRules, setHubs } from '../hubs'
 import { relatedTo, relatedToText, type Related } from '../related'
@@ -13,10 +13,14 @@ import { slugify } from '../wikilinks'
 // Server actions are standalone POST endpoints addressed by id, so the (app)
 // layout does not run for them and each one authenticates independently.
 
-export type ActionResult = { ok: true } | { ok: false; error: string }
+export type ActionResult = { ok: true } | { ok: false; error: string; fields?: Record<string, string> }
 
 function failed(error: unknown): ActionResult {
-  return { ok: false, error: error instanceof Error ? error.message : 'Failed' }
+  return {
+    ok: false,
+    error: error instanceof Error ? error.message : 'Failed',
+    ...(error instanceof ToolInputError && { fields: error.fields }),
+  }
 }
 
 function done(): ActionResult {
@@ -148,7 +152,7 @@ export async function captureFile(form: FormData): Promise<ActionResult & { slug
 }
 
 /** A short lived URL for the file behind a note. Nothing in the bucket is public. */
-export async function noteFileUrl(noteId: string): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+export async function noteFileUrl(noteId: string): Promise<{ ok: true; url: string } | { ok: false; error: string; fields?: Record<string, string> }> {
   await requireOwner()
   try {
     const { rows } = await db().query<{ file_path: string }>(`select file_path from brain.note where id = $1`, [noteId])

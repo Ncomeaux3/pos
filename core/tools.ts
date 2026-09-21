@@ -1,3 +1,4 @@
+import { ZodError } from 'zod'
 import type { Autonomy } from './autonomy'
 import { writeDigest } from './digests'
 import { getModule, getModules, type ToolContext } from './modules'
@@ -15,6 +16,45 @@ import type { Diff } from './writelog-shape'
 // in core/autonomy.ts so a client component can import them without pulling in
 // pg and the module registry.
 export { AUTONOMY_LABELS, AUTONOMY_LEVELS, type Autonomy } from './autonomy'
+
+/** A field's path as a label: `estimated_minutes` reads "Estimated minutes". */
+function labelOf(path: PropertyKey[]): string {
+  const text = path.map(String).join(' ').replace(/_/g, ' ')
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
+
+/**
+ * One message per field from the issues a tool's schema rejected. A missing or
+ * empty required string reads "Title is required"; everything else keeps zod's
+ * own message under the field's label. The first issue per field wins.
+ */
+export function fieldErrors(error: ZodError): Record<string, string> {
+  const fields: Record<string, string> = {}
+  for (const issue of error.issues) {
+    const key = issue.path.map(String).join('.') || 'input'
+    if (fields[key]) continue
+    const empty =
+      (issue.code === 'too_small' && 'origin' in issue && issue.origin === 'string' && issue.minimum === 1) ||
+      (issue.code === 'invalid_type' && issue.message.endsWith('received undefined'))
+    fields[key] = empty ? `${labelOf(issue.path)} is required` : `${labelOf(issue.path)}: ${issue.message}`
+  }
+  return fields
+}
+
+/**
+ * What callTool throws when the input fails the tool's schema. `message` is
+ * the field messages joined, fit for a toast; `fields` is what a form puts
+ * under each control.
+ */
+export class ToolInputError extends Error {
+  name = 'ToolInputError'
+  fields: Record<string, string>
+  constructor(error: ZodError) {
+    const fields = fieldErrors(error)
+    super(Object.values(fields).join('. '))
+    this.fields = fields
+  }
+}
 
 /**
  * Whether this call becomes a proposal instead of a write.
@@ -109,7 +149,9 @@ export async function callTool(
     // Validate before storing: a proposal the owner approves must be one the
     // tool will actually accept, or approval fails later for a reason they
     // cannot see.
-    const parsed = tool.input.parse(input)
+    const check = tool.input.safeParse(input)
+    if (!check.success) throw new ToolInputError(check.error)
+    const parsed = check.data
 
     const id = await propose({
       module: moduleId,
@@ -137,7 +179,15 @@ export async function callTool(
     return { status: 'proposed', proposalId: id }
   }
 
-  const result = await tool.run(input, { source: ctx.source })
+  let result: unknown
+  try {
+    result = await tool.run(input, { source: ctx.source })
+  } catch (err) {
+    // The module contract parses inside run, so this is where a bad input
+    // surfaces on the unguarded path.
+    if (err instanceof ZodError) throw new ToolInputError(err)
+    throw err
+  }
 
   // Every tool but get_digest is a write by contract (query returned above),
   // and a write changes the module's numbers, so the digest is recomputed here
