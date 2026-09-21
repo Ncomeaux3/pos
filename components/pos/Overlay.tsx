@@ -34,10 +34,14 @@ export function Overlay({
   lede,
   actions,
   footer,
+  dirty = false,
   children,
 }: {
   open: boolean
   onClose: () => void
+  /** Unsaved edits in the body. Escape and a tap on the dim then ask before closing;
+   * the close control, Cancel and Save stay direct, since a click is not an accident. */
+  dirty?: boolean
   side?: 'right' | 'bottom'
   /** 560px instead of 520: the Travel artboard's trip drawer. */
   wide?: boolean
@@ -81,7 +85,11 @@ export function Overlay({
   // alone. Most callers pass a fresh closure every render, and with `onClose`
   // in the deps the effect re-ran, and refocused the panel, on every keystroke
   // in a drawer that owns its own input state.
-  const onEscape = useEffectEvent(() => onClose())
+  const dismiss = () => {
+    if (dirty && !window.confirm('Discard your changes?')) return
+    onClose()
+  }
+  const onEscape = useEffectEvent(dismiss)
 
   useEffect(() => {
     if (!open) return
@@ -113,12 +121,15 @@ export function Overlay({
     }
     document.addEventListener('keydown', onKey)
 
-    // Stop the page behind from scrolling, and put focus in the panel so the
-    // next Tab lands inside it rather than back in the list.
+    // Stop the page behind from scrolling, and put focus on the first field
+    // so a form drawer is ready to type into; a drawer with no field takes
+    // focus on the panel so the next Tab lands inside it rather than back in
+    // the list.
     const overflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    panel.current?.focus()
+    const field = panel.current?.querySelector<HTMLElement>('input, select, textarea')
+    ;(field ?? panel.current)?.focus()
 
     return () => {
       document.removeEventListener('keydown', onKey)
@@ -136,7 +147,7 @@ export function Overlay({
       <button
         type="button"
         aria-label="Close"
-        onClick={onClose}
+        onClick={dismiss}
         className="absolute inset-0 bg-[light-dark(rgba(32,41,39,.28),rgba(0,0,0,.45))] duration-200 animate-in fade-in"
       />
       <div
