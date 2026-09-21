@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
-import { ActionButton, Eyebrow, StatusChip, fieldClass, useToast, type ChipTone, type SkillLink } from '@/components/pos'
+import { ActionButton, CHEVRON, Eyebrow, STRETCH, STRETCH_WRAP, StatusChip, fieldClass, useToast, type ChipTone, type SkillLink } from '@/components/pos'
 import { actionButtonBase, actionButtonSizes, actionButtonVariants } from '@/components/pos/Button'
 import { Segments } from '@/components/pos/Segments'
 import { useIsPhone } from '@/components/pos/useIsPhone'
@@ -440,15 +440,22 @@ function Card({
   const done = doneOverride ?? p.status === 'done'
 
   return (
-    <article className="glass min-w-0 rounded-[18px] px-[18px] py-4 transition-[border-color,transform] duration-200 hover:-translate-y-0.5">
+    // The title button's hit area is stretched over the whole card; the task
+    // link and the check-in controls below sit above it (v1.2 phase 3d).
+    <article className={cn(STRETCH_WRAP, 'glass min-w-0 rounded-[18px] px-[18px] py-4 transition-[background-color,transform] duration-200 hover:-translate-y-0.5')}>
       <div className="flex items-start justify-between gap-2.5">
-        <button type="button" onClick={onOpen} className="min-w-0 text-left">
+        <button type="button" onClick={onOpen} className={cn(STRETCH, 'min-w-0 text-left')}>
           <span className="block text-[15px] font-medium leading-[1.3] tracking-[-0.01em] text-ink">{goal.title}</span>
           <span className="t-caption mt-0.5 block text-ink-3">
             {KIND_LABEL[goal.kind]} · {manual ? 'check-ins' : 'computed'}
           </span>
         </button>
-        <StatusMark status={p.status} />
+        <span className="flex shrink-0 items-center gap-2">
+          <StatusMark status={p.status} />
+          <span aria-hidden="true" className={CHEVRON}>
+            &rsaquo;
+          </span>
+        </span>
       </div>
 
       <div className="mt-3.5 flex items-baseline justify-between gap-2.5">
@@ -488,7 +495,7 @@ function Card({
         <Spark history={goal.history} status={p.status} />
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-2.5 border-t border-rule pt-2.5">
+      <div className="relative z-10 mt-3 flex items-center justify-between gap-2.5 border-t border-rule pt-2.5">
         <Link
           href="/tasks?view=goal"
           className="t-caption min-w-0 truncate text-ink-3 transition-colors duration-150 hover:text-action"
