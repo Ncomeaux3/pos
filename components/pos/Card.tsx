@@ -60,6 +60,21 @@ export function CardLink({
   )
 }
 
+/**
+ * The stretched target: a title button whose hit area is the whole card or
+ * row. The wrapper is `relative` and takes the hover tint; anything else
+ * clickable inside sits above the stretch with `relative z-10`. A wrapper
+ * that was itself the button could not hold a form or a link, and its name
+ * would be its whole text, which is why Row keeps its target on the header
+ * too (v1.2 phase 3d).
+ */
+export const STRETCH = 'static after:absolute after:inset-0'
+
+/** The hover tint and chevron a stretched wrapper carries; the chevron is
+ * placed by the caller since each card has its own corner for it. */
+export const STRETCH_WRAP = 'relative transition-colors duration-150 ease-[var(--ease)] hover:bg-ink/[.06]'
+export const CHEVRON = 'select-none text-[16px] leading-none text-ink-3'
+
 /** Eyebrow left, metadata right, baseline aligned. */
 export function CardHead({
   label,

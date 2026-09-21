@@ -17,7 +17,7 @@ export {
 } from './charts'
 export { LineChart } from './LineChart'
 export { Chip, StatusChip, type ChipTone } from './Chip'
-export { Card, CardHead, CardLink, MetricStrip, MetricTile, type DeltaTone } from './Card'
+export { Card, CardHead, CardLink, MetricStrip, MetricTile, STRETCH, STRETCH_WRAP, CHEVRON, type DeltaTone } from './Card'
 export { PageHeader } from './PageHeader'
 export { Row, RowList } from './Row'
 export { EmptyState } from './EmptyState'
