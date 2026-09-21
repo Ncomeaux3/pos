@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useTransition, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { useLongPress } from '@/components/pos/gestures'
-import { useToast } from '@/components/pos'
+import { ActionButton, useToast } from '@/components/pos'
 import type { Settings } from '@/core/settings'
 import { arrange } from '@/core/dashboard-layout'
 import { saveDashboardLayout } from './shell-actions'
@@ -104,13 +104,9 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
             Arrange mode: <span className="max-md:hidden">drag tiles, or </span>use ‹ › and Hide on
             each. The layout is saved for every device.
           </span>
-          <button
-            type="button"
-            onClick={() => save(null)}
-            className="text-[12px] text-ink-3 hover:text-ink"
-          >
+          <ActionButton variant="quiet" size="sm" onClick={() => save(null)}>
             Reset to default
-          </button>
+          </ActionButton>
         </div>
       )}
 
@@ -138,32 +134,17 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
             >
               {arranging && (
                 <div className="flex items-center justify-between border border-b-0 border-brand bg-brand-soft px-2 py-1 rounded-[18px]">
-                  <button
-                    type="button"
-                    aria-label={`Move ${id} earlier`}
-                    onClick={() => move(id, -1)}
-                    className="px-1 text-ink-2 hover:text-ink"
-                  >
+                  <ActionButton variant="quiet" size="sm" aria-label={`Move ${id} earlier`} onClick={() => move(id, -1)}>
                     ‹
-                  </button>
+                  </ActionButton>
                   <span className="label text-ink-3">Drag</span>
                   <span className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      aria-label={`Hide ${id}`}
-                      onClick={() => hide(id)}
-                      className="px-1 text-[11px] text-ink-2 hover:text-ink"
-                    >
+                    <ActionButton variant="quiet" size="sm" aria-label={`Hide ${id}`} onClick={() => hide(id)}>
                       Hide
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={`Move ${id} later`}
-                      onClick={() => move(id, 1)}
-                      className="px-1 text-ink-2 hover:text-ink"
-                    >
+                    </ActionButton>
+                    <ActionButton variant="quiet" size="sm" aria-label={`Move ${id} later`} onClick={() => move(id, 1)}>
                       ›
-                    </button>
+                    </ActionButton>
                   </span>
                 </div>
               )}
@@ -182,15 +163,9 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
         >
           <span className="label">Hidden</span>
           {hiddenTiles.map((id) => (
-            <button
-              key={id}
-              type="button"
-              aria-label={`Show ${id}`}
-              onClick={() => show(id)}
-              className="border border-rule-2 px-2 py-1 text-ink-2 hover:border-ink hover:text-ink rounded-full"
-            >
+            <ActionButton key={id} variant="outline" size="sm" aria-label={`Show ${id}`} onClick={() => show(id)}>
               {id} · Show
-            </button>
+            </ActionButton>
           ))}
         </div>
       )}
