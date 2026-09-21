@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Eyebrow, HolonLockup, fieldClass } from '@/components/pos'
+import { ActionButton, Eyebrow, HolonLockup, fieldClass } from '@/components/pos'
 import { sendCode, verifyCode } from './actions'
 import { CodeInput } from './CodeInput'
 import { Countdown } from './Countdown'
@@ -81,12 +81,9 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
               </Link>
               <form action={sendCode}>
                 <input type="hidden" name="email" value={email} />
-                <button
-                  type="submit"
-                  className="label text-ink-3 transition-colors hover:text-ink"
-                >
+                <ActionButton variant="quiet" size="sm" type="submit">
                   Resend
-                </button>
+                </ActionButton>
               </form>
             </div>
 

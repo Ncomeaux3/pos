@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState, useTransition } from 'react'
 import {
   ActionButton,
   BandSearch,
+  CHEVRON,
   Chip,
   EmptyState,
   MetricStrip,
@@ -471,6 +472,9 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
                                 {c.gained30d > 0 ? `+${round(c.gained30d)} / 30d` : 'idle'}
                               </span>
                               <span className="num text-[12px] text-ink">Lv {c.level}</span>
+                              <span aria-hidden="true" className={CHEVRON}>
+                                &rsaquo;
+                              </span>
                             </span>
                         </button>
                       ))}
@@ -618,7 +622,7 @@ function characterTitle(level: number): string {
 
 /** The row shape from Row.tsx, for a list item that is its own button. */
 const ROW =
-  'relative px-4 py-2.5 transition-colors duration-150 ease-[var(--ease)] hover:bg-glass-strong ' +
+  'relative px-4 py-2.5 transition-colors duration-150 ease-[var(--ease)] hover:bg-ink/[.06] ' +
   'before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-rule first:before:hidden'
 
 /** One of the four summary columns under the canvas. */
@@ -655,7 +659,8 @@ function Line({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full min-w-0 items-baseline justify-between gap-2 text-left text-ink transition-colors duration-150 hover:text-brand"
+      // The tint runs a little past the text so it reads as a row, not a word.
+      className="-mx-1.5 flex w-[calc(100%+12px)] min-w-0 items-baseline justify-between gap-2 rounded-md px-1.5 text-left text-ink transition-colors duration-150 hover:bg-ink/[.06]"
     >
       <span className="truncate text-[12px]">{name}</span>
       <span className="num shrink-0 text-[11px] text-ink-3">{children}</span>

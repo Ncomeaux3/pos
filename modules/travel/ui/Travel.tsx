@@ -294,7 +294,7 @@ export function Travel({ data }: { data: TravelData }) {
                         setParams({ trip: t.id, new: null }, { push: true })
                       }
                     }}
-                    className="cursor-pointer px-[18px] text-left transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-glass-strong"
+                    className="cursor-pointer px-[18px] text-left transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-ink/[.06]"
                   >
                     <div className="flex items-start justify-between gap-2.5">
                       <div className="min-w-0">

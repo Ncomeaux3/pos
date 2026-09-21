@@ -3,7 +3,7 @@
 import { AlarmClock, Check, Filter, Plus } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useMemo, useOptimistic, useState, useTransition } from 'react'
-import { ActionButton, EmptyState, PillGroup, RowList, StatusChip, useToast } from '@/components/pos'
+import { ActionButton, CHEVRON, EmptyState, PillGroup, RowList, STRETCH, StatusChip, useToast } from '@/components/pos'
 import { actionButtonBase, actionButtonSizes, actionButtonVariants } from '@/components/pos/Button'
 import { cn } from '@/lib/utils'
 import { parseQuickAdd } from '../quickadd'
@@ -336,15 +336,16 @@ export function Board({
                     <span className="flex shrink-0 items-center gap-1.5">
                       <span className="num text-[13px] text-ink-3">{column.meta}</span>
                       {column.drop && (
-                        <button
-                          type="button"
+                        <ActionButton
+                          variant="quiet"
+                          size="sm"
                           aria-label={`New task in ${column.label}`}
                           onClick={() => openNew(dropPatch(column.drop!))}
                           // 24px target around a 13px glyph, per WCAG 2.5.8.
-                          className="-my-1.5 flex h-6 w-6 items-center justify-center text-ink-3 transition-colors duration-150 hover:text-ink"
+                          className="-my-1.5 h-6 w-6 px-0 sm:px-0"
                         >
                           <Plus size={13} aria-hidden />
-                        </button>
+                        </ActionButton>
                       )}
                     </span>
                   </div>
@@ -550,18 +551,21 @@ function Row({
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
         className={cn(
-          'px-4 py-2.5 transition-colors duration-150',
+          'px-4 py-2.5 transition-colors duration-150 hover:bg-ink/[.06]',
           draggable && 'cursor-grab active:cursor-grabbing',
         )}
       >
-        <div className="flex items-start gap-3">
+        {/* The title button's hit area is stretched over the header line, so
+          * the padding and the estimate open the row too; the checkbox and
+          * the Edit link sit above it (v1.2 phase 3d). */}
+        <div className="relative flex items-start gap-3">
           <button
             type="button"
             onClick={onComplete}
             title={agent ? 'Approve first' : done ? 'Reopen' : 'Complete'}
             aria-label={done ? `Reopen ${task.title}` : `Complete ${task.title}`}
             className={cn(
-              'relative mt-px grid size-5 shrink-0 place-items-center rounded-full border transition-colors duration-150',
+              'relative z-10 mt-px grid size-5 shrink-0 place-items-center rounded-full border transition-colors duration-150',
               'before:absolute before:-inset-3 before:content-[""] sm:before:inset-0',
               done
                 ? 'border-action bg-action text-action-fg'
@@ -579,7 +583,7 @@ function Row({
             onDoubleClick={isPhone ? undefined : onEdit}
             title={isPhone ? 'Edit' : 'Click: details · Double-click: edit'}
             aria-expanded={expanded}
-            className="min-w-0 flex-1 text-left"
+            className={cn(STRETCH, 'min-w-0 flex-1 text-left')}
           >
             <span
               className={cn(
@@ -623,10 +627,16 @@ function Row({
             onClick={onEdit}
             title="Edit task"
             aria-label={`Edit ${task.title}`}
-            className="hidden shrink-0 pt-0.5 text-[12.5px] font-medium text-ink-3 transition-colors duration-150 hover:text-action md:inline-flex"
+            className="relative z-10 hidden shrink-0 pt-0.5 text-[12.5px] font-medium text-ink-3 transition-colors duration-150 hover:text-action md:inline-flex"
           >
             Edit
           </button>
+          <span
+            aria-hidden="true"
+            className={cn(CHEVRON, 'shrink-0 transition-transform duration-150', expanded && !isPhone && 'rotate-90')}
+          >
+            &rsaquo;
+          </span>
         </div>
 
         {expanded && (

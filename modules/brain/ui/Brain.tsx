@@ -1,7 +1,7 @@
 'use client'
 
 import { useTransition } from 'react'
-import { ActionButton, BandSearch, PillGroup, SearchButton, StatusChip, useToast } from '@/components/pos'
+import { ActionButton, BandSearch, CHEVRON, PillGroup, SearchButton, StatusChip, useToast } from '@/components/pos'
 import { BackControl } from '@/components/pos/BackControl'
 import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
@@ -179,13 +179,14 @@ export function Brain({ data }: { data: BrainData }) {
             <span className="num whitespace-nowrap text-[11px] text-ink-3">
               {listMeta}
               {hubFolder && (
-                <button
-                  type="button"
+                <ActionButton
+                  variant="quiet"
+                  size="sm"
+                  className="ml-2.5"
                   onClick={() => setParams({ hub: hubFolder.slug }, { push: true })}
-                  className="ml-2.5 text-ink-3 underline-offset-2 hover:text-ink hover:underline"
                 >
                   Edit hub
-                </button>
+                </ActionButton>
               )}
             </span>
           </div>
@@ -207,14 +208,19 @@ export function Brain({ data }: { data: BrainData }) {
                   type="button"
                   onClick={() => setParams({ note: n.slug })}
                   className={cn(
-                    'relative block w-full px-4 py-2.5 text-left transition-colors duration-150 ease-[var(--ease)] hover:bg-glass-strong',
+                    'relative block w-full px-4 py-2.5 text-left transition-colors duration-150 ease-[var(--ease)] hover:bg-ink/[.06]',
                     'before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-rule first:before:hidden',
                     selected && 'bg-brand-soft before:hidden [&+*]:before:hidden',
                   )}
                 >
                   <span className="flex items-baseline justify-between gap-2">
                     <span className="min-w-0 truncate text-[14.5px] font-medium leading-[1.35] text-ink">{n.title}</span>
-                    <span className="num t-caption shrink-0 text-ink-4">{ago(n.updatedAt)}</span>
+                    <span className="flex shrink-0 items-baseline gap-2">
+                      <span className="num t-caption text-ink-4">{ago(n.updatedAt)}</span>
+                      <span aria-hidden="true" className={CHEVRON}>
+                        &rsaquo;
+                      </span>
+                    </span>
                   </span>
                   <span className="t-caption mt-0.5 block truncate text-ink-3">{subLine(n)}</span>
                   <span className="mt-1.5 flex items-center gap-1.5">

@@ -97,7 +97,9 @@ export function DataRow({
         'max-lg:[&>*:last-child]:col-start-3 max-lg:[&>*:last-child]:row-start-1 max-lg:[&>*:last-child]:text-right',
         'max-lg:[&>*:not(:first-child):not(:last-child)]:col-start-2',
         'lg:grid lg:grid-cols-[var(--cols)] lg:items-center lg:gap-x-4',
-        interactive && 'cursor-pointer hover:bg-glass-strong',
+        // The same sunken tint as Row (v1.2 phase 3d); no chevron, since the
+        // grid's columns belong to the caller's template.
+        interactive && 'cursor-pointer hover:bg-ink/[.06]',
         selected && 'bg-brand-soft before:hidden [&+*]:before:hidden',
         className,
       )}

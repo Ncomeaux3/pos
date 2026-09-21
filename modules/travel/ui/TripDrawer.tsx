@@ -5,12 +5,15 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import {
   ActionButton,
   Card,
+  CHEVRON,
   Chip,
   EmptyState,
   Eyebrow,
   MetricStrip,
   MetricTile,
   Overlay,
+  STRETCH,
+  STRETCH_WRAP,
   SkillPicker,
   StatusChip,
   TabBar,
@@ -298,9 +301,9 @@ function Itinerary({ trip, items: allItems, run }: { trip: Trip; items: TravelDa
         run={run}
       />
     ) : (
-      <div className="grid grid-cols-[44px_1fr_auto] items-start gap-2.5 border-b border-rule py-2">
+      <div className={cn(STRETCH_WRAP, 'grid grid-cols-[44px_1fr_auto] items-start gap-2.5 border-b border-rule py-2')}>
         <span className="num pt-0.5 text-[11px] text-ink-3">{it.occursAt ?? ''}</span>
-        <button type="button" title="Edit" onClick={() => setEditingId(it.id)} className="min-w-0 text-left hover:text-brand">
+        <button type="button" title="Edit" onClick={() => setEditingId(it.id)} className={cn(STRETCH, 'min-w-0 text-left')}>
           <span className="block text-[13px] text-ink">{it.title}</span>
           {(it.detail || it.confirmation) && (
             <span className="mt-0.5 block text-[11px] text-ink-3">
@@ -308,11 +311,14 @@ function Itinerary({ trip, items: allItems, run }: { trip: Trip; items: TravelDa
             </span>
           )}
         </button>
-        <span className="flex items-center gap-2">
+        <span className="relative z-10 flex items-center gap-2">
           <Chip tone={KIND_TONE[it.kind] ?? 'quiet'}>{cap(it.kind)}</Chip>
-          <button type="button" aria-label={`Remove ${it.title}`} onClick={() => remove(it.id)} className="text-[11px] text-ink-4 hover:text-bad">
+          <ActionButton variant="danger" size="sm" aria-label={`Remove ${it.title}`} onClick={() => remove(it.id)} className="h-6 w-6 px-0 text-[11px] sm:px-0">
             ✕
-          </button>
+          </ActionButton>
+          <span aria-hidden="true" className={CHEVRON}>
+            &rsaquo;
+          </span>
         </span>
       </div>
     )
@@ -541,9 +547,9 @@ function Budget({
                   }}
                   className={cn(inlineInput, 'num text-right')}
                 />
-                <button type="button" aria-label={`Remove ${l.category}`} onClick={() => removeLine(l)} className="text-[11px] text-ink-4 hover:text-bad">
+                <ActionButton variant="danger" size="sm" aria-label={`Remove ${l.category}`} onClick={() => removeLine(l)} className="h-6 w-6 px-0 text-[11px] sm:px-0">
                   ✕
-                </button>
+                </ActionButton>
               </div>
               <div className="mt-1.5 h-[3px] bg-rule-2">
                 <div className={cn('h-[3px]', actual > l.planned_cents && l.planned_cents > 0 ? 'bg-bad' : 'bg-brand')} style={{ width: `${pct}%` }} />
@@ -644,9 +650,9 @@ function Packing({ trip, packing: allPacking, run }: { trip: Trip; packing: Trav
               </span>
               <span className={cn('truncate text-[12px]', p.packed ? 'text-ink-4 line-through' : 'text-ink')}>{p.label}</span>
             </button>
-            <button type="button" aria-label={`Remove ${p.label}`} onClick={() => remove(p)} className="px-0.5 text-[11px] text-ink-4 hover:text-bad">
+            <ActionButton variant="danger" size="sm" aria-label={`Remove ${p.label}`} onClick={() => remove(p)} className="h-6 w-6 px-0 text-[11px] sm:px-0">
               ✕
-            </button>
+            </ActionButton>
           </div>
         ))}
       </div>
@@ -837,26 +843,27 @@ function DestinationFields({
             />
           </label>
           {canRemove && (
-            <button
-              type="button"
+            <ActionButton
+              variant="danger"
               onClick={onRemove}
               aria-label={`Remove ${row.name || `destination ${index + 1}`}`}
-              className="h-[38px] px-2 text-[13px] text-ink-3 transition-colors duration-150 hover:text-bad"
+              className="h-[38px]"
             >
               Remove
-            </button>
+            </ActionButton>
           )}
         </div>
       )}
       {!showDates && canRemove && (
-        <button
-          type="button"
+        <ActionButton
+          variant="danger"
+          size="sm"
           onClick={onRemove}
           aria-label={`Remove ${row.name || `destination ${index + 1}`}`}
-          className="self-start text-[13px] text-ink-3 transition-colors duration-150 hover:text-bad"
+          className="self-start"
         >
           Remove
-        </button>
+        </ActionButton>
       )}
     </div>
   )
@@ -930,9 +937,9 @@ function TripForm({
       footer={
         <>
           <div className="flex flex-col items-start gap-1">
-            <button type="button" onClick={onClose} className="text-[13px] text-ink-2 hover:text-ink">
+            <ActionButton variant="quiet" onClick={onClose}>
               Cancel
-            </button>
+            </ActionButton>
             <span className="text-[11px] leading-none text-ink-2">Location search by Open-Meteo and GeoNames</span>
           </div>
           <ActionButton variant="solid" size="lg" className="h-[38px] gap-2 px-3.5 text-[13px]" onClick={save}>
@@ -963,13 +970,14 @@ function TripForm({
         ))}
 
         {many && (
-          <button
-            type="button"
+          <ActionButton
+            variant="quiet"
+            size="sm"
             onClick={() => setRows((all) => [...all, blankRow()])}
-            className="self-start text-[13px] text-ink-3 transition-colors duration-150 hover:text-ink"
+            className="self-start"
           >
             + Add destination
-          </button>
+          </ActionButton>
         )}
 
         {many ? (
