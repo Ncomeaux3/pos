@@ -3843,16 +3843,16 @@ test('gestures, a swiped task reads as done before the server answers', async ({
 
   // The other way snoozes: the row is due tomorrow and out of Today at once,
   // and the week view has it under This week once the server has answered.
-  // DDIA, because the test above completed Sketch the week ahead.
-  const ddia = page.locator('article').filter({ hasText: 'Read DDIA ch. 5' }).first()
-  const dbox = (await ddia.boundingBox())!
-  await ddia.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: dbox.x + dbox.width - 10, clientY: dbox.y + 8 })
-  await ddia.dispatchEvent('pointerup', { pointerType: 'touch', clientX: dbox.x + 20, clientY: dbox.y + 8 })
-  await expect(ddia).toHaveCount(0)
+  // The umbrella task: the tests above completed Sketch the week ahead and DDIA.
+  const umbrella = page.locator('article').filter({ hasText: 'umbrella policy' }).first()
+  const dbox = (await umbrella.boundingBox())!
+  await umbrella.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: dbox.x + dbox.width - 10, clientY: dbox.y + 8 })
+  await umbrella.dispatchEvent('pointerup', { pointerType: 'touch', clientX: dbox.x + 20, clientY: dbox.y + 8 })
+  await expect(umbrella).toHaveCount(0)
   await expect(page.getByText('Snoozed to tomorrow')).toBeVisible()
 
   await page.goto('/tasks?view=week')
-  const moved = page.locator('article').filter({ hasText: 'Read DDIA ch. 5' }).first()
+  const moved = page.locator('article').filter({ hasText: 'umbrella policy' }).first()
   await expect(moved).toContainText('Tomorrow')
 })
 
