@@ -39,6 +39,7 @@ export function ProjectsDrawer({
   return (
     <Overlay
       open
+      dirty={name.trim() !== ''}
       narrow
       onClose={onClose}
       eyebrow={

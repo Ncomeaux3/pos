@@ -2,9 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireOwner } from '@/core/auth'
-import { callTool } from '@/core/tools'
+import { callTool, ToolInputError } from '@/core/tools'
 
-export type ActionResult = { ok: true } | { ok: false; error: string }
+export type ActionResult = { ok: true } | { ok: false; error: string; fields?: Record<string, string> }
 
 /**
  * Dropping an event onto a different skill. Server actions are standalone POST
@@ -25,6 +25,10 @@ export async function reassignEvent(
     revalidatePath('/skills')
     return { ok: true }
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : 'Failed' }
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Failed',
+      ...(error instanceof ToolInputError && { fields: error.fields }),
+    }
   }
 }

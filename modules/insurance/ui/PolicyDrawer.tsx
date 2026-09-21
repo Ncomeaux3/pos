@@ -438,7 +438,7 @@ function PolicyForm({
     postToFinance: policy?.postToFinance ?? false,
   }
   const [form, setForm] = useState(initial)
-  const dirty = (Object.keys(initial) as (keyof typeof initial)[]).some((k) => form[k] !== initial[k])
+  const dirty = (Object.keys(initial) as (keyof typeof initial)[]).some((k) => String(form[k]) !== String(initial[k]))
 
   const set = (patch: Partial<typeof form>) => setForm((prev) => ({ ...prev, ...patch }))
   const dollars = (value: string) => {

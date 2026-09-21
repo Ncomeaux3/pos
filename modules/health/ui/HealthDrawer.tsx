@@ -178,8 +178,17 @@ function Form({
   const [title, setTitle] = useState('')
   const [date, setDate] = useState(todayIso)
   const [cost, setCost] = useState('')
+  const defaultProvider = (providers.find((p) => /primary/i.test(p.role)) ?? providers[0])?.id ?? ''
+  const [provider, setProvider] = useState(defaultProvider)
+  const [notes, setNotes] = useState('')
   const future = date > todayIso
-  const dirty = kind !== 'visit' || title !== '' || date !== todayIso || cost !== ''
+  const dirty =
+    kind !== 'visit' ||
+    title !== '' ||
+    date !== todayIso ||
+    cost !== '' ||
+    provider !== defaultProvider ||
+    notes !== ''
   const formId = useId()
   const { errors, ref: formRef, submit } = useFormErrors(() => ({
     title: title.trim() ? undefined : 'Title is required',
@@ -217,11 +226,7 @@ function Form({
         </Field>
         <label className="flex flex-col gap-1.5">
           <Eyebrow>Provider</Eyebrow>
-          <select
-            name="provider"
-            defaultValue={(providers.find((p) => /primary/i.test(p.role)) ?? providers[0])?.id ?? ''}
-            className={fieldClass}
-          >
+          <select name="provider" value={provider} onChange={(e) => setProvider(e.target.value)} className={fieldClass}>
             {providers.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name} · {p.role.toLowerCase()}
@@ -242,6 +247,8 @@ function Form({
           <Eyebrow>Notes</Eyebrow>
           <textarea
             name="notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
             onKeyDown={submitOnModEnter}
             placeholder="What was decided, what to follow up on"
             className={cn(fieldClass, 'min-h-24 resize-y leading-[1.5]')}

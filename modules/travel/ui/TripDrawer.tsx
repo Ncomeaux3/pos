@@ -795,6 +795,14 @@ function DestinationFields({
           <input
             value={row.name}
             onChange={onName}
+            onKeyDown={(e) => {
+              // Enter with the list open takes its first place rather than
+              // submitting a trip that has a name and no pin.
+              if (e.key === 'Enter' && hits.length > 0 && !row.lat) {
+                e.preventDefault()
+                onName({ target: { value: hits[0].label } } as React.ChangeEvent<HTMLInputElement>)
+              }
+            }}
             placeholder="City, country"
             list={listId}
             className={field}

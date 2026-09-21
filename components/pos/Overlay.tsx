@@ -65,9 +65,15 @@ export function Overlay({
   const opener = useRef<HTMLElement | null>(null)
   const headingId = useId()
   const eyebrowId = useId()
+  // Escape, the dim and the sheet's handle are the accidental ways out, so
+  // they ask first when the form has unsaved edits.
+  const dismiss = () => {
+    if (dirty && !window.confirm('Discard your changes?')) return
+    onClose()
+  }
   // Dragging the sheet's handle down closes it, as every phone sheet does. On
   // the handle and the band only: the body scrolls, and a pull there is that.
-  const drag = useSwipe({ onDown: onClose })
+  const drag = useSwipe({ onDown: dismiss })
 
   // A portal cannot render on the server, and `typeof document === 'undefined'`
   // is a server/client branch: with the open state in the URL the server
@@ -85,10 +91,6 @@ export function Overlay({
   // alone. Most callers pass a fresh closure every render, and with `onClose`
   // in the deps the effect re-ran, and refocused the panel, on every keystroke
   // in a drawer that owns its own input state.
-  const dismiss = () => {
-    if (dirty && !window.confirm('Discard your changes?')) return
-    onClose()
-  }
   const onEscape = useEffectEvent(dismiss)
 
   useEffect(() => {
