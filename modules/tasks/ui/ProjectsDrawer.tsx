@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ActionButton, Eyebrow, Overlay } from '@/components/pos'
+import { ActionButton, Eyebrow, Field, Overlay, useFormErrors } from '@/components/pos'
 import { ConfirmButton, InlineEdit } from '@/components/pos/edit'
 import { fieldClass } from '@/components/pos/field'
 import { cn } from '@/lib/utils'
@@ -26,11 +26,13 @@ export function ProjectsDrawer({
   onAdd: (name: string) => void
 }) {
   const [name, setName] = useState('')
+  const { errors, ref: formRef, submit } = useFormErrors(() => ({
+    name: name.trim() ? undefined : 'New project is required',
+  }))
 
   const add = () => {
-    const trimmed = name.trim()
-    if (!trimmed) return
-    onAdd(trimmed)
+    if (!submit()) return
+    onAdd(name.trim())
     setName('')
   }
 
@@ -47,22 +49,23 @@ export function ProjectsDrawer({
     >
       <form
         className="flex items-center gap-2"
+        ref={formRef}
         onSubmit={(e) => {
           e.preventDefault()
           add()
         }}
       >
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="New project"
-          aria-label="New project"
-          className={fieldClass}
-        />
+        <Field label="New project" required error={errors.name} className="flex-1">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="New project"
+            className={fieldClass}
+          />
+        </Field>
         <ActionButton
           variant="solid"
           type="submit"
-          disabled={!name.trim()}
           className="h-[38px] shrink-0 sm:h-[38px]"
         >
           Add
