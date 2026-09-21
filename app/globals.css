@@ -118,6 +118,12 @@ html[data-theme="dark"] {
 html {
   /* The page owns its pull: no browser refresh or rubber band doubling it. */
   overscroll-behavior-y: contain;
+  /* In the installed app WebKit can size the layout viewport short by the
+   * status bar, so a fixed bottom: 0 tab bar floats that far above the screen
+   * edge with bare canvas under it. Sizing the root past the viewport by the
+   * same inset is the documented workaround (developer.apple.com/forums/
+   * thread/744327); a browser tab reports a zero inset and sees no change. */
+  min-height: calc(100% + var(--inset-t));
 }
 
 @theme inline {
