@@ -383,7 +383,7 @@ export function Onboarding({ data }: { data: SetupData }) {
                   <button
                     type="button"
                     onClick={() => toggleModule(m.id)}
-                    className="w-full p-4 text-left"
+                    className="w-full rounded-[18px] p-4 text-left transition-colors duration-150 hover:bg-ink/[.06]"
                   >
                     <span className="flex items-baseline justify-between gap-2.5">
                       <span
@@ -553,7 +553,8 @@ export function Onboarding({ data }: { data: SetupData }) {
                         setOpenCategory(open ? null : category.id)
                         setManualOpen(false)
                       }}
-                      className="w-full text-left"
+                      aria-expanded={open}
+                      className="-mx-2 w-[calc(100%+16px)] rounded-lg px-2 text-left transition-colors duration-150 hover:bg-ink/[.06]"
                     >
                       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                         <span className="flex items-baseline gap-2">
@@ -727,7 +728,7 @@ export function Onboarding({ data }: { data: SetupData }) {
                       return results.find((r) => !r.ok) ?? { ok: true }
                     })
                   }}
-                  className="w-full p-4 text-left"
+                  className="w-full rounded-[18px] p-4 text-left transition-colors duration-150 hover:bg-ink/[.06]"
                 >
                   <Eyebrow>{p.tag}</Eyebrow>
                   <span className="mt-3 block text-[16px] tracking-[-0.01em] text-ink">
