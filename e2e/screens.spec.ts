@@ -1731,6 +1731,37 @@ test('tasks, a row expands in place and EDIT opens the form drawer', async ({ pa
   await expect(page.locator('article').filter({ hasText: 'Recurring detection tests' }).getByText('1.6 h')).toBeVisible()
 })
 
+test('tasks, the form names a missing title, Enter creates, Tab moves in reading order', async ({ page }) => {
+  await page.goto('/tasks')
+  await page.getByRole('button', { name: 'New task' }).first().click()
+  const drawer = page.getByRole('dialog')
+  await expect(drawer.getByText('Tasks / New task')).toBeVisible()
+
+  // The first field takes focus on open, so the drawer is ready to type into.
+  const title = drawer.getByLabel('Title')
+  await expect(title).toBeFocused()
+
+  // Create with nothing typed says which field is missing, at the field, and
+  // puts focus there. The button is never disabled: a disabled button cannot
+  // explain itself.
+  await drawer.getByRole('button', { name: 'Create' }).click()
+  await expect(drawer.getByRole('alert')).toHaveText('Title is required')
+  await expect(title).toHaveAttribute('aria-invalid', 'true')
+  await expect(title).toBeFocused()
+
+  // Tab from the title lands on the next control in reading order.
+  await page.keyboard.press('Tab')
+  await expect(drawer.getByLabel('Due', { exact: true })).toBeFocused()
+
+  // Typing clears the message as the draft is fixed, and Enter in the title
+  // submits the form: the footer button is its submit control.
+  await title.fill('Descale the kettle')
+  await expect(drawer.getByRole('alert')).toHaveCount(0)
+  await title.press('Enter')
+  await expect(page.getByText('Added. Descale the kettle')).toBeVisible()
+  await expect(page.getByText('Descale the kettle').first()).toBeVisible()
+})
+
 test('tasks, the six views and the month grid', async ({ page }) => {
   await page.goto('/tasks')
   const mobile = (page.viewportSize()?.width ?? 0) < 768
