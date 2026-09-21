@@ -1,7 +1,20 @@
 'use client'
 
-import { useState } from 'react'
-import { ActionButton, Eyebrow, Overlay, PillGroup, Row, RowList, SkillPicker, fieldClass } from '@/components/pos'
+import { useId, useState } from 'react'
+import {
+  ActionButton,
+  Eyebrow,
+  Field,
+  Overlay,
+  PillGroup,
+  Row,
+  RowList,
+  SkillPicker,
+  fieldClass,
+  submitOnModEnter,
+  useFormErrors,
+} from '@/components/pos'
+import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
 import { addMonths, logDate, money, monthKey, monthLabelLong } from '../schedule'
 import { logService, type ActionResult } from './actions'
@@ -144,16 +157,26 @@ export function LogServiceDrawer({
   const [vendorId, setVendorId] = useState('')
   const [intervalMonths, setIntervalMonths] = useState('12')
   const [notes, setNotes] = useState('')
-  const [missing, setMissing] = useState(false)
 
   const months = Number(intervalMonths)
   const lands = doneOn ? ` (${monthLabelLong(monthKey(addMonths(doneOn, months)))})` : ''
+  const dirty =
+    assetId !== (data.assets[0]?.id ?? '') ||
+    what !== '' ||
+    doneOn !== data.todayIso ||
+    cost !== '' ||
+    vendorId !== '' ||
+    intervalMonths !== '12' ||
+    notes !== ''
+  const formId = useId()
+  const { errors, ref: formRef, submit } = useFormErrors(() => ({
+    what: what.trim() ? undefined : 'What was done is required',
+    doneOn: doneOn ? undefined : 'Date is required',
+    cost: cost.trim() && parseNumber(cost) === null ? 'Cost must be a number' : undefined,
+  }))
 
-  const submit = () => {
-    if (!what.trim() || !doneOn) {
-      setMissing(true)
-      return
-    }
+  const save = () => {
+    if (!submit()) return
     run(
       () =>
         logService({
@@ -174,7 +197,6 @@ export function LogServiceDrawer({
     setWhat('')
     setCost('')
     setNotes('')
-    setMissing(false)
     onClose()
   }
 
@@ -183,12 +205,13 @@ export function LogServiceDrawer({
       open={open}
       onClose={onClose}
       narrow
+      dirty={dirty}
       eyebrow="New entry"
       title="Log service"
       lede="Logs what was done and, if you pick an interval, schedules the next one on the calendar."
       footer={
         <div className="flex gap-2.5">
-          <ActionButton variant="accent" className="h-11 px-4 text-[13px] sm:h-10" onClick={submit}>
+          <ActionButton variant="accent" className="h-11 px-4 text-[13px] sm:h-10" type="submit" form={formId}>
             Save service
           </ActionButton>
           <ActionButton className="h-11 px-4 text-[13px] sm:h-10" onClick={onClose}>
@@ -197,7 +220,15 @@ export function LogServiceDrawer({
         </div>
       }
     >
-      <div className="flex flex-col gap-[18px]">
+      <form
+        id={formId}
+        ref={formRef}
+        className="flex flex-col gap-[18px]"
+        onSubmit={(e) => {
+          e.preventDefault()
+          save()
+        }}
+      >
         <div>
           <Eyebrow>Asset</Eyebrow>
           <select
@@ -214,8 +245,7 @@ export function LogServiceDrawer({
           </select>
         </div>
 
-        <label className="flex flex-col gap-2">
-          <Eyebrow>What was done</Eyebrow>
+        <Field label="What was done" required error={errors.what} className="gap-2">
           <input
             value={what}
             aria-label="What was done"
@@ -223,11 +253,10 @@ export function LogServiceDrawer({
             placeholder="Replaced the water heater anode rod"
             className={fieldClass}
           />
-        </label>
+        </Field>
 
         <div className="flex flex-wrap gap-3">
-          <label className="flex min-w-0 flex-[1_1_140px] flex-col gap-2">
-            <Eyebrow>Date</Eyebrow>
+          <Field label="Date" required error={errors.doneOn} className="min-w-0 flex-[1_1_140px] gap-2">
             <input
               type="date"
               aria-label="Date"
@@ -235,9 +264,8 @@ export function LogServiceDrawer({
               onChange={(e) => setDoneOn(e.target.value)}
               className={fieldClass}
             />
-          </label>
-          <label className="flex min-w-0 flex-[1_1_110px] flex-col gap-2">
-            <Eyebrow>Cost</Eyebrow>
+          </Field>
+          <Field label="Cost" error={errors.cost} className="min-w-0 flex-[1_1_110px] gap-2">
             <input
               inputMode="decimal"
               aria-label="Cost"
@@ -246,7 +274,7 @@ export function LogServiceDrawer({
               placeholder="$180"
               className={fieldClass}
             />
-          </label>
+          </Field>
         </div>
 
         <label className="flex flex-col gap-2">
@@ -283,19 +311,18 @@ export function LogServiceDrawer({
             value={notes}
             aria-label="Notes"
             onChange={(e) => setNotes(e.target.value)}
+            onKeyDown={submitOnModEnter}
             placeholder="Part numbers, what to watch, who to call next time"
             className={cn(fieldClass, 'min-h-[88px] resize-y px-3 py-2.5 text-[14px] leading-[1.5]')}
           />
         </label>
 
-        <p className={cn('text-[12px] leading-[1.5]', missing ? 'text-bad' : 'text-ink-3')}>
-          {missing
-            ? 'A description and a date are required.'
-            : months === 0
-              ? 'One off: nothing gets added to the calendar.'
-              : `The next one lands ${months} months out${lands} on the maintenance calendar.`}
+        <p className="text-[12px] leading-[1.5] text-ink-3">
+          {months === 0
+            ? 'One off: nothing gets added to the calendar.'
+            : `The next one lands ${months} months out${lands} on the maintenance calendar.`}
         </p>
-      </div>
+      </form>
     </Overlay>
   )
 }
