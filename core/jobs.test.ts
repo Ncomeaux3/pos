@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
-import { latestRun, pruneRequestLog, pruneStaleJobs, runJob, runLine } from './jobs'
+import { latestRun, pruneClientErrors, pruneRequestLog, pruneStaleJobs, runJob, runLine } from './jobs'
 import { pending, queue, renderEmail, snoozeNotification, unreadWarnings } from './notify'
 import { buildSummary } from './orchestrator'
 
@@ -139,6 +139,22 @@ describe('pruneRequestLog', () => {
 
     const { rows } = await db().query<{ route: string }>('select route from core.request_log')
     expect(rows).toMatchObject([{ route: '/api/new' }])
+  })
+})
+
+describe('pruneClientErrors', () => {
+  it('deletes rows older than thirty days and keeps the rest', async () => {
+    await db().query(
+      `insert into core.client_errors (route, message, occurred_at)
+       values ('/old', 'stale', now() - interval '31 days'),
+              ('/new', 'fresh', now())`,
+    )
+
+    const { deleted } = await pruneClientErrors()
+    expect(deleted).toBe(1)
+
+    const { rows } = await db().query<{ route: string }>('select route from core.client_errors')
+    expect(rows).toMatchObject([{ route: '/new' }])
   })
 })
 

@@ -56,6 +56,7 @@ core/                     shared runtime. Modules import core. Core never import
   crypto.ts               AES-256-GCM encrypt/decrypt with ENCRYPTION_KEY
   ratelimit.ts            in-memory per-IP counter used by every API route
   log.ts                  writes core.request_log rows from API and webhook handlers
+  errors.ts               reads request_log failures, failed jobs and client_errors for the Agent log Errors tab
 modules/<name>/
   manifest.ts             the module contract
   tools/                  get_digest, write, extras (query is provided by core)
@@ -172,6 +173,7 @@ Schema `core`. RLS on every table. `authenticated` role reads and writes. `servi
 | settings | key, value jsonb, updated_at. Timezone, owner name, digest hour, llm soft cap. |
 | llm_calls | occurred_at, model, purpose, module, input_tokens, output_tokens, cost_cents |
 | request_log | occurred_at, route, method, status, duration_ms, ip_hash, error. Pruned to 90 days nightly. |
+| client_errors | occurred_at, route, digest, message, stack, user_agent. What error.tsx posts to /api/client-error. Pruned to 30 days nightly. |
 
 Skill XP is not core. `skills.xp` is a view the Skill Tree module owns, over `core.events` joined to `core.skill_links` and weighted by `skills.xp_weight`. Level is `min(99, floor(sqrt(xp / 100)))`, implemented once as `skills.level()` and once in `modules/skills/xp.ts`, with a test proving they match. See modules/skills/README.md.
 
@@ -179,7 +181,7 @@ Skill XP is not core. `skills.xp` is a view the Skill Tree module owns, over `co
 
 1. Ingestion: a provider webhook, a cron sync using `getCredentials()`, an import script, or a UI form writes a module row through `entities.register()`.
 2. `register()` writes `core.entities`, classifies, and emits an event. The creation event fires once, on insert: re-registering an existing row updates it silently, or the caller names an event for something that genuinely happened again.
-3. Nightly cron, in order: refresh OAuth tokens, each module's jobs, prune (`request_log` past 90 days, and `core.jobs` rows for jobs nothing registers any more, so a deleted module's last failure is not read as tonight's), embed changed entities, each module's `get_digest` into `core.digests`, orchestrator assembles `core.dashboard_summary` by rules and asks Haiku for a two sentence headline, queues one notification, thins `core.digests` to one row per module per day past two days.
+3. Nightly cron, in order: refresh OAuth tokens, each module's jobs, prune (`request_log` past 90 days, `client_errors` past 30 days, and `core.jobs` rows for jobs nothing registers any more, so a deleted module's last failure is not read as tonight's), embed changed entities, each module's `get_digest` into `core.digests`, orchestrator assembles `core.dashboard_summary` by rules and asks Haiku for a two sentence headline, queues one notification, thins `core.digests` to one row per module per day past two days.
 4. Every write tool called through `callTool` recomputes its module's digest afterwards (v1.1 Phase 5), so a dashboard tile reads this minute's numbers. The headline, alerts and Last run line stay nightly.
 5. Notification sender bundles every unsent `core.notifications` row into one plain text email: headline, top 3 items, remaining alerts, month to date model spend, dashboard link. Nothing else emails.
 6. Dashboard renders the latest summary for the headline and alerts, and the latest `core.digests` row per module for the tiles. Module pages read their own schema.

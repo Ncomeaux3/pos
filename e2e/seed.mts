@@ -238,6 +238,21 @@ const { rows: runRows } = await db().query<{ id: string }>(
 
 const [recent, older] = runRows.map((r) => r.id)
 
+// The Errors tab's other two sections. The failed brokerage-sync job above is
+// the third. Only the seed's own request row is replaced: the rest of
+// request_log is the real record of every e2e request.
+await db().query(`delete from core.request_log where route = '/api/demo/broken'`)
+await db().query(
+  `insert into core.request_log (route, method, status, duration_ms, error)
+   values ('/api/demo/broken', 'POST', 500, 42, 'relation "demo.missing" does not exist')`,
+)
+await db().query(`delete from core.client_errors`)
+await db().query(
+  `insert into core.client_errors (route, digest, message, stack, user_agent)
+   values ('/finance?view=budget', '1234567890', 'Cannot read properties of undefined (reading ''cents'')',
+           'TypeError: Cannot read properties of undefined (reading ''cents'')\n    at BudgetRow (Finance.tsx:760)', 'demo')`,
+)
+
 // The ideas row is written before the skills row on purpose: the Agent Log
 // filter pills are asserted to read in sidebar order (Skill Tree 20 before
 // Ideas 80), which only proves anything when the write order disagrees.

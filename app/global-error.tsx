@@ -1,6 +1,8 @@
 'use client'
 
+import { useEffect } from 'react'
 import { ActionButton } from '@/components/pos'
+import { reportClientError } from './report-error'
 import './globals.css'
 
 // Replaces the root layout when the layout itself throws, so it renders its
@@ -14,6 +16,9 @@ export default function GlobalError({
   error: Error & { digest?: string }
   retry: () => void
 }) {
+  // Once per failure, so the Errors tab shows it without a trip to Vercel.
+  useEffect(() => reportClientError(error), [error])
+
   return (
     <html lang="en" className="h-full">
       <body className="min-h-full flex flex-col">

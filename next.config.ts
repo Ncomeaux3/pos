@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import pkg from './package.json'
 
 // ponytail: one static CSP with 'unsafe-inline' for Next's hydration scripts.
 // Upgrade to per-request nonces in middleware only if this app ever serves
@@ -35,6 +36,9 @@ const nextConfig: NextConfig = {
   // next dev otherwise appends its own block to CLAUDE.md on every run, which
   // dirties the tree. The pointer it wants to leave is in CLAUDE.md Commands.
   agentRules: false,
+
+  // The version Settings shows (the Agent log header takes it in the release phase) comes from package.json, the semver source (v1.2 decision, 2026-09-20).
+  env: { NEXT_PUBLIC_APP_VERSION: pkg.version },
 
   async headers() {
     return [

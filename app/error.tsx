@@ -1,6 +1,8 @@
 'use client'
 
+import { useEffect } from 'react'
 import { ActionButton } from '@/components/pos'
+import { reportClientError } from './report-error'
 
 // Wraps every page under the root layout. The digest is what Next logs
 // server side in place of the message, so it is shown here so the owner can
@@ -12,6 +14,9 @@ export default function Error({
   error: Error & { digest?: string }
   retry: () => void
 }) {
+  // Once per failure, so the Errors tab shows it without a trip to Vercel.
+  useEffect(() => reportClientError(error), [error])
+
   return (
     <main className="flex min-h-dvh items-center justify-center p-6">
       <div className="max-w-sm space-y-3 text-center">

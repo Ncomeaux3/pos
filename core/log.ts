@@ -13,7 +13,7 @@ async function record(row: {
   method: string
   status: number
   durationMs: number
-  ipHash: string
+  ipHash: string | null
   error?: string
 }): Promise<void> {
   try {
@@ -26,6 +26,23 @@ async function record(row: {
     // Swallowed on purpose: the request already succeeded or failed on its own
     // terms, and the caller should not learn about our bookkeeping.
   }
+}
+
+/**
+ * A failure that a job or tool catches and carries on past, written where the
+ * Errors tab reads: a request_log row with method `internal` and status 500,
+ * `where` naming the code path ("brain.hubs.file"). For a catch that would
+ * otherwise be silent; a parser falling back on bad input is not an error.
+ */
+export async function recordError(where: string, error: unknown): Promise<void> {
+  await record({
+    route: where,
+    method: 'internal',
+    status: 500,
+    durationMs: 0,
+    ipHash: null,
+    error: error instanceof Error ? error.message : String(error),
+  })
 }
 
 /**

@@ -1,3 +1,4 @@
+import { recordError } from './log'
 import { getModules } from './modules'
 import type { ReviewCheck, ReviewDecisions, ReviewItem, ReviewWin } from './module-contract'
 
@@ -20,9 +21,10 @@ async function gather<T>(
       if (!fn) return null
       try {
         return { module: manifest.id, label: manifest.nav.label, items: await fn() }
-      } catch {
+      } catch (error) {
         // A module that cannot answer is left out rather than failing the whole
-        // review. Its absence is visible; a crashed page is not useful.
+        // review. Its absence is visible; the reason goes to the Errors tab.
+        await recordError(`review:${manifest.id}`, error)
         return null
       }
     }),

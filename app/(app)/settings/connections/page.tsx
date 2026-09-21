@@ -31,8 +31,8 @@ import { getModules } from '@/core/modules'
 import { getOrigin } from '@/core/origin'
 import { getSetting } from '@/core/settings'
 import { clockIn } from '@/core/today'
+import { Copy } from '@/components/pos'
 import { SettingsHeader } from '../tabs'
-import { Copy } from './Copy'
 import { Reveal } from './Reveal'
 
 // One card per manifest. Adding a provider folder adds a card; nothing here

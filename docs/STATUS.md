@@ -38,7 +38,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-21 (v1.2 Phase 3c: phone push, pop and tab fade, and the row swipes). Branch `main`, production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-21 (v1.2 Phase 2: the Errors tab and diagnostics). Branch `main`, production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -63,6 +63,22 @@ and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
 ## Done
+
+**v1.2 Phase 2: Errors tab and diagnostics** (2026-09-21, branch
+`phase-2-errors-tab`). One place to read what broke without Vercel:
+`/agent-log/errors` (a second Agent log route behind a Log / Errors tab row)
+lists request_log rows at 400 and above, the failed jobs inside partial and
+failed runs, and the new `core.client_errors`, which `error.tsx` and
+`global-error.tsx` post to `/api/client-error` (owner cookie, zod, the
+limiter, `maxDuration` 10). Range (24h, 7d, 30d) and module filters are
+links; every row has a Copy pill (the connections `Copy` moved to
+`components/pos`). `core/errors.ts` is the one reader. Settings gains a
+read-only Diagnostics card: version from package.json through
+`NEXT_PUBLIC_APP_VERSION`, database round trip, connected providers by name,
+Vercel region. `recordError` in `core/log.ts` writes an `internal` 500 row
+where a catch hid a failure (`readMetric`, the review registry, the embed
+job, `reclassify`); the other sixteen grep hits are parser fallbacks and
+stay. Nightly prune adds `client_errors` past 30 days.
 
 **v1.2 Phase 3c: motion and row swipes** (2026-09-21, branch
 `phase-3c-motion-swipes`). On the phone a route change is an iOS push or
