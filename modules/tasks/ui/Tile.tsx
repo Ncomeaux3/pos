@@ -1,8 +1,9 @@
 'use client'
 
 import { Check } from 'lucide-react'
+import Link from 'next/link'
 import { useState, useTransition } from 'react'
-import { RowList, useToast } from '@/components/pos'
+import { CHEVRON, RowList, STRETCH, STRETCH_WRAP, useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import type { TasksDigest } from '../jobs/nightly-digest'
 import { hoursLabel } from '../shape'
@@ -51,9 +52,11 @@ export function TasksTile({ payload }: { payload: Record<string, unknown> }) {
         const on = t.status === 'done' || ticked.includes(t.id)
         const tag = tagFor(t, today)
         return (
+          // The title is a link to the task's drawer, stretched over the row;
+          // the check circle sits above it (v1.2 phase 3d).
           <div
             key={t.id}
-            className="relative flex items-start gap-3 px-4 py-2.5 before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-rule first:before:hidden"
+            className={cn(STRETCH_WRAP, 'flex items-start gap-3 px-4 py-2.5 before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-rule first:before:hidden')}
           >
             <button
               type="button"
@@ -62,14 +65,14 @@ export function TasksTile({ payload }: { payload: Record<string, unknown> }) {
               aria-label={`Complete ${t.title}`}
               className={cn(
                 // 20px ring, 44px hit area on touch through the pseudo element.
-                'relative mt-px grid size-5 shrink-0 place-items-center rounded-full border transition-colors duration-150',
+                'relative z-10 mt-px grid size-5 shrink-0 place-items-center rounded-full border transition-colors duration-150',
                 'before:absolute before:-inset-3 before:content-[""] sm:before:inset-0',
                 on ? 'border-action bg-action text-action-fg' : 'border-rule-2 hover:border-action',
               )}
             >
               {on && <Check size={12} strokeWidth={3} aria-hidden />}
             </button>
-            <span className="min-w-0 flex-1">
+            <Link href={`/tasks?task=${t.id}`} className={cn(STRETCH, 'min-w-0 flex-1')}>
               <span
                 className={cn(
                   'block truncate text-[14.5px] font-medium leading-[1.35]',
@@ -81,7 +84,7 @@ export function TasksTile({ payload }: { payload: Record<string, unknown> }) {
               <span className="t-caption mt-0.5 block truncate text-ink-3">
                 {t.project ?? 'No project'}
               </span>
-            </span>
+            </Link>
             <span
               className={cn(
                 'num shrink-0 pt-0.5 text-[12.5px]',
@@ -91,6 +94,9 @@ export function TasksTile({ payload }: { payload: Record<string, unknown> }) {
               )}
             >
               {tag.text}
+            </span>
+            <span aria-hidden="true" className={cn(CHEVRON, 'shrink-0')}>
+              &rsaquo;
             </span>
           </div>
         )
