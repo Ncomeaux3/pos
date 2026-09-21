@@ -660,7 +660,7 @@ function Line({
       type="button"
       onClick={onClick}
       // The tint runs a little past the text so it reads as a row, not a word.
-      className="-mx-1.5 flex w-[calc(100%+12px)] min-w-0 items-baseline justify-between gap-2 rounded-md px-1.5 py-0.5 text-left text-ink transition-colors duration-150 hover:bg-ink/[.06]"
+      className="-mx-1.5 flex w-[calc(100%+12px)] min-w-0 items-baseline justify-between gap-2 rounded-md px-1.5 text-left text-ink transition-colors duration-150 hover:bg-ink/[.06]"
     >
       <span className="truncate text-[12px]">{name}</span>
       <span className="num shrink-0 text-[11px] text-ink-3">{children}</span>
