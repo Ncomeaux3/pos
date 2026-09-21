@@ -38,27 +38,43 @@ export function Field({
   children: ReactNode
 }) {
   const id = useId()
+  const noteId = `${id}-note`
+  const note = error ?? hint
   const control = isValidElement<{ className?: string }>(children)
     ? cloneElement(children as ReactElement<Record<string, unknown>>, {
+        id,
         'aria-invalid': error ? true : undefined,
-        'aria-describedby': error ? id : undefined,
+        'aria-describedby': note ? noteId : undefined,
         'aria-required': required || undefined,
-        className: cn(children.props.className, error && 'border-bad focus-visible:border-bad'),
+        className: cn(
+          children.props.className,
+          error &&
+            'border-bad focus-visible:border-bad focus-visible:shadow-[0_0_0_3px_color-mix(in_srgb,var(--risk)_28%,transparent)]',
+        ),
       })
     : children
 
+  // The label names the control through htmlFor rather than by wrapping it,
+  // so the message and hint stay out of the control's accessible name and
+  // reach it through aria-describedby alone.
   return (
-    <label className={cn('flex flex-col gap-1.5', className)}>
-      <Eyebrow>{label}</Eyebrow>
+    <div className={cn('flex flex-col gap-1.5', className)}>
+      <label htmlFor={id}>
+        <Eyebrow>{label}</Eyebrow>
+      </label>
       {control}
       {error ? (
-        <span id={id} role="alert" className="text-[12px] leading-[1.4] text-bad">
+        <span id={noteId} role="alert" className="text-[12px] leading-[1.4] text-bad">
           {error}
         </span>
       ) : (
-        hint && <span className="t-caption text-ink-3">{hint}</span>
+        hint && (
+          <span id={noteId} className="t-caption text-ink-3">
+            {hint}
+          </span>
+        )
       )}
-    </label>
+    </div>
   )
 }
 
