@@ -112,7 +112,7 @@ export function Brain({ data }: { data: BrainData }) {
 
   return (
     <>
-      <header className="-mx-[18px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 first:-mt-[max(18px,calc(var(--inset-t)+8px))] first:pt-[calc(8px+var(--inset-t))] md:-mx-7 md:first:-mt-7 md:px-7 lg:h-14 lg:flex-nowrap lg:py-0">
+      <header className="-mx-[18px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 first:-mt-[max(18px,calc(var(--inset-t)+16px))] first:pt-[calc(16px+var(--inset-t))] md:-mx-7 md:first:-mt-7 md:px-7 lg:h-14 lg:flex-nowrap lg:py-0">
         <BackControl />
         <span className="eyebrow shrink-0 whitespace-nowrap text-ink-3">
           Second Brain <span className="text-ink-4">/</span> {crumb}

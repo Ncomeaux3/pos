@@ -42,11 +42,14 @@
 
   /* The status bar and Dynamic Island in standalone mode; zero in a browser tab. */
   --inset-t: env(safe-area-inset-top, 0px);
-  /* The phone's home indicator, with a floor for browsers that report zero. */
-  --inset-b: max(env(safe-area-inset-bottom), 12px);
-  /* The tab capsule: 56px tall, floating one inset above the home indicator.
-     Everything that must clear it (toasts, sheets, the page bottom) measures
-     from this. */
+  /* The tab capsule's distance from the screen edge. A phone reports its home
+     indicator band (34px on a Face ID iPhone) and the capsule sits 20px up,
+     just above the indicator, the way Instagram's bar hugs the bottom; a
+     browser tab reports zero and gets an 8px floor. It floated a whole band
+     higher until 2026-09-21 and gave up a row of content for it. */
+  --inset-b: max(calc(env(safe-area-inset-bottom, 0px) - 14px), 8px);
+  /* The tab capsule: 56px tall, one inset above the edge. Everything that
+     must clear it (toasts, sheets, the page bottom) measures from this. */
   --tabbar: calc(56px + 2 * var(--inset-b));
 
   --bg: light-dark(#f2f2f7, #000000);
@@ -102,6 +105,9 @@
   --glass: light-dark(rgba(255, 255, 255, 0.85), rgba(44, 44, 46, 0.64));
   --glass-strong: light-dark(rgba(255, 255, 255, 0.92), rgba(44, 44, 46, 0.82));
   --glass-panel: light-dark(rgba(255, 255, 255, 0.94), rgba(44, 44, 46, 0.9));
+  /* The phone's tab capsule: see-through enough that content scrolls visibly
+     under it, with the panel's blur so the labels still read. */
+  --glass-tabbar: light-dark(rgba(255, 255, 255, 0.72), rgba(44, 44, 46, 0.7));
   --glass-edge: light-dark(rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.09));
   --glass-line: light-dark(rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.08));
   --field: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.07));
@@ -333,29 +339,30 @@ html {
     to { opacity: 1; }
   }
   /* The phone's tab capsule (MobileTabBar). Scrolling down sets
-   * data-tabbar="compact" on <html> and the capsule becomes a centred 44px
-   * pill of icons; the labels stay in the tree for their accessible names.
-   * The width comes from the tab count the bar sets in --tabs. The global
-   * reduced-motion rule zeroes the transition. Height and width live here
-   * rather than in utilities so the compact rule can override them. */
+   * data-tabbar="compact" on <html> and the capsule drops to 48px with its
+   * labels faded; the width holds and the labels stay in the tree for their
+   * accessible names. It used to collapse to a 44px pill of icons, which the
+   * owner found too much movement (2026-09-21). The global reduced-motion
+   * rule zeroes the transition. Height lives here rather than in a utility so
+   * the compact rule can override it. */
   .tabbar {
     height: 56px;
-    max-width: calc(100% - 32px);
+    background: var(--glass-tabbar);
+    transition: height 240ms var(--ease);
+  }
+  .tabbar-label {
+    height: 14px;
+    line-height: 14px;
     transition:
       height 240ms var(--ease),
-      max-width 240ms var(--ease);
+      opacity 240ms var(--ease);
   }
   html[data-tabbar='compact'] .tabbar {
-    height: 44px;
-    max-width: calc(var(--tabs) * 56px);
+    height: 48px;
   }
   html[data-tabbar='compact'] .tabbar-label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+    height: 0;
+    opacity: 0;
   }
   @media (prefers-reduced-transparency: reduce) {
     .glass,
