@@ -4037,3 +4037,65 @@ test('gestures, holding a dashboard tile enters arrange mode', async ({ page }, 
   await page.waitForTimeout(600)
   await expect(page).not.toHaveURL(/arrange/)
 })
+
+// v1.2 phase 3d: a clickable thing reads as one. On five screens every
+// visible, enabled button carries the pointer and, under the mouse, a border,
+// a fill, a shadow or an underline on itself or the row or card it opens
+// (a Row's target is its header; the tint sits on the wrapper). Desktop
+// only: the ghost treatment is a border on hover, and a touch project has
+// no hover. The goal card opens its drawer from a click on its body.
+test('look, every button reads as clickable and the goal card opens from its body', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Hover is a pointer thing')
+  const bare: string[] = []
+  let checked = 0
+  for (const path of ['/', '/tasks', '/goals', '/finance', '/brain']) {
+    await page.goto(path)
+    // Read the hovered style, not the first frame of its 150ms transition.
+    await page.addStyleTag({ content: '*, *::before, *::after { transition: none !important }' })
+    const buttons = page.getByRole('button')
+    for (let i = 0; i < (await buttons.count()); i++) {
+      const b = buttons.nth(i)
+      if (!(await b.isVisible()) || (await b.isDisabled())) continue
+      await b.hover({ force: true })
+      const verdict = await b.evaluate((el) => {
+        const alpha = (c: string) => {
+          const m = c.match(/[\d.]+/g)
+          return !m ? 0 : m.length === 4 ? Number(m[3]) : m.length === 3 ? 1 : 0
+        }
+        const shows = (n: Element) => {
+          const cs = getComputedStyle(n)
+          return (
+            (parseFloat(cs.borderTopWidth) > 0 && alpha(cs.borderTopColor) > 0) ||
+            alpha(cs.backgroundColor) > 0 ||
+            cs.backgroundImage !== 'none' ||
+            cs.boxShadow !== 'none' ||
+            cs.textDecorationLine.includes('underline')
+          )
+        }
+        // The button itself, the filled circle inside the avatar button, or
+        // the row or card two levels up that carries the hover tint.
+        let n: Element | null = el
+        let seen = el.firstElementChild ? shows(el.firstElementChild) : false
+        for (let depth = 0; n && depth < 3; depth++, n = n.parentElement) if (shows(n)) seen = true
+        const pointer = getComputedStyle(el).cursor
+        return { ok: seen && (pointer === 'pointer' || pointer === 'grab'), pointer, seen }
+      })
+      checked++
+      if (!verdict.ok) {
+        const label = (await b.getAttribute('aria-label')) ?? (await b.innerText()).trim().slice(0, 30)
+        bare.push(`${path} "${label}" cursor=${verdict.pointer} affordance=${verdict.seen}`)
+      }
+    }
+  }
+  expect(checked).toBeGreaterThan(50)
+  expect(bare, bare.join('\n')).toEqual([])
+
+  await page.goto('/goals')
+  const card = page.locator('article', { hasText: 'Net worth $300k' }).first()
+  // The body, well away from the title: the deadline line at the bottom left.
+  // Forced, because the title's stretched hit area is what the click lands
+  // on, and Playwright would otherwise wait for the text to be uncovered.
+  await card.getByText(/Deadline/).click({ force: true })
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page).toHaveURL(/goal=/)
+})
