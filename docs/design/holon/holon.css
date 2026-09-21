@@ -24,7 +24,7 @@
   --ink: light-dark(#1c1c1e, #f2f2f7);
   --ink-2: light-dark(#3a3a3c, #d1d1d6); /* derived */
   --ink-3: light-dark(#5a5a60, #aeaeb2);
-  --ink-4: light-dark(#78787e, #8e8e93); /* derived */
+  --ink-4: light-dark(#66666c, #98989d); /* derived */
   --rule: light-dark(#dcdce1, rgba(255, 255, 255, 0.09)); /* lighter than the kit border, which becomes --rule-2 */
   --rule-2: light-dark(#d1d1d6, #48484a); /* kit border */
 

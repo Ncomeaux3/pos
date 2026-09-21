@@ -212,7 +212,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
         * start under the band. The heading is drawn nowhere and present all
         * the same, because a page with no heading is one a screen reader
         * cannot announce. */}
-      <header className="-mx-[18px] -mt-[max(18px,calc(var(--inset-t)+8px))] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 md:-mx-7 md:-mt-7 md:px-7 lg:h-14 lg:flex-nowrap lg:py-0">
+      <header className="-mx-[18px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 first:-mt-[max(18px,calc(var(--inset-t)+8px))] first:pt-[calc(8px+var(--inset-t))] md:-mx-7 md:first:-mt-7 md:px-7 lg:h-14 lg:flex-nowrap lg:py-0">
         <BackControl />
         <h1 className="sr-only">Skills</h1>
         {/* The view name is desktop only: there is one view, and with the
@@ -385,7 +385,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
           * to the bottom. */}
         <aside
           data-testid="skill-tree-detail-pane"
-          className="flex min-w-0 flex-col bg-bg-deep md:min-h-0 md:overflow-y-auto"
+          className="flex min-w-0 flex-col bg-bg md:min-h-0 md:overflow-y-auto"
         >
           <div className="px-[22px] pt-[18px]">
             <span className="eyebrow text-ink-3">Attributes</span>

@@ -27,6 +27,14 @@ export default async function AppLayout({ children }: LayoutProps<'/'>) {
       <CommandPalette nav={[...nav, ...NAV_FOOTER, ...offRail]} />
       <PullToRefresh />
       <EdgeBack />
+      {/* The status bar is translucent in standalone mode (black-translucent
+        * in app/layout.tsx), so scrolled rows would pass under the clock with
+        * nothing behind them. This is the material iOS bars put there: the
+        * height of the inset, zero in a browser tab, none on the desktop. */}
+      <div
+        aria-hidden
+        className="glass-panel statusbar pointer-events-none fixed inset-x-0 top-0 z-40 h-[var(--inset-t)] rounded-none border-0 shadow-none md:hidden"
+      />
 
       <main
         // The sidebar is fixed so the rail never scrolls with the page; this
