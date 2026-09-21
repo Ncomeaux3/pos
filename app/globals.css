@@ -56,9 +56,9 @@
   --ink: light-dark(#1c1c1e, #f2f2f7);
   --ink-2: light-dark(#3a3a3c, #d1d1d6); /* derived */
   --ink-3: light-dark(#5a5a60, #aeaeb2);
-  /* Placeholders, disabled controls, separators and idle dots: 3.9:1 light,
-   * 5:1 dark. Not for copy the reader needs; that is ink-3. */
-  --ink-4: light-dark(#78787e, #8e8e93); /* derived */
+  /* Placeholders, disabled controls, separators and idle dots: 4.5:1 light,
+   * 4.9:1 dark on the sunken input fill. Not for copy the reader needs; that is ink-3. */
+  --ink-4: light-dark(#66666c, #98989d); /* derived */
   --rule: light-dark(#dcdce1, rgba(255, 255, 255, 0.09)); /* hairline, lighter than the kit border */
   --rule-2: light-dark(#d1d1d6, #48484a); /* the kit border: controls and sheet edges */
 
