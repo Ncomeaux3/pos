@@ -64,6 +64,24 @@ one CI carries as well until the pair is added to the secrets.
 
 ## Done
 
+**Fix: the SimpleFIN sign and the budget drawer's list** (2026-09-22, branch
+`fix-finance-sign-and-drawers`). Found on production the morning after 5a
+merged: purchases read as green incoming amounts on every account. SimpleFIN
+sends money out as negative ("positive numbers indicate money being deposited
+into the account"), this schema says positive is money out, and nothing
+flipped between them, so every pulled row was inverted. Budgets summed to
+nothing, `detectRecurring` skipped every real charge as income, and the
+digest's unusual list named deposits. One negation in
+`integrations/simplefin/client.ts` (now `parseAccounts`, pure and tested),
+plus migration `20260922120000_finance_simplefin_sign` correcting the stored
+rows and emptying the derived `finance.recurring` for re-detection. Balances
+are untouched: a card owed is negative in both conventions. Second bug from
+the same report: a budget drawer listed the page's 60 most recent rows
+filtered by category while its Spent figure was a month-to-date SQL sum, so
+rent's charge vanished behind newer rows. The page now also loads this month
+in full and the drawer lists exactly the rows behind the figure, captioned
+"Transactions · this month"; the main list no longer claims "30 days".
+
 **v1.2 Phase 5a: Finance, full pull, pending, categories** (2026-09-21, branch
 `phase-5a-finance-pull`). `finance.category.kind` (`expense`, `income`,
 `transfer`, `credit`) with eleven categories added and `Transfer` renamed
