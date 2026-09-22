@@ -29,10 +29,16 @@ function done(): ActionResult {
  * Transactions tab loads the newest rows only and a search has to reach the
  * rest.
  */
-export async function searchTransactions(q: string): Promise<ReturnType<typeof transactionItem>[]> {
+export async function searchTransactions(
+  q: string,
+): Promise<{ rows: ReturnType<typeof transactionItem>[]; more: boolean }> {
   await requireOwner()
-  return (await listTransactions({ search: q, limit: 200 })).map(transactionItem)
+  // One past the cap, so the screen can say there are more than it shows.
+  const rows = await listTransactions({ search: q, limit: SEARCH_CAP + 1 })
+  return { rows: rows.slice(0, SEARCH_CAP).map(transactionItem), more: rows.length > SEARCH_CAP }
 }
+
+const SEARCH_CAP = 200
 
 /**
  * Recategorise a transaction. The rule is offered afterwards, not learned

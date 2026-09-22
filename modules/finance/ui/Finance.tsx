@@ -327,7 +327,7 @@ export function Finance({ data }: { data: FinanceData }) {
   // The tab holds the newest rows, so a search asks the server for the whole
   // ledger. Two characters before it asks, a quarter second after typing stops.
   const [query, setQuery] = useState('')
-  const [found, setFound] = useState<{ q: string; rows: FinanceData['transactions'] } | null>(null)
+  const [found, setFound] = useState<{ q: string; rows: FinanceData['transactions']; more: boolean } | null>(null)
   const q = query.trim()
   const searching = q.length >= 2
   useEffect(() => {
@@ -335,7 +335,7 @@ export function Finance({ data }: { data: FinanceData }) {
     let live = true
     const timer = setTimeout(() => {
       searchTransactions(q)
-        .then((rows) => live && setFound({ q, rows }))
+        .then((result) => live && setFound({ q, ...result }))
         .catch(() => live && toast('Search failed'))
     }, 250)
     return () => {
@@ -711,7 +711,7 @@ export function Finance({ data }: { data: FinanceData }) {
           )}
 
           {tab === 'accounts' && (
-            <RowList className="mt-[18px]">
+            <RowList className="mt-[18px] max-w-3xl">
               {data.accounts.map((a) => (
                 <Row
                   key={a.id}
@@ -754,7 +754,7 @@ export function Finance({ data }: { data: FinanceData }) {
           )}
 
           {tab === 'budgets' && (
-            <div className="mt-[18px] space-y-3">
+            <div className="mt-[18px] max-w-3xl space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <span className={cn('label text-[11px]', hot.length > 0 ? 'text-warn' : 'text-ink-3')}>
                   {hot.length} over {data.alertThreshold}%
@@ -802,7 +802,7 @@ export function Finance({ data }: { data: FinanceData }) {
           )}
 
           {tab === 'subscriptions' && (
-            <div className="mt-[18px] space-y-3">
+            <div className="mt-[18px] max-w-3xl space-y-3">
               {upcoming.length === 0 ? (
                 <EmptyState headline="Nothing detected">
                   A subscription is three charges from the same merchant, within ten percent of each
@@ -836,7 +836,7 @@ export function Finance({ data }: { data: FinanceData }) {
           )}
 
           {tab === 'transactions' && (
-            <div className="mt-[18px]">
+            <div className="mt-[18px] max-w-3xl">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 {/* The counts are the ledger's, not this list's: 607 rows had
                   * no category behind a window of 60, which is why there is a
@@ -866,7 +866,7 @@ export function Finance({ data }: { data: FinanceData }) {
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search description, category, account or amount"
+                placeholder="Merchant, category, account or amount"
                 aria-label="Search transactions"
                 className={cn(fieldClass, 'mt-3 w-full')}
               />
@@ -880,7 +880,7 @@ export function Finance({ data }: { data: FinanceData }) {
               ) : (
               <TransactionList
                 transactions={shownTransactions}
-                caption={searching ? `Results for “${q}”` : undefined}
+                caption={searching ? `Results for “${q}”${found?.more ? ', newest 200, narrow it to see the rest' : ''}` : undefined}
                 total={
                   searching
                     ? undefined
@@ -923,6 +923,7 @@ export function Finance({ data }: { data: FinanceData }) {
           />
           <TransactionList
             transactions={accountTx}
+            showAccount={false}
             categories={data.categories}
             onRecategorise={(id, categoryId) => runFor(() => recategorise(id, categoryId), 'Filed')}
             onLearn={(id, categoryId) => runFor(() => learnFor(id, categoryId), 'Rule learned')}
@@ -1124,8 +1125,11 @@ function TransactionList({
   total,
   onRecategorise,
   onLearn,
+  showAccount = true,
 }: {
   transactions: FinanceData['transactions']
+  /** Off inside an account's own drawer, whose title already names it. */
+  showAccount?: boolean
   /** What this list is: the drawers scope theirs and say so. */
   caption?: string
   /**
@@ -1206,8 +1210,7 @@ function TransactionList({
                             : 'Rule'}
                     </StatusChip>
                   )}
-                  {' · '}
-                  {t.accountName}
+                  {showAccount && ` · ${t.accountName}`}
                 </span>
               </span>
               <span className={cn('num text-right text-[13px]', amount.incoming ? 'text-ok' : 'text-ink')}>

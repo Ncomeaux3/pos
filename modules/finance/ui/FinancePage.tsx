@@ -206,7 +206,7 @@ export default async function FinancePage() {
   return (
     <div className="space-y-7">
       <PageHeader
-        eyebrow="Finance / Overview"
+        eyebrow="Finance"
         // The artboard puts the provider and the last pull in the first band,
         // beside the search, with the button that does it now.
         status={syncBand}
