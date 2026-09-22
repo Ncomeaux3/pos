@@ -187,7 +187,24 @@ export async function accounts(
     throw new SimpleFinError(res.status, `SimpleFIN ${res.status}: ${detail}`)
   }
 
-  const body = (await res.json()) as AccountSet
+  return parseAccounts((await res.json()) as AccountSet)
+}
+
+/**
+ * The protocol's shape into this module's.
+ *
+ * **The sign is flipped here.** SimpleFIN says "positive numbers indicate money
+ * being deposited into the account"; this schema says positive is money out
+ * (migration 20260909020000, and modules/finance/money.ts). Storing the bank's
+ * sign unchanged inverted every purchase: budgets summed to nothing, recurring
+ * detection skipped every real charge as income, and a deposit was an unusual
+ * charge. One negation at the boundary is the whole fix, and nothing
+ * downstream has to know the bank's convention.
+ *
+ * The balance is not flipped: a card owed is negative in both conventions, and
+ * net worth is a plain sum over balances.
+ */
+export function parseAccounts(body: AccountSet): { warnings: string[]; accounts: Account[] } {
   const warnings = [...(body.errlist ?? []).map((e) => e.msg), ...(body.errors ?? [])]
 
   return {
@@ -204,7 +221,7 @@ export async function accounts(
         // payee and memo are optional extras some institutions send. The
         // categoriser reads whichever string is richest, so prefer them.
         description: t.payee || t.description || t.memo || '',
-        amountCents: toCents(t.amount),
+        amountCents: -toCents(t.amount),
         // `posted` is 0 while a transaction is pending, and epoch(0) is 1970,
         // which would file it under the Nixon administration.
         occurredOn: epoch(t.posted || t.transacted_at || Math.floor(Date.now() / 1000)),

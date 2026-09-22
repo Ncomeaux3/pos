@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { inferKind, toCents } from './client'
+import { inferKind, parseAccounts, toCents } from './client'
 
 // SimpleFIN sends money as a decimal string in the account's currency and the
 // column is bigint cents, so this conversion sits between the bank and every
@@ -72,5 +72,52 @@ describe('inferKind', () => {
   it('does not fire on a word that merely contains a keyword', () => {
     // "cardiology" contains "card", and word boundaries are what stop it.
     expect(inferKind('Cardiology HSA')).toBe('other')
+  })
+})
+
+// The sign. SimpleFIN says "positive numbers indicate money being deposited
+// into the account"; this schema says positive is money out. Storing the
+// protocol's sign unchanged inverted every purchase in production, which read
+// as income: budgets summed to nothing, recurring detection saw only the
+// paycheck, and the unusual list named deposits. The flip lives here, at the
+// protocol boundary, so nothing downstream has to know the bank's convention.
+describe('parseAccounts', () => {
+  const body = {
+    accounts: [
+      {
+        id: 'acct-1',
+        name: 'Card 1009',
+        currency: 'USD',
+        balance: '-231.00',
+        'balance-date': 1_760_000_000,
+        org: { name: 'Demo Card' },
+        transactions: [
+          { id: 't1', posted: 1_759_900_000, amount: '-32.45', description: 'Corner Bistro' },
+          { id: 't2', posted: 1_759_800_000, amount: '12.30', description: 'Refund' },
+          { id: 't3', posted: 0, transacted_at: 1_759_990_000, amount: '-8.00', description: 'Taco truck' },
+        ],
+      },
+    ],
+  }
+
+  it('stores a purchase as money out and a refund as money in', () => {
+    const [account] = parseAccounts(body).accounts
+    expect(account.transactions.map((t) => t.amountCents)).toEqual([3245, -1230, 800])
+  })
+
+  it('leaves the balance in the protocol’s sign, where a card owed is negative', () => {
+    // Net worth is a plain sum over balances, so a card has to stay negative.
+    expect(parseAccounts(body).accounts[0].balanceCents).toBe(-23100)
+  })
+
+  it('marks an unposted row pending and dates it from transacted_at', () => {
+    const pending = parseAccounts(body).accounts[0].transactions[2]
+    expect(pending.pending).toBe(true)
+    expect(pending.occurredOn.getTime()).toBe(1_759_990_000_000)
+  })
+
+  it('reads both the version 1 and version 2 error shapes', () => {
+    expect(parseAccounts({ errlist: [{ code: 'x', msg: 'bank down' }] }).warnings).toEqual(['bank down'])
+    expect(parseAccounts({ errors: ['bank down'] }).warnings).toEqual(['bank down'])
   })
 })

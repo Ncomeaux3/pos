@@ -3,7 +3,7 @@ import { afterAll, afterEach, describe, expect, it } from 'vitest'
 process.env.DATABASE_URL ??= 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
 
 const { db } = await import('@/core/db')
-const { categorySpend, setCountPending } = await import('./data')
+const { categorySpend, listTransactions, setCountPending } = await import('./data')
 
 // v1.2 phase 5a. The budget arithmetic against the real schema: only the
 // expense kind is a budget, a credit filed there is a negative row and nets,
@@ -14,15 +14,15 @@ async function category(name: string): Promise<string> {
   return rows[0].id
 }
 
-async function add(categoryName: string, cents: number, pending = false): Promise<void> {
+async function add(categoryName: string, cents: number, pending = false, daysAgo = 0): Promise<void> {
   const { rows } = await db().query<{ id: string }>(
     `insert into finance.account (name, kind, source, external_id) values ('Card', 'credit', 'demo', 'test-card')
      on conflict (source, external_id) do update set name = excluded.name returning id`,
   )
   await db().query(
     `insert into finance.transaction (account_id, descriptor, amount_cents, occurred_on, category_id, pending, source)
-     values ($1, $2, $3, core.today(), $4, $5, 'demo')`,
-    [rows[0].id, categoryName, cents, await category(categoryName), pending],
+     values ($1, $2, $3, core.today() - $6::int, $4, $5, 'demo')`,
+    [rows[0].id, categoryName, cents, await category(categoryName), pending, daysAgo],
   )
 }
 
@@ -33,6 +33,27 @@ afterEach(async () => {
 })
 afterAll(async () => {
   await db().end()
+})
+
+describe('listTransactions', () => {
+  it('scopes to this month, so the rows under a budget are the rows behind its Spent', async () => {
+    // The drawer used to filter the 60 most recent rows by category, so a
+    // charge with newer rows in front of it vanished while its Spent figure
+    // stayed. The list and the figure now read the same set.
+    await add('Rent', 145_000)
+    // Dated before this month began, whatever today is.
+    await add('Rent', 99_000, false, new Date().getDate() + 1)
+
+    const id = await category('Rent')
+    const month = await listTransactions({ categoryId: id, thisMonth: true, limit: 1000 })
+    expect(month.map((t) => Number(t.amount_cents))).toEqual([145_000])
+
+    const spent = Number((await categorySpend()).find((c) => c.name === 'Rent')?.spent_cents)
+    expect(spent).toBe(month.reduce((sum, t) => sum + Number(t.amount_cents), 0))
+
+    // Without the scope the category's whole history comes back.
+    expect(await listTransactions({ categoryId: id, limit: 1000 })).toHaveLength(2)
+  })
 })
 
 describe('categorySpend', () => {

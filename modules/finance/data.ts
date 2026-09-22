@@ -121,6 +121,8 @@ export type TransactionRow = {
 export async function listTransactions(filter: {
   accountId?: string
   categoryId?: string
+  /** This calendar month only, in the owner's zone. What a budget's Spent covers. */
+  thisMonth?: boolean
   limit?: number
 }): Promise<TransactionRow[]> {
   const { rows } = await db().query<TransactionRow>(
@@ -132,9 +134,10 @@ export async function listTransactions(filter: {
        left join finance.category c on c.id = t.category_id
       where ($1::uuid is null or t.account_id = $1)
         and ($2::uuid is null or t.category_id = $2)
+        and (not $4::boolean or t.occurred_on >= date_trunc('month', core.today())::date)
       order by t.occurred_on desc, t.created_at desc
       limit $3`,
-    [filter.accountId ?? null, filter.categoryId ?? null, filter.limit ?? 100],
+    [filter.accountId ?? null, filter.categoryId ?? null, filter.limit ?? 100, filter.thisMonth ?? false],
   )
   return rows
 }
