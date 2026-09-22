@@ -51,6 +51,16 @@ v1.2 phase 5c, all 2026-09-22, made while building; reasons in decisions/log.md 
 - `learnRule()` returns its pattern so every caller back-files, and the demo seed resets a non-manual row's category so the fixture stays deterministic.
 - A rule's pattern is not editable on screen, only its category; delete and file again is the same outcome.
 
+finance-charts, all 2026-09-22, from a three-round owner interview after the first day on the phase 5b cash flow card; reasons in decisions/log.md under that date, plan in docs/plans/finance-charts.md:
+
+- A per-account `in_cash_flow` switch, investments and `other` off by default (13 of 21), picked in a drawer on the Finance page.
+- The filter covers the cash flow card and the dashboard's net-this-month, which is the same number; budgets, the category trend and net worth are untouched.
+- A 3/6/12/24 month range in `finance.settings`, default 12, over cash flow and the category trend; net worth keeps its 30 day daily line.
+- "Net" becomes "Left over" against a labelled zero, with a readout on hover and tap.
+- Touch and keyboard land on the shared `LineChart`, so all four charts gain them.
+- Internal transfers stay a rules problem; no pair-matching heuristic.
+- Three phases, three PRs, accounts first.
+
 v2, all 2026-09-14, from the spec review; the sixteen entries are in decisions/log.md, the spec in docs/SPEC-v2.md and the plan in docs/plans/v2-agent-layer.md:
 
 - Runner topology, ledger shape, integration extension, cost cap, plan location, no in-app chat, first integrations, voice out, secret store and queue, the default permission level, sync scope, start order, Gmail's scope and OAuth posture, and an empty auto-approve table. Fourteen answers from the owner.
