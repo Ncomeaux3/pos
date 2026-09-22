@@ -12,9 +12,12 @@ import {
   lastPullDetail,
   listAccounts,
   listCategories,
+  listRules,
   listTransactions,
   netWorthSeries,
+  transactionCounts,
 } from '../data'
+import { unfiledMerchants } from '../rules'
 import { monthPace } from '../money'
 import { spine } from '@/core/series'
 import { Finance, type FinanceData } from './Finance'
@@ -39,6 +42,10 @@ export default async function FinancePage() {
     trend,
     transactions,
     monthTransactions,
+    uncategorisedTransactions,
+    counts,
+    rules,
+    unfiled,
     todayIso,
     sync,
     alertThreshold,
@@ -59,6 +66,17 @@ export default async function FinancePage() {
     // most recent by category left the drawer empty whenever newer rows had
     // pushed the month's charge out of that window, which is what rent did.
     listTransactions({ thisMonth: true, limit: 1000 }),
+    // v1.2 phase 5c. The Uncategorised chip's rows, which are mostly older
+    // than either window above: 607 of the owner's 622 rows had no category
+    // and the tab's 60 most recent could not reach them.
+    // Bounded well below the month window above: every row here is serialised
+    // into the client component, the list that shows them is inside the phone's
+    // `md:hidden` block, and the chip's count is the ledger's either way, so
+    // the list says "200 of 607" rather than claiming it holds them all.
+    listTransactions({ uncategorised: true, limit: 200 }),
+    transactionCounts(),
+    listRules(),
+    unfiledMerchants(),
     ownerToday(),
     syncState('finance'),
     getAlertThreshold(),
@@ -134,12 +152,29 @@ export default async function FinancePage() {
     trendMonths: trend.months,
     trendCategories: trend.categories,
 
-    // The union, by id: the newest rows for the Transactions tab and every row
-    // of this month for the drawers.
-    transactions: [
-      ...transactions,
-      ...monthTransactions.filter((m) => !transactions.some((t) => t.id === m.id)),
-    ]
+    counts,
+    rules: rules.map((r) => ({
+      id: r.id,
+      pattern: r.pattern,
+      categoryId: r.category_id,
+      categoryName: r.category_name,
+      classifiedBy: r.classified_by,
+      confidence: r.confidence === null ? null : Number(r.confidence),
+    })),
+    unfiled,
+
+    // The union, by id: the newest rows for the Transactions tab, every row of
+    // this month for the drawers, and everything unfiled for the chip.
+    transactions: (() => {
+      const seen = new Set(transactions.map((t) => t.id))
+      const union = [...transactions]
+      for (const row of [...monthTransactions, ...uncategorisedTransactions]) {
+        if (seen.has(row.id)) continue
+        seen.add(row.id)
+        union.push(row)
+      }
+      return union
+    })()
       // Newest first across the two queries. Array.sort is stable, so rows on
       // the same day keep the order the database gave them.
       .sort((a, b) => (a.occurred_on < b.occurred_on ? 1 : a.occurred_on > b.occurred_on ? -1 : 0))

@@ -52,9 +52,13 @@ to "second" is `null`: everything in that file exists to return null less often,
 because a month is hundreds of rows and sending each to a model would be the
 largest line on the bill.
 
-Ranking is manual before automatic, then longest pattern first. Manual wins
-outright because the owner's correction is the one fact a job may never
-overwrite. Length breaks the rest, so `amazon prime` beats `amazon`.
+Ranking is manual before automatic, then `priority`, then longest pattern
+first. Manual wins outright because the owner's correction is the one fact a job
+may never overwrite. Length breaks the rest, so `amazon prime` beats `amazon`.
+`priority` exists for one case and is set only on the three peer built-ins:
+"Zelle Transfer to Jane" carries both `zelle` and `transfer to`, and on length
+alone money to a person was filed `Account transfer`, whose kind is never
+counted as spending.
 
 `learnFrom()` turns a correction into a rule, which is the compounding value of
 the module: every rule learned is a model call not made next month. It strips
@@ -63,9 +67,9 @@ then drops a short token the reference was sitting behind. That last step is
 what turns `WHOLEFDS ABC 10045` into `wholefds` while leaving `BIG SPOON
 CREAMERY` intact, and it is the case worth reading the test for.
 
-The nightly `categorise` job never sends anything to a model. Unmatched rows
-stay uncategorised and visible; the model arm belongs behind the guard with a
-confidence and a proposal, not on a sweep.
+The nightly `categorise` job does not send anything to a model yet; that arm is
+v1.2 phase 5d. Unmatched rows stay uncategorised and are reachable through the
+Transactions tab's Uncategorised chip and the Rules drawer's Unfiled list.
 
 Since v1.2 phase 5a, filing a row by hand does not learn a rule by itself: the
 row offers "Always file {merchant} as {category}", and Always writes the rule
@@ -78,6 +82,53 @@ Account transfer; "membership rewards credit" is Statement credit; "dining
 credit" and "uber credit" net against Dining and Travel. Money back on a card
 from a merchant charged in the last 90 days (`matchRefund`) files into that
 charge's category, or into Refund when the charge had none.
+
+## Rules, and what writing one does
+
+Since v1.2 phase 5c a rule is not only a thing the next sync consults: writing,
+editing or deleting one re-files the history it matches, straight away. That is
+the only way a backlog clears, and on the owner's real data the backlog was 607
+of 622 rows across 172 merchants, because `BUILTIN_RULES` is eleven payment,
+transfer and credit patterns and nothing there files an ordinary purchase.
+
+`rules.ts` is the one place that answers which rows a rule touches.
+`refile(pattern)` selects every row with `is_manual = false` whose normalised
+descriptor contains the pattern and runs the *whole* ranked set over each one,
+writing the winner or clearing the row when nothing matches any more. Running
+the set rather than forcing the one rule that occasioned it is what stops a
+short new rule stealing rows a longer one owns, and what lets a delete hand its
+rows to the next rule instead of orphaning them. `applyRule` and `removeRule`
+are each one line over it, and neither can write a manual row: the guard is in
+the SQL as well as in the select.
+
+`loadRuleSet()` shapes the stored rules and the built-ins together, and carries
+the 90 days of card charges the refund matcher needs; `classify()` beside it is
+the one answer to "what is this row", rules first and then `matchRefund`. The
+nightly job reads both, so a rule cannot mean one thing when it is written and
+another at 3am, and a back-file cannot clear a refund the sweep had filed.
+
+Two bounds worth knowing. `unfiledMerchants()` reads the 5000 newest
+uncategorised rows: past that the oldest unfiled ones are not listed, and the
+Uncategorised chip's count (a `count(*)` over the whole ledger) is the number
+that stays honest. The nightly sweep takes 5000 rows a run. The SQL normalisation in `NORMALISED` has to agree with
+`normalise()` in `categorise.ts`; a pattern is normalised before it is stored,
+which is also why it is safe in a `LIKE` without escaping.
+
+`finance.category_rule` carries `classified_by` ('human' or 'model') and
+`confidence`, which SPEC asks of every model decision. `is_manual` keeps its one
+job as the override flag. The tools are `write_rule` and `delete_rule`, both
+unguarded for the reason `categorise` is: hundreds of rows a month through the
+Review inbox would make the inbox useless.
+
+The screen is the Rules drawer (`ui/RulesDrawer.tsx`), opened from the
+Transactions tab on the phone and from the Budgets card head on the desktop,
+which has no transactions surface of its own. It lists the owner's and the
+model's rules with a provenance badge and a category select (the pattern is not
+editable on screen: delete and file again reaches the same state, and the
+pattern column is 80px on a phone), the eleven built-ins read-only below them,
+and an Unfiled list grouped by `groupUnfiled()` onto the pattern a rule
+would use, so two store numbers of one merchant are one row. Every write says
+how many rows moved, because a back-file moves past budgets with it.
 
 ### Category kinds
 

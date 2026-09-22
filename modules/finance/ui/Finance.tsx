@@ -16,6 +16,7 @@ import {
   MetricTile,
   Overlay,
   PaceBar,
+  PillGroup,
   Row,
   RowList,
   STRETCH,
@@ -42,10 +43,13 @@ import {
 } from '../money'
 import { CashFlow, type MonthFlowPoint } from './CashFlow'
 import { CategoryTrend, type CategorySeriesPoint } from './CategoryTrend'
+import { RulesDrawer, type RuleItem, type UnfiledItem } from './RulesDrawer'
 import {
+  deleteRule,
   learnFor,
   recategorise,
   saveBudget,
+  saveRule,
   saveCountPending,
   saveThreshold,
   setSubscriptionStatus,
@@ -141,7 +145,13 @@ export type FinanceData = {
     isManual: boolean
     pending: boolean
   }[]
+  /** Counted over the whole ledger, not over the rows loaded above. */
+  counts: { all: number; uncategorised: number; pending: number }
+  rules: RuleItem[]
+  unfiled: UnfiledItem[]
 }
+
+type TxFilter = 'all' | 'uncategorised' | 'pending'
 
 type Tab = 'overview' | 'accounts' | 'budgets' | 'subscriptions' | 'transactions'
 
@@ -312,6 +322,14 @@ export function Finance({ data }: { data: FinanceData }) {
   // A cancelled subscription leaves the Upcoming list and its KPI count the
   // moment Cancel is pressed, same shape as Inbox.tsx's act(): optimistic,
   // reverted with a toast on failure.
+  const [txFilter, setTxFilter] = useState<TxFilter>('all')
+  const shownTransactions =
+    txFilter === 'all'
+      ? data.transactions
+      : txFilter === 'pending'
+        ? data.transactions.filter((t) => t.pending)
+        : data.transactions.filter((t) => t.categoryName === null)
+
   const [gone, setGone] = useState<string[]>([])
   const cancel = (u: FinanceData['upcoming'][number]) => {
     setGone((g) => [...g, u.id])
@@ -535,12 +553,46 @@ export function Finance({ data }: { data: FinanceData }) {
           )}
 
           {tab === 'transactions' && (
-            <TransactionList
-              transactions={data.transactions}
-              categories={data.categories}
-              onRecategorise={(id, categoryId) => runFor(() => recategorise(id, categoryId), 'Filed')}
-              onLearn={(id, categoryId) => runFor(() => learnFor(id, categoryId), 'Rule learned')}
-            />
+            <div className="mt-[18px]">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                {/* The counts are the ledger's, not this list's: 607 rows had
+                  * no category behind a window of 60, which is why there is a
+                  * filter at all. */}
+                <PillGroup
+                  label="Transaction filter"
+                  value={txFilter}
+                  onChange={setTxFilter}
+                  options={[
+                    { value: 'all', label: 'All', count: data.counts.all },
+                    { value: 'uncategorised', label: 'Uncategorised', count: data.counts.uncategorised },
+                    { value: 'pending', label: 'Pending', count: data.counts.pending },
+                  ]}
+                />
+                {/* ml-auto, not justify-between alone: the three pills fill
+                  * the row at 402 and the button wraps, and a wrapped line
+                  * with one item on it starts at the left edge. */}
+                <ActionButton
+                  size="sm"
+                  className="ml-auto"
+                  onClick={() => setParams({ rules: '1' }, { push: true })}
+                >
+                  Rules
+                </ActionButton>
+              </div>
+              <TransactionList
+                transactions={shownTransactions}
+                total={
+                  txFilter === 'all'
+                    ? data.counts.all
+                    : txFilter === 'pending'
+                      ? data.counts.pending
+                      : data.counts.uncategorised
+                }
+                categories={data.categories}
+                onRecategorise={(id, categoryId) => runFor(() => recategorise(id, categoryId), 'Filed')}
+                onLearn={(id, categoryId) => runFor(() => learnFor(id, categoryId), 'Rule learned')}
+              />
+            </div>
           )}
         </Segments>
       </div>
@@ -726,6 +778,12 @@ export function Finance({ data }: { data: FinanceData }) {
                   <span className={cn('label text-[11px]', hot.length > 0 ? 'text-warn' : 'text-ink-3')}>
                     {hot.length} over {data.alertThreshold}%
                   </span>
+                  {/* Rules live with transactions, and the desktop page has no
+                    * transactions surface of its own: the drawer's Unfiled
+                    * list is how this width reaches what nothing filed. */}
+                  <ActionButton size="sm" onClick={() => setParams({ rules: '1' }, { push: true })}>
+                    Rules
+                  </ActionButton>
                   <ActionButton size="sm" onClick={() => setParams({ limits: '1' }, { push: true })}>
                     Edit limits
                   </ActionButton>
@@ -879,6 +937,18 @@ export function Finance({ data }: { data: FinanceData }) {
         </Overlay>
       )}
 
+      {params.get('rules') === '1' && (
+        <RulesDrawer
+          rules={data.rules}
+          unfiled={data.unfiled}
+          categories={data.categories}
+          onClose={() => setParams({ rules: null })}
+          onSave={saveRule}
+          onDelete={deleteRule}
+          toast={toast}
+        />
+      )}
+
       {params.get('limits') === '1' && (
         <LimitsDrawer
           budgets={data.budgets}
@@ -1004,12 +1074,18 @@ function TransactionList({
   transactions,
   categories,
   caption = 'Transactions',
+  total,
   onRecategorise,
   onLearn,
 }: {
   transactions: FinanceData['transactions']
   /** What this list is: the drawers scope theirs and say so. */
   caption?: string
+  /**
+   * How many rows exist, when more exist than were loaded. The count line then
+   * says so rather than letting the filter chip and the list contradict.
+   */
+  total?: number
   categories: FinanceData['categories']
   onRecategorise: (id: string, categoryId: string) => Promise<ActionResult>
   onLearn: (id: string, categoryId: string) => Promise<ActionResult>
@@ -1036,7 +1112,9 @@ function TransactionList({
       <div className="flex items-center justify-between">
         <Eyebrow>{caption}</Eyebrow>
         <span className="label text-[11px] text-ink-3">
-          {transactions.length} {transactions.length === 1 ? 'transaction' : 'transactions'}
+          {total !== undefined && total > transactions.length
+            ? `${transactions.length} of ${total} transactions`
+            : `${transactions.length} ${transactions.length === 1 ? 'transaction' : 'transactions'}`}
         </span>
       </div>
       <div className="mt-2 grid grid-cols-[64px_minmax(0,1fr)_auto] gap-x-3 border-b border-rule-2 py-[7px]">

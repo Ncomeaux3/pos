@@ -93,30 +93,39 @@ export async function seed(): Promise<number> {
     cents: number
     daysAgo: number
     account: string
-    category: string
+    /** Null is a row nothing has filed yet, which is what the Rules drawer is for. */
+    category: string | null
     pending?: boolean
   }) => {
-    const { rows } = await db().query<{ id: string }>(
+    await db().query(
       `insert into finance.transaction
          (account_id, descriptor, merchant, amount_cents, occurred_on,
           category_id, classified_by, confidence, pending, source, external_id)
-       values ($1, $2, $2, $3, core.today() - $4::int, $5, 'rule', 1, $7, 'demo', $6)
+       values ($1, $2, $2, $3, core.today() - $4::int, $5,
+               case when $5::uuid is null then null else 'rule' end,
+               case when $5::uuid is null then null else 1 end,
+               $7, 'demo', $6)
        on conflict (source, external_id) do update
          set amount_cents = excluded.amount_cents, occurred_on = excluded.occurred_on,
-             pending = excluded.pending
-       returning id`,
+             pending = excluded.pending,
+             -- The category too, since v1.2 phase 5c: the fixture has a row
+             -- nothing has filed, and a screen test that files it would
+             -- otherwise leave it filed for every run after.
+             category_id = excluded.category_id,
+             classified_by = excluded.classified_by,
+             confidence = excluded.confidence
+         where finance.transaction.is_manual = false`,
       [
         accounts.get(args.account),
         args.descriptor,
         args.cents,
         args.daysAgo,
-        categories.get(args.category) ?? null,
+        args.category === null ? null : (categories.get(args.category) ?? null),
         args.externalId,
         args.pending ?? false,
       ],
     )
     written++
-    return rows[0].id
   }
 
   // Four monthly cycles, so the detector has the three it needs plus one.
@@ -155,7 +164,14 @@ export async function seed(): Promise<number> {
   // A lived-in current month. Without this the scatter above lands mostly in
   // earlier months, every budget reads near zero, and the screen never shows
   // the state it exists to show: a category running hot with days still to go.
-  const THIS_MONTH = [
+  const THIS_MONTH: {
+    merchant: string
+    cents: number
+    category: string | null
+    account: string
+    daysAgo: number
+    pending?: boolean
+  }[] = [
     { merchant: 'Kroger', cents: 9240, category: 'Groceries', account: 'checking', daysAgo: 1 },
     { merchant: 'Publix', cents: 6120, category: 'Groceries', account: 'credit', daysAgo: 3 },
     { merchant: 'Costco', cents: 15_880, category: 'Groceries', account: 'credit', daysAgo: 5 },
@@ -175,6 +191,12 @@ export async function seed(): Promise<number> {
     { merchant: 'Payment thank you', cents: -231_000, category: 'Credit card payment', account: 'credit', daysAgo: 7 },
     { merchant: 'Amex dining credit', cents: -1000, category: 'Dining', account: 'credit', daysAgo: 5 },
     { merchant: 'Taco truck', cents: 1800, category: 'Dining', account: 'credit', daysAgo: 0, pending: true },
+    // v1.2 phase 5c. Two branches of one merchant that no rule matches, so the
+    // Uncategorised chip has a count and the Rules drawer has a group worth
+    // one rule. The store numbers are the point: they are why the unfiled list
+    // groups on the learned pattern and not on the stored merchant.
+    { merchant: 'DUTCH BROS #4412', cents: 1180, category: null, account: 'credit', daysAgo: 8 },
+    { merchant: 'DUTCH BROS #9920', cents: 940, category: null, account: 'credit', daysAgo: 12 },
   ]
 
   for (const [i, tx] of THIS_MONTH.entries()) {

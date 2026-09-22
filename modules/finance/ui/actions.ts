@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireOwner } from '@/core/auth'
-import { callTool, ToolInputError } from '@/core/tools'
+import { callTool, ToolInputError, type CallResult } from '@/core/tools'
 
 // Server actions are standalone POST endpoints addressed by id, so the (app)
 // layout does not run for them and each one authenticates independently.
@@ -47,6 +47,51 @@ export async function learnFor(id: string, categoryId: string): Promise<ActionRe
   try {
     await callTool('finance', 'learn_rule', { transaction_id: id, category_id: categoryId }, { source: 'ui' })
     return done()
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+/**
+ * How many rows a rule moved, out of the tool's result. Neither rule tool is
+ * guarded, so `proposed` never happens here; reading it as zero is still the
+ * honest answer if one ever were.
+ */
+function movedIn(result: CallResult): number {
+  if (result.status !== 'done') return 0
+  const moved = (result.result as { moved?: unknown }).moved
+  return typeof moved === 'number' ? moved : 0
+}
+
+/**
+ * Write or change a rule. The count comes back so the drawer can say how many
+ * rows moved: a back-file changes past budgets, and doing that silently would
+ * be the surprise this phase exists to avoid.
+ */
+export async function saveRule(
+  pattern: string,
+  categoryId: string,
+  id?: string,
+): Promise<ActionResult & { moved?: number }> {
+  await requireOwner()
+  try {
+    const result = await callTool(
+      'finance',
+      'write_rule',
+      { ...(id && { id }), pattern, category_id: categoryId },
+      { source: 'ui' },
+    )
+    return { ...done(), moved: movedIn(result) }
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+export async function deleteRule(id: string): Promise<ActionResult & { moved?: number }> {
+  await requireOwner()
+  try {
+    const result = await callTool('finance', 'delete_rule', { id }, { source: 'ui' })
+    return { ...done(), moved: movedIn(result) }
   } catch (error) {
     return failed(error)
   }

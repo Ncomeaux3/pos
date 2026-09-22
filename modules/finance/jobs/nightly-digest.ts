@@ -1,6 +1,7 @@
 import { db } from '@/core/db'
 import { ownerToday } from '@/core/today'
-import { BUILTIN_RULES, categorise, learnFrom, matchRefund, type Rule } from '../categorise'
+import { learnFrom } from '../categorise'
+import { classify, loadRuleSet } from '../rules'
 import { detectRecurring, isStale, type Charge } from '../recurring'
 import {
   cashFlowByMonth,
@@ -8,7 +9,6 @@ import {
   dueSoon,
   getAlertThreshold,
   listAccounts,
-  loadRules,
   netWorthSeries,
 } from '../data'
 import { percent } from '../money'
@@ -155,51 +155,16 @@ export async function snapshotBalances(): Promise<{ accounts: number }> {
  * one inviolable flag, and this job is the most frequent thing that would
  * otherwise trample it.
  *
- * Anything the rules miss is left uncategorised rather than sent to a model
- * from here. The model arm belongs behind the guard with a confidence and a
- * proposal, and burning a call per unmatched row on a nightly sweep is exactly
- * the cost the rules-first design exists to avoid.
+ * Anything the rules miss is left uncategorised and reachable: the Transactions
+ * tab's Uncategorised chip and the Rules drawer's Unfiled list. v1.2 phase 5d
+ * adds the model arm here as one batched call over the merchants left, never
+ * one call per row, which is the cost the rules-first design exists to avoid.
  */
 export async function categoriseNew(): Promise<{ matched: number; unmatched: number }> {
-  const rules = await loadRules()
-  const { rows: categoryRows } = await db().query<{ id: string; name: string }>(
-    `select id, name from finance.category`,
-  )
-  const byName = new Map(categoryRows.map((c) => [c.name, c.id]))
-  // Learned rules first, then the built-ins: the sort inside categorise puts a
-  // manual rule ahead of both, so the owner's correction still wins.
-  const shaped: Rule[] = [
-    ...rules.map((r) => ({ category: r.category, pattern: r.pattern, isManual: r.isManual })),
-    ...BUILTIN_RULES,
-  ]
-
-  // The owner's card institutions, so "CAPITAL ONE ONLINE PMT" is a payment.
-  const { rows: institutionRows } = await db().query<{ institution: string }>(
-    `select distinct institution from finance.account
-      where kind = 'credit' and archived = false and institution <> ''`,
-  )
-  const institutions = institutionRows.map((r) => r.institution)
-
-  // Recent charges on the cards, for refunds: money back from a merchant seen
-  // in the last 90 days nets against that charge's category.
-  const { rows: chargeRows } = await db().query<{
-    merchant: string
-    amount_cents: string
-    category: string | null
-  }>(
-    `select t.merchant, t.amount_cents::text, c.name as category
-       from finance.transaction t
-       join finance.account a on a.id = t.account_id
-       left join finance.category c on c.id = t.category_id
-      where a.kind = 'credit' and t.amount_cents > 0
-        and t.occurred_on >= core.today() - 90
-      order by t.occurred_on desc`,
-  )
-  const charges = chargeRows.map((r) => ({
-    merchant: r.merchant,
-    amountCents: Number(r.amount_cents),
-    category: r.category,
-  }))
+  // The same set the Rules drawer's back-file runs, so a rule cannot mean one
+  // thing tonight and another when it was written. The recent card charges the
+  // refund matcher needs come with it.
+  const ruleSet = await loadRuleSet()
 
   const { rows } = await db().query<{
     id: string
@@ -212,21 +177,28 @@ export async function categoriseNew(): Promise<{ matched: number; unmatched: num
        from finance.transaction t
        join finance.account a on a.id = t.account_id
       where t.category_id is null and t.is_manual = false
-      limit 500`,
+      -- ponytail: 607 rows did not fit the 500 this used to be, and a backlog
+      -- that clears 500 a night takes two. One update per row at a few
+      -- milliseconds is seconds against the cron's maxDuration of 300; batch
+      -- it if a pull ever puts tens of thousands here.
+      limit 5000`,
   )
 
   let matched = 0
 
   for (const row of rows) {
-    const category =
-      categorise(row.descriptor, shaped, institutions)?.category ??
-      matchRefund(
-        { merchant: row.merchant, amountCents: Number(row.amount_cents), accountKind: row.account_kind },
-        charges,
-      )
+    const category = classify(
+      {
+        descriptor: row.descriptor,
+        merchant: row.merchant,
+        amountCents: Number(row.amount_cents),
+        accountKind: row.account_kind,
+      },
+      ruleSet,
+    )
     if (!category) continue
 
-    const categoryId = byName.get(category)
+    const categoryId = ruleSet.byName.get(category)
     if (!categoryId) continue
 
     await db().query(
@@ -248,23 +220,25 @@ export async function categoriseNew(): Promise<{ matched: number; unmatched: num
  * the same merchant is then a rule hit rather than a question, which is the
  * whole compounding value of the module.
  */
-export async function learnRule(descriptor: string, categoryId: string): Promise<boolean> {
+export async function learnRule(descriptor: string, categoryId: string): Promise<string | null> {
   const { rows } = await db().query<{ name: string }>(
     `select name from finance.category where id = $1`,
     [categoryId],
   )
-  if (rows.length === 0) return false
+  if (rows.length === 0) return null
 
   const rule = learnFrom(descriptor, rows[0].name)
-  if (!rule) return false
+  if (!rule) return null
 
   await db().query(
-    `insert into finance.category_rule (category_id, pattern, is_manual)
-     values ($1, $2, true)
-     on conflict (pattern, category_id) do update set is_manual = true`,
+    `insert into finance.category_rule (category_id, pattern, is_manual, classified_by)
+     values ($1, $2, true, 'human')
+     on conflict (pattern, category_id) do update set is_manual = true, classified_by = 'human'`,
     [categoryId, rule.pattern],
   )
-  return true
+  // The pattern, not a boolean: the caller back-files the history it matches,
+  // which since v1.2 phase 5c is what writing any rule means.
+  return rule.pattern
 }
 
 /**

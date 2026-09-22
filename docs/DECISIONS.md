@@ -42,6 +42,15 @@ v1.1, all 2026-09-14, from the /adopt-repo interview; reasons in decisions/log.m
 - Branch protection requires `migrations` as well as `check` and `screens`, so the db push gate blocks a merge rather than advising. Enforced for admins; no required reviews, no up-to-date rule (solo). (2026-09-15)
 - The storage buckets are mirrored by the backup workflow, not only documented: the readiness row said add them to the dump. Two more repo secrets, `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF`. (2026-09-15)
 
+v1.2 phase 5c, all 2026-09-22, made while building; reasons in decisions/log.md under that date:
+
+- `refile()` re-runs the whole rule set plus the refund matcher over a pattern's rows, so `applyRule` and `removeRule` are one line each, neither orphans a row, and a back-file cannot clear a refund for good.
+- `Rule.priority`, set only on the three peer built-ins, because `transfer to` outranks `zelle` on length; the migration back-files the rows already filed as transfers.
+- The desktop reaches rules and the backlog through the Budgets card head, the desktop page having no transactions surface (owner's answer).
+- The Unfiled list is uncapped; the read behind it is bounded at 5000 rows.
+- `learnRule()` returns its pattern so every caller back-files, and the demo seed resets a non-manual row's category so the fixture stays deterministic.
+- A rule's pattern is not editable on screen, only its category; delete and file again is the same outcome.
+
 v2, all 2026-09-14, from the spec review; the sixteen entries are in decisions/log.md, the spec in docs/SPEC-v2.md and the plan in docs/plans/v2-agent-layer.md:
 
 - Runner topology, ledger shape, integration extension, cost cap, plan location, no in-app chat, first integrations, voice out, secret store and queue, the default permission level, sync scope, start order, Gmail's scope and OAuth posture, and an empty auto-approve table. Fourteen answers from the owner.

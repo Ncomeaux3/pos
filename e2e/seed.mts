@@ -119,6 +119,11 @@ const coached = await coachReview()
 
 // The detector runs against the seeded history rather than the fixture listing
 // its own answers: the screen has to show what detectRecurring actually found.
+// Every screen run writes rules: the filing test presses Always, and the rules
+// test files an unfiled merchant. The drawer lists them, so they go back to
+// none before the fixture is rebuilt, the same reason the ideas rows above do.
+await db().query(`delete from finance.category_rule`)
+
 const { detectSubscriptions, snapshotBalances } = await import('@/modules/finance/jobs/nightly-digest')
 await snapshotBalances()
 const detected = await detectSubscriptions()

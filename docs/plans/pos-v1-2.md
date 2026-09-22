@@ -245,17 +245,34 @@ Complexity: medium. Files: migration `finance_rule_provenance`, `modules/finance
 
 Why this phase exists: on the owner's real data 607 of 622 transactions (97.6 percent) have no category, across 172 distinct merchants. `BUILTIN_RULES` holds eleven patterns and every one of them is a payment, a transfer or a credit, so nothing files an ordinary purchase. `finance.category_rule` is written by `learn_rule` and read by `loadRules` and by nothing else: there is no screen, no edit and no delete, and a wrong rule (`apple icloud` to Dining, from an e2e run) is unreachable. `listTransactions` has no filter, so the uncategorised rows cannot be found either.
 
-- [ ] Migration `finance_rule_provenance`: `finance.category_rule` gains `classified_by text not null default 'human'` and `confidence numeric`; `is_manual` keeps its meaning as the override flag. Insert the `People` category (`kind = 'expense'`, not fixed) for money to and from individuals.
-- [ ] `modules/finance/rules.ts` (+ test), the one place that answers which rows a rule touches. `applyRule` re-files every matching row where `is_manual = false` and returns the count; `removeRule` clears those rows and re-runs the remaining rules over them, so a row two rules matched is not orphaned by deleting one. Never writes where `is_manual = true`.
-- [ ] Peer payments: `zelle`, `venmo`, `cash app` sort ahead of the transfer patterns and file to `People`. "Zelle Transfer to <name>" carries both `zelle` and `transfer to`, so precedence is the whole fix; `online transfer`, `transfer to` and `transfer from` stay for the owner's own accounts. A $1,382.45 Zelle is currently `Account transfer` and counted as no spending at all.
-- [ ] Rules drawer, opened from the Transactions tab beside Edit limits, the Budget limits drawer's shape: the owner's and the model's rules with a provenance badge, each editable and deletable, the eleven built-ins read-only below them (a rule the owner writes already beats a built-in in the sort, so overriding one is writing one), and an Unfiled merchants list with row count and total where filing one writes a rule and back-files in the same action. Saving says how many rows moved.
-- [ ] Tools: `write_rule` and `delete_rule` on the manifest, unguarded, for the same reason `categorise` is unguarded (README: hundreds of rows a month through the Review inbox would make the inbox useless).
-- [ ] Uncategorised filter on the Transactions tab: All, Uncategorised and Pending with counts, fed by a third `listTransactions` call unioned into the page data, the pattern the budget drawer fix already set.
-- [ ] `categoriseNew`'s 500 row limit is raised or looped: 607 rows do not fit it, and the backlog would otherwise take two nights.
-- [ ] Tests first, as the project asks for classification: a peer payment beats the transfer rule; a back-file leaves an `is_manual` row alone; deleting a rule re-files rather than orphans.
-- [ ] e2e: the drawer lists a built-in as read-only; filing an unfiled merchant writes a rule and the Uncategorised count falls.
+- [x] Migration `finance_rule_provenance`: `finance.category_rule` gains `classified_by text not null default 'human'` and `confidence numeric`; `is_manual` keeps its meaning as the override flag. Insert the `People` category (`kind = 'expense'`, not fixed) for money to and from individuals.
+- [x] `modules/finance/rules.ts` (+ test), the one place that answers which rows a rule touches. `applyRule` re-files every matching row where `is_manual = false` and returns the count; `removeRule` clears those rows and re-runs the remaining rules over them, so a row two rules matched is not orphaned by deleting one. Never writes where `is_manual = true`.
+- [x] Peer payments: `zelle`, `venmo`, `cash app` sort ahead of the transfer patterns and file to `People`. "Zelle Transfer to <name>" carries both `zelle` and `transfer to`, so precedence is the whole fix; `online transfer`, `transfer to` and `transfer from` stay for the owner's own accounts. A $1,382.45 Zelle is currently `Account transfer` and counted as no spending at all.
+- [x] Rules drawer, opened from the Transactions tab beside Edit limits, the Budget limits drawer's shape: the owner's and the model's rules with a provenance badge, each editable and deletable, the eleven built-ins read-only below them (a rule the owner writes already beats a built-in in the sort, so overriding one is writing one), and an Unfiled merchants list with row count and total where filing one writes a rule and back-files in the same action. Saving says how many rows moved.
+- [x] Tools: `write_rule` and `delete_rule` on the manifest, unguarded, for the same reason `categorise` is unguarded (README: hundreds of rows a month through the Review inbox would make the inbox useless).
+- [x] Uncategorised filter on the Transactions tab: All, Uncategorised and Pending with counts, fed by a third `listTransactions` call unioned into the page data, the pattern the budget drawer fix already set.
+- [x] `categoriseNew`'s 500 row limit is raised or looped: 607 rows do not fit it, and the backlog would otherwise take two nights.
+- [x] Tests first, as the project asks for classification: a peer payment beats the transfer rule; a back-file leaves an `is_manual` row alone; deleting a rule re-files rather than orphans.
+- [x] e2e: the drawer lists a built-in as read-only; filing an unfiled merchant writes a rule and the Uncategorised count falls.
 
 Exit: standard; migration pushed (`db push: done`). The owner files or confirms the 172 merchants and the uncategorised share in STATUS.md is below 10 percent.
+
+Built 2026-09-22. Notes for later phases: `modules/finance/rules.ts` is the one
+place that re-files history. `refile(pattern)` re-runs the *whole* ranked rule
+set over every automatic row whose normalised descriptor contains the pattern,
+which is why a short new rule cannot steal a longer one's rows and why deleting
+a rule hands its rows to whatever matches next instead of clearing them;
+`applyRule` and `removeRule` are both one line over it. `loadRuleSet()` there is
+now the single shaper of the rule list and the nightly `categoriseNew` reads it
+too, so a rule cannot mean one thing at match time and another when written.
+`Rule` gained `priority`, set only on the three peer built-ins, because
+`transfer to` is a longer pattern than `zelle`. `learnRule()` returns the
+pattern it wrote rather than a boolean, and every caller back-files with it.
+5d writes `finance.category_rule` rows with `classified_by = 'model'` and a
+`confidence`, and the drawer already renders that badge; it should call
+`applyRule` after writing, exactly as `write_rule` does. The Unfiled list is
+grouped on `learnFrom()`'s pattern by `groupUnfiled()`, a pure function, so 5d's
+payload should be those patterns and not the stored merchant.
 
 ## Phase 5d: Finance, the model arm
 
