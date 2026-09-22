@@ -156,7 +156,8 @@ export function matchRefund(
   row: { merchant: string; amountCents: number; accountKind: string },
   recentCharges: { merchant: string; amountCents: number; category: string | null }[],
 ): string | null {
-  if (row.accountKind !== 'credit' || row.amountCents >= 0) return null
+  // A blank descriptor is not a merchant, and two blanks are not the same one.
+  if (row.accountKind !== 'credit' || row.amountCents >= 0 || row.merchant === '') return null
   const charge = recentCharges.find((c) => c.amountCents > 0 && c.merchant === row.merchant)
   if (!charge) return null
   return charge.category ?? 'Refund'

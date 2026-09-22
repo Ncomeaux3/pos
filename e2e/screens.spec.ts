@@ -2421,6 +2421,9 @@ test('finance, a card payment is a transfer and a credit nets against its budget
   await expect(credit).toContainText('+$10.00')
   await expect(drawer.getByText('Taco truck')).toBeVisible()
   await expect(drawer.getByText('Pending', { exact: true })).toBeVisible()
+  // The spent figure itself is asserted in modules/finance/data.test.ts
+  // against the schema: the seed's scatter moves with the day of the month
+  // and earlier filing tests leave rows in Dining, so it is not stable here.
   await shoot(page, 'finance-budget-dining')
 })
 

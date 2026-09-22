@@ -155,6 +155,11 @@ describe('matchRefund', () => {
     expect(matchRefund({ merchant: 'new place', amountCents: -900, accountKind: 'credit' }, recent)).toBeNull()
   })
 
+  it('never matches a blank descriptor to another blank one', () => {
+    const blanks = [{ merchant: '', amountCents: 500, category: 'Dining' }]
+    expect(matchRefund({ merchant: '', amountCents: -500, accountKind: 'credit' }, blanks)).toBeNull()
+  })
+
   it('is only for money back on a card', () => {
     // A charge is not a refund, and a deposit into checking is income or a
     // transfer, never a refund of a card purchase.
