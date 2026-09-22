@@ -60,6 +60,7 @@ finance-charts, all 2026-09-22, from a three-round owner interview after the fir
 - Touch and keyboard land on the shared `LineChart`, so all four charts gain them.
 - Internal transfers stay a rules problem; no pair-matching heuristic.
 - Three phases, three PRs, accounts first.
+- An Entertainment expense category, added in Phase 1's migration; Shopping unchanged.
 
 v2, all 2026-09-14, from the spec review; the sixteen entries are in decisions/log.md, the spec in docs/SPEC-v2.md and the plan in docs/plans/v2-agent-layer.md:
 
