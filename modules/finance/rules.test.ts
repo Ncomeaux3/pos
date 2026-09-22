@@ -192,9 +192,9 @@ describe('refile and the refund matcher', () => {
 describe('groupUnfiled', () => {
   it('collapses one merchant’s store numbers onto the pattern a rule would use', () => {
     const groups = groupUnfiled([
-      { descriptor: 'KROGER #412', merchant: 'kroger 412', amountCents: 4_000 },
-      { descriptor: 'KROGER #118', merchant: 'kroger 118', amountCents: 2_000 },
-      { descriptor: 'DUTCH BROS COFFEE', merchant: 'dutch bros coffee', amountCents: 900 },
+      { descriptor: 'KROGER #412', merchant: 'kroger 412', amountCents: 4_000, occurredOn: '2026-09-02', account: 'Checking' },
+      { descriptor: 'KROGER #118', merchant: 'kroger 118', amountCents: 2_000, occurredOn: '2026-09-01', account: 'Checking' },
+      { descriptor: 'DUTCH BROS COFFEE', merchant: 'dutch bros coffee', amountCents: 900, occurredOn: '2026-09-01', account: 'Visa' },
     ])
 
     expect(groups.map((g) => [g.pattern, g.count, g.totalCents])).toEqual([
@@ -205,8 +205,29 @@ describe('groupUnfiled', () => {
 
   it('still lists a descriptor with nothing learnable in it', () => {
     // All digits: learnFrom refuses it, and dropping the row would hide money.
-    expect(groupUnfiled([{ descriptor: '1234567', merchant: '1234567', amountCents: 500 }])).toEqual([
-      { pattern: '1234567', label: '1234567', count: 1, totalCents: 500 },
+    const row = { descriptor: '1234567', merchant: '1234567', amountCents: 500, occurredOn: '2026-09-01', account: 'Checking' }
+    expect(groupUnfiled([row])).toEqual([
+      {
+        pattern: '1234567',
+        label: '1234567',
+        count: 1,
+        totalCents: 500,
+        rows: [{ descriptor: '1234567', amountCents: 500, occurredOn: '2026-09-01', account: 'Checking' }],
+      },
+    ])
+  })
+
+  it('keeps each transaction so money in and money out can be told apart', () => {
+    // One institution, both directions: interest paid to the owner (negative,
+    // money in) and interest charged (positive, money out). One rule files
+    // both, so the drawer has to show them before the owner picks.
+    const [group] = groupUnfiled([
+      { descriptor: 'AMEX INTEREST CREDIT', merchant: 'amex interest credit', amountCents: -1_250, occurredOn: '2026-09-03', account: 'Savings' },
+      { descriptor: 'AMEX INTEREST CREDIT', merchant: 'amex interest credit', amountCents: 300, occurredOn: '2026-08-03', account: 'Gold card' },
+    ])
+    expect(group.rows.map((r) => [r.occurredOn, r.account, r.amountCents])).toEqual([
+      ['2026-09-03', 'Savings', -1_250],
+      ['2026-08-03', 'Gold card', 300],
     ])
   })
 })
