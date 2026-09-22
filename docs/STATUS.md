@@ -30,7 +30,8 @@ trip drawer footer on `ink-2`). v1.1 below is complete.
 phases from the owner's first day on the phase 5b cash flow card: a per-account
 `in_cash_flow` switch so investments stop reading as income, a readout on hover
 and tap with "Net" renamed "Left over", and a 3/6/12/24 month range saved in
-`finance.settings`). Depends on v1.2 phase 5c; independent of 5d. Not started.
+`finance.settings`). Phase 1 also adds an `Entertainment` expense category
+(#127). 5c is closed; independent of 5d. Not started.
 
 **Queued after v1.2: docs/plans/skills-v2.md** (2026-09-15, six phases from the owner's Skill Tree rewrite in docs/SKILLS.md: the nine-attribute tree, per-event XP snapshots, projects, challenges and achievements, the digest, the screen). Not started.
 
@@ -44,7 +45,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-22 (v1.2 phase 5c built; phases 5c and 5d planned and 5b merged as #122). Production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-22 (v1.2 phase 5c closed at 3 uncategorised rows; #126 and #128 merged; 5d deferred). Production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -68,9 +69,30 @@ against the Vercel domain. Laptop notes: `.env` has no VAPID pair, so `pnpm setu
 and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
-## Next: v1.2 phase 5d, Finance's model arm
+## Next: finance-charts Phase 1
 
-Phase 5c is built (branch `phase-5c-finance-rules`). Rules are now visible and
+**5c is closed.** The owner filed the Unfiled list by hand on 2026-09-22. What
+is left uncategorised is 3 rows, all AMC Theatres, held for the Entertainment
+category that finance-charts Phase 1 adds: about 0.4 percent of a ledger of
+about 700 rows (owner-reported from the Rules drawer, not queried). Two fixes
+made the filing possible: #126 (each Unfiled line shows its transactions, which
+way the money went, and three-letter names such as REI are learnable as whole
+words) and #128 (the Finance tabs at every width so the desktop has a
+Transactions list, a search over the whole ledger, and the account on each row).
+**5d is deferred:** with the backlog filed by hand, the model arm has little to
+do. Revisit if new merchants pile up in Unfiled. After Phase 1 ships, file AMC
+Theatres as Entertainment.
+
+Follow-ups from #126 and #128, not scheduled: the Travel "a trip holds a list of
+destinations" e2e test sits near its 5 second wait on CI (the Create action took
+5.06s once); `balance()` prints "-$0" for a group of a few cents; an account
+drawer lists the loaded rows, not all of the account's (68 of 205 for one card);
+the Rules button wraps at 402; Subscriptions amounts do not align at 1440; the
+Finance tabs take no arrow keys.
+
+### What 5c built
+
+Phase 5c (#124). Rules are now visible and
 changeable in a drawer, writing or deleting one re-files the history it
 matches, money to a person is a `People` expense rather than an `Account
 transfer`, and the Transactions tab has an All / Uncategorised / Pending filter
