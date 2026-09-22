@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireOwner } from '@/core/auth'
 import { callTool, ToolInputError, type CallResult } from '@/core/tools'
+import { listTransactions, transactionItem } from '../data'
 
 // Server actions are standalone POST endpoints addressed by id, so the (app)
 // layout does not run for them and each one authenticates independently.
@@ -21,6 +22,16 @@ function done(): ActionResult {
   revalidatePath('/finance')
   revalidatePath('/', 'layout')
   return { ok: true }
+}
+
+/**
+ * Search the whole ledger, newest first. A read, so it skips callTool: the
+ * Transactions tab loads the newest rows only and a search has to reach the
+ * rest.
+ */
+export async function searchTransactions(q: string): Promise<ReturnType<typeof transactionItem>[]> {
+  await requireOwner()
+  return (await listTransactions({ search: q, limit: 200 })).map(transactionItem)
 }
 
 /**

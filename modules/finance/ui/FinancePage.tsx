@@ -16,6 +16,7 @@ import {
   listTransactions,
   netWorthSeries,
   transactionCounts,
+  transactionItem,
 } from '../data'
 import { unfiledMerchants } from '../rules'
 import { monthPace } from '../money'
@@ -178,18 +179,7 @@ export default async function FinancePage() {
       // Newest first across the two queries. Array.sort is stable, so rows on
       // the same day keep the order the database gave them.
       .sort((a, b) => (a.occurred_on < b.occurred_on ? 1 : a.occurred_on > b.occurred_on ? -1 : 0))
-      .map((t) => ({
-      id: t.id,
-      descriptor: t.descriptor,
-      amountCents: Number(t.amount_cents),
-      occurredOn: t.occurred_on,
-      accountName: t.account_name,
-      categoryName: t.category_name,
-      classifiedBy: t.classified_by,
-      confidence: t.confidence === null ? null : Number(t.confidence),
-      isManual: t.is_manual,
-      pending: t.pending,
-    })),
+      .map(transactionItem),
   }
 
   const hot = data.budgets.filter(

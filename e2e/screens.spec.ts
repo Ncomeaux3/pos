@@ -2436,6 +2436,26 @@ test('finance, filing a transaction teaches the rule', async ({ page }) => {
   await shoot(page, 'finance-account')
 })
 
+test('finance, the transactions tab searches the ledger on both widths', async ({ page }) => {
+  // The desktop had no transactions list at all; the tab is now the same at
+  // every width, and each row names its account.
+  await page.goto('/finance?tab=transactions')
+  const search = page.getByRole('searchbox', { name: 'Search transactions' })
+  await expect(search).toBeVisible()
+
+  await search.fill('costco')
+  await expect(page.getByText('Results for “costco”')).toBeVisible()
+  await expect(page.getByText('Costco').first()).toBeVisible()
+  await expect(page.getByText(/Groceries.*· Credit card/).first()).toBeVisible()
+
+  // An amount finds its row whichever way the ledger signs it.
+  await search.fill('148.90')
+  await expect(page.getByText('Costco').first()).toBeVisible()
+
+  await search.fill('zzz no such merchant')
+  await expect(page.getByText('Nothing matches')).toBeVisible()
+})
+
 test('finance, a card payment is a transfer and a credit nets against its budget', async ({ page }) => {
   const mobile = (page.viewportSize()?.width ?? 0) < 768
   await page.goto('/finance')

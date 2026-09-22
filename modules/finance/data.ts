@@ -118,6 +118,22 @@ export type TransactionRow = {
   pending: boolean
 }
 
+/** A row as the Finance screen holds it: numbers as numbers, camel case. */
+export function transactionItem(t: TransactionRow) {
+  return {
+    id: t.id,
+    descriptor: t.descriptor,
+    amountCents: Number(t.amount_cents),
+    occurredOn: t.occurred_on,
+    accountName: t.account_name,
+    categoryName: t.category_name,
+    classifiedBy: t.classified_by,
+    confidence: t.confidence === null ? null : Number(t.confidence),
+    isManual: t.is_manual,
+    pending: t.pending,
+  }
+}
+
 export async function listTransactions(filter: {
   accountId?: string
   categoryId?: string
@@ -125,8 +141,16 @@ export async function listTransactions(filter: {
   thisMonth?: boolean
   /** Nothing filed it yet: what the Uncategorised chip lists. */
   uncategorised?: boolean
+  /** Description, category or account containing this, or an amount equal to it. */
+  search?: string
   limit?: number
 }): Promise<TransactionRow[]> {
+  const search = filter.search?.trim() || null
+  // "84.12", "$1,250" or "-40". The sign is dropped: the owner reads a refund
+  // of 40 as 40, whichever way round the ledger stores it.
+  const amount = search && /^-?\$?[\d,]+(\.\d{1,2})?$/.test(search)
+    ? Math.round(Math.abs(Number(search.replace(/[$,]/g, ''))) * 100)
+    : null
   const { rows } = await db().query<TransactionRow>(
     `select t.id, t.descriptor, t.merchant, t.amount_cents::text, t.occurred_on::text,
             a.name as account_name, c.name as category_name,
@@ -138,6 +162,12 @@ export async function listTransactions(filter: {
         and ($2::uuid is null or t.category_id = $2)
         and (not $4::boolean or t.occurred_on >= date_trunc('month', core.today())::date)
         and (not $5::boolean or t.category_id is null)
+        -- ilike escapes with a backslash, so a typed % or _ is found, not matched.
+        and ($6::text is null
+             or t.descriptor ilike '%' || $6 || '%'
+             or a.name ilike '%' || $6 || '%'
+             or c.name ilike '%' || $6 || '%'
+             or abs(t.amount_cents) = $7::bigint)
       order by t.occurred_on desc, t.created_at desc
       limit $3`,
     [
@@ -146,6 +176,8 @@ export async function listTransactions(filter: {
       filter.limit ?? 100,
       filter.thisMonth ?? false,
       filter.uncategorised ?? false,
+      search?.replace(/[\\%_]/g, '\\$&') ?? null,
+      amount,
     ],
   )
   return rows
