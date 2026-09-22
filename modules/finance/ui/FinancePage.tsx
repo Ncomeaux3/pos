@@ -5,7 +5,10 @@ import { ownerToday } from '@/core/today'
 import {
   categorySpend,
   getAlertThreshold,
+  getCountPending,
+  lastPullDetail,
   listAccounts,
+  listCategories,
   listTransactions,
   netWorthSeries,
   upcomingCharges,
@@ -13,7 +16,7 @@ import {
 import { monthPace } from '../money'
 import { spine } from '@/core/series'
 import { Finance, type FinanceData } from './Finance'
-import { syncFinance } from './sync'
+import { pullFinance, syncFinance } from './sync'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -24,18 +27,33 @@ function bandDate(iso: string): string {
 }
 
 export default async function FinancePage() {
-  const [accounts, series, spend, upcoming, transactions, todayIso, sync, alertThreshold, settings] =
-    await Promise.all([
-      listAccounts(),
-      netWorthSeries(30),
-      categorySpend(),
-      upcomingCharges(14),
-      listTransactions({ limit: 60 }),
-      ownerToday(),
-      syncState('finance'),
-      getAlertThreshold(),
-      getSettings(),
-    ])
+  const [
+    accounts,
+    series,
+    spend,
+    categories,
+    upcoming,
+    transactions,
+    todayIso,
+    sync,
+    alertThreshold,
+    countPending,
+    lastPull,
+    settings,
+  ] = await Promise.all([
+    listAccounts(),
+    netWorthSeries(30),
+    categorySpend(),
+    listCategories(),
+    upcomingCharges(14),
+    listTransactions({ limit: 60 }),
+    ownerToday(),
+    syncState('finance'),
+    getAlertThreshold(),
+    getCountPending(),
+    lastPullDetail(),
+    getSettings(),
+  ])
 
   const netWorth = accounts.reduce((sum, a) => sum + Number(a.balance_cents), 0)
   const assets = accounts
@@ -54,6 +72,7 @@ export default async function FinancePage() {
   const data: FinanceData = {
     todayIso,
     alertThreshold,
+    countPending,
     provider: sync.provider,
     monthPace: monthPace(todayIso),
     netWorthCents: netWorth,
@@ -76,6 +95,9 @@ export default async function FinancePage() {
       txCount: Number(a.tx_count),
       mask: a.mask,
     })),
+
+    // Every category, for filing. Budgets below are the expense kind only.
+    categories: categories.map((c) => ({ id: c.id, name: c.name, kind: c.kind })),
 
     budgets: spend.map((c) => ({
       id: c.id,
@@ -106,6 +128,7 @@ export default async function FinancePage() {
       classifiedBy: t.classified_by,
       confidence: t.confidence === null ? null : Number(t.confidence),
       isManual: t.is_manual,
+      pending: t.pending,
     })),
   }
 
@@ -121,8 +144,12 @@ export default async function FinancePage() {
       at={sync.at}
       status={sync.status}
       connected={sync.connected}
+      // What the last pull returned per account: the institution's history
+      // limit, not the bridge's, so the count is the honest number.
+      note={sync.connected ? lastPull : null}
       timeZone={settings.timezone}
       onSync={syncFinance}
+      also={{ label: 'Pull 90 days', run: pullFinance }}
     />
   )
 

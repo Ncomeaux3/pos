@@ -65,9 +65,14 @@ export type CategorySpend = {
 /**
  * This month's spending per category, against its limit.
  *
- * Income and transfers are excluded from spend: moving money between your own
- * accounts is not an expense, and counting it would make every month look twice
- * as expensive as it was.
+ * Only the expense kind is a budget: income is not spending, a transfer is
+ * money moving between your own accounts, and a credit kind (a refund with no
+ * charge to net against, a statement credit) is money back. A credit filed
+ * into an expense category is a negative row there, so the signed sum is
+ * already expense minus credit.
+ *
+ * Pending rows wait until they post unless `count_pending` is on: the amount
+ * and the date both move when a charge settles.
  */
 export async function categorySpend(): Promise<CategorySpend[]> {
   const { rows } = await db().query<CategorySpend>(
@@ -75,15 +80,26 @@ export async function categorySpend(): Promise<CategorySpend[]> {
             b.limit_cents::text,
             coalesce(sum(t.amount_cents) filter (
               where t.occurred_on >= date_trunc('month', core.today())::date
+                and (not t.pending or (select count_pending from finance.settings))
             ), 0)::text as spent_cents,
             count(t.id)::text as tx_count
        from finance.category c
        left join finance.budget b
          on b.category_id = c.id and b.month = date_trunc('month', core.today())::date
        left join finance.transaction t on t.category_id = c.id
-      where c.name not in ('Income', 'Transfer', 'Investing')
+      where c.kind = 'expense'
       group by c.id, c.name, c.description, c.is_fixed, b.limit_cents, c.position
       order by c.position`,
+  )
+  return rows
+}
+
+export type CategoryKind = 'expense' | 'income' | 'transfer' | 'credit'
+
+/** Every category, for filing: a transaction can go anywhere, not only into a budget. */
+export async function listCategories(): Promise<{ id: string; name: string; kind: CategoryKind }[]> {
+  const { rows } = await db().query<{ id: string; name: string; kind: CategoryKind }>(
+    `select id, name, kind from finance.category order by position`,
   )
   return rows
 }
@@ -99,6 +115,7 @@ export type TransactionRow = {
   classified_by: string | null
   confidence: string | null
   is_manual: boolean
+  pending: boolean
 }
 
 export async function listTransactions(filter: {
@@ -109,7 +126,7 @@ export async function listTransactions(filter: {
   const { rows } = await db().query<TransactionRow>(
     `select t.id, t.descriptor, t.merchant, t.amount_cents::text, t.occurred_on::text,
             a.name as account_name, c.name as category_name,
-            t.classified_by, t.confidence::text, t.is_manual
+            t.classified_by, t.confidence::text, t.is_manual, t.pending
        from finance.transaction t
        join finance.account a on a.id = t.account_id
        left join finance.category c on c.id = t.category_id
@@ -194,4 +211,35 @@ export async function setAlertThreshold(percent: number): Promise<void> {
      on conflict (id) do update set alert_threshold = excluded.alert_threshold`,
     [percent],
   )
+}
+
+/** Whether pending charges count toward a budget before they post. Off by default. */
+export async function getCountPending(): Promise<boolean> {
+  const { rows } = await db().query<{ count_pending: boolean }>(
+    `select count_pending from finance.settings where id`,
+  )
+  return rows[0]?.count_pending ?? false
+}
+
+export async function setCountPending(on: boolean): Promise<void> {
+  await db().query(
+    `insert into finance.settings (id, count_pending) values (true, $1)
+     on conflict (id) do update set count_pending = excluded.count_pending`,
+    [on],
+  )
+}
+
+/**
+ * What the last bank pull said, per account, for the band. Read from the
+ * job's own log row, so the band and the Agent log never disagree.
+ */
+export async function lastPullDetail(): Promise<string | null> {
+  const { rows } = await db().query<{ detail: string | null }>(
+    `select log->'output'->>'detail' as detail from core.jobs
+      where module = 'finance' and name = 'sync_simplefin' and last_status = 'ok'
+        -- A run the provider refused is recorded as ok and skipped; its
+        -- detail is the refusal, which is the band's status dot, not a count.
+        and log->'output'->>'skipped' = 'false'`,
+  )
+  return rows[0]?.detail ?? null
 }

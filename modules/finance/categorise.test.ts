@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { categorise, learnFrom, type Rule } from './categorise'
+import { BUILTIN_RULES, categorise, learnFrom, matchRefund, type Rule } from './categorise'
 
 // "Rules first, model second" is a rule of the whole system, and this is where
 // it costs the most: a month of transactions is hundreds of rows, and sending
@@ -88,5 +88,82 @@ describe('learnFrom', () => {
     expect(categorise('WHOLEFDS ABC 10045', [rule])?.category).toBe('Groceries')
     // And the next store, which is the point of learning it.
     expect(categorise('WHOLEFDS XYZ 20099', [rule])?.category).toBe('Groceries')
+  })
+})
+
+// v1.2 phase 5a. The rules that keep a card payment out of spending and put a
+// credit against the category it refunds. One test per rule.
+describe('built-in rules', () => {
+  const builtin = [...rules, ...BUILTIN_RULES]
+
+  it('files the card side of a payment as Credit card payment', () => {
+    expect(categorise('Payment Thank You - Web', builtin)?.category).toBe('Credit card payment')
+    expect(categorise('MOBILE PAYMENT - THANK YOU', builtin)?.category).toBe('Credit card payment')
+  })
+
+  it('files the checking side of a payment as Credit card payment', () => {
+    expect(categorise('AMEX EPAYMENT ACH PMT', builtin)?.category).toBe('Credit card payment')
+    expect(categorise('DISCOVER E-PAYMENT', builtin)?.category).toBe('Credit card payment')
+    expect(categorise('CHASE CREDIT CRD AUTOPAY', builtin)?.category).toBe('Credit card payment')
+  })
+
+  it('files a payment naming one of the owner’s card institutions', () => {
+    // No built-in pattern knows this descriptor; the institution list does.
+    expect(categorise('CAPITAL ONE ONLINE PMT', builtin)).toBeNull()
+    expect(categorise('CAPITAL ONE ONLINE PMT', builtin, ['Capital One'])?.category).toBe(
+      'Credit card payment',
+    )
+    // The name alone is not a payment: a purchase at a Capital One Cafe stays unmatched.
+    expect(categorise('CAPITAL ONE CAFE', builtin, ['Capital One'])).toBeNull()
+  })
+
+  it('files a move between own accounts as Account transfer', () => {
+    expect(categorise('ONLINE TRANSFER TO SAV ...8830', builtin)?.category).toBe('Account transfer')
+    expect(categorise('Transfer from Checking', builtin)?.category).toBe('Account transfer')
+  })
+
+  it('files a rewards credit as Statement credit', () => {
+    expect(categorise('MEMBERSHIP REWARDS CREDIT', builtin)?.category).toBe('Statement credit')
+  })
+
+  it('nets a named credit against the category it refunds', () => {
+    expect(categorise('DINING CREDIT', builtin)?.category).toBe('Dining')
+    expect(categorise('UBER CREDIT', builtin)?.category).toBe('Travel')
+  })
+
+  it('still lets a manual rule win over a built-in', () => {
+    const manual: Rule = { category: 'Shopping', pattern: 'uber credit', isManual: true }
+    expect(categorise('UBER CREDIT', [...builtin, manual])?.category).toBe('Shopping')
+  })
+})
+
+describe('matchRefund', () => {
+  const recent = [
+    { merchant: 'chipotle', amountCents: 1485, category: 'Dining' },
+    { merchant: 'mystery shop', amountCents: 4200, category: null },
+  ]
+
+  it('files money back from a recent merchant into that charge’s category', () => {
+    expect(matchRefund({ merchant: 'chipotle', amountCents: -1485, accountKind: 'credit' }, recent)).toBe('Dining')
+  })
+
+  it('files money back from an uncategorised charge as Refund', () => {
+    expect(matchRefund({ merchant: 'mystery shop', amountCents: -4200, accountKind: 'credit' }, recent)).toBe('Refund')
+  })
+
+  it('leaves a credit with no matching charge alone', () => {
+    expect(matchRefund({ merchant: 'new place', amountCents: -900, accountKind: 'credit' }, recent)).toBeNull()
+  })
+
+  it('never matches a blank descriptor to another blank one', () => {
+    const blanks = [{ merchant: '', amountCents: 500, category: 'Dining' }]
+    expect(matchRefund({ merchant: '', amountCents: -500, accountKind: 'credit' }, blanks)).toBeNull()
+  })
+
+  it('is only for money back on a card', () => {
+    // A charge is not a refund, and a deposit into checking is income or a
+    // transfer, never a refund of a card purchase.
+    expect(matchRefund({ merchant: 'chipotle', amountCents: 1485, accountKind: 'credit' }, recent)).toBeNull()
+    expect(matchRefund({ merchant: 'chipotle', amountCents: -1485, accountKind: 'checking' }, recent)).toBeNull()
   })
 })

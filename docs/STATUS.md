@@ -38,7 +38,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-21 (v1.2 Phase 4: forms, required fields and keyboard). Branch `main`, production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-21 (v1.2 Phase 5a: Finance, full pull, pending, categories). Branch `phase-5a-finance-pull`, production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -63,6 +63,24 @@ and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
 ## Done
+
+**v1.2 Phase 5a: Finance, full pull, pending, categories** (2026-09-21, branch
+`phase-5a-finance-pull`). `finance.category.kind` (`expense`, `income`,
+`transfer`, `credit`) with eleven categories added and `Transfer` renamed
+`Account transfer`; only the expense kind is a budget, and the list shows the
+ones with a limit or spending this month. Spent skips pending rows unless the
+new `count_pending` setting is on (Budget limits drawer); rows carry a
+`Pending` chip. `BUILTIN_RULES` file both sides of a card payment and the
+transfers, `categorise()` also catches a descriptor naming one of the owner's
+card institutions with a payment word, and `matchRefund` files money back on a
+card into the category of the charge it matches, else Refund. Recurring
+detection and the digest's unusual list skip transfers. `sync_simplefin` takes
+`{ days }` and reports the count and oldest date per account; the band has a
+Pull 90 days pill and prints that line under its clock. Filing a row by hand no
+longer learns a rule; the row offers "Always file {merchant} as {category}" and
+Always calls `finance.learn_rule`. Production 90-day counts: not yet run
+(OWNER-TODO 27); the numbers go here when the owner has compared one account
+with the bank.
 
 **v1.2 Phase 4: forms, required fields and keyboard** (2026-09-21, branch
 `phase-4-forms`). A missing or invalid field is named at the field: `Field`

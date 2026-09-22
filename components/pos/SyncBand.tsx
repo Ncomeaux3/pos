@@ -7,6 +7,9 @@ import { ActionButton } from './Button'
 import { Eyebrow } from './text'
 import { useToast } from './Toast'
 
+/** What a sync action hands back; `detail` is toasted in place of "Synced." when present. */
+export type SyncOutcome = { ran: number; failed: string[]; detail?: string }
+
 /**
  * "SimpleFIN Bridge · synced 04:02" and a Sync now button, for a module
  * header's first band.
@@ -21,8 +24,10 @@ export function SyncBand({
   status,
   connected = true,
   arrived,
+  note,
   timeZone,
   onSync,
+  also,
 }: {
   /** The integration's label, or null when the module imports from nothing. */
   provider: string | null
@@ -33,22 +38,26 @@ export function SyncBand({
   connected?: boolean
   /** ISO timestamp of the last inbound payload from a phone, where a module takes one. */
   arrived?: string | null
+  /** What the last pull said, per account, where a module keeps that. Desktop only, like `arrived`. */
+  note?: string | null
   /** The owner's zone from core.settings: the clocks below are printed in it on the server and the device alike. */
   timeZone: string
-  onSync: () => Promise<{ ran: number; failed: string[] }>
+  onSync: () => Promise<SyncOutcome>
+  /** A second, wider pull beside the usual one: Finance's "Pull 90 days". */
+  also?: { label: string; run: () => Promise<SyncOutcome> }
 }) {
   const [pending, start] = useTransition()
   const toast = useToast()
 
-  const sync = () =>
+  const sync = (run: () => Promise<SyncOutcome>) =>
     start(async () => {
-      const result = await onSync()
+      const result = await run()
       toast(
         result.failed.length > 0
           ? `${result.failed.join(', ')} failed. The Agent Log has the error.`
           : result.ran === 0
             ? 'Nothing to sync: this module imports from nothing.'
-            : 'Synced.',
+            : (result.detail ?? 'Synced.'),
       )
     })
 
@@ -78,10 +87,20 @@ export function SyncBand({
           Apple data last arrived {arrived ? syncClock(arrived, timeZone) : 'never'}
         </span>
       )}
+      {note && (
+        <span className="num hidden max-w-[360px] truncate text-[11px] text-ink-3 md:inline" title={note}>
+          {note}
+        </span>
+      )}
       {/* A quiet glass pill: syncing is a maintenance action, not the page's primary. */}
-      <ActionButton variant="outline" size="md" onClick={sync} disabled={pending}>
+      <ActionButton variant="outline" size="md" onClick={() => sync(onSync)} disabled={pending}>
         <span className={cn(pending && 'animate-pulse')}>{pending ? 'Syncing' : 'Sync now'}</span>
       </ActionButton>
+      {also && (
+        <ActionButton variant="outline" size="md" onClick={() => sync(also.run)} disabled={pending}>
+          {also.label}
+        </ActionButton>
+      )}
     </>
   )
 }

@@ -76,7 +76,12 @@ const MIN_PATTERN_LENGTH = 4
  * overwrite; length breaks the rest, so "amazon prime" beats "amazon" and the
  * specific rule is the one that fires.
  */
-export function categorise(descriptor: string, rules: Rule[]): Match | null {
+export function categorise(
+  descriptor: string,
+  rules: Rule[],
+  /** Names of the institutions behind the owner's credit accounts. */
+  institutions: string[] = [],
+): Match | null {
   const text = normalise(descriptor)
 
   const ranked = [...rules].sort((a, b) => {
@@ -97,7 +102,65 @@ export function categorise(descriptor: string, rules: Rule[]): Match | null {
     }
   }
 
+  // No pattern can name the owner's own bank in advance: "CAPITAL ONE ONLINE
+  // PMT" is a card payment only because Capital One is one of their cards.
+  // The institution and a payment word together are the rule.
+  if (
+    PAYMENT_WORD.test(text) &&
+    institutions.some((name) => normalise(name).length >= MIN_PATTERN_LENGTH && text.includes(normalise(name)))
+  ) {
+    return {
+      category: CARD_PAYMENT,
+      confidence: 1,
+      classifiedBy: 'rule',
+      matched: 'institution payment',
+    }
+  }
+
   return null
+}
+
+const CARD_PAYMENT = 'Credit card payment'
+const PAYMENT_WORD = /\b(payment|pmt|autopay|epay)/
+
+/**
+ * The rules every ledger needs and nobody should have to teach.
+ *
+ * Paying a card off is a transfer between the owner's own accounts and must
+ * never count as spending on either side; a statement credit belongs against
+ * the category it refunds, not as income. These are appended after the learned
+ * rules, so a manual rule still wins, and the descriptors are the common ones
+ * (verify against the owner's own statements; the doc says so).
+ */
+export const BUILTIN_RULES: Rule[] = [
+  { category: CARD_PAYMENT, pattern: 'payment thank you', isManual: false },
+  { category: CARD_PAYMENT, pattern: 'epayment', isManual: false },
+  { category: CARD_PAYMENT, pattern: 'e payment', isManual: false },
+  { category: CARD_PAYMENT, pattern: 'credit crd autopay', isManual: false },
+  { category: CARD_PAYMENT, pattern: 'autopay payment', isManual: false },
+  { category: 'Account transfer', pattern: 'online transfer', isManual: false },
+  { category: 'Account transfer', pattern: 'transfer to', isManual: false },
+  { category: 'Account transfer', pattern: 'transfer from', isManual: false },
+  { category: 'Statement credit', pattern: 'membership rewards credit', isManual: false },
+  { category: 'Dining', pattern: 'dining credit', isManual: false },
+  { category: 'Travel', pattern: 'uber credit', isManual: false },
+]
+
+/**
+ * Money back on a card from a merchant charged recently is a refund of that
+ * charge, and it nets against the charge's category. With no category on the
+ * charge it is a Refund, which is a credit kind and never income. Null means
+ * this is not a refund at all: a charge, a deposit, or a merchant never seen.
+ */
+export function matchRefund(
+  row: { merchant: string; amountCents: number; accountKind: string },
+  recentCharges: { merchant: string; amountCents: number; category: string | null }[],
+): string | null {
+  // A blank descriptor is not a merchant, and two blanks are not the same one.
+  if (row.accountKind !== 'credit' || row.amountCents >= 0 || row.merchant === '') return null
+  const charge = recentCharges.find((c) => c.amountCents > 0 && c.merchant === row.merchant)
+  if (!charge) return null
+  return charge.category ?? 'Refund'
 }
 
 /**

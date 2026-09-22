@@ -67,6 +67,29 @@ The nightly `categorise` job never sends anything to a model. Unmatched rows
 stay uncategorised and visible; the model arm belongs behind the guard with a
 confidence and a proposal, not on a sweep.
 
+Since v1.2 phase 5a, filing a row by hand does not learn a rule by itself: the
+row offers "Always file {merchant} as {category}", and Always writes the rule
+through `learn_rule`. `BUILTIN_RULES` in `categorise.ts` are appended after the
+learned rules on every run (a manual rule still wins): the card side and the
+checking side of paying a card off ("payment thank you", "epayment", "credit
+crd autopay") go to Credit card payment, and so does any descriptor naming one
+of the owner's card institutions with a payment word; "online transfer" is
+Account transfer; "membership rewards credit" is Statement credit; "dining
+credit" and "uber credit" net against Dining and Travel. Money back on a card
+from a merchant charged in the last 90 days (`matchRefund`) files into that
+charge's category, or into Refund when the charge had none.
+
+### Category kinds
+
+`finance.category.kind` is `expense`, `income`, `transfer` or `credit`. Only
+`expense` categories are budgets. A transfer (Credit card payment, Account
+transfer, Investing) is money moving between the owner's own accounts and is
+never spending, never a recurring charge, never an unusual transaction. A credit
+kind (Refund, Statement credit) is money back that is not income. A credit
+filed into an expense category is a negative row there, so "expense minus
+credit" is the plain signed sum. A pending row waits until it posts unless
+`finance.settings.count_pending` is on (the Budget limits drawer).
+
 ## Guarded, and what is not
 
 `set_budget` and `write_subscription` are guarded. A budget and a subscription
@@ -77,6 +100,12 @@ the row itself, and putting hundreds of rows a month through the Review inbox
 would make the inbox useless, which is the exact failure a guard has to avoid.
 
 ## Jobs
+
+`sync_simplefin` takes `{ days }`: the nightly run asks for a 30 day overlap
+(90 on the first run), and the band's Pull 90 days button re-asks for the
+first-run window. The result names each account's count and oldest date,
+because the history limit is the institution's and a 90 day pull can return
+less; the band prints that line under the clock.
 
 `snapshot_balances` writes one row per account per night. It is the only reason
 the net worth chart can exist: a balance not recorded on the day is gone, and no
