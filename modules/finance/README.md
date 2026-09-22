@@ -90,6 +90,41 @@ filed into an expense category is a negative row there, so "expense minus
 credit" is the plain signed sum. A pending row waits until it posts unless
 `finance.settings.count_pending` is on (the Budget limits drawer).
 
+### The overview's three reads
+
+`cashFlowByMonth(6)` puts the kinds to work: income is the `income` kind with
+its sign flipped, spending is `expense` plus `credit` (a credit is a negative
+row, so that sum is already expense minus credit), and a transfer is on neither
+side. A row with no category yet is read by its sign, because that is what the
+sign convention means; dropping it would make a freshly pulled month look
+emptier than it was. Every month of the window comes back whether it has rows
+or not: a quiet month drawn as a missing bar and one drawn as no bar are
+different claims.
+
+The sign fallback has one known ceiling: an **unfiled** card payment is `+` in
+checking and `-` on the card, so it adds the same amount to both bars. The net
+line and `netThisMonthCents` are unaffected, and the built-in payment rules
+normally file these before the chart ever sees them.
+
+`dueSoon(14)` reads both `finance.subscription` and `finance.recurring`,
+deduped by `recurring_id` or name. They are not the same set and nothing
+promotes one into the other: reading only subscriptions left the Upcoming card
+empty on a real install while the detector had a dozen rows. Only a curated
+subscription can be cancelled, because the nightly job would write a detection
+straight back. A cancelled subscription suppresses its detection for the same
+reason: Cancel means stop showing me this, and `finance.recurring` is rewritten
+nightly, so this read is the only place that can honour it. A paused one does
+not: paused is the detector saying the charges stopped arriving, so if it now
+says one is due, that is the row worth showing. The Balance after column is `runningBalance()` in `money.ts`
+over the largest checking account, not a column on the query: cancelling a
+charge has to re-run it over what is left, and a number computed on the server
+would be stale in every row below the cancelled one. It is a projection and
+not a forecast, because nothing here knows about pay days.
+
+`categorySeries(12)` returns every expense category at once, about two hundred
+numbers, so the trend card's select is a re-render rather than a round trip.
+Categories with nothing in the whole window are dropped.
+
 ## Guarded, and what is not
 
 `set_budget` and `write_subscription` are guarded. A budget and a subscription

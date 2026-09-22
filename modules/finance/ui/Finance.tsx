@@ -35,10 +35,13 @@ import {
   compactMoney,
   money,
   percent,
+  runningBalance,
   signedMoney,
   transactionAmount,
   type BudgetTone,
 } from '../money'
+import { CashFlow, type MonthFlowPoint } from './CashFlow'
+import { CategoryTrend, type CategorySeriesPoint } from './CategoryTrend'
 import {
   learnFor,
   recategorise,
@@ -51,6 +54,10 @@ import {
 
 /** What the accounts table's change column means, on the head and on a row with none. */
 const CHANGE_NOTE = 'Balance change over the last 30 days. An account added inside that window has no history yet.'
+
+/** What the running balance on the Upcoming card is, and what it is not. */
+const BALANCE_NOTE =
+  'The largest checking account as it stands now, with each charge above taken off in turn. A projection, not a forecast: nothing here knows about pay days.'
 
 // Five tabs over one dataset, plus two drawer kinds. The tab and the open
 // drawer live in the URL, so both survive a refresh and a shared link opens
@@ -97,6 +104,11 @@ export type FinanceData = {
     limitCents: number | null
     txCount: number
   }[]
+  /**
+   * What leaves the account in the next fortnight, from both the curated
+   * subscriptions and the nightly detections, with the checking balance run
+   * down through them.
+   */
   upcoming: {
     id: string
     name: string
@@ -104,7 +116,19 @@ export type FinanceData = {
     amountCents: number
     nextChargeOn: string
     cadence: string
+    /** Only a curated subscription can be cancelled; a detection is derived. */
+    isSubscription: boolean
   }[]
+  /**
+   * Where the running balance starts: the largest checking account, or null
+   * when there is no checking account to project from.
+   */
+  checkingCents: number | null
+  /** Income against spending per month, oldest first. */
+  cashFlow: MonthFlowPoint[]
+  /** The first of each month trendCategories covers. */
+  trendMonths: string[]
+  trendCategories: CategorySeriesPoint[]
   transactions: {
     id: string
     descriptor: string
@@ -304,6 +328,13 @@ export function Finance({ data }: { data: FinanceData }) {
   const kpiData = gone.length > 0 ? { ...data, upcoming } : data
 
   const upcomingTotal = upcoming.reduce((sum, u) => sum + u.amountCents, 0)
+  // Recomputed here rather than fetched with the charges, so cancelling one
+  // corrects every balance below it at once instead of after a reload. With no
+  // checking account there is nothing to project from, and the column goes
+  // rather than counting every row down from zero into a red number that says
+  // the money has run out.
+  const projecting = data.checkingCents !== null
+  const balanceAfter = runningBalance(data.checkingCents ?? 0, upcoming.map((u) => u.amountCents))
   const hot = data.budgets.filter(
     (b) => !b.isFixed && b.limitCents && percent(b.spentCents, b.limitCents) >= data.alertThreshold,
   )
@@ -348,6 +379,16 @@ export function Finance({ data }: { data: FinanceData }) {
               <Card className={cn(overviewCard, 'flex min-h-[260px] flex-col')}>
                 <NetWorthCard data={data} />
               </Card>
+              {data.cashFlow.length > 0 && (
+                <Card className={cn(overviewCard, 'flex min-h-[240px] flex-col')}>
+                  <CashFlow months={data.cashFlow} />
+                </Card>
+              )}
+              {data.trendCategories.length > 0 && (
+                <Card className={cn(overviewCard, 'flex min-h-[280px] flex-col')}>
+                  <CategoryTrend categories={data.trendCategories} months={data.trendMonths} />
+                </Card>
+              )}
               <RowList>
                 <Row
                   title="Accounts"
@@ -469,18 +510,24 @@ export function Finance({ data }: { data: FinanceData }) {
                 </EmptyState>
               ) : (
                 <RowList>
-                  {upcoming.map((u) => (
+                  {upcoming.map((u, i) => (
                     <Row
                       key={u.id}
                       title={u.name}
-                      meta={`${u.vendor || 'No vendor'} / ${u.cadence} / next ${shortDate(u.nextChargeOn)}`}
+                      meta={`${u.vendor || (u.isSubscription ? 'No vendor' : 'Detected')} / ${u.cadence} / next ${shortDate(u.nextChargeOn)}`}
                       amount={money(u.amountCents, true)}
                       right={
                         <>
-                          <ActionButton onClick={() => cancel(u)}>Cancel</ActionButton>
+                          {u.isSubscription && <ActionButton onClick={() => cancel(u)}>Cancel</ActionButton>}
                         </>
                       }
-                    />
+                    >
+                      {projecting ? (
+                        <span className="label text-[11px] text-ink-3">
+                          Leaves {balance(balanceAfter[i])} in checking
+                        </span>
+                      ) : null}
+                    </Row>
                   ))}
                 </RowList>
               )}
@@ -565,6 +612,14 @@ export function Finance({ data }: { data: FinanceData }) {
               </DataTable>
             </Card>
 
+            {/* v1.2 phase 5b. The corner under the accounts table, which was
+              * empty at 1440 while the column beside it ran on. */}
+            {data.cashFlow.length > 0 && (
+              <Card data-testid="finance-cashflow" className={cn(overviewCard, 'flex min-h-[260px] flex-col')}>
+                <CashFlow months={data.cashFlow} />
+              </Card>
+            )}
+
           </div>
 
           <div className="flex min-w-0 flex-col gap-3.5">
@@ -576,11 +631,19 @@ export function Finance({ data }: { data: FinanceData }) {
               />
               {upcoming.length === 0 ? (
                 <EmptyState headline="Nothing booked" className="border-0">
-                  No active subscription is due in the next fortnight.
+                  Nothing the detector found, and no subscription you keep, is due in the next
+                  fortnight.
                 </EmptyState>
               ) : (
-                <DataTable head={['Date', 'Charge', 'Amount']} cols="82px minmax(0,1fr) auto">
-                  {upcoming.map((u) => (
+                <DataTable
+                  head={
+                    projecting
+                      ? ['Date', 'Charge', 'Amount', <span key="after">Balance after</span>]
+                      : ['Date', 'Charge', 'Amount']
+                  }
+                  cols={projecting ? '82px minmax(0,1fr) auto 96px' : '82px minmax(0,1fr) auto'}
+                >
+                  {upcoming.map((u, i) => (
                     <DataRow key={u.id} className={cn(overviewRow, 'md:gap-x-3')}>
                       <span className="num text-[12px] text-ink">
                         {shortDate(u.nextChargeOn)}
@@ -591,37 +654,68 @@ export function Finance({ data }: { data: FinanceData }) {
                       <span className="min-w-0">
                         <span className="block truncate text-[13px] text-ink">{u.name}</span>
                         <span className="mt-0.5 block truncate text-[11px] text-ink-3">
-                          Subscription · {u.cadence}
+                          {u.isSubscription ? 'Subscription' : 'Detected'} · {u.cadence}
                           {u.vendor ? ` · ${u.vendor}` : ''}
                         </span>
                       </span>
                       <span className="flex items-center justify-end gap-2.5">
+                        {/* Before the amount, not after it: only some rows
+                            carry a Cancel now, and a button inside the numeric
+                            cell pushed those rows' amounts out of the column.
+                            Not on the artboard either way: cancel has no home
+                            there, and this is the one place a due charge is
+                            named. Only a subscription the owner keeps can be
+                            cancelled, because the nightly job would write a
+                            detection straight back. */}
+                        {u.isSubscription && (
+                          <ActionButton
+                            size="sm"
+                            variant="quiet"
+                            aria-label={`Cancel ${u.name}`}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              cancel(u)
+                            }}
+                          >
+                            Cancel
+                          </ActionButton>
+                        )}
                         <span className="num text-right text-[13px] text-ink">{money(u.amountCents, true)}</span>
-                        {/* Not on the artboard: cancel has no home there, and
-                            this is the one place a due charge is named. */}
-                        <ActionButton
-                          size="sm"
-                          variant="quiet"
-                          aria-label={`Cancel ${u.name}`}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            cancel(u)
-                          }}
-                        >
-                          Cancel
-                        </ActionButton>
                       </span>
+                      {projecting && (
+                        <span
+                          className={cn(
+                            'num text-right text-[13px]',
+                            balanceAfter[i] < 0 ? 'text-bad' : 'text-ink-2',
+                          )}
+                        >
+                          {balance(balanceAfter[i])}
+                        </span>
+                      )}
                     </DataRow>
                   ))}
                   <DataRow className="border-b-0 md:gap-x-3 md:pb-0.5 md:pt-2.5">
                     <span className="label text-[11px] text-ink-3">Total</span>
                     <span className="text-[12px] text-ink-3">
                       {upcoming.length} {upcoming.length === 1 ? 'charge' : 'charges'} ·{' '}
-                      {money(monthlySubscriptions, true)}/mo in subscriptions
+                      {money(monthlySubscriptions, true)}/mo in recurring charges
                     </span>
                     <span className="num text-right text-[13px] text-ink">{money(upcomingTotal, true)}</span>
+                    {projecting && (
+                      <span
+                        className={cn(
+                          'num text-right text-[13px]',
+                          (balanceAfter.at(-1) ?? 0) < 0 ? 'text-bad' : 'text-ink',
+                        )}
+                      >
+                        {balance(balanceAfter.at(-1) ?? data.checkingCents ?? 0)}
+                      </span>
+                    )}
                   </DataRow>
                 </DataTable>
+              )}
+              {upcoming.length > 0 && projecting && (
+                <p className="t-caption mt-2.5 text-ink-3">{BALANCE_NOTE}</p>
               )}
             </Card>
 
@@ -691,6 +785,12 @@ export function Finance({ data }: { data: FinanceData }) {
                 </>
               )}
             </Card>
+
+            {data.trendCategories.length > 0 && (
+              <Card data-testid="finance-trend" className={cn(overviewCard, 'flex min-h-[300px] flex-col')}>
+                <CategoryTrend categories={data.trendCategories} months={data.trendMonths} />
+              </Card>
+            )}
           </div>
         </div>
       </div>

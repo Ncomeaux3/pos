@@ -9,6 +9,11 @@ describe('money rendering', () => {
     expect(signedMoney(-64_000)).toBe('-$640')
     // And a change of nothing is not "$0", it is flat.
     expect(signedMoney(0)).toBe('flat')
+    // Whole dollars are what it renders, so a seven cent move has no signed
+    // reading: the category trend's worst month was printing "-$0".
+    expect(signedMoney(-7)).toBe('flat')
+    expect(signedMoney(49)).toBe('flat')
+    expect(signedMoney(-50)).toBe('-$1')
   })
 
   it('flips the sign for income, which is negative in the data', () => {
@@ -20,6 +25,8 @@ describe('money rendering', () => {
     expect(compactMoney(84_200)).toBe('$842')
     expect(compactMoney(3_120_000)).toBe('$31.2k')
     expect(compactMoney(-231_000)).toBe('-$2.3k')
+    // An axis bound below zero keeps its sign, where money() drops it.
+    expect(compactMoney(-73_900)).toBe('-$739')
   })
 })
 

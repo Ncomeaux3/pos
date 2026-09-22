@@ -3,12 +3,13 @@ import { ownerToday } from '@/core/today'
 import { BUILTIN_RULES, categorise, learnFrom, matchRefund, type Rule } from '../categorise'
 import { detectRecurring, isStale, type Charge } from '../recurring'
 import {
+  cashFlowByMonth,
   categorySpend,
+  dueSoon,
   getAlertThreshold,
   listAccounts,
   loadRules,
   netWorthSeries,
-  upcomingCharges,
 } from '../data'
 import { percent } from '../money'
 import { spine } from '@/core/series'
@@ -31,6 +32,12 @@ export type FinanceDigest = {
   /** Categories past the alert threshold, and the threshold they were judged by. */
   overBudget: { name: string; percent: number }[]
   alertThreshold: number
+  /**
+   * This month so far: what arrived less what left, transfers excluded. The
+   * tile head's one line, because a net worth that moved says nothing about
+   * whether the month is being lived within its means.
+   */
+  netThisMonthCents: number
   /** Month to date, summed over the categories that have a budget this month. */
   spendCents: number
   budgetCents: number
@@ -41,11 +48,15 @@ export type FinanceDigest = {
 const LARGE_CHARGE_CENTS = 50_000
 
 export async function nightlyDigest(): Promise<FinanceDigest> {
-  const [accounts, series, spend, upcoming, today, alertThreshold] = await Promise.all([
+  const [accounts, series, spend, upcoming, flow, today, alertThreshold] = await Promise.all([
     listAccounts(),
     netWorthSeries(30),
     categorySpend(),
-    upcomingCharges(14),
+    // The same read the screen's Upcoming card makes, so the dashboard tile
+    // and the screen it links to cannot disagree about what is due.
+    dueSoon(14),
+    // One month, because the tile needs this month and nothing else.
+    cashFlowByMonth(1),
     ownerToday(),
     // SPEC's 80 by default; the owner's own number once the slider has moved.
     getAlertThreshold(),
@@ -91,17 +102,18 @@ export async function nightlyDigest(): Promise<FinanceDigest> {
     // Dollars, not cents: the line is a shape, and the numbers beside it are
     // where the precision belongs.
     netWorthSeries: days.map((d) => (d.cents === null ? null : Math.round(d.cents / 100))),
-    upcomingCents: upcoming.reduce((sum, c) => sum + Number(c.amount_cents), 0),
-    upcomingCount: upcoming.length,
-    nextCharge: upcoming[0]
+    upcomingCents: upcoming.charges.reduce((sum, c) => sum + c.amountCents, 0),
+    upcomingCount: upcoming.charges.length,
+    nextCharge: upcoming.charges[0]
       ? {
-          name: upcoming[0].name,
+          name: upcoming.charges[0].name,
           inDays: Math.round(
-            (Date.parse(`${upcoming[0].next_charge_on}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`)) /
+            (Date.parse(`${upcoming.charges[0].nextChargeOn}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`)) /
               86_400_000,
           ),
         }
       : null,
+    netThisMonthCents: Number(flow[0]?.income_cents ?? 0) - Number(flow[0]?.expense_cents ?? 0),
     spendCents: budgeted.reduce((sum, c) => sum + Number(c.spent_cents), 0),
     budgetCents: budgeted.reduce((sum, c) => sum + Number(c.limit_cents), 0),
     overBudget: spend

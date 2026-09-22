@@ -19,7 +19,10 @@ export function money(cents: number, withCents = false): string {
 
 /** "-$640" for a fall, "+$1,200" for a rise. What a delta reads as. */
 export function signedMoney(cents: number): string {
-  if (cents === 0) return 'flat'
+  // Under half a dollar is flat, not "-$0". This renders whole dollars, so a
+  // seven cent move has no signed reading; printing one says the number is
+  // smaller than zero when what is true is that it rounds to nothing.
+  if (Math.abs(cents) < 50) return 'flat'
   return `${cents > 0 ? '+' : '-'}${money(cents)}`
 }
 
@@ -35,10 +38,16 @@ export function balance(cents: number): string {
   return cents < 0 ? `-${money(cents)}` : money(cents)
 }
 
-/** "$31.2k". For an axis, where the digits do not fit and do not matter. */
+/**
+ * "$31.2k". For an axis, where the digits do not fit and do not matter.
+ *
+ * Signed, because money() is absolute by design and an axis bound is not: a
+ * cash flow chart whose whole reading is the zero crossing labelled its
+ * negative floor "$740".
+ */
 export function compactMoney(cents: number): string {
   const dollars = cents / 100
-  if (Math.abs(dollars) < 1000) return money(cents)
+  if (Math.abs(dollars) < 1000) return `${cents < 0 ? '-' : ''}${money(cents)}`
   return `${dollars < 0 ? '-' : ''}$${(Math.abs(dollars) / 1000).toFixed(1)}k`
 }
 
@@ -52,6 +61,19 @@ export function compactMoney(cents: number): string {
 export function transactionAmount(cents: number): { text: string; incoming: boolean } {
   const incoming = cents < 0
   return { text: `${incoming ? '+' : '-'}${money(cents, true)}`, incoming }
+}
+
+/**
+ * The balance after each charge in turn, starting from `startCents`.
+ *
+ * Positive is money out, so a charge lowers the balance. Here rather than in
+ * the query that fetches the charges because cancelling one has to re-run it
+ * over what is left: a number computed on the server would be stale in every
+ * row below the cancelled one until the page reloaded.
+ */
+export function runningBalance(startCents: number, amountsCents: number[]): number[] {
+  let balance = startCents
+  return amountsCents.map((cents) => (balance -= cents))
 }
 
 /**
