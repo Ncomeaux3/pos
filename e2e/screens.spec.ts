@@ -2300,10 +2300,11 @@ test('finance, net worth and the budget pace marks', async ({ page }) => {
 
   const mobile = (page.viewportSize()?.width ?? 0) < 768
   if (!mobile) {
-    // POS Finance.dc.html at 1440: one overview, no tabs; the four KPI cells in
-    // its order; the accounts table's columns; the Budgets head's Edit limits;
-    // 9px rows; the title block's sentence.
-    await expect(page.getByRole('tablist')).toHaveCount(0)
+    // POS Finance.dc.html at 1440 is the Overview tab: the tabs show at every
+    // width since the owner asked for transactions on the desktop (2026-09-22);
+    // the four KPI cells in its order; the accounts table's columns; the
+    // Budgets head's Edit limits; 9px rows; the title block's sentence.
+    await expect(page.getByRole('tablist', { name: 'Finance views' })).toBeVisible()
     await expect(page.getByText('Balances, upcoming charges, and budgets. Synced nightly, amounts in USD.')).toBeVisible()
     const strip = page.getByTestId('finance-kpis')
     await expect(strip.locator('.eyebrow')).toHaveText([
@@ -2386,7 +2387,8 @@ test('finance, cash flow, the category trend and the running balance', async ({ 
 
   // Switching the select redraws the same chart with another category, with no
   // round trip: every series came down with the page.
-  const select = trend.getByLabel('Category')
+  // Visible only: the pane also holds the desktop Overview, hidden on the phone.
+  const select = trend.getByLabel('Category').filter({ visible: true })
   const first = await chart.getAttribute('aria-label')
   const options = await select.locator('option').allTextContents()
   expect(options.length).toBeGreaterThan(1)
@@ -2434,6 +2436,26 @@ test('finance, filing a transaction teaches the rule', async ({ page }) => {
   await page.getByRole('button', { name: 'Always', exact: true }).click()
   await expect(page.getByText('Rule learned')).toBeVisible()
   await shoot(page, 'finance-account')
+})
+
+test('finance, the transactions tab searches the ledger on both widths', async ({ page }) => {
+  // The desktop had no transactions list at all; the tab is now the same at
+  // every width, and each row names its account.
+  await page.goto('/finance?tab=transactions')
+  const search = page.getByRole('searchbox', { name: 'Search transactions' })
+  await expect(search).toBeVisible()
+
+  await search.fill('costco')
+  await expect(page.getByText('Results for “costco”')).toBeVisible()
+  await expect(page.getByText('Costco').first()).toBeVisible()
+  await expect(page.getByText(/Groceries.*· Credit card/).first()).toBeVisible()
+
+  // An amount finds its row whichever way the ledger signs it.
+  await search.fill('148.90')
+  await expect(page.getByText('Costco').first()).toBeVisible()
+
+  await search.fill('zzz no such merchant')
+  await expect(page.getByText('Nothing matches')).toBeVisible()
 })
 
 test('finance, a card payment is a transfer and a credit nets against its budget', async ({ page }) => {

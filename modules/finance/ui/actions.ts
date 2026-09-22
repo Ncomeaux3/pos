@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireOwner } from '@/core/auth'
 import { callTool, ToolInputError, type CallResult } from '@/core/tools'
+import { listTransactions, transactionItem } from '../data'
 
 // Server actions are standalone POST endpoints addressed by id, so the (app)
 // layout does not run for them and each one authenticates independently.
@@ -22,6 +23,22 @@ function done(): ActionResult {
   revalidatePath('/', 'layout')
   return { ok: true }
 }
+
+/**
+ * Search the whole ledger, newest first. A read, so it skips callTool: the
+ * Transactions tab loads the newest rows only and a search has to reach the
+ * rest.
+ */
+export async function searchTransactions(
+  q: string,
+): Promise<{ rows: ReturnType<typeof transactionItem>[]; more: boolean }> {
+  await requireOwner()
+  // One past the cap, so the screen can say there are more than it shows.
+  const rows = await listTransactions({ search: q, limit: SEARCH_CAP + 1 })
+  return { rows: rows.slice(0, SEARCH_CAP).map(transactionItem), more: rows.length > SEARCH_CAP }
+}
+
+const SEARCH_CAP = 200
 
 /**
  * Recategorise a transaction. The rule is offered afterwards, not learned

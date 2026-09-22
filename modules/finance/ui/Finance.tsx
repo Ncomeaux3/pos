@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import {
   DataTable,
   DataRow,
@@ -54,6 +54,7 @@ import {
   saveThreshold,
   setSubscriptionStatus,
   type ActionResult,
+  searchTransactions,
 } from './actions'
 
 /** What the accounts table's change column means, on the head and on a row with none. */
@@ -323,12 +324,34 @@ export function Finance({ data }: { data: FinanceData }) {
   // moment Cancel is pressed, same shape as Inbox.tsx's act(): optimistic,
   // reverted with a toast on failure.
   const [txFilter, setTxFilter] = useState<TxFilter>('all')
+  // The tab holds the newest rows, so a search asks the server for the whole
+  // ledger. Two characters before it asks, a quarter second after typing stops.
+  const [query, setQuery] = useState('')
+  const [found, setFound] = useState<{ q: string; rows: FinanceData['transactions']; more: boolean } | null>(null)
+  const q = query.trim()
+  const searching = q.length >= 2
+  useEffect(() => {
+    if (q.length < 2) return
+    let live = true
+    const timer = setTimeout(() => {
+      searchTransactions(q)
+        .then((result) => live && setFound({ q, ...result }))
+        .catch(() => live && toast('Search failed'))
+    }, 250)
+    return () => {
+      live = false
+      clearTimeout(timer)
+    }
+  }, [q, toast])
+  const pool = searching ? (found?.q === q ? found.rows : null) : data.transactions
   const shownTransactions =
-    txFilter === 'all'
-      ? data.transactions
-      : txFilter === 'pending'
-        ? data.transactions.filter((t) => t.pending)
-        : data.transactions.filter((t) => t.categoryName === null)
+    pool === null
+      ? []
+      : txFilter === 'all'
+        ? pool
+        : txFilter === 'pending'
+          ? pool.filter((t) => t.pending)
+          : pool.filter((t) => t.categoryName === null)
 
   const [gone, setGone] = useState<string[]>([])
   const cancel = (u: FinanceData['upcoming'][number]) => {
@@ -373,7 +396,10 @@ export function Finance({ data }: { data: FinanceData }) {
 
   return (
     <div className="space-y-5">
-      <div className="md:hidden">
+      {/* One set of tabs at every width, so a row is found the same way on
+        * the desktop as on the phone. Overview is the one view that differs:
+        * the desktop keeps its whole-picture page there. */}
+      <div>
         <Segments
           label="Finance views"
           value={tab}
@@ -390,7 +416,8 @@ export function Finance({ data }: { data: FinanceData }) {
           }))}
         >
           {tab === 'overview' && (
-            <div className="mt-[18px] space-y-3.5">
+            <>
+            <div className="mt-[18px] space-y-3.5 md:hidden">
               <MetricStrip>
                 <KpiStrip data={kpiData} hot={hot} upcomingTotal={upcomingTotal} daysLeft={daysLeft} />
               </MetricStrip>
@@ -425,10 +452,266 @@ export function Finance({ data }: { data: FinanceData }) {
                 />
               </RowList>
             </div>
+            <div className="mt-[18px] hidden md:block space-y-3.5">
+              {/* POS Finance.dc.html: the whole picture on one page. Four cells on
+                * the page ground with 1px rules between, then accounts over the
+                * curve beside what is due over the budgets. The phone drills in
+                * through its segments; the desktop through the drawers. */}
+              <div data-testid="finance-kpis">
+                <MetricStrip className="sm:grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))]">
+                  <KpiStrip data={kpiData} hot={hot} upcomingTotal={upcomingTotal} daysLeft={daysLeft} />
+                </MetricStrip>
+              </div>
+
+              {/* The chart owns its own header, because the high, low and average
+                * belong beside the title rather than under the line. Full width
+                * under the KPIs, as the Holon mockup draws it (docs/design/holon/finance.html). */}
+              <Card className={cn(overviewCard, 'flex min-h-[300px] flex-col')}>
+                <NetWorthCard data={data} />
+              </Card>
+
+              <div className="grid items-start gap-3.5 xl:grid-cols-2">
+                <div className="flex min-w-0 flex-col gap-3.5 self-stretch">
+                  <Card data-testid="finance-accounts" className={overviewCard}>
+                    <CardHead label="Accounts" meta="share of assets" className="mb-1" />
+                    <DataTable
+                      head={['Account', 'Institution', 'Balance', <span key="30d" title={CHANGE_NOTE}>30d change</span>, 'Share']}
+                      cols="minmax(0,1.2fr) minmax(0,.9fr) minmax(0,.9fr) minmax(0,.9fr) minmax(0,1fr)"
+                    >
+                      {data.accounts.map((a) => (
+                        <DataRow key={a.id} onClick={() => setParams({ account: a.id }, { push: true })} className={overviewRow}>
+                          <span className="min-w-0 truncate text-[13px] text-ink">
+                            {a.name}
+                            <span className="label ml-1.5 text-[11px] text-ink-3">{a.txCount} tx →</span>
+                          </span>
+                          <span className="truncate text-[13px] text-ink-3">{a.institution}</span>
+                          <span className="num text-right text-[13px] text-ink">{balance(a.balanceCents)}</span>
+                          <span
+                            className={cn(
+                              'num text-right text-[13px]',
+                              a.changeCents === null || a.changeCents === 0
+                                ? 'text-ink-3'
+                                : a.changeCents > 0
+                                  ? 'text-ok'
+                                  : 'text-bad',
+                            )}
+                          >
+                            {/* Not tracked is not the same as no change, and must not
+                                render as one. */}
+                            {a.changeCents === null ? (
+                              <span title={CHANGE_NOTE} className="label whitespace-nowrap text-[11px]">no history yet</span>
+                            ) : a.changeCents === 0 ? (
+                              'flat'
+                            ) : (
+                              signedMoney(a.changeCents)
+                            )}
+                          </span>
+                          <span className="flex items-center justify-end gap-2">
+                            <span className="h-0.5 w-14 bg-rule-2" aria-hidden>
+                              <span className="block h-0.5 bg-brand" style={{ width: `${Math.max(0, Math.min(100, a.sharePercent))}%` }} />
+                            </span>
+                            <span className="num w-[34px] shrink-0 text-right text-[11px] text-ink-2">
+                              {a.balanceCents > 0 ? `${Math.round(a.sharePercent)}%` : '\u2014'}
+                            </span>
+                          </span>
+                        </DataRow>
+                      ))}
+                    </DataTable>
+                  </Card>
+
+                  {/* v1.2 phase 5b. The corner under the accounts table, which was
+                    * empty at 1440 while the column beside it ran on. */}
+                  {data.cashFlow.length > 0 && (
+                    <Card data-testid="finance-cashflow" className={cn(overviewCard, 'flex min-h-[260px] flex-col')}>
+                      <CashFlow months={data.cashFlow} />
+                    </Card>
+                  )}
+
+                </div>
+
+                <div className="flex min-w-0 flex-col gap-3.5">
+                  <Card data-testid="finance-upcoming" className={overviewCard}>
+                    <CardHead
+                      label="Upcoming · 14 days"
+                      meta={`${shortDate(data.todayIso)} → ${shortDate(plusDays(data.todayIso, 14))}`}
+                      className="mb-1"
+                    />
+                    {upcoming.length === 0 ? (
+                      <EmptyState headline="Nothing booked" className="border-0">
+                        Nothing the detector found, and no subscription you keep, is due in the next
+                        fortnight.
+                      </EmptyState>
+                    ) : (
+                      <DataTable
+                        head={
+                          projecting
+                            ? ['Date', 'Charge', 'Amount', <span key="after">Balance after</span>]
+                            : ['Date', 'Charge', 'Amount']
+                        }
+                        cols={projecting ? '82px minmax(0,1fr) auto 96px' : '82px minmax(0,1fr) auto'}
+                      >
+                        {upcoming.map((u, i) => (
+                          <DataRow key={u.id} className={cn(overviewRow, 'md:gap-x-3')}>
+                            <span className="num text-[12px] text-ink">
+                              {shortDate(u.nextChargeOn)}
+                              <span className="mt-0.5 block text-[11px] text-ink-3">
+                                {weekday(u.nextChargeOn)} · {inDays(data.todayIso, u.nextChargeOn)}
+                              </span>
+                            </span>
+                            <span className="min-w-0">
+                              <span className="block truncate text-[13px] text-ink">{u.name}</span>
+                              <span className="mt-0.5 block truncate text-[11px] text-ink-3">
+                                {u.isSubscription ? 'Subscription' : 'Detected'} · {u.cadence}
+                                {u.vendor ? ` · ${u.vendor}` : ''}
+                              </span>
+                            </span>
+                            <span className="flex items-center justify-end gap-2.5">
+                              {/* Before the amount, not after it: only some rows
+                                  carry a Cancel now, and a button inside the numeric
+                                  cell pushed those rows' amounts out of the column.
+                                  Not on the artboard either way: cancel has no home
+                                  there, and this is the one place a due charge is
+                                  named. Only a subscription the owner keeps can be
+                                  cancelled, because the nightly job would write a
+                                  detection straight back. */}
+                              {u.isSubscription && (
+                                <ActionButton
+                                  size="sm"
+                                  variant="quiet"
+                                  aria-label={`Cancel ${u.name}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    cancel(u)
+                                  }}
+                                >
+                                  Cancel
+                                </ActionButton>
+                              )}
+                              <span className="num text-right text-[13px] text-ink">{money(u.amountCents, true)}</span>
+                            </span>
+                            {projecting && (
+                              <span
+                                className={cn(
+                                  'num text-right text-[13px]',
+                                  balanceAfter[i] < 0 ? 'text-bad' : 'text-ink-2',
+                                )}
+                              >
+                                {balance(balanceAfter[i])}
+                              </span>
+                            )}
+                          </DataRow>
+                        ))}
+                        <DataRow className="border-b-0 md:gap-x-3 md:pb-0.5 md:pt-2.5">
+                          <span className="label text-[11px] text-ink-3">Total</span>
+                          <span className="text-[12px] text-ink-3">
+                            {upcoming.length} {upcoming.length === 1 ? 'charge' : 'charges'} ·{' '}
+                            {money(monthlySubscriptions, true)}/mo in recurring charges
+                          </span>
+                          <span className="num text-right text-[13px] text-ink">{money(upcomingTotal, true)}</span>
+                          {projecting && (
+                            <span
+                              className={cn(
+                                'num text-right text-[13px]',
+                                (balanceAfter.at(-1) ?? 0) < 0 ? 'text-bad' : 'text-ink',
+                              )}
+                            >
+                              {balance(balanceAfter.at(-1) ?? data.checkingCents ?? 0)}
+                            </span>
+                          )}
+                        </DataRow>
+                      </DataTable>
+                    )}
+                    {upcoming.length > 0 && projecting && (
+                      <p className="t-caption mt-2.5 text-ink-3">{BALANCE_NOTE}</p>
+                    )}
+                  </Card>
+
+                  <Card data-testid="finance-budgets" className={cn(overviewCard, 'flex flex-col')}>
+                    <div className="mb-1 flex items-center justify-between gap-3.5">
+                      <Eyebrow>Budgets · {monthLabel(data.todayIso)}</Eyebrow>
+                      <span className="flex items-center gap-3.5">
+                        <span className={cn('label text-[11px]', hot.length > 0 ? 'text-warn' : 'text-ink-3')}>
+                          {hot.length} over {data.alertThreshold}%
+                        </span>
+                        {/* Rules live with transactions, and the desktop page has no
+                          * transactions surface of its own: the drawer's Unfiled
+                          * list is how this width reaches what nothing filed. */}
+                        <ActionButton size="sm" onClick={() => setParams({ rules: '1' }, { push: true })}>
+                          Rules
+                        </ActionButton>
+                        <ActionButton size="sm" onClick={() => setParams({ limits: '1' }, { push: true })}>
+                          Edit limits
+                        </ActionButton>
+                      </span>
+                    </div>
+                    {shownBudgets.length === 0 ? (
+                      <EmptyState headline="No budgets" className="border-0">
+                        A budget is a limit on a category for this month. Set one with Edit limits.
+                      </EmptyState>
+                    ) : (
+                      <>
+                        <DataTable head={['Category', 'Spent / limit', 'Used']} cols="minmax(0,1fr) auto 44px">
+                          {shownBudgets.map((b) => {
+                            const used = b.limitCents ? budgetTone(b.spentCents, b.limitCents, data.alertThreshold, b.isFixed) : null
+                            const over = used !== null && (used.tone === 'warn' || used.tone === 'bad')
+                            const tone = used === null || used.tone === 'fixed' ? 'text-ink' : toneText(used.tone)
+                            return (
+                              <DataRow
+                                key={b.id}
+                                onClick={() => setParams({ budget: b.id }, { push: true })}
+                                className={cn(overviewRow, 'lg:block lg:py-1.5')}
+                              >
+                                <span className="grid items-baseline gap-x-3.5 lg:grid-cols-[minmax(0,1fr)_auto_44px]">
+                                  <span className={cn('min-w-0 truncate text-[13px]', tone)}>
+                                    {b.name}
+                                    {b.isFixed ? (
+                                      <StatusChip tone="quiet" className="ml-1.5">Fixed</StatusChip>
+                                    ) : over ? (
+                                      <StatusChip tone="warn" className="ml-1.5">over {data.alertThreshold}%</StatusChip>
+                                    ) : null}
+                                  </span>
+                                  <span className="num text-[12px] text-ink-2">
+                                    {money(b.spentCents)}{' '}
+                                    <span className="text-ink-3">/ {b.limitCents ? money(b.limitCents) : 'no limit'}</span>
+                                  </span>
+                                  <span className={cn('num text-right text-[12px]', tone)}>
+                                    {used === null ? '\u2014' : `${used.pct}%`}
+                                  </span>
+                                </span>
+                                <BudgetBar budget={b} pace={data.monthPace} threshold={data.alertThreshold} compact />
+                              </DataRow>
+                            )
+                          })}
+                        </DataTable>
+                        <div className="grid items-baseline gap-x-3.5 pt-2.5 lg:grid-cols-[minmax(0,1fr)_auto_44px]">
+                          <span className="label text-[11px] text-ink-3">
+                            Total · <span className="text-ink-2">{money(Math.max(0, budgetTotals.limit - budgetTotals.spent))} left</span> ·
+                            pace mark at day {dayOfMonth(data.todayIso)}
+                          </span>
+                          <span className="num text-[12px] text-ink">
+                            {money(budgetTotals.spent)} <span className="text-ink-3">/ {money(budgetTotals.limit)}</span>
+                          </span>
+                          <span className="num text-right text-[12px] text-ink">
+                            {budgetTotals.limit > 0 ? `${Math.round((budgetTotals.spent / budgetTotals.limit) * 100)}%` : '\u2014'}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </Card>
+
+                  {data.trendCategories.length > 0 && (
+                    <Card data-testid="finance-trend" className={cn(overviewCard, 'flex min-h-[300px] flex-col')}>
+                      <CategoryTrend categories={data.trendCategories} months={data.trendMonths} />
+                    </Card>
+                  )}
+                </div>
+              </div>
+            </div>
+            </>
           )}
 
           {tab === 'accounts' && (
-            <RowList className="mt-[18px]">
+            <RowList className="mt-[18px] max-w-3xl">
               {data.accounts.map((a) => (
                 <Row
                   key={a.id}
@@ -471,7 +754,7 @@ export function Finance({ data }: { data: FinanceData }) {
           )}
 
           {tab === 'budgets' && (
-            <div className="mt-[18px] space-y-3">
+            <div className="mt-[18px] max-w-3xl space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <span className={cn('label text-[11px]', hot.length > 0 ? 'text-warn' : 'text-ink-3')}>
                   {hot.length} over {data.alertThreshold}%
@@ -519,7 +802,7 @@ export function Finance({ data }: { data: FinanceData }) {
           )}
 
           {tab === 'subscriptions' && (
-            <div className="mt-[18px] space-y-3">
+            <div className="mt-[18px] max-w-3xl space-y-3">
               {upcoming.length === 0 ? (
                 <EmptyState headline="Nothing detected">
                   A subscription is three charges from the same merchant, within ten percent of each
@@ -553,7 +836,7 @@ export function Finance({ data }: { data: FinanceData }) {
           )}
 
           {tab === 'transactions' && (
-            <div className="mt-[18px]">
+            <div className="mt-[18px] max-w-3xl">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 {/* The counts are the ledger's, not this list's: 607 rows had
                   * no category behind a window of 60, which is why there is a
@@ -579,278 +862,42 @@ export function Finance({ data }: { data: FinanceData }) {
                   Rules
                 </ActionButton>
               </div>
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Merchant, category, account or amount"
+                aria-label="Search transactions"
+                className={cn(fieldClass, 'mt-3 w-full')}
+              />
+              {searching && pool === null ? (
+                <p className="mt-3.5 text-[12px] text-ink-3">Searching…</p>
+              ) : searching && shownTransactions.length === 0 ? (
+                <EmptyState headline="Nothing matches" className="mt-3.5">
+                  No transaction has &ldquo;{q}&rdquo; in its description, category or account, or
+                  that amount{txFilter === 'all' ? '' : ' under this filter'}.
+                </EmptyState>
+              ) : (
               <TransactionList
                 transactions={shownTransactions}
+                caption={searching ? `Results for “${q}”${found?.more ? ', newest 200, narrow it to see the rest' : ''}` : undefined}
                 total={
-                  txFilter === 'all'
-                    ? data.counts.all
-                    : txFilter === 'pending'
-                      ? data.counts.pending
-                      : data.counts.uncategorised
+                  searching
+                    ? undefined
+                    : txFilter === 'all'
+                      ? data.counts.all
+                      : txFilter === 'pending'
+                        ? data.counts.pending
+                        : data.counts.uncategorised
                 }
                 categories={data.categories}
                 onRecategorise={(id, categoryId) => runFor(() => recategorise(id, categoryId), 'Filed')}
                 onLearn={(id, categoryId) => runFor(() => learnFor(id, categoryId), 'Rule learned')}
               />
+              )}
             </div>
           )}
         </Segments>
-      </div>
-
-      <div className="hidden md:block space-y-3.5">
-        {/* POS Finance.dc.html: the whole picture on one page. Four cells on
-          * the page ground with 1px rules between, then accounts over the
-          * curve beside what is due over the budgets. The phone drills in
-          * through its segments; the desktop through the drawers. */}
-        <div data-testid="finance-kpis">
-          <MetricStrip className="sm:grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))]">
-            <KpiStrip data={kpiData} hot={hot} upcomingTotal={upcomingTotal} daysLeft={daysLeft} />
-          </MetricStrip>
-        </div>
-
-        {/* The chart owns its own header, because the high, low and average
-          * belong beside the title rather than under the line. Full width
-          * under the KPIs, as the Holon mockup draws it (docs/design/holon/finance.html). */}
-        <Card className={cn(overviewCard, 'flex min-h-[300px] flex-col')}>
-          <NetWorthCard data={data} />
-        </Card>
-
-        <div className="grid items-start gap-3.5 xl:grid-cols-2">
-          <div className="flex min-w-0 flex-col gap-3.5 self-stretch">
-            <Card data-testid="finance-accounts" className={overviewCard}>
-              <CardHead label="Accounts" meta="share of assets" className="mb-1" />
-              <DataTable
-                head={['Account', 'Institution', 'Balance', <span key="30d" title={CHANGE_NOTE}>30d change</span>, 'Share']}
-                cols="minmax(0,1.2fr) minmax(0,.9fr) minmax(0,.9fr) minmax(0,.9fr) minmax(0,1fr)"
-              >
-                {data.accounts.map((a) => (
-                  <DataRow key={a.id} onClick={() => setParams({ account: a.id }, { push: true })} className={overviewRow}>
-                    <span className="min-w-0 truncate text-[13px] text-ink">
-                      {a.name}
-                      <span className="label ml-1.5 text-[11px] text-ink-3">{a.txCount} tx →</span>
-                    </span>
-                    <span className="truncate text-[13px] text-ink-3">{a.institution}</span>
-                    <span className="num text-right text-[13px] text-ink">{balance(a.balanceCents)}</span>
-                    <span
-                      className={cn(
-                        'num text-right text-[13px]',
-                        a.changeCents === null || a.changeCents === 0
-                          ? 'text-ink-3'
-                          : a.changeCents > 0
-                            ? 'text-ok'
-                            : 'text-bad',
-                      )}
-                    >
-                      {/* Not tracked is not the same as no change, and must not
-                          render as one. */}
-                      {a.changeCents === null ? (
-                        <span title={CHANGE_NOTE} className="label whitespace-nowrap text-[11px]">no history yet</span>
-                      ) : a.changeCents === 0 ? (
-                        'flat'
-                      ) : (
-                        signedMoney(a.changeCents)
-                      )}
-                    </span>
-                    <span className="flex items-center justify-end gap-2">
-                      <span className="h-0.5 w-14 bg-rule-2" aria-hidden>
-                        <span className="block h-0.5 bg-brand" style={{ width: `${Math.max(0, Math.min(100, a.sharePercent))}%` }} />
-                      </span>
-                      <span className="num w-[34px] shrink-0 text-right text-[11px] text-ink-2">
-                        {a.balanceCents > 0 ? `${Math.round(a.sharePercent)}%` : '\u2014'}
-                      </span>
-                    </span>
-                  </DataRow>
-                ))}
-              </DataTable>
-            </Card>
-
-            {/* v1.2 phase 5b. The corner under the accounts table, which was
-              * empty at 1440 while the column beside it ran on. */}
-            {data.cashFlow.length > 0 && (
-              <Card data-testid="finance-cashflow" className={cn(overviewCard, 'flex min-h-[260px] flex-col')}>
-                <CashFlow months={data.cashFlow} />
-              </Card>
-            )}
-
-          </div>
-
-          <div className="flex min-w-0 flex-col gap-3.5">
-            <Card data-testid="finance-upcoming" className={overviewCard}>
-              <CardHead
-                label="Upcoming · 14 days"
-                meta={`${shortDate(data.todayIso)} → ${shortDate(plusDays(data.todayIso, 14))}`}
-                className="mb-1"
-              />
-              {upcoming.length === 0 ? (
-                <EmptyState headline="Nothing booked" className="border-0">
-                  Nothing the detector found, and no subscription you keep, is due in the next
-                  fortnight.
-                </EmptyState>
-              ) : (
-                <DataTable
-                  head={
-                    projecting
-                      ? ['Date', 'Charge', 'Amount', <span key="after">Balance after</span>]
-                      : ['Date', 'Charge', 'Amount']
-                  }
-                  cols={projecting ? '82px minmax(0,1fr) auto 96px' : '82px minmax(0,1fr) auto'}
-                >
-                  {upcoming.map((u, i) => (
-                    <DataRow key={u.id} className={cn(overviewRow, 'md:gap-x-3')}>
-                      <span className="num text-[12px] text-ink">
-                        {shortDate(u.nextChargeOn)}
-                        <span className="mt-0.5 block text-[11px] text-ink-3">
-                          {weekday(u.nextChargeOn)} · {inDays(data.todayIso, u.nextChargeOn)}
-                        </span>
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block truncate text-[13px] text-ink">{u.name}</span>
-                        <span className="mt-0.5 block truncate text-[11px] text-ink-3">
-                          {u.isSubscription ? 'Subscription' : 'Detected'} · {u.cadence}
-                          {u.vendor ? ` · ${u.vendor}` : ''}
-                        </span>
-                      </span>
-                      <span className="flex items-center justify-end gap-2.5">
-                        {/* Before the amount, not after it: only some rows
-                            carry a Cancel now, and a button inside the numeric
-                            cell pushed those rows' amounts out of the column.
-                            Not on the artboard either way: cancel has no home
-                            there, and this is the one place a due charge is
-                            named. Only a subscription the owner keeps can be
-                            cancelled, because the nightly job would write a
-                            detection straight back. */}
-                        {u.isSubscription && (
-                          <ActionButton
-                            size="sm"
-                            variant="quiet"
-                            aria-label={`Cancel ${u.name}`}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              cancel(u)
-                            }}
-                          >
-                            Cancel
-                          </ActionButton>
-                        )}
-                        <span className="num text-right text-[13px] text-ink">{money(u.amountCents, true)}</span>
-                      </span>
-                      {projecting && (
-                        <span
-                          className={cn(
-                            'num text-right text-[13px]',
-                            balanceAfter[i] < 0 ? 'text-bad' : 'text-ink-2',
-                          )}
-                        >
-                          {balance(balanceAfter[i])}
-                        </span>
-                      )}
-                    </DataRow>
-                  ))}
-                  <DataRow className="border-b-0 md:gap-x-3 md:pb-0.5 md:pt-2.5">
-                    <span className="label text-[11px] text-ink-3">Total</span>
-                    <span className="text-[12px] text-ink-3">
-                      {upcoming.length} {upcoming.length === 1 ? 'charge' : 'charges'} ·{' '}
-                      {money(monthlySubscriptions, true)}/mo in recurring charges
-                    </span>
-                    <span className="num text-right text-[13px] text-ink">{money(upcomingTotal, true)}</span>
-                    {projecting && (
-                      <span
-                        className={cn(
-                          'num text-right text-[13px]',
-                          (balanceAfter.at(-1) ?? 0) < 0 ? 'text-bad' : 'text-ink',
-                        )}
-                      >
-                        {balance(balanceAfter.at(-1) ?? data.checkingCents ?? 0)}
-                      </span>
-                    )}
-                  </DataRow>
-                </DataTable>
-              )}
-              {upcoming.length > 0 && projecting && (
-                <p className="t-caption mt-2.5 text-ink-3">{BALANCE_NOTE}</p>
-              )}
-            </Card>
-
-            <Card data-testid="finance-budgets" className={cn(overviewCard, 'flex flex-col')}>
-              <div className="mb-1 flex items-center justify-between gap-3.5">
-                <Eyebrow>Budgets · {monthLabel(data.todayIso)}</Eyebrow>
-                <span className="flex items-center gap-3.5">
-                  <span className={cn('label text-[11px]', hot.length > 0 ? 'text-warn' : 'text-ink-3')}>
-                    {hot.length} over {data.alertThreshold}%
-                  </span>
-                  {/* Rules live with transactions, and the desktop page has no
-                    * transactions surface of its own: the drawer's Unfiled
-                    * list is how this width reaches what nothing filed. */}
-                  <ActionButton size="sm" onClick={() => setParams({ rules: '1' }, { push: true })}>
-                    Rules
-                  </ActionButton>
-                  <ActionButton size="sm" onClick={() => setParams({ limits: '1' }, { push: true })}>
-                    Edit limits
-                  </ActionButton>
-                </span>
-              </div>
-              {shownBudgets.length === 0 ? (
-                <EmptyState headline="No budgets" className="border-0">
-                  A budget is a limit on a category for this month. Set one with Edit limits.
-                </EmptyState>
-              ) : (
-                <>
-                  <DataTable head={['Category', 'Spent / limit', 'Used']} cols="minmax(0,1fr) auto 44px">
-                    {shownBudgets.map((b) => {
-                      const used = b.limitCents ? budgetTone(b.spentCents, b.limitCents, data.alertThreshold, b.isFixed) : null
-                      const over = used !== null && (used.tone === 'warn' || used.tone === 'bad')
-                      const tone = used === null || used.tone === 'fixed' ? 'text-ink' : toneText(used.tone)
-                      return (
-                        <DataRow
-                          key={b.id}
-                          onClick={() => setParams({ budget: b.id }, { push: true })}
-                          className={cn(overviewRow, 'lg:block lg:py-1.5')}
-                        >
-                          <span className="grid items-baseline gap-x-3.5 lg:grid-cols-[minmax(0,1fr)_auto_44px]">
-                            <span className={cn('min-w-0 truncate text-[13px]', tone)}>
-                              {b.name}
-                              {b.isFixed ? (
-                                <StatusChip tone="quiet" className="ml-1.5">Fixed</StatusChip>
-                              ) : over ? (
-                                <StatusChip tone="warn" className="ml-1.5">over {data.alertThreshold}%</StatusChip>
-                              ) : null}
-                            </span>
-                            <span className="num text-[12px] text-ink-2">
-                              {money(b.spentCents)}{' '}
-                              <span className="text-ink-3">/ {b.limitCents ? money(b.limitCents) : 'no limit'}</span>
-                            </span>
-                            <span className={cn('num text-right text-[12px]', tone)}>
-                              {used === null ? '\u2014' : `${used.pct}%`}
-                            </span>
-                          </span>
-                          <BudgetBar budget={b} pace={data.monthPace} threshold={data.alertThreshold} compact />
-                        </DataRow>
-                      )
-                    })}
-                  </DataTable>
-                  <div className="grid items-baseline gap-x-3.5 pt-2.5 lg:grid-cols-[minmax(0,1fr)_auto_44px]">
-                    <span className="label text-[11px] text-ink-3">
-                      Total · <span className="text-ink-2">{money(Math.max(0, budgetTotals.limit - budgetTotals.spent))} left</span> ·
-                      pace mark at day {dayOfMonth(data.todayIso)}
-                    </span>
-                    <span className="num text-[12px] text-ink">
-                      {money(budgetTotals.spent)} <span className="text-ink-3">/ {money(budgetTotals.limit)}</span>
-                    </span>
-                    <span className="num text-right text-[12px] text-ink">
-                      {budgetTotals.limit > 0 ? `${Math.round((budgetTotals.spent / budgetTotals.limit) * 100)}%` : '\u2014'}
-                    </span>
-                  </div>
-                </>
-              )}
-            </Card>
-
-            {data.trendCategories.length > 0 && (
-              <Card data-testid="finance-trend" className={cn(overviewCard, 'flex min-h-[300px] flex-col')}>
-                <CategoryTrend categories={data.trendCategories} months={data.trendMonths} />
-              </Card>
-            )}
-          </div>
-        </div>
       </div>
 
       {openAccount && (
@@ -876,6 +923,7 @@ export function Finance({ data }: { data: FinanceData }) {
           />
           <TransactionList
             transactions={accountTx}
+            showAccount={false}
             categories={data.categories}
             onRecategorise={(id, categoryId) => runFor(() => recategorise(id, categoryId), 'Filed')}
             onLearn={(id, categoryId) => runFor(() => learnFor(id, categoryId), 'Rule learned')}
@@ -1077,8 +1125,11 @@ function TransactionList({
   total,
   onRecategorise,
   onLearn,
+  showAccount = true,
 }: {
   transactions: FinanceData['transactions']
+  /** Off inside an account's own drawer, whose title already names it. */
+  showAccount?: boolean
   /** What this list is: the drawers scope theirs and say so. */
   caption?: string
   /**
@@ -1159,6 +1210,7 @@ function TransactionList({
                             : 'Rule'}
                     </StatusChip>
                   )}
+                  {showAccount && ` · ${t.accountName}`}
                 </span>
               </span>
               <span className={cn('num text-right text-[13px]', amount.incoming ? 'text-ok' : 'text-ink')}>

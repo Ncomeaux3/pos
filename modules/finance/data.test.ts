@@ -75,6 +75,37 @@ describe('listTransactions', () => {
     // Without the scope the category's whole history comes back.
     expect(await listTransactions({ categoryId: id, limit: 1000 })).toHaveLength(2)
   })
+
+  it('searches the whole ledger by description, category, account and amount', async () => {
+    // The Transactions tab loads the newest 60. A search has to reach the row
+    // from last year too, which is why it is a query and not a filter.
+    const { rows } = await db().query<{ id: string }>(
+      `insert into finance.account (name, kind, source, external_id) values ('Zqx Brokerage 4411', 'brokerage', 'demo', 'test-search')
+       on conflict (source, external_id) do update set name = excluded.name returning id`,
+    )
+    const insert = (descriptor: string, cents: number, daysAgo: number, categoryId: string | null) =>
+      db().query(
+        `insert into finance.transaction (account_id, descriptor, amount_cents, occurred_on, category_id, source)
+         values ($1, $2, $3, core.today() - $4::int, $5, 'demo')`,
+        [rows[0].id, descriptor, cents, daysAgo, categoryId],
+      )
+    await insert('ZQX DIVIDEND REINVEST', -987_654, 400, await category('Investing'))
+    await insert('ZQX 100% CASHBACK', 1_234, 0, null)
+
+    const hit = async (q: string) =>
+      (await listTransactions({ search: q }))
+        .filter((t) => t.descriptor.startsWith('ZQX'))
+        .map((t) => t.descriptor)
+
+    expect(await hit('dividend')).toEqual(['ZQX DIVIDEND REINVEST'])
+    expect(await hit('zqx brokerage')).toEqual(['ZQX 100% CASHBACK', 'ZQX DIVIDEND REINVEST'])
+    expect(await hit('investing')).toEqual(['ZQX DIVIDEND REINVEST'])
+    // An amount matches in either direction, with or without the dollar sign.
+    expect(await hit('9,876.54')).toEqual(['ZQX DIVIDEND REINVEST'])
+    expect(await hit('$12.34')).toEqual(['ZQX 100% CASHBACK'])
+    // A percent sign is a character to find, not a wildcard.
+    expect(await hit('0%')).toEqual(['ZQX 100% CASHBACK'])
+  })
 })
 
 describe('categorySpend', () => {
