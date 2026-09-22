@@ -236,7 +236,10 @@ export async function setCountPending(on: boolean): Promise<void> {
 export async function lastPullDetail(): Promise<string | null> {
   const { rows } = await db().query<{ detail: string | null }>(
     `select log->'output'->>'detail' as detail from core.jobs
-      where module = 'finance' and name = 'sync_simplefin' and last_status = 'ok'`,
+      where module = 'finance' and name = 'sync_simplefin' and last_status = 'ok'
+        -- A run the provider refused is recorded as ok and skipped; its
+        -- detail is the refusal, which is the band's status dot, not a count.
+        and log->'output'->>'skipped' = 'false'`,
   )
   return rows[0]?.detail ?? null
 }

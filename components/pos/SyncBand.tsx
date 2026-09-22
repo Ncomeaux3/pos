@@ -87,7 +87,11 @@ export function SyncBand({
           Apple data last arrived {arrived ? syncClock(arrived, timeZone) : 'never'}
         </span>
       )}
-      {note && <span className="num hidden text-[11px] text-ink-3 md:inline">{note}</span>}
+      {note && (
+        <span className="num hidden max-w-[360px] truncate text-[11px] text-ink-3 md:inline" title={note}>
+          {note}
+        </span>
+      )}
       {/* A quiet glass pill: syncing is a maintenance action, not the page's primary. */}
       <ActionButton variant="outline" size="md" onClick={() => sync(onSync)} disabled={pending}>
         <span className={cn(pending && 'animate-pulse')}>{pending ? 'Syncing' : 'Sync now'}</span>
