@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
-import { listAccounts, setAlertThreshold, setBudget } from './data'
+import { listAccounts, setAlertThreshold, setBudget, setCountPending } from './data'
 import {
   categoriseNew,
   detectSubscriptions,
@@ -60,6 +60,29 @@ export default defineModule({
         })
 
         return { id, learned }
+      },
+    }),
+
+    learn_rule: defineTool({
+      description:
+        'Always file this transaction’s merchant as this category: writes the rule the next sync applies before the model.',
+      input: z.object({ transaction_id: z.uuid(), category_id: z.uuid() }),
+      run: async ({ transaction_id, category_id }) => {
+        const { rows } = await db().query<{ descriptor: string }>(
+          `select descriptor from finance.transaction where id = $1`,
+          [transaction_id],
+        )
+        if (rows.length === 0) throw new Error(`No transaction ${transaction_id}`)
+        return { learned: await learnRule(rows[0].descriptor, category_id) }
+      },
+    }),
+
+    set_count_pending: defineTool({
+      description: 'Whether pending charges count toward a budget before they post.',
+      input: z.object({ on: z.boolean() }),
+      run: async ({ on }) => {
+        await setCountPending(on)
+        return { on }
       },
     }),
 

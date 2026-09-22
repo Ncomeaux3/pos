@@ -94,14 +94,16 @@ export async function seed(): Promise<number> {
     daysAgo: number
     account: string
     category: string
+    pending?: boolean
   }) => {
     const { rows } = await db().query<{ id: string }>(
       `insert into finance.transaction
          (account_id, descriptor, merchant, amount_cents, occurred_on,
-          category_id, classified_by, confidence, source, external_id)
-       values ($1, $2, $2, $3, core.today() - $4::int, $5, 'rule', 1, 'demo', $6)
+          category_id, classified_by, confidence, pending, source, external_id)
+       values ($1, $2, $2, $3, core.today() - $4::int, $5, 'rule', 1, $7, 'demo', $6)
        on conflict (source, external_id) do update
-         set amount_cents = excluded.amount_cents, occurred_on = excluded.occurred_on
+         set amount_cents = excluded.amount_cents, occurred_on = excluded.occurred_on,
+             pending = excluded.pending
        returning id`,
       [
         accounts.get(args.account),
@@ -110,6 +112,7 @@ export async function seed(): Promise<number> {
         args.daysAgo,
         categories.get(args.category) ?? null,
         args.externalId,
+        args.pending ?? false,
       ],
     )
     written++
@@ -165,6 +168,13 @@ export async function seed(): Promise<number> {
     { merchant: 'Sports shop', cents: 6400, category: 'Fitness', account: 'credit', daysAgo: 2 },
     { merchant: 'Shell', cents: 5210, category: 'Gas / Auto', account: 'credit', daysAgo: 4 },
     { merchant: 'Amazon', cents: 8830, category: 'Shopping', account: 'credit', daysAgo: 3 },
+    // v1.2 phase 5a. The kinds at work: paying the card off is a transfer on
+    // both sides and in no budget; a dining credit nets against Dining; a
+    // pending charge waits until it posts.
+    { merchant: 'Chase credit crd autopay', cents: 231_000, category: 'Credit card payment', account: 'checking', daysAgo: 7 },
+    { merchant: 'Payment thank you', cents: -231_000, category: 'Credit card payment', account: 'credit', daysAgo: 7 },
+    { merchant: 'Amex dining credit', cents: -1000, category: 'Dining', account: 'credit', daysAgo: 5 },
+    { merchant: 'Taco truck', cents: 1800, category: 'Dining', account: 'credit', daysAgo: 0, pending: true },
   ]
 
   for (const [i, tx] of THIS_MONTH.entries()) {
@@ -175,6 +185,7 @@ export async function seed(): Promise<number> {
       daysAgo: tx.daysAgo,
       account: tx.account,
       category: tx.category,
+      pending: tx.pending,
     })
   }
 

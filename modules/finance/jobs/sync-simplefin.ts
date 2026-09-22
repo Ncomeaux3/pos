@@ -20,6 +20,12 @@ export type SyncResult = {
   skippedAccounts: string[]
   /** What the bridge said went wrong at an institution it could not reach. */
   warnings: string[]
+  /**
+   * What came back per account, with the oldest date. The history limit is the
+   * institution's, not the bridge's: a 90 day pull can return less, and the
+   * count is the honest number rather than a claim of 90.
+   */
+  perAccount: { name: string; transactions: number; oldest: string | null }[]
   detail: string
 }
 
@@ -51,11 +57,13 @@ const OVERLAP_DAYS = 30
  */
 const CURRENCY = 'USD'
 
-async function since(): Promise<Date> {
-  const { rows } = await db().query<{ latest: string | null }>(
-    `select max(occurred_on)::text as latest from finance.transaction where source = 'simplefin'`,
-  )
-  const days = rows[0]?.latest ? OVERLAP_DAYS : FIRST_RUN_DAYS
+async function since(days?: number): Promise<Date> {
+  if (days === undefined) {
+    const { rows } = await db().query<{ latest: string | null }>(
+      `select max(occurred_on)::text as latest from finance.transaction where source = 'simplefin'`,
+    )
+    days = rows[0]?.latest ? OVERLAP_DAYS : FIRST_RUN_DAYS
+  }
   return new Date(Date.now() - days * 86_400_000)
 }
 
@@ -134,11 +142,17 @@ async function storeTransactions(accountId: string, a: Account): Promise<number>
   return written
 }
 
+/** The Pull 90 days button's window, and the doc's name for it. */
+export const PULL_DAYS = FIRST_RUN_DAYS
+
 /**
  * Never throws for a provider problem. A bank being down must not fail the
  * nightly run, and the job runner records the outcome either way.
+ *
+ * `days` overrides the window: the nightly run leaves it out, the Pull 90 days
+ * button passes PULL_DAYS.
  */
-export async function syncSimpleFin(): Promise<SyncResult> {
+export async function syncSimpleFin(opts: { days?: number } = {}): Promise<SyncResult> {
   if (!(await getCredentials('simplefin'))?.access_url) {
     return {
       skipped: true,
@@ -146,11 +160,12 @@ export async function syncSimpleFin(): Promise<SyncResult> {
       transactions: 0,
       skippedAccounts: [],
       warnings: [],
+      perAccount: [],
       detail: 'SimpleFIN is not connected.',
     }
   }
 
-  const from = await since()
+  const from = await since(opts.days)
   const connection = await connectionId()
 
   let found
@@ -164,6 +179,7 @@ export async function syncSimpleFin(): Promise<SyncResult> {
         transactions: 0,
         skippedAccounts: [],
         warnings: [error.message],
+        perAccount: [],
         detail: error.message,
       }
     }
@@ -171,7 +187,7 @@ export async function syncSimpleFin(): Promise<SyncResult> {
   }
 
   const skippedAccounts: string[] = []
-  let accountCount = 0
+  const perAccount: SyncResult['perAccount'] = []
   let transactionCount = 0
 
   for (const a of found.accounts) {
@@ -180,20 +196,30 @@ export async function syncSimpleFin(): Promise<SyncResult> {
       continue
     }
     const id = await storeAccount(a, connection)
-    transactionCount += await storeTransactions(id, a)
-    accountCount++
+    const written = await storeTransactions(id, a)
+    transactionCount += written
+    const oldest = a.transactions.map((t) => t.occurredOn.toISOString().slice(0, 10)).sort()[0] ?? null
+    perAccount.push({ name: a.name, transactions: written, oldest })
   }
 
-  const parts = [`${accountCount} accounts, ${transactionCount} transactions`]
+  const parts = [`${perAccount.length} accounts, ${transactionCount} transactions`]
+  if (perAccount.length > 0) {
+    parts.push(
+      perAccount
+        .map((p) => `${p.name} ${p.transactions}${p.oldest ? ` since ${p.oldest}` : ''}`)
+        .join(', '),
+    )
+  }
   if (skippedAccounts.length > 0) parts.push(`skipped ${skippedAccounts.join(', ')}`)
   if (found.warnings.length > 0) parts.push(found.warnings.join('; '))
 
   return {
     skipped: false,
-    accounts: accountCount,
+    accounts: perAccount.length,
     transactions: transactionCount,
     skippedAccounts,
     warnings: found.warnings,
+    perAccount,
     detail: parts.join('. '),
   }
 }

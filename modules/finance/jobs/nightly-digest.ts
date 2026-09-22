@@ -1,6 +1,6 @@
 import { db } from '@/core/db'
 import { ownerToday } from '@/core/today'
-import { categorise, learnFrom, type Rule } from '../categorise'
+import { BUILTIN_RULES, categorise, learnFrom, matchRefund, type Rule } from '../categorise'
 import { detectRecurring, isStale, type Charge } from '../recurring'
 import {
   categorySpend,
@@ -71,11 +71,14 @@ export async function nightlyDigest(): Promise<FinanceDigest> {
     amount_cents: string
     occurred_on: string
   }>(
-    `select descriptor, amount_cents::text, occurred_on::text
-       from finance.transaction
-      where amount_cents > $1
-        and occurred_on >= core.today() - 7
-      order by amount_cents desc
+    `select t.descriptor, t.amount_cents::text, t.occurred_on::text
+       from finance.transaction t
+       left join finance.category c on c.id = t.category_id
+      where t.amount_cents > $1
+        and t.occurred_on >= core.today() - 7
+        -- Paying a card off is large every month and unusual never.
+        and coalesce(c.kind, 'expense') <> 'transfer'
+      order by t.amount_cents desc
       limit 5`,
     [LARGE_CHARGE_CENTS],
   )
@@ -147,26 +150,71 @@ export async function snapshotBalances(): Promise<{ accounts: number }> {
  */
 export async function categoriseNew(): Promise<{ matched: number; unmatched: number }> {
   const rules = await loadRules()
-  const byName = new Map(rules.map((r) => [r.category, r.categoryId]))
-  const shaped: Rule[] = rules.map((r) => ({
+  const { rows: categoryRows } = await db().query<{ id: string; name: string }>(
+    `select id, name from finance.category`,
+  )
+  const byName = new Map(categoryRows.map((c) => [c.name, c.id]))
+  // Learned rules first, then the built-ins: the sort inside categorise puts a
+  // manual rule ahead of both, so the owner's correction still wins.
+  const shaped: Rule[] = [
+    ...rules.map((r) => ({ category: r.category, pattern: r.pattern, isManual: r.isManual })),
+    ...BUILTIN_RULES,
+  ]
+
+  // The owner's card institutions, so "CAPITAL ONE ONLINE PMT" is a payment.
+  const { rows: institutionRows } = await db().query<{ institution: string }>(
+    `select distinct institution from finance.account
+      where kind = 'credit' and archived = false and institution <> ''`,
+  )
+  const institutions = institutionRows.map((r) => r.institution)
+
+  // Recent charges on the cards, for refunds: money back from a merchant seen
+  // in the last 90 days nets against that charge's category.
+  const { rows: chargeRows } = await db().query<{
+    merchant: string
+    amount_cents: string
+    category: string | null
+  }>(
+    `select t.merchant, t.amount_cents::text, c.name as category
+       from finance.transaction t
+       join finance.account a on a.id = t.account_id
+       left join finance.category c on c.id = t.category_id
+      where a.kind = 'credit' and t.amount_cents > 0
+        and t.occurred_on >= core.today() - 90
+      order by t.occurred_on desc`,
+  )
+  const charges = chargeRows.map((r) => ({
+    merchant: r.merchant,
+    amountCents: Number(r.amount_cents),
     category: r.category,
-    pattern: r.pattern,
-    isManual: r.isManual,
   }))
 
-  const { rows } = await db().query<{ id: string; descriptor: string }>(
-    `select id, descriptor from finance.transaction
-      where category_id is null and is_manual = false
+  const { rows } = await db().query<{
+    id: string
+    descriptor: string
+    merchant: string
+    amount_cents: string
+    account_kind: string
+  }>(
+    `select t.id, t.descriptor, t.merchant, t.amount_cents::text, a.kind as account_kind
+       from finance.transaction t
+       join finance.account a on a.id = t.account_id
+      where t.category_id is null and t.is_manual = false
       limit 500`,
   )
 
   let matched = 0
 
   for (const row of rows) {
-    const hit = categorise(row.descriptor, shaped)
-    if (!hit) continue
+    const category =
+      categorise(row.descriptor, shaped, institutions)?.category ??
+      matchRefund(
+        { merchant: row.merchant, amountCents: Number(row.amount_cents), accountKind: row.account_kind },
+        charges,
+      )
+    if (!category) continue
 
-    const categoryId = byName.get(hit.category)
+    const categoryId = byName.get(category)
     if (!categoryId) continue
 
     await db().query(
@@ -216,10 +264,14 @@ export async function learnRule(descriptor: string, categoryId: string): Promise
  */
 export async function detectSubscriptions(): Promise<{ found: number; stale: number }> {
   const { rows } = await db().query<{ merchant: string; amount_cents: string; occurred_on: string }>(
-    `select coalesce(nullif(merchant, ''), descriptor) as merchant,
-            amount_cents::text, occurred_on::text
-       from finance.transaction
-      where occurred_on >= core.today() - 400`,
+    `select coalesce(nullif(t.merchant, ''), t.descriptor) as merchant,
+            t.amount_cents::text, t.occurred_on::text
+       from finance.transaction t
+       left join finance.category c on c.id = t.category_id
+      where t.occurred_on >= core.today() - 400
+        -- A card paid off on the same day each month has every mark of a
+        -- subscription and is not one.
+        and coalesce(c.kind, 'expense') <> 'transfer'`,
   )
 
   const charges: Charge[] = rows.map((r) => ({
