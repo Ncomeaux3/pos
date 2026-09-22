@@ -38,7 +38,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-22 (v1.2 phases 5c and 5d planned; Phase 5b merged as #122). Production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-22 (v1.2 phase 5c built; phases 5c and 5d planned and 5b merged as #122). Production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -62,7 +62,19 @@ against the Vercel domain. Laptop notes: `.env` has no VAPID pair, so `pnpm setu
 and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
-## Next: v1.2 phases 5c and 5d, Finance rules and the model arm
+## Next: v1.2 phase 5d, Finance's model arm
+
+Phase 5c is built (branch `phase-5c-finance-rules`). Rules are now visible and
+changeable in a drawer, writing or deleting one re-files the history it
+matches, money to a person is a `People` expense rather than an `Account
+transfer`, and the Transactions tab has an All / Uncategorised / Pending filter
+with the ledger's own counts. The nightly `categorise` sweep takes 5000 rows a
+run rather than 500, so the backlog clears in one night. **Owner check after
+merge: the uncategorised share. It was 97.6 percent (607 of 622) and the exit
+criterion is below 10 percent, which needs the 172 merchants filed or confirmed
+in the Rules drawer.** 5d is the model arm that files what the rules miss.
+
+## The finding behind 5c and 5d
 
 Planned 2026-09-22 from a three-round interview; the twelve decisions are in
 decisions/log.md under that date and the phases are in docs/plans/pos-v1-2.md.

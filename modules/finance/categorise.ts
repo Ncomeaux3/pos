@@ -13,6 +13,12 @@ export type Rule = {
   pattern: string
   /** True when the owner's own correction wrote it. Beats any automatic rule. */
   isManual: boolean
+  /**
+   * Breaks the tie before length does. Zero for everything the owner or the
+   * model writes; only the built-ins below set it, and only where one
+   * descriptor legitimately matches two of them.
+   */
+  priority?: number
 }
 
 export type Match = {
@@ -66,15 +72,16 @@ function stripReference(pattern: string): string {
 }
 
 /** Shorter than this matches too much of the ledger to be safe to learn. */
-const MIN_PATTERN_LENGTH = 4
+export const MIN_PATTERN_LENGTH = 4
 
 /**
  * The first rule that matches, ranked.
  *
- * Manual before automatic, then longest first. Manual wins outright because the
- * owner's correction is the one fact in the system that a job may never
- * overwrite; length breaks the rest, so "amazon prime" beats "amazon" and the
- * specific rule is the one that fires.
+ * Manual before automatic, then priority, then longest first. Manual wins
+ * outright because the owner's correction is the one fact in the system that a
+ * job may never overwrite; priority settles the built-ins that legitimately
+ * match the same descriptor; length breaks the rest, so "amazon prime" beats
+ * "amazon" and the specific rule is the one that fires.
  */
 export function categorise(
   descriptor: string,
@@ -86,6 +93,7 @@ export function categorise(
 
   const ranked = [...rules].sort((a, b) => {
     if (a.isManual !== b.isManual) return a.isManual ? -1 : 1
+    if ((a.priority ?? 0) !== (b.priority ?? 0)) return (b.priority ?? 0) - (a.priority ?? 0)
     return b.pattern.length - a.pattern.length
   })
 
@@ -121,6 +129,8 @@ export function categorise(
 }
 
 const CARD_PAYMENT = 'Credit card payment'
+/** Money to or from an individual. Spending, not a transfer: v1.2 phase 5c. */
+const PEOPLE = 'People'
 const PAYMENT_WORD = /\b(payment|pmt|autopay|epay)/
 
 /**
@@ -133,6 +143,13 @@ const PAYMENT_WORD = /\b(payment|pmt|autopay|epay)/
  * (verify against the owner's own statements; the doc says so).
  */
 export const BUILTIN_RULES: Rule[] = [
+  // Ahead of the transfer patterns, and the only reason priority exists.
+  // "Zelle Transfer to Jane" carries both `zelle` and `transfer to`, and
+  // `transfer to` is the longer pattern, so on length alone money to a person
+  // was a move between the owner's own accounts and counted as no spending.
+  { category: PEOPLE, pattern: 'zelle', isManual: false, priority: 1 },
+  { category: PEOPLE, pattern: 'venmo', isManual: false, priority: 1 },
+  { category: PEOPLE, pattern: 'cash app', isManual: false, priority: 1 },
   { category: CARD_PAYMENT, pattern: 'payment thank you', isManual: false },
   { category: CARD_PAYMENT, pattern: 'epayment', isManual: false },
   { category: CARD_PAYMENT, pattern: 'e payment', isManual: false },

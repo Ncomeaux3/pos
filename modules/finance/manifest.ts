@@ -2,7 +2,9 @@ import { z } from 'zod'
 import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
+import { MIN_PATTERN_LENGTH, normalise } from './categorise'
 import { listAccounts, setAlertThreshold, setBudget, setCountPending } from './data'
+import { applyRule, refile, removeRule } from './rules'
 import {
   categoriseNew,
   detectSubscriptions,
@@ -47,7 +49,9 @@ export default defineModule({
         )
         if (rows.length === 0) throw new Error(`No transaction ${id}`)
 
-        const learned = learn ? await learnRule(rows[0].descriptor, category_id) : false
+        const pattern = learn ? await learnRule(rows[0].descriptor, category_id) : null
+        // Writing a rule means the history it matches moves too.
+        const moved = pattern === null ? 0 : await applyRule(pattern)
 
         // The event is the categorising, not the transaction: importing a month
         // of history is not a month of work, but teaching the rules is.
@@ -59,7 +63,7 @@ export default defineModule({
           eventType: 'transaction_categorised',
         })
 
-        return { id, learned }
+        return { id, learned: pattern !== null, moved }
       },
     }),
 
@@ -73,8 +77,71 @@ export default defineModule({
           [transaction_id],
         )
         if (rows.length === 0) throw new Error(`No transaction ${transaction_id}`)
-        return { learned: await learnRule(rows[0].descriptor, category_id) }
+        const pattern = await learnRule(rows[0].descriptor, category_id)
+        return { learned: pattern !== null, moved: pattern === null ? 0 : await applyRule(pattern) }
       },
+    }),
+
+    write_rule: defineTool({
+      description:
+        'Create or change a rule that files a merchant into a category, and re-file the history it matches.',
+      input: z.object({
+        /** Present when an existing rule is being changed, absent for a new one. */
+        id: z.uuid().optional(),
+        pattern: z.string().min(1).max(200),
+        category_id: z.uuid(),
+      }),
+      run: async ({ id, pattern, category_id }) => {
+        const normalised = normalise(pattern)
+        if (normalised.length < MIN_PATTERN_LENGTH || !/[a-z]/.test(normalised)) {
+          throw new Error(
+            `A rule needs at least ${MIN_PATTERN_LENGTH} letters: anything shorter matches half the ledger`,
+          )
+        }
+
+        // (pattern, category_id) is unique, so moving a rule to another
+        // category is an insert and a delete rather than an update. In that
+        // order: a failed insert then leaves the rule the owner was editing
+        // where it was, rather than deleting it and writing nothing.
+        let previous: { pattern: string; category_id: string } | null = null
+        if (id) {
+          const { rows } = await db().query<{ pattern: string; category_id: string }>(
+            `select pattern, category_id from finance.category_rule where id = $1`,
+            [id],
+          )
+          previous = rows[0] ?? null
+        }
+
+        await db().query(
+          `insert into finance.category_rule (category_id, pattern, is_manual, classified_by, confidence)
+           values ($1, $2, true, 'human', null)
+           on conflict (pattern, category_id) do update
+             set is_manual = true, classified_by = 'human', confidence = null`,
+          [category_id, normalised],
+        )
+
+        // Before the back-file, not after: two rules of the same length both
+        // match, and the one being replaced could win its own replacement.
+        // Nothing is deleted when the insert landed on that same row.
+        const changed =
+          previous !== null &&
+          (previous.pattern !== normalised || previous.category_id !== category_id)
+        if (changed) await db().query(`delete from finance.category_rule where id = $1`, [id])
+
+        let moved = await applyRule(normalised)
+        // An edited pattern leaves rows behind under the old one; they belong
+        // to whatever matches now.
+        if (changed && previous!.pattern !== normalised) moved += await refile(previous!.pattern)
+
+        return { pattern: normalised, moved }
+      },
+    }),
+
+    delete_rule: defineTool({
+      description:
+        'Remove a rule and re-file the rows it held, so a row another rule also matches is not orphaned.',
+      input: z.object({ id: z.uuid() }),
+      run: async ({ id }) => ({ moved: await removeRule(id) }),
     }),
 
     set_count_pending: defineTool({

@@ -131,6 +131,26 @@ describe('built-in rules', () => {
     expect(categorise('UBER CREDIT', builtin)?.category).toBe('Travel')
   })
 
+  // v1.2 phase 5c. "Zelle Transfer to Jane" carries both `zelle` and
+  // `transfer to`, and `transfer to` is the longer pattern, so length alone
+  // filed money to a person as a move between the owner's own accounts and
+  // counted it as no spending at all. Precedence is the whole fix.
+  it('files money to a person as People, ahead of the transfer patterns', () => {
+    expect(categorise('ZELLE TRANSFER TO JANE DOE JPM9921', builtin)?.category).toBe('People')
+    expect(categorise('Zelle payment from John Smith', builtin)?.category).toBe('People')
+    expect(categorise('VENMO *CASHOUT', builtin)?.category).toBe('People')
+    expect(categorise('CASH APP*MIKE R', builtin)?.category).toBe('People')
+  })
+
+  it('leaves the owner’s own transfers as Account transfer', () => {
+    expect(categorise('ONLINE TRANSFER TO SAV ...8830', builtin)?.category).toBe('Account transfer')
+  })
+
+  it('lets a manual rule beat a peer payment, because a correction always wins', () => {
+    const manual: Rule = { category: 'Travel', pattern: 'zelle transfer to jane', isManual: true }
+    expect(categorise('ZELLE TRANSFER TO JANE DOE', [...builtin, manual])?.category).toBe('Travel')
+  })
+
   it('still lets a manual rule win over a built-in', () => {
     const manual: Rule = { category: 'Shopping', pattern: 'uber credit', isManual: true }
     expect(categorise('UBER CREDIT', [...builtin, manual])?.category).toBe('Shopping')

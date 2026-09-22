@@ -1275,7 +1275,11 @@ test('settings, agents and mcp', async ({ page }) => {
   // Reads collapse to one open row; every write is listed with its mode.
   await expect(page.getByText('*.get_digest · *.query · core.search')).toBeVisible()
   await expect(page.getByText('Guarded', { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('finance.write')).toBeVisible()
+  // Named in full, not by the prefix: v1.2 phase 5c added finance.write_rule,
+  // and 'finance.write' now matches two tools. Both are listed, and only the
+  // subscription one is guarded, which is what the mode beside it says.
+  await expect(page.getByText('finance.write_subscription')).toBeVisible()
+  await expect(page.getByText('finance.write_rule')).toBeVisible()
 
   await shoot(page, 'settings-agents')
 })
@@ -2508,6 +2512,75 @@ test('finance, the limits drawer holds edits until Done', async ({ page }) => {
   await expect(page.getByText('No changes')).toBeVisible()
   await page.getByRole('button', { name: 'Done' }).click()
   await expect(page).not.toHaveURL(/limits=1/)
+})
+
+// v1.2 phase 5c. Rules were written by the app and shown nowhere, so a wrong
+// one was unreachable and the 607 rows nothing had filed could not be found.
+async function openRules(page: Page) {
+  if ((page.viewportSize()?.width ?? 0) < 768) {
+    // The phone reaches them from the tab that holds the rows they govern.
+    await page.goto('/finance?tab=transactions')
+  } else {
+    // The desktop page has no transactions surface of its own, so the button
+    // sits in the Budgets head beside Edit limits.
+    await page.goto('/finance')
+  }
+  await page.getByRole('button', { name: 'Rules', exact: true }).click()
+  await expect(page).toHaveURL(/rules=1/)
+  await expect(page.getByRole('heading', { name: 'Rules', exact: true })).toBeVisible()
+}
+
+test('finance, the rules drawer lists the built-ins read-only', async ({ page }) => {
+  await openRules(page)
+
+  const drawer = page.getByRole('dialog')
+  // A built-in is shown so a filing can be explained, and carries no control:
+  // writing your own with the same pattern is how one is overridden.
+  const builtin = drawer.getByText('payment thank you').locator('..')
+  await expect(builtin).toContainText('Credit card payment')
+  await expect(builtin).toContainText('Built in')
+  await expect(drawer.getByLabel('Category for payment thank you')).toHaveCount(0)
+
+  await shoot(page, 'finance-rules')
+})
+
+test('finance, filing an unfiled merchant writes a rule and back-files', async ({ page }) => {
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
+
+  // Counted before rather than asserted as a constant: CI runs on the fixture
+  // alone, and a laptop's database also holds whatever the owner has pulled.
+  const chip = page.getByRole('radio', { name: /Uncategorised/ })
+  let before = 0
+  if (mobile) {
+    await page.goto('/finance?tab=transactions')
+    // The count is the ledger's and not the loaded list's, which is the whole
+    // reason the chip exists: 607 rows sat behind a window of 60.
+    before = Number((await chip.textContent())?.replace(/\D/g, ''))
+    expect(before).toBeGreaterThanOrEqual(2)
+  }
+
+  await openRules(page)
+  const drawer = page.getByRole('dialog')
+
+  // Grouped on the pattern a rule would use, so two store numbers are one row.
+  await expect(drawer.getByText('dutch bros · 2 rows · $21')).toBeVisible()
+
+  await drawer.getByLabel(/^File DUTCH BROS/).selectOption({ label: 'Dining' })
+  // How many rows moved, every time: a back-file moves past budgets with it.
+  // The exact count for a given rule is asserted in modules/finance/rules.test.ts.
+  await expect(page.getByText(/^dutch bros filed, \d+ transactions re-filed$/)).toBeVisible()
+  // The merchant left the unfiled list and became a rule of the owner's own.
+  await expect(drawer.getByText('dutch bros · 2 rows · $21')).toHaveCount(0)
+  await expect(drawer.getByLabel('Category for dutch bros')).toHaveValue(/.+/)
+
+  await page.getByRole('button', { name: 'Done' }).click()
+  await expect(page).not.toHaveURL(/rules=1/)
+
+  if (mobile) {
+    await expect(chip).toContainText(String(before - 2))
+    await page.getByRole('radio', { name: /^All/ }).click()
+    await expect(page.getByText('DUTCH BROS #4412')).toBeVisible()
+  }
 })
 
 test('finance segments swipe from overview to accounts and the URL follows', async ({ page }, testInfo) => {

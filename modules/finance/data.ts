@@ -123,6 +123,8 @@ export async function listTransactions(filter: {
   categoryId?: string
   /** This calendar month only, in the owner's zone. What a budget's Spent covers. */
   thisMonth?: boolean
+  /** Nothing filed it yet: what the Uncategorised chip lists. */
+  uncategorised?: boolean
   limit?: number
 }): Promise<TransactionRow[]> {
   const { rows } = await db().query<TransactionRow>(
@@ -135,28 +137,72 @@ export async function listTransactions(filter: {
       where ($1::uuid is null or t.account_id = $1)
         and ($2::uuid is null or t.category_id = $2)
         and (not $4::boolean or t.occurred_on >= date_trunc('month', core.today())::date)
+        and (not $5::boolean or t.category_id is null)
       order by t.occurred_on desc, t.created_at desc
       limit $3`,
-    [filter.accountId ?? null, filter.categoryId ?? null, filter.limit ?? 100, filter.thisMonth ?? false],
+    [
+      filter.accountId ?? null,
+      filter.categoryId ?? null,
+      filter.limit ?? 100,
+      filter.thisMonth ?? false,
+      filter.uncategorised ?? false,
+    ],
   )
   return rows
 }
 
-/** Every rule, in the shape modules/finance/categorise.ts takes. */
-export async function loadRules(): Promise<
-  { category: string; categoryId: string; pattern: string; isManual: boolean }[]
-> {
-  const { rows } = await db().query<{
-    category: string
-    categoryId: string
-    pattern: string
-    isManual: boolean
-  }>(
-    `select c.name as category, c.id as "categoryId", r.pattern, r.is_manual as "isManual"
+export type RuleRow = {
+  id: string
+  pattern: string
+  category_id: string
+  category_name: string
+  is_manual: boolean
+  classified_by: string
+  confidence: string | null
+}
+
+/**
+ * Every stored rule, for the Rules drawer.
+ *
+ * The eleven built-ins are not here: they live in categorise.ts, are listed
+ * read-only beside these, and a rule the owner writes already beats one in the
+ * sort, so overriding a built-in is writing a rule. What categorise() needs at
+ * match time is loadRuleSet() in ./rules.ts, which shapes both sets together.
+ */
+export async function listRules(): Promise<RuleRow[]> {
+  const { rows } = await db().query<RuleRow>(
+    `select r.id, r.pattern, r.category_id, c.name as category_name,
+            r.is_manual, r.classified_by, r.confidence::text
        from finance.category_rule r
-       join finance.category c on c.id = r.category_id`,
+       join finance.category c on c.id = r.category_id
+      order by r.pattern`,
   )
   return rows
+}
+
+/**
+ * What the filter chips count.
+ *
+ * Counted rather than measured off the loaded rows: the tab loads the newest
+ * few hundred and the whole point of the Uncategorised chip is that there were
+ * 607 of them behind a window of 60.
+ */
+export async function transactionCounts(): Promise<{
+  all: number
+  uncategorised: number
+  pending: number
+}> {
+  const { rows } = await db().query<{ all: string; uncategorised: string; pending: string }>(
+    `select count(*)::text as all,
+            count(*) filter (where category_id is null)::text as uncategorised,
+            count(*) filter (where pending)::text as pending
+       from finance.transaction`,
+  )
+  return {
+    all: Number(rows[0].all),
+    uncategorised: Number(rows[0].uncategorised),
+    pending: Number(rows[0].pending),
+  }
 }
 
 /**
