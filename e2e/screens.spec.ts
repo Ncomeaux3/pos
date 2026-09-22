@@ -2375,8 +2375,53 @@ test('finance, filing a transaction teaches the rule', async ({ page }) => {
 
   await page.getByRole('button', { name: /^File Coffee bar/ }).first().click()
   await page.getByRole('button', { name: 'Dining', exact: true }).first().click()
-  await expect(page.getByText(/the rule learned it/)).toBeVisible()
+  // v1.2 phase 5a: filing is not learning. The row offers the rule and the
+  // offer stays until answered. Answered before the shot, which reloads.
+  await expect(page.getByText('Always file Coffee bar as Dining?')).toBeVisible()
+  await page.getByRole('button', { name: 'Always', exact: true }).click()
+  await expect(page.getByText('Rule learned')).toBeVisible()
   await shoot(page, 'finance-account')
+})
+
+test('finance, a card payment is a transfer and a credit nets against its budget', async ({ page }) => {
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
+  await page.goto('/finance')
+  await expect(page.getByRole('heading', { name: 'Finance' })).toBeVisible()
+
+  // The band offers the first-run window beside the nightly one.
+  await expect(page.getByRole('button', { name: 'Pull 90 days' })).toBeVisible()
+
+  // The checking side of paying the card off is in the ledger and in no
+  // budget: Credit card payment is a transfer kind.
+  if (mobile) {
+    await page.getByRole('tab', { name: /Transactions/ }).click()
+  } else {
+    await page.getByTestId('finance-accounts').getByRole('button', { name: /Checking/ }).click()
+    await expect(page).toHaveURL(/account=/)
+  }
+  await expect(page.getByText('Chase credit crd autopay').first()).toBeVisible()
+  await expect(page.getByText('Credit card payment').first()).toBeVisible()
+  if (mobile) {
+    // A charge the bank has not posted says so.
+    await expect(page.getByText('Pending', { exact: true }).first()).toBeVisible()
+    await page.getByRole('tab', { name: /Budgets/ }).click()
+    await expect(page.locator('[data-segments-pane]').getByText('Credit card payment')).toHaveCount(0)
+    await page.getByRole('button', { name: /^Dining/ }).first().click()
+  } else {
+    await page.keyboard.press('Escape')
+    await expect(page).not.toHaveURL(/account=/)
+    await expect(page.getByTestId('finance-budgets').getByText('Credit card payment')).toHaveCount(0)
+    await page.getByTestId('finance-budgets').getByRole('button', { name: /^Dining/ }).click()
+  }
+  await expect(page).toHaveURL(/budget=/)
+  // The Amex dining credit is a negative row in Dining, so the signed sum
+  // nets it; the pending taco truck is listed but waits for its post.
+  const drawer = page.getByRole('dialog')
+  const credit = drawer.getByText('Amex dining credit').locator('..').locator('..')
+  await expect(credit).toContainText('+$10.00')
+  await expect(drawer.getByText('Taco truck')).toBeVisible()
+  await expect(drawer.getByText('Pending', { exact: true })).toBeVisible()
+  await shoot(page, 'finance-budget-dining')
 })
 
 test('finance, the limits drawer holds edits until Done', async ({ page }) => {

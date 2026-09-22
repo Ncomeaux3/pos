@@ -39,7 +39,15 @@ import {
   transactionAmount,
   type BudgetTone,
 } from '../money'
-import { recategorise, saveBudget, saveThreshold, setSubscriptionStatus, type ActionResult } from './actions'
+import {
+  learnFor,
+  recategorise,
+  saveBudget,
+  saveCountPending,
+  saveThreshold,
+  setSubscriptionStatus,
+  type ActionResult,
+} from './actions'
 
 /** What the accounts table's change column means, on the head and on a row with none. */
 const CHANGE_NOTE = 'Balance change over the last 30 days. An account added inside that window has no history yet.'
@@ -52,6 +60,8 @@ export type FinanceData = {
   todayIso: string
   /** The Finance setting: a category past this share of its limit is flagged. */
   alertThreshold: number
+  /** The Finance setting: pending charges count toward a budget before they post. */
+  countPending: boolean
   /** The integration's label, for the drawer's "Synced nightly from SimpleFIN". */
   provider: string | null
   monthPace: number
@@ -76,6 +86,8 @@ export type FinanceData = {
     txCount: number
     mask: string
   }[]
+  /** Every category, for filing a transaction; budgets are the expense kind only. */
+  categories: { id: string; name: string; kind: 'expense' | 'income' | 'transfer' | 'credit' }[]
   budgets: {
     id: string
     name: string
@@ -103,6 +115,7 @@ export type FinanceData = {
     classifiedBy: string | null
     confidence: number | null
     isManual: boolean
+    pending: boolean
   }[]
 }
 
@@ -298,6 +311,10 @@ export function Finance({ data }: { data: FinanceData }) {
     (sum, u) => sum + u.amountCents * (u.cadence === 'yearly' ? 1 / 12 : u.cadence === 'weekly' ? 52 / 12 : 1),
     0,
   )
+  // Twenty expense categories since 5a, most with no limit and nothing in
+  // them this month. The lists show the ones that mean something; the limits
+  // drawer keeps every one so a limit can be set.
+  const shownBudgets = data.budgets.filter((b) => b.limitCents || b.spentCents !== 0)
   const budgetTotals = data.budgets
     .filter((b) => b.limitCents)
     .reduce((t, b) => ({ spent: t.spent + b.spentCents, limit: t.limit + (b.limitCents ?? 0) }), { spent: 0, limit: 0 })
@@ -407,7 +424,7 @@ export function Finance({ data }: { data: FinanceData }) {
                 limit you set here applies to this month only, so raising one in March does not rewrite
                 what February was measured against.
               </p>
-              {data.budgets.map((b) => {
+              {shownBudgets.map((b) => {
                 const used = b.limitCents ? budgetTone(b.spentCents, b.limitCents, data.alertThreshold, b.isFixed) : null
                 const tone = used === null || used.tone === 'fixed' ? null : toneText(used.tone)
                 return (
@@ -470,10 +487,9 @@ export function Finance({ data }: { data: FinanceData }) {
           {tab === 'transactions' && (
             <TransactionList
               transactions={data.transactions}
-              categories={data.budgets.map((b) => ({ id: b.id, name: b.name }))}
-              onRecategorise={(id, categoryId) =>
-                runFor(() => recategorise(id, categoryId), 'Filed, and the rule learned it')
-              }
+              categories={data.categories}
+              onRecategorise={(id, categoryId) => runFor(() => recategorise(id, categoryId), 'Filed')}
+              onLearn={(id, categoryId) => runFor(() => learnFor(id, categoryId), 'Rule learned')}
             />
           )}
         </Segments>
@@ -618,14 +634,14 @@ export function Finance({ data }: { data: FinanceData }) {
                   </ActionButton>
                 </span>
               </div>
-              {data.budgets.length === 0 ? (
+              {shownBudgets.length === 0 ? (
                 <EmptyState headline="No budgets" className="border-0">
                   A budget is a limit on a category for this month. Set one with Edit limits.
                 </EmptyState>
               ) : (
                 <>
                   <DataTable head={['Category', 'Spent / limit', 'Used']} cols="minmax(0,1fr) auto 44px">
-                    {data.budgets.map((b) => {
+                    {shownBudgets.map((b) => {
                       const used = b.limitCents ? budgetTone(b.spentCents, b.limitCents, data.alertThreshold, b.isFixed) : null
                       const over = used !== null && (used.tone === 'warn' || used.tone === 'bad')
                       const tone = used === null || used.tone === 'fixed' ? 'text-ink' : toneText(used.tone)
@@ -699,10 +715,9 @@ export function Finance({ data }: { data: FinanceData }) {
           />
           <TransactionList
             transactions={accountTx}
-            categories={data.budgets.map((b) => ({ id: b.id, name: b.name }))}
-            onRecategorise={(id, categoryId) =>
-              runFor(() => recategorise(id, categoryId), 'Filed, and the rule learned it')
-            }
+            categories={data.categories}
+            onRecategorise={(id, categoryId) => runFor(() => recategorise(id, categoryId), 'Filed')}
+            onLearn={(id, categoryId) => runFor(() => learnFor(id, categoryId), 'Rule learned')}
           />
         </Overlay>
       )}
@@ -751,10 +766,9 @@ export function Finance({ data }: { data: FinanceData }) {
           </Card>
           <TransactionList
             transactions={data.transactions.filter((t) => t.categoryName === openBudget.name)}
-            categories={data.budgets.map((b) => ({ id: b.id, name: b.name }))}
-            onRecategorise={(id, categoryId) =>
-              runFor(() => recategorise(id, categoryId), 'Filed, and the rule learned it')
-            }
+            categories={data.categories}
+            onRecategorise={(id, categoryId) => runFor(() => recategorise(id, categoryId), 'Filed')}
+            onLearn={(id, categoryId) => runFor(() => learnFor(id, categoryId), 'Rule learned')}
           />
         </Overlay>
       )}
@@ -763,13 +777,18 @@ export function Finance({ data }: { data: FinanceData }) {
         <LimitsDrawer
           budgets={data.budgets}
           threshold={data.alertThreshold}
+          countPending={data.countPending}
           onClose={() => setParams({ limits: null })}
-          onSave={async (limits, threshold) => {
+          onSave={async (limits, threshold, countPending) => {
             for (const [id, dollars] of limits) {
               const result = await saveBudget(id, dollars)
               if (!result.ok) return result
             }
-            if (threshold !== null) return saveThreshold(threshold)
+            if (threshold !== null) {
+              const result = await saveThreshold(threshold)
+              if (!result.ok) return result
+            }
+            if (countPending !== null) return saveCountPending(countPending)
             return { ok: true }
           }}
           toast={toast}
@@ -879,15 +898,20 @@ function TransactionList({
   transactions,
   categories,
   onRecategorise,
+  onLearn,
 }: {
   transactions: FinanceData['transactions']
-  categories: { id: string; name: string }[]
+  categories: FinanceData['categories']
   onRecategorise: (id: string, categoryId: string) => Promise<ActionResult>
+  onLearn: (id: string, categoryId: string) => Promise<ActionResult>
 }) {
   const [editing, setEditing] = useState<string | null>(null)
   // The category label flips the moment one is picked, reverted on failure,
   // same shape as Inbox.tsx's act() with a map instead of a list.
   const [override, setOverride] = useState<Record<string, string>>({})
+  // After a pick, the row offers to make it a rule. The offer stays until
+  // answered: a toast would be gone before the owner read it.
+  const [offer, setOffer] = useState<{ id: string; categoryId: string; name: string } | null>(null)
 
   if (transactions.length === 0) {
     return (
@@ -936,6 +960,7 @@ function TransactionList({
                   >
                     {override[t.id] ?? t.categoryName ?? 'Uncategorised'}
                   </button>{' '}
+                  {t.pending && <StatusChip tone="quiet">Pending</StatusChip>}{t.pending ? ' ' : ''}
                   {(t.isManual || t.classifiedBy === 'model' || t.classifiedBy === 'rule') && (
                     <StatusChip tone={t.classifiedBy === 'model' && !t.isManual ? 'brand' : 'quiet'}>
                       {t.isManual
@@ -969,6 +994,8 @@ function TransactionList({
                             delete next[t.id]
                             return next
                           })
+                        } else {
+                          setOffer({ id: t.id, categoryId: c.id, name: c.name })
                         }
                       })
                     }}
@@ -976,6 +1003,24 @@ function TransactionList({
                     {c.name}
                   </ActionButton>
                 ))}
+              </div>
+            )}
+            {offer?.id === t.id && (
+              <div className="flex flex-wrap items-center gap-2 pb-2.5 text-[12px] text-ink-2">
+                <span className="min-w-0 flex-1">
+                  Always file {t.descriptor} as {offer.name}?
+                </span>
+                <ActionButton
+                  onClick={() => {
+                    setOffer(null)
+                    onLearn(t.id, offer.categoryId)
+                  }}
+                >
+                  Always
+                </ActionButton>
+                <ActionButton variant="outline" onClick={() => setOffer(null)}>
+                  Not now
+                </ActionButton>
               </div>
             )}
           </div>
@@ -993,18 +1038,25 @@ function TransactionList({
 function LimitsDrawer({
   budgets,
   threshold,
+  countPending,
   onClose,
   onSave,
   toast,
 }: {
   budgets: FinanceData['budgets']
   threshold: number
+  countPending: boolean
   onClose: () => void
-  onSave: (limits: [string, number][], threshold: number | null) => Promise<ActionResult>
+  onSave: (
+    limits: [string, number][],
+    threshold: number | null,
+    countPending: boolean | null,
+  ) => Promise<ActionResult>
   toast: (message: string) => void
 }) {
   const [limits, setLimits] = useState<Record<string, string>>({})
   const [nextThreshold, setNextThreshold] = useState(threshold)
+  const [nextCountPending, setNextCountPending] = useState(countPending)
   const [pending, start] = useTransition()
 
   const changed = Object.entries(limits).flatMap(([id, v]) => {
@@ -1013,7 +1065,8 @@ function LimitsDrawer({
     return n !== null && Math.round(n * 100) !== (was ?? 0) ? [[id, n] as [string, number]] : []
   })
   const thresholdChanged = nextThreshold !== threshold
-  const count = changed.length + (thresholdChanged ? 1 : 0)
+  const countPendingChanged = nextCountPending !== countPending
+  const count = changed.length + (thresholdChanged ? 1 : 0) + (countPendingChanged ? 1 : 0)
 
   const close = () => {
     if (count > 0 && !window.confirm(`Discard ${count} unsaved change${count === 1 ? '' : 's'}?`)) return
@@ -1022,10 +1075,15 @@ function LimitsDrawer({
   const reset = () => {
     setLimits({})
     setNextThreshold(threshold)
+    setNextCountPending(countPending)
   }
   const done = () =>
     start(async () => {
-      const result = await onSave(changed, thresholdChanged ? nextThreshold : null)
+      const result = await onSave(
+        changed,
+        thresholdChanged ? nextThreshold : null,
+        countPendingChanged ? nextCountPending : null,
+      )
       if (!result.ok) {
         toast(result.error)
         return
@@ -1124,6 +1182,23 @@ function LimitsDrawer({
         <p className="text-[12px] leading-[1.5] text-ink-3">
           Categories past this share of their limit are flagged in the digest and count toward
           &quot;Budgets over threshold&quot;.
+        </p>
+      </Card>
+
+      <Card className="mt-2 flex flex-col gap-2.5">
+        <Eyebrow>Pending charges</Eyebrow>
+        <label className="flex items-center gap-2.5 text-[13px] text-ink">
+          <input
+            type="checkbox"
+            checked={nextCountPending}
+            onChange={(e) => setNextCountPending(e.target.checked)}
+            className="accent-action"
+          />
+          Count pending charges toward budgets
+        </label>
+        <p className="text-[12px] leading-[1.5] text-ink-3">
+          Off, a charge counts once the bank posts it; the amount and the date can both move
+          until then. On, the live number.
         </p>
       </Card>
     </Overlay>

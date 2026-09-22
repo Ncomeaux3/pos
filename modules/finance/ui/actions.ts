@@ -24,7 +24,8 @@ function done(): ActionResult {
 }
 
 /**
- * Recategorise a transaction and learn from it.
+ * Recategorise a transaction. The rule is offered afterwards, not learned
+ * here: SPEC v1.2 says a manual category offers to become a rule.
  *
  * source 'ui' on purpose: `categorise` is unguarded, but going through callTool
  * keeps one implementation shared with MCP, and the owner pressing a button in
@@ -33,7 +34,28 @@ function done(): ActionResult {
 export async function recategorise(id: string, categoryId: string): Promise<ActionResult> {
   await requireOwner()
   try {
-    await callTool('finance', 'categorise', { id, category_id: categoryId }, { source: 'ui' })
+    await callTool('finance', 'categorise', { id, category_id: categoryId, learn: false }, { source: 'ui' })
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+/** "Always file {merchant} as {category}": the offer under a filed row. */
+export async function learnFor(id: string, categoryId: string): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    await callTool('finance', 'learn_rule', { transaction_id: id, category_id: categoryId }, { source: 'ui' })
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}
+
+export async function saveCountPending(on: boolean): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    await callTool('finance', 'set_count_pending', { on }, { source: 'ui' })
     return done()
   } catch (error) {
     return failed(error)
