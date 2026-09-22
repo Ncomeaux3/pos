@@ -38,7 +38,9 @@ Order: bugs, then look and forms, then data pulls, then Calendar and integration
 | 3d Look: affordance and contrast rollout | Every button, row link and tile visibly clickable; ink tokens AA at every size; whole goal card opens | high | none | 3c | PR #118 open 2026-09-21: title targets stretched over the goal, budget, task and itinerary cards (`STRETCH` in Card.tsx), text-only buttons on the quiet and danger variants with a rest border on touch, one hover tint and chevron on every row and card, Today task rows link to the drawer; no ink token moved (measured) | #118 |
 | 4 Forms: required fields and keyboard | Missing field highlighted with a message; Enter submits, Tab order, first field focused | medium | 5a | 3d | Done 2026-09-21: `Field` and `useFormErrors` in `components/pos/FormField.tsx`, `ToolInputError` from `callTool` with one message per field, footer Save as the form's submit control, Overlay focuses the first field and guards a dirty form; ten forms swept, Recipe waits for Phase 12 | #119 |
 | 5a Finance: full pull, pending, categories | 90-day re-pull button, pending marked, transfers out of spending, credits net, new categories, rule offer on manual override | high | 4 | 1b | PR #120 open 2026-09-21: `kind` on categories with eleven new ones, budgets are the expense kind only and skip pending, built-in payment and credit rules plus refund matching, Pull 90 days with per-account counts, the rule offer under a filed row | #120 |
-| 5b Finance: three new views | Cash flow by month, Upcoming 14 days, Category trend in the desktop corner | medium | 6a | 5a | | |
+| 5b Finance: three new views | Cash flow by month, Upcoming 14 days, Category trend in the desktop corner | medium | 6a | 5a | PR #122 open 2026-09-22: cash flow and the category trend fill the corner, the existing Upcoming card gained a Balance after column and reads both sources, `netThisMonthCents` on the tile head; `compactMoney` and `signedMoney` fixed at the root | #122 |
+| 5c Finance: rules, back-filing and the transfer fix | Rules drawer with provenance and back-filing, peer payments out of transfers, an Uncategorised filter | medium | 6a | 5b | | |
+| 5d Finance: the model arm | One batched Haiku call fills what the rules miss; at 0.8 it writes a rule, below it the merchant is listed unfiled | medium | 6a | 5c | | |
 | 6a Calendar module | `calendar` schema, the `calendar` manifest seam on nine modules, month grid with day list, recurring rules drawn | high | 5b | 4 | | |
 | 6b Recurring tasks | Repeat rule on a task, next instance on completion, Tasks calendar day list | medium | 7a | 6a | | |
 | 7a Google: Calendar feed | One OAuth app, refresh token in connections, events pulled nightly and on demand | high | 6b | 6a | | |
@@ -235,6 +237,41 @@ Complexity: medium. Files: `modules/finance/ui/Finance.tsx`, `modules/finance/da
 - [x] e2e: the three cards render with the seed; the category select switches the series.
 
 Exit: ui-verifier at 1440 shows the corner filled without a taller page than today plus one row.
+
+## Phase 5c: Finance, rules, back-filing and the transfer fix
+
+Goal: every rule is visible and changeable, money to a person counts as spending, and the 607 uncategorised rows are reachable.
+Complexity: medium. Files: migration `finance_rule_provenance`, `modules/finance/rules.ts` (+ test), `modules/finance/categorise.ts`, `modules/finance/data.ts`, `modules/finance/manifest.ts`, `modules/finance/ui/Finance.tsx`, `modules/finance/ui/RulesDrawer.tsx`, `modules/finance/ui/actions.ts`, `modules/finance/README.md`.
+
+Why this phase exists: on the owner's real data 607 of 622 transactions (97.6 percent) have no category, across 172 distinct merchants. `BUILTIN_RULES` holds eleven patterns and every one of them is a payment, a transfer or a credit, so nothing files an ordinary purchase. `finance.category_rule` is written by `learn_rule` and read by `loadRules` and by nothing else: there is no screen, no edit and no delete, and a wrong rule (`apple icloud` to Dining, from an e2e run) is unreachable. `listTransactions` has no filter, so the uncategorised rows cannot be found either.
+
+- [ ] Migration `finance_rule_provenance`: `finance.category_rule` gains `classified_by text not null default 'human'` and `confidence numeric`; `is_manual` keeps its meaning as the override flag. Insert the `People` category (`kind = 'expense'`, not fixed) for money to and from individuals.
+- [ ] `modules/finance/rules.ts` (+ test), the one place that answers which rows a rule touches. `applyRule` re-files every matching row where `is_manual = false` and returns the count; `removeRule` clears those rows and re-runs the remaining rules over them, so a row two rules matched is not orphaned by deleting one. Never writes where `is_manual = true`.
+- [ ] Peer payments: `zelle`, `venmo`, `cash app` sort ahead of the transfer patterns and file to `People`. "Zelle Transfer to <name>" carries both `zelle` and `transfer to`, so precedence is the whole fix; `online transfer`, `transfer to` and `transfer from` stay for the owner's own accounts. A $1,382.45 Zelle is currently `Account transfer` and counted as no spending at all.
+- [ ] Rules drawer, opened from the Transactions tab beside Edit limits, the Budget limits drawer's shape: the owner's and the model's rules with a provenance badge, each editable and deletable, the eleven built-ins read-only below them (a rule the owner writes already beats a built-in in the sort, so overriding one is writing one), and an Unfiled merchants list with row count and total where filing one writes a rule and back-files in the same action. Saving says how many rows moved.
+- [ ] Tools: `write_rule` and `delete_rule` on the manifest, unguarded, for the same reason `categorise` is unguarded (README: hundreds of rows a month through the Review inbox would make the inbox useless).
+- [ ] Uncategorised filter on the Transactions tab: All, Uncategorised and Pending with counts, fed by a third `listTransactions` call unioned into the page data, the pattern the budget drawer fix already set.
+- [ ] `categoriseNew`'s 500 row limit is raised or looped: 607 rows do not fit it, and the backlog would otherwise take two nights.
+- [ ] Tests first, as the project asks for classification: a peer payment beats the transfer rule; a back-file leaves an `is_manual` row alone; deleting a rule re-files rather than orphans.
+- [ ] e2e: the drawer lists a built-in as read-only; filing an unfiled merchant writes a rule and the Uncategorised count falls.
+
+Exit: standard; migration pushed (`db push: done`). The owner files or confirms the 172 merchants and the uncategorised share in STATUS.md is below 10 percent.
+
+## Phase 5d: Finance, the model arm
+
+Goal: the rules-first design gets its second half, so a new merchant files itself.
+Complexity: medium. Files: `modules/finance/jobs/categorise-model.ts` (+ test), `modules/finance/jobs/nightly-digest.ts`, `modules/finance/manifest.ts`, `modules/finance/ui/RulesDrawer.tsx`, `modules/finance/README.md`.
+
+`categorise.ts` has said "null means ask the model" since it was written and nothing ever did. This is that arm.
+
+- [ ] One batched call through `core/llm.ts`, never one per merchant: `claude-haiku-4-5`, the unfiled shop names and the category list in, `{ merchant, category, confidence }` out. The model chooses from existing categories and never invents one. Measured: 172 merchants is about $0.012, then under a cent a month against `llm_soft_cap_cents` of 1000.
+- [ ] At or above 0.8 it writes a `finance.category_rule` with `classified_by = 'model'` and the confidence, then back-files through 5c's `applyRule`, so next month is a rule hit and not a second call. Below 0.8 nothing is written and the merchant shows in the drawer's Unfiled list. `is_manual` is never touched.
+- [ ] Peer payments never reach the model: `zelle`, `venmo` and `cash app` descriptors are filed by 5c's rules before any call, so a person's name and a payment memo do not leave the machine. Everything sent is a shop name.
+- [ ] Runs at the end of the nightly `categorise` job, and on demand from a Categorise unfiled button in the drawer, which is how the backlog clears the day this ships rather than overnight.
+- [ ] Tests: the threshold (0.79 writes nothing, 0.80 writes a rule); a peer payment is never in the payload; an unknown category name from the model is refused rather than created.
+- [ ] e2e: the Unfiled count falls after the button, and a model rule shows its badge and confidence in the drawer.
+
+Exit: standard; no migration. The owner checks a sample of what the model filed against the bank.
 
 ## Phase 6a: Calendar module
 

@@ -62,6 +62,26 @@ against the Vercel domain. Laptop notes: `.env` has no VAPID pair, so `pnpm setu
 and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
+## Next: v1.2 phases 5c and 5d, Finance rules and the model arm
+
+Planned 2026-09-22 from a three-round interview; the twelve decisions are in
+decisions/log.md under that date and the phases are in docs/plans/pos-v1-2.md.
+The finding behind them: **607 of 622 real transactions (97.6 percent) have no
+category**, across 172 distinct merchants. `BUILTIN_RULES` is eleven patterns
+and every one is a payment, a transfer or a credit, so nothing files an
+ordinary purchase; `finance.category_rule` has no screen, no edit and no
+delete; and `listTransactions` has no filter, so the uncategorised rows cannot
+be found in the app. A $1,382.45 Zelle to a person is filed `Account transfer`,
+whose kind is never counted as spending.
+
+5c is deterministic: a migration for rule provenance and a `People` category,
+one `rules.ts` that back-files without touching `is_manual`, peer payments
+sorted ahead of the transfer patterns, a Rules drawer, and an Uncategorised
+filter. 5d adds one batched Haiku call for what the rules miss, about $0.012
+for all 172 merchants and under a cent a month after; at 0.8 it writes a rule,
+below it the merchant is listed unfiled, and peer descriptors never leave the
+machine.
+
 ## Done
 
 **v1.2 Phase 5b: Finance, three new views** (2026-09-22, branch
