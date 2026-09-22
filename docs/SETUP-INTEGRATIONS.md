@@ -213,7 +213,20 @@ different problem from a wrong credential and says so.
 subscription detection and the digest, because all three read what it wrote. The
 first run asks for 90 days, enough history for recurring detection to have
 something to work with. Later runs re-ask for 30, because a pending transaction
-changes when it posts and the upsert corrects it in place.
+changes when it posts and the upsert corrects it in place. **Pull 90 days** on
+the Finance band re-asks for the first-run window at any time. How far back an
+account actually goes is the institution's limit, not the bridge's (verify per
+account: some return less than 90 days), so the job log and the line under the
+band's clock say the count and the oldest date per account rather than
+claiming 90. Compare one account against the bank after the first pull.
+
+A pending transaction shows a `Pending` chip and stays out of every budget
+until it posts, unless "Count pending charges toward budgets" is on in the
+Budget limits drawer. Paying the card off lands in Credit card payment on both
+sides (the descriptors the rules know are "Payment Thank You", "EPAYMENT",
+"E-PAYMENT", "CREDIT CRD AUTOPAY", and any descriptor naming one of your card
+institutions with a payment word; verify against your own statements and file
+one by hand if a bank's wording differs, then answer Always to teach the rule).
 
 Two things it deliberately refuses to do:
 
