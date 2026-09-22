@@ -229,10 +229,10 @@ Built 2026-09-21. Notes for later phases: `finance.category.kind` is on every ca
 Goal: the empty corner at 1440 shows cash flow, what is due, and one category's year.
 Complexity: medium. Files: `modules/finance/ui/Finance.tsx`, `modules/finance/data.ts`, `modules/finance/ui/CashFlow.tsx`, `modules/finance/ui/Upcoming.tsx`, `modules/finance/ui/CategoryTrend.tsx`, `components/pos/LineChart.tsx` (reuse), `components/pos/charts.tsx` (bars: verify a bar primitive exists; else the smallest SVG in the new file).
 
-- [ ] `data.ts`: `cashFlowByMonth(6)` (income and expense sums per month, transfers excluded), `upcoming(14)` (recurring rows due, from `finance.recurring`, with the running balance after each from the main checking account), `categorySeries(categoryId, 12)`.
-- [ ] Three cards on the desktop overview under the budgets: bars with the net line, a due list with the running balance, a category select over `LineChart`. Phone: the three join the Overview segment rows.
-- [ ] Digest gains `netThisMonthCents` for the Finance tile head.
-- [ ] e2e: the three cards render with the seed; the category select switches the series.
+- [x] `data.ts`: `cashFlowByMonth(6)` (income and expense sums per month, transfers excluded), `dueSoon(14)` (both `finance.recurring` and `finance.subscription`, deduped, with the running balance after each from the largest checking account), `categorySeries(12)` (every expense category at once, so the select costs no round trip).
+- [x] Three cards on the desktop overview: cash flow bars with the net line and the category trend fill the corner under Accounts; the due list is the existing Upcoming card with a Balance after column, not a fourth card. Phone: the two new cards sit inline in the Overview stack.
+- [x] Digest gains `netThisMonthCents` for the Finance tile head.
+- [x] e2e: the three cards render with the seed; the category select switches the series.
 
 Exit: ui-verifier at 1440 shows the corner filled without a taller page than today plus one row.
 

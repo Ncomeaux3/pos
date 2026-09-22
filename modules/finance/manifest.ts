@@ -222,7 +222,14 @@ export default defineModule({
   tile: FinanceTile,
   tileHead: (payload) => {
     const over = Array.isArray(payload.overBudget) ? payload.overBudget.length : 0
-    return { meta: `${over} budget${over === 1 ? '' : 's'} flagged` }
+    const net = typeof payload.netThisMonthCents === 'number' ? payload.netThisMonthCents : null
+    // Net first: it is the one number that says whether the month is going
+    // well. The flag count follows it, and a digest written before v1.2
+    // phase 5b has no net, so the head falls back to what it used to say.
+    const flags = `${over} budget${over === 1 ? '' : 's'} flagged`
+    if (net === null) return { meta: flags }
+    const dollars = `$${Math.round(Math.abs(net) / 100).toLocaleString('en-US')}`
+    return { meta: `${net >= 0 ? '+' : '-'}${dollars} this month · ${flags}` }
   },
 
   metrics: {

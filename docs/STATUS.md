@@ -38,7 +38,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-21 (v1.2 Phase 5a: Finance, full pull, pending, categories). Branch `phase-5a-finance-pull`, production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-22 (v1.2 Phase 5b: Finance, three new views). Branch `phase-5b-finance-views`, production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -63,6 +63,43 @@ and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
 ## Done
+
+**v1.2 Phase 5b: Finance, three new views** (2026-09-22, branch
+`phase-5b-finance-views`). The corner under the accounts table was empty at
+1440 while the column beside it ran on; it now holds cash flow and a category
+trend. `cashFlowByMonth(6)` puts 5a's kinds to work (income is the income kind
+with its sign flipped, spending is expense plus credit, a transfer is on
+neither side, an uncategorised row is read by its sign) and returns every month
+of the window so a quiet month draws as zero rather than vanishing.
+`categorySeries(12)` sends every expense category down with the page, so the
+trend card's select is a re-render and not a round trip; `LineChart` gained one
+`unit` prop so a month axis says "12 months", "Monthly dining" and "Best
+month".
+
+The due list did not become a fourth card. The existing Upcoming card read
+`finance.subscription` only, and nothing promotes a detection into a
+subscription outside the demo seed, so on production it was empty while the
+detector had rows. `dueSoon(14)` reads both, deduped, and the card gained a
+Balance after column; the nightly digest reads the same function, so the
+dashboard tile and the screen it links to can no longer disagree about what is
+due. `runningBalance()` lives in `money.ts` and runs on the client over the
+filtered list, because cancelling a charge has to correct every balance below
+it. Only a curated subscription keeps its Cancel button: the nightly job would
+write a detection straight back. The digest also gained `netThisMonthCents`,
+which the Finance tile head now leads with.
+
+The ui-verifier found four things worth the record. `compactMoney` dropped the
+sign below $1,000, so the cash flow axis labelled its negative floor "$740";
+that is shared with the net worth and fitness charts and was fixed in
+`money.ts`. The first colour pair failed WCAG 1.4.11: sand is 1.81:1 on a light
+card and `--chart-1` at 0.55 opacity was 1.86:1 on a dark one, so the bars are
+`--chart-3` and `--chart-1` at full strength and measure 4.14:1 or better in
+both themes. Both new cards in the left column ran it 511px past the right, so
+the trend moved under Budgets: the columns now measure 1461 and 1461 and the
+page grows 380px, one card's height. And Cancel moved ahead of the amount in an
+Upcoming row, because a button after it inside the same cell pushed the amounts
+of the rows that still have one 69px out of their column.
+
 
 **Fix: the SimpleFIN sign and the budget drawer's list** (2026-09-22, branch
 `fix-finance-sign-and-drawers`). Found on production the morning after 5a

@@ -2358,6 +2358,55 @@ test('finance, the detector found the subscriptions and left the rest alone', as
   await shoot(page, 'finance-subscriptions')
 })
 
+test('finance, cash flow, the category trend and the running balance', async ({ page }) => {
+  // v1.2 phase 5b. The corner that was empty at 1440, and the column the
+  // Upcoming card gained.
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
+  await page.goto('/finance')
+
+  // Both layouts are in the DOM at every width, so everything is scoped: the
+  // phone reads its Overview pane, the desktop its cards by test id.
+  const cashflow = mobile ? page.locator('[data-segments-pane]') : page.getByTestId('finance-cashflow')
+
+  // Six months of bars with the net line over them. The accessible name is the
+  // assertion because it names the window the bars actually cover.
+  await expect(
+    cashflow.getByRole('img', { name: /Income against spending over 6 months/ }),
+  ).toBeVisible()
+
+  // The trend is twelve months, not twelve days: LineChart counts its points
+  // in the unit it was given, and this fails if that prop is dropped.
+  const trend = mobile ? page.locator('[data-segments-pane]') : page.getByTestId('finance-trend')
+  const chart = trend.getByRole('img', { name: /over 12 months/ })
+  await expect(chart).toBeVisible()
+
+  // Switching the select redraws the same chart with another category, with no
+  // round trip: every series came down with the page.
+  const select = trend.getByLabel('Category')
+  const first = await chart.getAttribute('aria-label')
+  const options = await select.locator('option').allTextContents()
+  expect(options.length).toBeGreaterThan(1)
+  await select.selectOption({ index: 1 })
+  await expect(trend.getByRole('img', { name: new RegExp(`^${options[1]} over 12 months`) })).toBeVisible()
+  expect(first).not.toContain(`${options[1]} over`)
+
+  if (!mobile) {
+    // The fortnight's charges now say what is left after each one.
+    const upcoming = page.getByTestId('finance-upcoming')
+    await expect(upcoming.locator('[data-table-head] > span')).toHaveText([
+      'Date',
+      'Charge',
+      'Amount',
+      'Balance after',
+    ])
+    // Visible, not a title attribute: a tooltip never reaches a keyboard or a
+    // phone, and this is the only place the projection is qualified.
+    await expect(upcoming.getByText(/projection, not a forecast/)).toBeVisible()
+  }
+
+  await shoot(page, 'finance-cashflow')
+})
+
 test('finance, filing a transaction teaches the rule', async ({ page }) => {
   const mobile = (page.viewportSize()?.width ?? 0) < 768
   if (mobile) {

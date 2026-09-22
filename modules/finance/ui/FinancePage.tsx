@@ -3,7 +3,10 @@ import { syncState } from '@/core/sync'
 import { getSettings } from '@/core/settings'
 import { ownerToday } from '@/core/today'
 import {
+  cashFlowByMonth,
+  categorySeries,
   categorySpend,
+  dueSoon,
   getAlertThreshold,
   getCountPending,
   lastPullDetail,
@@ -11,7 +14,6 @@ import {
   listCategories,
   listTransactions,
   netWorthSeries,
-  upcomingCharges,
 } from '../data'
 import { monthPace } from '../money'
 import { spine } from '@/core/series'
@@ -32,7 +34,9 @@ export default async function FinancePage() {
     series,
     spend,
     categories,
-    upcoming,
+    due,
+    cashFlow,
+    trend,
     transactions,
     monthTransactions,
     todayIso,
@@ -46,7 +50,9 @@ export default async function FinancePage() {
     netWorthSeries(30),
     categorySpend(),
     listCategories(),
-    upcomingCharges(14),
+    dueSoon(14),
+    cashFlowByMonth(6),
+    categorySeries(12),
     listTransactions({ limit: 60 }),
     // This month in full, because a budget drawer lists the rows behind its
     // Spent figure and that figure is a month-to-date sum. Filtering the 60
@@ -115,14 +121,18 @@ export default async function FinancePage() {
       txCount: Number(c.tx_count),
     })),
 
-    upcoming: upcoming.map((u) => ({
-      id: u.id,
-      name: u.name,
-      vendor: u.vendor,
-      amountCents: Number(u.amount_cents),
-      nextChargeOn: u.next_charge_on,
-      cadence: u.cadence,
+    // Both sources: what the owner curated and what the detector found, with
+    // the checking balance run down through them.
+    upcoming: due.charges,
+    checkingCents: due.checkingCents,
+
+    cashFlow: cashFlow.map((m) => ({
+      month: m.month,
+      incomeCents: Number(m.income_cents),
+      expenseCents: Number(m.expense_cents),
     })),
+    trendMonths: trend.months,
+    trendCategories: trend.categories,
 
     // The union, by id: the newest rows for the Transactions tab and every row
     // of this month for the drawers.

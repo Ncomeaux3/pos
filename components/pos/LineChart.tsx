@@ -16,6 +16,12 @@ const shortDate = (iso: string) => {
   return `${MONTHS[d.getMonth()]} ${String(d.getDate()).padStart(2, '0')}`
 }
 
+/** "Sep", and "Sep 25" each January so a year's turn is not two "Jan"s. */
+const shortMonth = (iso: string) => {
+  const d = new Date(`${iso}T12:00:00`)
+  return d.getMonth() === 0 ? `${MONTHS[0]} ${String(d.getFullYear()).slice(2)}` : MONTHS[d.getMonth()]
+}
+
 /**
  * Gridlines, the first recorded value as a dashed baseline, the average as a
  * second one, the high and the low marked, and a crosshair that says what a
@@ -33,6 +39,7 @@ export function LineChart({
   formatCompact = format,
   formatDelta,
   downIsGood = false,
+  unit = 'day',
 }: {
   /** "Net worth", "Weight": the caption, the legend and the accessible name. */
   name: string
@@ -45,8 +52,16 @@ export function LineChart({
   formatDelta: (value: number) => string
   /** Weight and resting heart rate colour a fall green; everything else a rise. */
   downIsGood?: boolean
+  /**
+   * What one point is. A month axis labels its points by month, counts them as
+   * months and calls the biggest move the best month. Nothing else changes:
+   * `days` is still spine()'s output, one entry per point, oldest first.
+   */
+  unit?: 'day' | 'month'
 }) {
   const [hover, setHover] = useState<number | null>(null)
+
+  const pointLabel = unit === 'month' ? shortMonth : shortDate
 
   const width = 600
   const height = 160
@@ -111,7 +126,7 @@ export function LineChart({
     <div className="flex flex-1 flex-col">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <span className="eyebrow text-ink-3">
-          {name} · {days.length} days
+          {name} · {days.length} {unit}s
         </span>
         <span className="label flex gap-[18px] text-[11px] text-ink-3">
           <span>
@@ -132,7 +147,7 @@ export function LineChart({
             viewBox={`0 0 ${width} ${height}`}
             preserveAspectRatio="none"
             role="img"
-            aria-label={`${name} over ${days.length} days, ${observed.length} of them recorded, from ${formatCompact(start)} to ${formatCompact(last)}`}
+            aria-label={`${name} over ${days.length} ${unit}s, ${observed.length} of them recorded, from ${formatCompact(start)} to ${formatCompact(last)}`}
             className="block h-full w-full cursor-crosshair overflow-visible"
             onMouseMove={(e) => {
               const box = e.currentTarget.getBoundingClientRect()
@@ -203,7 +218,7 @@ export function LineChart({
                 transform: hover > days.length / 2 ? 'translateX(-100%)' : 'none',
               }}
             >
-              <span className="text-ink-3">{shortDate(days[hover].date)}</span>{' '}
+              <span className="text-ink-3">{pointLabel(days[hover].date)}</span>{' '}
               <span className="num ml-2 text-ink">{format(at)}</span>{' '}
               {!days[hover].observed && <span className="text-ink-4">carried</span>}{' '}
               <span className={cn('num ml-2', tone(at - start))}>
@@ -229,7 +244,7 @@ export function LineChart({
             .map((d, i) => (
               // Six labels ran together at 360px; every other one hides below sm.
               <span key={d.date} className={cn('num', i % 2 === 1 && 'hidden sm:inline')}>
-                {shortDate(d.date)}
+                {pointLabel(d.date)}
               </span>
             ))}
         </div>
@@ -239,7 +254,7 @@ export function LineChart({
       <div className="label mt-2.5 flex flex-wrap gap-x-[18px] gap-y-2 border-t border-rule pt-2.5 text-[11px] text-ink-3">
         <span className="flex items-center gap-1.5">
           <span className="h-0.5 w-3 rounded-full bg-chart-1" aria-hidden />
-          Daily {name.toLowerCase()}
+          {unit === 'month' ? 'Monthly' : 'Daily'} {name.toLowerCase()}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-3 border-t border-dashed border-ink-3" aria-hidden />
@@ -250,7 +265,7 @@ export function LineChart({
           High / low
         </span>
         <span className="ml-auto">
-          Best day <span className={cn('num', tone(downIsGood ? worst : best))}>{formatDelta(downIsGood ? worst : best)}</span> · worst{' '}
+          Best {unit} <span className={cn('num', tone(downIsGood ? worst : best))}>{formatDelta(downIsGood ? worst : best)}</span> · worst{' '}
           <span className={cn('num', tone(downIsGood ? best : worst))}>{formatDelta(downIsGood ? best : worst)}</span>
         </span>
       </div>
