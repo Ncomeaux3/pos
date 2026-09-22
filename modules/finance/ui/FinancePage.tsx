@@ -34,6 +34,7 @@ export default async function FinancePage() {
     categories,
     upcoming,
     transactions,
+    monthTransactions,
     todayIso,
     sync,
     alertThreshold,
@@ -47,6 +48,11 @@ export default async function FinancePage() {
     listCategories(),
     upcomingCharges(14),
     listTransactions({ limit: 60 }),
+    // This month in full, because a budget drawer lists the rows behind its
+    // Spent figure and that figure is a month-to-date sum. Filtering the 60
+    // most recent by category left the drawer empty whenever newer rows had
+    // pushed the month's charge out of that window, which is what rent did.
+    listTransactions({ thisMonth: true, limit: 1000 }),
     ownerToday(),
     syncState('finance'),
     getAlertThreshold(),
@@ -118,7 +124,16 @@ export default async function FinancePage() {
       cadence: u.cadence,
     })),
 
-    transactions: transactions.map((t) => ({
+    // The union, by id: the newest rows for the Transactions tab and every row
+    // of this month for the drawers.
+    transactions: [
+      ...transactions,
+      ...monthTransactions.filter((m) => !transactions.some((t) => t.id === m.id)),
+    ]
+      // Newest first across the two queries. Array.sort is stable, so rows on
+      // the same day keep the order the database gave them.
+      .sort((a, b) => (a.occurred_on < b.occurred_on ? 1 : a.occurred_on > b.occurred_on ? -1 : 0))
+      .map((t) => ({
       id: t.id,
       descriptor: t.descriptor,
       amountCents: Number(t.amount_cents),

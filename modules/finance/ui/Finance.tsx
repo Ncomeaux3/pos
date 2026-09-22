@@ -256,6 +256,9 @@ export function Finance({ data }: { data: FinanceData }) {
 
   const openAccount = data.accounts.find((a) => a.id === params.get('account')) ?? null
   const openBudget = data.budgets.find((b) => b.id === params.get('budget')) ?? null
+  // A budget's Spent is a month-to-date sum, so the rows under it are this
+  // month's rows in that category and nothing else.
+  const monthStart = `${data.todayIso.slice(0, 8)}01`
   const accountTx = openAccount
     ? data.transactions.filter((t) => t.accountName === openAccount.name)
     : []
@@ -765,7 +768,10 @@ export function Finance({ data }: { data: FinanceData }) {
             </span>
           </Card>
           <TransactionList
-            transactions={data.transactions.filter((t) => t.categoryName === openBudget.name)}
+            transactions={data.transactions.filter(
+              (t) => t.categoryName === openBudget.name && t.occurredOn >= monthStart,
+            )}
+            caption="Transactions · this month"
             categories={data.categories}
             onRecategorise={(id, categoryId) => runFor(() => recategorise(id, categoryId), 'Filed')}
             onLearn={(id, categoryId) => runFor(() => learnFor(id, categoryId), 'Rule learned')}
@@ -897,10 +903,13 @@ function DrawerStats({
 function TransactionList({
   transactions,
   categories,
+  caption = 'Transactions',
   onRecategorise,
   onLearn,
 }: {
   transactions: FinanceData['transactions']
+  /** What this list is: the drawers scope theirs and say so. */
+  caption?: string
   categories: FinanceData['categories']
   onRecategorise: (id: string, categoryId: string) => Promise<ActionResult>
   onLearn: (id: string, categoryId: string) => Promise<ActionResult>
@@ -925,7 +934,7 @@ function TransactionList({
   return (
     <div className="mt-3.5">
       <div className="flex items-center justify-between">
-        <Eyebrow>Transactions · 30 days</Eyebrow>
+        <Eyebrow>{caption}</Eyebrow>
         <span className="label text-[11px] text-ink-3">
           {transactions.length} {transactions.length === 1 ? 'transaction' : 'transactions'}
         </span>
