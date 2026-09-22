@@ -8,15 +8,19 @@ import { applyDecisions } from '@/core/review-registry'
 import { closeReview, noteWriter, saveAnswers, weekOf } from '@/core/reviews'
 import { renderNote, type ReviewAnswers } from '@/core/reviews-shape'
 import { ownerToday } from '@/core/today'
-import { callTool } from '@/core/tools'
+import { callTool, ToolInputError } from '@/core/tools'
 
 // Server actions are standalone POST endpoints addressed by id, so the (app)
 // layout does not run for them and each one authenticates independently.
 
-export type ActionResult = { ok: true } | { ok: false; error: string }
+export type ActionResult = { ok: true } | { ok: false; error: string; fields?: Record<string, string> }
 
 function failed(error: unknown): ActionResult {
-  return { ok: false, error: error instanceof Error ? error.message : 'Failed' }
+  return {
+    ok: false,
+    error: error instanceof Error ? error.message : 'Failed',
+    ...(error instanceof ToolInputError && { fields: error.fields }),
+  }
 }
 
 /** Save without closing, so an interrupted review is resumable. */
@@ -41,7 +45,7 @@ export type CloseContext = {
 
 export type CloseResult =
   | { ok: true; note: string; skipped: string[] }
-  | { ok: false; error: string }
+  | { ok: false; error: string; fields?: Record<string, string> }
 
 /**
  * Close the week.

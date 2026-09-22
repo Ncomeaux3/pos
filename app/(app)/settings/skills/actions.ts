@@ -2,17 +2,21 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireOwner } from '@/core/auth'
-import { callTool } from '@/core/tools'
+import { callTool, ToolInputError } from '@/core/tools'
 
 // Every edit goes through the module's tools rather than straight to SQL, so
 // the UI and an MCP client share one implementation and one set of rules.
 // Server actions are standalone POST endpoints addressed by id, so the (app)
 // layout does not run for them and each of these authenticates on its own.
 
-export type ActionResult = { ok: true } | { ok: false; error: string }
+export type ActionResult = { ok: true } | { ok: false; error: string; fields?: Record<string, string> }
 
 function failed(error: unknown): ActionResult {
-  return { ok: false, error: error instanceof Error ? error.message : 'Failed' }
+  return {
+    ok: false,
+    error: error instanceof Error ? error.message : 'Failed',
+    ...(error instanceof ToolInputError && { fields: error.fields }),
+  }
 }
 
 function done(): ActionResult {

@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requireOwner } from '@/core/auth'
 import { db } from '@/core/db'
 import { remove, signedUrl, upload } from '@/core/files'
-import { callTool } from '@/core/tools'
+import { callTool, ToolInputError } from '@/core/tools'
 import { revealNumber } from '../data'
 import { draftFromPdf } from '../extract'
 import type { DraftField } from '../draft'
@@ -12,10 +12,14 @@ import type { DraftField } from '../draft'
 // Server actions are standalone POST endpoints addressed by id, so the (app)
 // layout does not run for them and each one authenticates independently.
 
-export type ActionResult = { ok: true } | { ok: false; error: string }
+export type ActionResult = { ok: true } | { ok: false; error: string; fields?: Record<string, string> }
 
 function failed(error: unknown): ActionResult {
-  return { ok: false, error: error instanceof Error ? error.message : 'Failed' }
+  return {
+    ok: false,
+    error: error instanceof Error ? error.message : 'Failed',
+    ...(error instanceof ToolInputError && { fields: error.fields }),
+  }
 }
 
 function done(): ActionResult {
@@ -30,7 +34,7 @@ function done(): ActionResult {
  * Its own action rather than a field on the list, so a policy number is only
  * ever in a response the owner asked for. Nothing caches it.
  */
-export async function reveal(id: string): Promise<{ ok: true; number: string } | { ok: false; error: string }> {
+export async function reveal(id: string): Promise<{ ok: true; number: string } | { ok: false; error: string; fields?: Record<string, string> }> {
   await requireOwner()
   try {
     return { ok: true, number: await revealNumber(id) }
@@ -100,7 +104,7 @@ export async function renewPolicy(id: string, expiresOn: string): Promise<Action
 
 export type DraftResult =
   | { ok: true; fields: DraftField[]; filePath: string; fileName: string }
-  | { ok: false; error: string }
+  | { ok: false; error: string; fields?: Record<string, string> }
 
 /**
  * Read a declarations page and draft the fields.
@@ -234,7 +238,7 @@ export async function attachDocument(form: FormData): Promise<ActionResult> {
 }
 
 /** A short lived URL for one document's file. Nothing in the bucket is public. */
-export async function documentUrl(id: string): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+export async function documentUrl(id: string): Promise<{ ok: true; url: string } | { ok: false; error: string; fields?: Record<string, string> }> {
   await requireOwner()
   try {
     const { rows } = await db().query<{ file_path: string | null }>(

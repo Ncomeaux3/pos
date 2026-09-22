@@ -38,7 +38,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-21 (v1.2 Phase 3d: the affordance rollout). Branch `main`, production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-21 (v1.2 Phase 4: forms, required fields and keyboard). Branch `main`, production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -63,6 +63,23 @@ and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
 ## Done
+
+**v1.2 Phase 4: forms, required fields and keyboard** (2026-09-21, branch
+`phase-4-forms`). A missing or invalid field is named at the field: `Field`
+in `components/pos/FormField.tsx` wraps one control with `aria-invalid`,
+`aria-describedby`, a red border and the message under it at 12px;
+`useFormErrors` derives the messages from the draft after the first attempt
+and focuses the first invalid control; `submitOnModEnter` makes Cmd or Ctrl
+Enter submit from a textarea. A footer Save is `type="submit" form={formId}`
+and is no longer disabled for a missing field, so Enter submits from any
+single-line input and the button can say why it refused. `Overlay` focuses
+the first field on open and asks before discarding a dirty form on Escape or
+a dim tap. `callTool` throws `ToolInputError` with one message per field
+from the zod issues, and every action's `failed()` passes `fields` through;
+the toast reads "Title is required" instead of a JSON array. Swept: task,
+goal, idea, trip, policy, fitness plan, log service, log a visit, capture
+and projects. The recipe form waits for Phase 12. e2e: the task form's
+missing title, Enter and Tab order, both projects.
 
 **v1.2 Phase 2: Errors tab and diagnostics** (2026-09-21, branch
 `phase-2-errors-tab`). One place to read what broke without Vercel:

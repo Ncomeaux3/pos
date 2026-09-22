@@ -1,19 +1,22 @@
 'use client'
 
-import { useRef, useState, useTransition } from 'react'
+import { useId, useRef, useState, useTransition } from 'react'
 import {
   ActionButton,
   Card,
   Eyebrow,
+  Field,
   Overlay,
   PillGroup,
   SkillPicker,
   StatusChip,
   Switch,
   fieldClass,
+  useFormErrors,
   useToast,
   type SkillLink,
 } from '@/components/pos'
+import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
 import {
   CADENCE_LABELS,
@@ -419,7 +422,7 @@ function PolicyForm({
   onClose: () => void
   onCancel: () => void
 }) {
-  const [form, setForm] = useState({
+  const initial = {
     kind: policy?.kind ?? 'auto',
     name: policy?.name ?? '',
     carrier: policy?.carrier ?? '',
@@ -433,15 +436,24 @@ function PolicyForm({
     agentContact: policy?.agentContact ?? '',
     leads: policy?.reminderLeads ?? [60, 30, 7],
     postToFinance: policy?.postToFinance ?? false,
-  })
+  }
+  const [form, setForm] = useState(initial)
+  const dirty = (Object.keys(initial) as (keyof typeof initial)[]).some((k) => String(form[k]) !== String(initial[k]))
 
   const set = (patch: Partial<typeof form>) => setForm((prev) => ({ ...prev, ...patch }))
   const dollars = (value: string) => {
     const n = Number(value.replace(/[^0-9.]/g, ''))
     return value.trim() === '' || !Number.isFinite(n) ? null : Math.round(n * 100)
   }
+  const formId = useId()
+  const { errors, ref: formRef, submit } = useFormErrors(() => ({
+    name: form.name.trim() ? undefined : 'Policy name is required',
+    premium: form.premium.trim() && parseNumber(form.premium) === null ? 'Premium must be a number' : undefined,
+    deductible: form.deductible.trim() && parseNumber(form.deductible) === null ? 'Deductible must be a number' : undefined,
+  }))
 
-  const save = () =>
+  const save = () => {
+    if (!submit()) return
     run(
       () =>
         savePolicy({
@@ -463,26 +475,36 @@ function PolicyForm({
       policy ? 'Saved' : 'Policy created',
       policy ? onCancel : onClose,
     )
+  }
 
   return (
     <Overlay
       open
       onClose={onClose}
+      dirty={dirty}
       eyebrow={policy ? 'Insurance / Edit' : 'Insurance / New policy'}
       footer={
         <>
           <ActionButton variant="quiet" onClick={onCancel}>
             Cancel
           </ActionButton>
-          <ActionButton variant="solid" size="xl" disabled={!form.name.trim()} onClick={save}>
+          <ActionButton variant="solid" size="xl" type="submit" form={formId}>
             {policy ? 'Save' : 'Create'} <span aria-hidden="true">&rarr;</span>
           </ActionButton>
         </>
       }
     >
-      <div className="flex flex-col gap-[18px]">
+      <form
+        id={formId}
+        ref={formRef}
+        className="flex flex-col gap-[18px]"
+        onSubmit={(e) => {
+          e.preventDefault()
+          save()
+        }}
+      >
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Policy name" className="col-span-2">
+          <Field label="Policy name" required error={errors.name} className="col-span-2">
             <input
               aria-label="Policy name"
               value={form.name}
@@ -491,7 +513,7 @@ function PolicyForm({
               className={fieldClass}
             />
           </Field>
-          <Field label="Type">
+          <Labelled label="Type">
             <select aria-label="Type" value={form.kind} onChange={(e) => set({ kind: e.target.value })} className={fieldClass}>
               {KINDS.map((k) => (
                 <option key={k} value={k}>
@@ -499,11 +521,11 @@ function PolicyForm({
                 </option>
               ))}
             </select>
-          </Field>
-          <Field label="Carrier">
+          </Labelled>
+          <Labelled label="Carrier">
             <input aria-label="Carrier" value={form.carrier} onChange={(e) => set({ carrier: e.target.value })} className={fieldClass} />
-          </Field>
-          <Field label="Policy number">
+          </Labelled>
+          <Labelled label="Policy number">
             <input
               aria-label="Policy number"
               value={form.policyNumber}
@@ -511,8 +533,8 @@ function PolicyForm({
               onChange={(e) => set({ policyNumber: e.target.value })}
               className={cn(fieldClass, 'num')}
             />
-          </Field>
-          <Field label="Expires">
+          </Labelled>
+          <Labelled label="Expires">
             <input
               type="date"
               aria-label="Expires"
@@ -520,8 +542,8 @@ function PolicyForm({
               onChange={(e) => set({ expiresOn: e.target.value })}
               className={cn(fieldClass, 'num')}
             />
-          </Field>
-          <Field label="Premium">
+          </Labelled>
+          <Field label="Premium" error={errors.premium}>
             <input
               inputMode="decimal"
               aria-label="Premium"
@@ -531,7 +553,7 @@ function PolicyForm({
               className={cn(fieldClass, 'num')}
             />
           </Field>
-          <Field label="Billed">
+          <Labelled label="Billed">
             <select
               aria-label="Billed"
               value={form.cadence}
@@ -544,8 +566,8 @@ function PolicyForm({
                 </option>
               ))}
             </select>
-          </Field>
-          <Field label="Deductible">
+          </Labelled>
+          <Field label="Deductible" error={errors.deductible}>
             <input
               inputMode="decimal"
               aria-label="Deductible"
@@ -555,7 +577,7 @@ function PolicyForm({
               className={cn(fieldClass, 'num')}
             />
           </Field>
-          <Field label="Coverage limits">
+          <Labelled label="Coverage limits">
             <input
               aria-label="Coverage limits"
               value={form.limits}
@@ -563,13 +585,13 @@ function PolicyForm({
               onChange={(e) => set({ limits: e.target.value })}
               className={cn(fieldClass, 'num')}
             />
-          </Field>
-          <Field label="Agent · contact" className="col-span-2">
+          </Labelled>
+          <Labelled label="Agent · contact" className="col-span-2">
             <div className="grid grid-cols-2 gap-3">
               <input aria-label="Agent" value={form.agentName} placeholder="Name" onChange={(e) => set({ agentName: e.target.value })} className={fieldClass} />
               <input aria-label="Agent contact" value={form.agentContact} placeholder="Phone · email" onChange={(e) => set({ agentContact: e.target.value })} className={fieldClass} />
             </div>
-          </Field>
+          </Labelled>
         </div>
 
         <Card className="flex flex-col gap-2.5">
@@ -605,12 +627,12 @@ function PolicyForm({
             />
           </div>
         </Card>
-      </div>
+      </form>
     </Overlay>
   )
 }
 
-function Field({ label, className, children }: { label: string; className?: string; children: React.ReactNode }) {
+function Labelled({ label, className, children }: { label: string; className?: string; children: React.ReactNode }) {
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
       <Eyebrow>{label}</Eyebrow>

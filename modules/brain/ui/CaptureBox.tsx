@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { ActionButton, CHEVRON, Eyebrow, useToast } from '@/components/pos'
+import { ActionButton, CHEVRON, Eyebrow, submitOnModEnter, useFormErrors, useToast } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { fieldClass } from '@/components/pos/field'
 import type { Related } from '../related'
@@ -31,6 +31,9 @@ export function CaptureBox({ notes, setParams }: { notes: BrainNote[]; setParams
   const trimmed = text.trim()
   const isUrl = URL_ONLY.test(trimmed)
   const wantRelated = !isUrl && trimmed.length >= MIN_RELATED
+  const { errors, ref: formRef, submit: validate } = useFormErrors(() => ({
+    text: trimmed ? undefined : 'Capture is required',
+  }))
 
   // ponytail: related fires once per pause against a 3 RPM Voyage ceiling;
   // text-only hits when it 429s (search() already falls back).
@@ -57,7 +60,8 @@ export function CaptureBox({ notes, setParams }: { notes: BrainNote[]; setParams
   }, [trimmed, wantRelated])
 
   const submit = async () => {
-    if (!trimmed || running) return
+    if (running) return
+    if (!validate()) return
     setRunning(true)
     try {
       if (isUrl) {
@@ -104,6 +108,7 @@ export function CaptureBox({ notes, setParams }: { notes: BrainNote[]; setParams
   return (
     <form
       data-testid="brain-capture"
+      ref={formRef}
       className="flex flex-col gap-2 border-b border-rule bg-bg-elev px-4 py-3"
       onSubmit={(e) => {
         e.preventDefault()
@@ -117,12 +122,18 @@ export function CaptureBox({ notes, setParams }: { notes: BrainNote[]; setParams
           // Rows for the last draft must not reappear under the next one.
           if (e.target.value.trim().length < MIN_RELATED) setRelated(null)
         }}
+        onKeyDown={submitOnModEnter}
         rows={3}
         disabled={running}
         aria-label="Capture"
         placeholder="A thought, a link, what you worked on…"
         className={cn(fieldClass, 'resize-y leading-[1.6]')}
       />
+      {errors.text && (
+        <span role="alert" className="text-[12px] leading-[1.4] text-bad">
+          {errors.text}
+        </span>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-4">
           <label className={cn('flex min-h-11 items-center gap-2 text-[12px] text-ink-3 md:min-h-0', isUrl && 'invisible')}>

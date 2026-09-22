@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
-import { callTool, shouldGuard } from './tools'
+import { z } from 'zod'
+import { callTool, fieldErrors, shouldGuard } from './tools'
 
 // The whole access rule for agent writes, kept pure so the matrix is readable.
 // The wiring that calls it is covered in proposals.test.ts against a database.
@@ -85,5 +86,50 @@ describe('callTool and the digest', () => {
     await callTool('ideas', 'get_digest', {}, { source: 'ui' })
 
     expect(await newestIdeasDigest()).toBeNull()
+  })
+})
+
+// The zod issues a tool rejects with, as one message per field. The toast and
+// the form both read this; the raw issue array is JSON nobody should see.
+describe('fieldErrors', () => {
+  const schema = z.object({
+    title: z.string().min(1).max(300),
+    due_on: z.iso.date().nullable().optional(),
+    estimated_minutes: z.number().int().optional(),
+    kind: z.enum(['number', 'count']).optional(),
+  })
+
+  function issuesOf(input: unknown) {
+    const r = schema.safeParse(input)
+    if (r.success) throw new Error('expected a failure')
+    return fieldErrors(r.error)
+  }
+
+  it('names a missing or empty required field', () => {
+    expect(issuesOf({ title: '' })).toEqual({ title: 'Title is required' })
+    expect(issuesOf({})).toEqual({ title: 'Title is required' })
+  })
+
+  it('carries the issue message for anything else, under the field label', () => {
+    expect(issuesOf({ title: 'x', due_on: 'nope', estimated_minutes: 1.5, kind: 'streak' })).toEqual({
+      due_on: 'Due on: Invalid ISO date',
+      estimated_minutes: 'Estimated minutes: Invalid input: expected int, received number',
+      kind: 'Kind: Invalid option: expected one of "number"|"count"',
+    })
+  })
+
+  it('keeps the first issue per field', () => {
+    expect(issuesOf({ title: 'x'.repeat(301), due_on: 'nope' })).toEqual({
+      title: 'Title: Too big: expected string to have <=300 characters',
+      due_on: 'Due on: Invalid ISO date',
+    })
+  })
+
+  it('callTool rethrows a rejected input as a ToolInputError the form can read', async () => {
+    await expect(callTool('ideas', 'write', { title: '' }, { source: 'ui' })).rejects.toMatchObject({
+      name: 'ToolInputError',
+      message: 'Title is required',
+      fields: { title: 'Title is required' },
+    })
   })
 })

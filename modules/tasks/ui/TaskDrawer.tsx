@@ -1,8 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
-import { ActionButton, Eyebrow, Overlay, SkillPicker, fieldClass } from '@/components/pos'
+import { useId, useState } from 'react'
+import {
+  ActionButton,
+  Eyebrow,
+  Field,
+  Overlay,
+  SkillPicker,
+  fieldClass,
+  submitOnModEnter,
+  useFormErrors,
+} from '@/components/pos'
 import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
 import type { Task } from '../shape'
@@ -79,7 +88,7 @@ export function TaskDrawer({
   const dateKey =
     dueInDays === null ? 'none' : dueInDays === 0 ? 'today' : dueInDays === 1 ? 'tomorrow' : 'date'
 
-  const [draft, setDraft] = useState({
+  const initial = {
     title: task?.title ?? '',
     due: dateKey,
     dueDate: dueInDays === null ? '' : isoFrom(today, dueInDays),
@@ -92,7 +101,15 @@ export function TaskDrawer({
     // a value, so saving never copies the project's goal onto the task.
     goal: task?.ownGoalRef ?? prefill?.goal_ref ?? '',
     notes: task?.notes ?? '',
-  })
+  }
+  const [draft, setDraft] = useState(initial)
+  const dirty = (Object.keys(initial) as (keyof typeof initial)[]).some((k) => draft[k] !== initial[k])
+  const formId = useId()
+  const { errors, ref: formRef, submit } = useFormErrors(() => ({
+    title: draft.title.trim() ? undefined : 'Title is required',
+    estimate:
+      draft.estimate.trim() && parseNumber(draft.estimate) === null ? 'Estimate must be a number' : undefined,
+  }))
   const inherited = draft.goal
     ? null
     : goals.find((g) => g.id === projects.find((p) => p.name === draft.project)?.goalRef)
@@ -100,8 +117,8 @@ export function TaskDrawer({
     setDraft((d) => ({ ...d, [key]: e.target.value }))
 
   const save = () => {
+    if (!submit()) return
     const title = draft.title.trim()
-    if (!title) return
     const input: WriteInput = {
       ...(task && { id: task.id }),
       title,
@@ -128,6 +145,7 @@ export function TaskDrawer({
       open
       narrow
       onClose={onClose}
+      dirty={dirty}
       eyebrow={
         <>
           Tasks <span className="text-ink-4">/</span> {task ? 'Edit' : 'New task'}
@@ -144,28 +162,29 @@ export function TaskDrawer({
           <ActionButton variant="quiet" size="md" onClick={onClose}>
             Cancel
           </ActionButton>
-          <ActionButton variant="accent" size="md" disabled={!draft.title.trim()} onClick={save}>
+          <ActionButton variant="accent" size="md" type="submit" form={formId}>
             {task ? 'Save' : 'Create'}
           </ActionButton>
         </>
       }
     >
       <form
+        id={formId}
+        ref={formRef}
         className="flex flex-col gap-4"
         onSubmit={(e) => {
           e.preventDefault()
           save()
         }}
       >
-        <label className="flex flex-col gap-1.5">
-          <Eyebrow>Title</Eyebrow>
+        <Field label="Title" required error={errors.title}>
           <input
             value={draft.title}
             onChange={set('title')}
             placeholder="What needs doing?"
             className={cn(field, 'text-[16px] md:text-[15px]')}
           />
-        </label>
+        </Field>
 
         <div className="grid grid-cols-2 gap-3">
           <div className={cn('flex flex-col gap-1.5', draft.due === 'date' && 'col-span-2')}>
@@ -234,15 +253,14 @@ export function TaskDrawer({
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1.5">
-            <Eyebrow>Estimate · min</Eyebrow>
+          <Field label="Estimate · min" error={errors.estimate}>
             <input
               inputMode="decimal"
               value={draft.estimate}
               onChange={set('estimate')}
               className={cn(field, 'num')}
             />
-          </label>
+          </Field>
         </div>
 
         <label className="flex flex-col gap-1.5">
@@ -267,6 +285,7 @@ export function TaskDrawer({
           <textarea
             value={draft.notes}
             onChange={set('notes')}
+            onKeyDown={submitOnModEnter}
             rows={4}
             placeholder="Context, links, acceptance…"
             className={cn(field, 'resize-y leading-[1.5]')}

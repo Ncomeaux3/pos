@@ -3,16 +3,20 @@
 import { revalidatePath } from 'next/cache'
 import { requireOwner } from '@/core/auth'
 import { db } from '@/core/db'
-import { callTool } from '@/core/tools'
+import { callTool, ToolInputError } from '@/core/tools'
 import { geocode, type Hit } from '../geocode'
 
 // Server actions are standalone POST endpoints addressed by id, so the (app)
 // layout does not run for them and each one authenticates independently.
 
-export type ActionResult = { ok: true } | { ok: false; error: string }
+export type ActionResult = { ok: true } | { ok: false; error: string; fields?: Record<string, string> }
 
 function failed(error: unknown): ActionResult {
-  return { ok: false, error: error instanceof Error ? error.message : 'Failed' }
+  return {
+    ok: false,
+    error: error instanceof Error ? error.message : 'Failed',
+    ...(error instanceof ToolInputError && { fields: error.fields }),
+  }
 }
 
 function done(): ActionResult {

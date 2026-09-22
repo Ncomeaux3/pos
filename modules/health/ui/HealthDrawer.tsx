@@ -1,7 +1,18 @@
 'use client'
 
-import { useState } from 'react'
-import { ActionButton, Eyebrow, Overlay, PillGroup, SkillPicker, fieldClass } from '@/components/pos'
+import { useId, useState } from 'react'
+import {
+  ActionButton,
+  Eyebrow,
+  Field,
+  Overlay,
+  PillGroup,
+  SkillPicker,
+  fieldClass,
+  submitOnModEnter,
+  useFormErrors,
+} from '@/components/pos'
+import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
 import { logVisit, recordUrl, setAppointmentStatus, type ActionResult } from './actions'
 import { KIND_LABEL, longWhen, recordDate, type Appointment, type HealthRecord } from './Health'
@@ -166,19 +177,35 @@ function Form({
   const [kind, setKind] = useState<(typeof KINDS)[number]>('visit')
   const [title, setTitle] = useState('')
   const [date, setDate] = useState(todayIso)
-  const [tried, setTried] = useState(false)
+  const [cost, setCost] = useState('')
+  const defaultProvider = (providers.find((p) => /primary/i.test(p.role)) ?? providers[0])?.id ?? ''
+  const [provider, setProvider] = useState(defaultProvider)
+  const [notes, setNotes] = useState('')
   const future = date > todayIso
-  const missing = !title.trim() || !date
+  const dirty =
+    kind !== 'visit' ||
+    title !== '' ||
+    date !== todayIso ||
+    cost !== '' ||
+    provider !== defaultProvider ||
+    notes !== ''
+  const formId = useId()
+  const { errors, ref: formRef, submit } = useFormErrors(() => ({
+    title: title.trim() ? undefined : 'Title is required',
+    date: date ? undefined : 'Date is required',
+    cost: cost.trim() && parseNumber(cost) === null ? 'Cost must be a number' : undefined,
+  }))
 
   return (
-    <Overlay open narrow onClose={onClose} eyebrow="New entry">
+    <Overlay open narrow onClose={onClose} dirty={dirty} eyebrow="New entry">
       <Head title="Log a visit" sub="A date in the future lands on the appointment list; anything past goes straight to records." />
       <form
+        id={formId}
+        ref={formRef}
         className="mt-[22px] flex flex-col gap-[18px]"
         onSubmit={(e) => {
           e.preventDefault()
-          setTried(true)
-          if (missing) return
+          if (!submit()) return
           const form = new FormData(e.currentTarget)
           form.set('kind', kind)
           onRun(() => logVisit(form), future ? 'Saved. It is on the appointment list.' : 'Saved to records.')
@@ -194,17 +221,12 @@ function Form({
             options={KINDS.map((k) => ({ value: k, label: KIND_LABEL[k] }))}
           />
         </div>
-        <label className="flex flex-col gap-1.5">
-          <Eyebrow>Title</Eyebrow>
+        <Field label="Title" required error={errors.title}>
           <input name="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Annual physical" className={fieldClass} />
-        </label>
+        </Field>
         <label className="flex flex-col gap-1.5">
           <Eyebrow>Provider</Eyebrow>
-          <select
-            name="provider"
-            defaultValue={(providers.find((p) => /primary/i.test(p.role)) ?? providers[0])?.id ?? ''}
-            className={fieldClass}
-          >
+          <select name="provider" value={provider} onChange={(e) => setProvider(e.target.value)} className={fieldClass}>
             {providers.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name} · {p.role.toLowerCase()}
@@ -214,18 +236,23 @@ function Form({
           </select>
         </label>
         <div className="flex flex-wrap gap-3">
-          <label className="flex min-w-0 flex-[1_1_140px] flex-col gap-1.5">
-            <Eyebrow>Date</Eyebrow>
+          <Field label="Date" required error={errors.date} className="min-w-0 flex-[1_1_140px]">
             <input name="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className={cn(fieldClass, 'num')} />
-          </label>
-          <label className="flex min-w-0 flex-[1_1_120px] flex-col gap-1.5">
-            <Eyebrow>Cost</Eyebrow>
-            <input name="cost" placeholder="$40 copay" className={fieldClass} />
-          </label>
+          </Field>
+          <Field label="Cost" error={errors.cost} className="min-w-0 flex-[1_1_120px]">
+            <input name="cost" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="$40 copay" className={fieldClass} />
+          </Field>
         </div>
         <label className="flex flex-col gap-1.5">
           <Eyebrow>Notes</Eyebrow>
-          <textarea name="notes" placeholder="What was decided, what to follow up on" className={cn(fieldClass, 'min-h-24 resize-y leading-[1.5]')} />
+          <textarea
+            name="notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            onKeyDown={submitOnModEnter}
+            placeholder="What was decided, what to follow up on"
+            className={cn(fieldClass, 'min-h-24 resize-y leading-[1.5]')}
+          />
         </label>
         <div className="flex flex-col gap-1.5">
           <Eyebrow>Attachment</Eyebrow>
@@ -239,12 +266,10 @@ function Form({
           />
           {future && <p className="mt-1.5 text-[11px] text-ink-4">Files attach to a record, once the visit has happened.</p>}
         </div>
-        <p className={cn('text-[12px] leading-[1.5]', tried && missing ? 'text-bad' : 'text-ink-3')}>
-          {tried && missing
-            ? 'A title and a date are required.'
-            : future
-              ? 'Future date: this will appear under Appointments.'
-              : 'Past date: this files under Records.'}
+        <p className="text-[12px] leading-[1.5] text-ink-3">
+          {future
+            ? 'Future date: this will appear under Appointments.'
+            : 'Past date: this files under Records.'}
         </p>
         <div className="mt-2 flex flex-wrap gap-2.5">
           <ActionButton type="submit" variant="accent">
