@@ -83,6 +83,17 @@ describe('learnFrom', () => {
     expect(learnFrom('12345', 'Dining')).toBeNull()
   })
 
+  it('learns a three letter merchant and matches it as a whole word only', () => {
+    // REI was listed as unfiled with no way to file it. Three letters is safe
+    // only as a word: "rei" must not file every reimbursement.
+    expect(learnFrom('REI #0123', 'Shopping')?.pattern).toBe('rei')
+    const short: Rule[] = [{ category: 'Shopping', pattern: 'rei', isManual: true }]
+    expect(categorise('REI #1234 SEATTLE', short)?.category).toBe('Shopping')
+    expect(categorise('rei.com', short)?.category).toBe('Shopping')
+    expect(categorise('REIMBURSEMENT ACH', short)).toBeNull()
+    expect(categorise('THEREIN LLC', short)).toBeNull()
+  })
+
   it('learns a rule that then matches the thing it came from', () => {
     const rule = learnFrom('WHOLEFDS ABC 10045', 'Groceries')!
     expect(categorise('WHOLEFDS ABC 10045', [rule])?.category).toBe('Groceries')

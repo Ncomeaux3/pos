@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
-import { MIN_PATTERN_LENGTH, normalise } from './categorise'
+import { MIN_PATTERN_LENGTH, learnable, normalise } from './categorise'
 import { listAccounts, setAlertThreshold, setBudget, setCountPending } from './data'
 import { applyRule, refile, removeRule } from './rules'
 import {
@@ -93,7 +93,7 @@ export default defineModule({
       }),
       run: async ({ id, pattern, category_id }) => {
         const normalised = normalise(pattern)
-        if (normalised.length < MIN_PATTERN_LENGTH || !/[a-z]/.test(normalised)) {
+        if (!learnable(normalised)) {
           throw new Error(
             `A rule needs at least ${MIN_PATTERN_LENGTH} letters: anything shorter matches half the ledger`,
           )

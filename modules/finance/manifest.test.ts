@@ -114,7 +114,7 @@ describe('finance.write_rule', () => {
     // Two characters would match half the ledger, and a bad rule mis-files
     // quietly, which is the failure worth spending code to avoid.
     await expect(writeRule({ pattern: 'ab', category_id: await category('Dining') })).rejects.toThrow(
-      /at least 4 letters/,
+      /at least 3 letters/,
     )
     await expect(writeRule({ pattern: '12345', category_id: await category('Dining') })).rejects.toThrow()
   })

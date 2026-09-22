@@ -72,7 +72,20 @@ function stripReference(pattern: string): string {
 }
 
 /** Shorter than this matches too much of the ledger to be safe to learn. */
-export const MIN_PATTERN_LENGTH = 4
+export const MIN_PATTERN_LENGTH = 3
+
+/** Below this a pattern matches as a whole word only: "rei" is REI, never "reimbursement". */
+const WHOLE_WORD_BELOW = 4
+
+/** Whether a rule can be written on this normalised pattern at all. */
+export function learnable(pattern: string): boolean {
+  return pattern.length >= MIN_PATTERN_LENGTH && /[a-z]/.test(pattern)
+}
+
+/** Whether a normalised descriptor carries this pattern. */
+export function matches(text: string, pattern: string): boolean {
+  return pattern.length < WHOLE_WORD_BELOW ? ` ${text} `.includes(` ${pattern} `) : text.includes(pattern)
+}
 
 /**
  * The first rule that matches, ranked.
@@ -98,7 +111,7 @@ export function categorise(
   })
 
   for (const rule of ranked) {
-    if (text.includes(rule.pattern)) {
+    if (matches(text, rule.pattern)) {
       return {
         category: rule.category,
         // A rule is a fact, not an estimate. Only the model arm produces a
@@ -115,7 +128,7 @@ export function categorise(
   // The institution and a payment word together are the rule.
   if (
     PAYMENT_WORD.test(text) &&
-    institutions.some((name) => normalise(name).length >= MIN_PATTERN_LENGTH && text.includes(normalise(name)))
+    institutions.some((name) => normalise(name).length >= WHOLE_WORD_BELOW && text.includes(normalise(name)))
   ) {
     return {
       category: CARD_PAYMENT,
@@ -203,7 +216,7 @@ export function learnFrom(descriptor: string, category: string): Rule | null {
   pattern = stripReference(pattern)
 
   // A descriptor that is only digits leaves nothing to learn.
-  if (pattern.length < MIN_PATTERN_LENGTH || !/[a-z]/.test(pattern)) return null
+  if (!learnable(pattern)) return null
 
   return { category, pattern, isManual: true }
 }

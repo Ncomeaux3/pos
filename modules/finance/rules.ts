@@ -126,6 +126,8 @@ export async function refile(pattern: string, set?: RuleSet): Promise<number> {
        from finance.transaction t
        join finance.account a on a.id = t.account_id
       where t.is_manual = false
+        -- A superset for a three letter pattern, which matches as a whole
+        -- word: classify() below is what decides, and only a change counts.
         and ${NORMALISED} like '%' || $1 || '%'`,
     [normalised],
   )
@@ -186,6 +188,16 @@ export type Unfiled = {
   label: string
   count: number
   totalCents: number
+  /** Newest first, so the owner can see which way the money went before filing. */
+  rows: UnfiledRow[]
+}
+
+export type UnfiledRow = {
+  descriptor: string
+  /** Positive is money out, negative is money in: the ledger's sign. */
+  amountCents: number
+  occurredOn: string
+  account: string
 }
 
 /**
@@ -197,7 +209,7 @@ export type Unfiled = {
  * which filing one is worth the click.
  */
 export function groupUnfiled(
-  rows: { descriptor: string; merchant: string; amountCents: number }[],
+  rows: (UnfiledRow & { merchant: string })[],
 ): Unfiled[] {
   const groups = new Map<string, Unfiled>()
 
@@ -207,9 +219,15 @@ export function groupUnfiled(
     const pattern = learnFrom(row.descriptor, '')?.pattern ?? row.merchant
     if (pattern === '') continue
 
-    const group = groups.get(pattern) ?? { pattern, label: row.descriptor, count: 0, totalCents: 0 }
+    const group = groups.get(pattern) ?? { pattern, label: row.descriptor, count: 0, totalCents: 0, rows: [] }
     group.count++
     group.totalCents += row.amountCents
+    group.rows.push({
+      descriptor: row.descriptor,
+      amountCents: row.amountCents,
+      occurredOn: row.occurredOn,
+      account: row.account,
+    })
     groups.set(pattern, group)
   }
 
@@ -224,12 +242,20 @@ export function groupUnfiled(
  * read below is what bounds the work.
  */
 export async function unfiledMerchants(): Promise<Unfiled[]> {
-  const { rows } = await db().query<{ descriptor: string; merchant: string; amount_cents: string }>(
+  const { rows } = await db().query<{
+    descriptor: string
+    merchant: string
+    amount_cents: string
+    occurred_on: string
+    account: string
+  }>(
     // Newest first so the label is a descriptor the owner saw recently. The
     // bound is well past the owner's whole ledger and is there so one bad pull
     // cannot turn this read into the page's slowest query.
-    `select t.descriptor, t.merchant, t.amount_cents::text
+    `select t.descriptor, t.merchant, t.amount_cents::text,
+            t.occurred_on::text, a.name as account
        from finance.transaction t
+       join finance.account a on a.id = t.account_id
       where t.category_id is null and t.is_manual = false
       order by t.occurred_on desc
       limit 5000`,
@@ -240,6 +266,8 @@ export async function unfiledMerchants(): Promise<Unfiled[]> {
       descriptor: r.descriptor,
       merchant: r.merchant,
       amountCents: Number(r.amount_cents),
+      occurredOn: r.occurred_on,
+      account: r.account,
     })),
   )
 }
