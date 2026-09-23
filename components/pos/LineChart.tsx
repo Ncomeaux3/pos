@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type KeyboardEvent, type PointerEvent } from 'react'
 import type { Day } from '@/core/series'
 import { cn } from '@/lib/utils'
 
@@ -20,6 +20,47 @@ const shortDate = (iso: string) => {
 const shortMonth = (iso: string) => {
   const d = new Date(`${iso}T12:00:00`)
   return d.getMonth() === 0 ? `${MONTHS[0]} ${String(d.getFullYear()).slice(2)}` : MONTHS[d.getMonth()]
+}
+
+/**
+ * Which point of a chart is being read, from a mouse, a finger or the keys.
+ * Shared by this chart and the cash flow card, which differ only in how a
+ * share of the width maps to a point (`at`). Pointer events cover mouse and
+ * touch in one handler. `touch-action: pan-y` on the SVG lets a sideways scrub
+ * read the chart while an up or down swipe still scrolls the page.
+ *
+ * A tap ends in pointerleave, so only a mouse leaving clears the readout; a
+ * tap elsewhere blurs the chart, which clears it. `start` is the first point
+ * with a value, where Home lands.
+ */
+export function useScrub(count: number, at: (share: number) => number, start = 0) {
+  const [index, setIndex] = useState<number | null>(null)
+  const pick = (e: PointerEvent<SVGSVGElement>) => {
+    const box = e.currentTarget.getBoundingClientRect()
+    setIndex(Math.max(0, Math.min(count - 1, at((e.clientX - box.left) / box.width))))
+  }
+  const handlers = {
+    tabIndex: 0,
+    style: { touchAction: 'pan-y' },
+    onPointerMove: pick,
+    onPointerDown: pick,
+    onPointerLeave: (e: PointerEvent<SVGSVGElement>) => e.pointerType === 'mouse' && setIndex(null),
+    onBlur: () => setIndex(null),
+    onKeyDown: (e: KeyboardEvent<SVGSVGElement>) => {
+      const last = count - 1
+      const keys: Record<string, number | null> = {
+        ArrowLeft: index === null ? last : Math.max(start, index - 1),
+        ArrowRight: index === null ? start : Math.min(last, index + 1),
+        Home: start,
+        End: last,
+        Escape: null,
+      }
+      if (!(e.key in keys)) return
+      e.preventDefault()
+      setIndex(keys[e.key])
+    },
+  } as const
+  return [index, handlers] as const
 }
 
 /**
@@ -59,8 +100,6 @@ export function LineChart({
    */
   unit?: 'day' | 'month'
 }) {
-  const [hover, setHover] = useState<number | null>(null)
-
   const pointLabel = unit === 'month' ? shortMonth : shortDate
 
   const width = 600
@@ -103,6 +142,7 @@ export function LineChart({
   // spine() carries a value forward once it has one, so the only nulls are the
   // leading ones before the first sync.
   const first = drawn.findIndex((v) => v !== null)
+  const [hover, scrub] = useScrub(days.length, (share) => Math.round(share * (days.length - 1)), Math.max(0, first))
   const area =
     first === -1 ? '' : `M${x(first).toFixed(1)},${height} ${line.slice(1)} L${width},${height} Z`
 
@@ -149,12 +189,7 @@ export function LineChart({
             role="img"
             aria-label={`${name} over ${days.length} ${unit}s, ${observed.length} of them recorded, from ${formatCompact(start)} to ${formatCompact(last)}`}
             className="block h-full w-full cursor-crosshair overflow-visible"
-            onMouseMove={(e) => {
-              const box = e.currentTarget.getBoundingClientRect()
-              const share = (e.clientX - box.left) / box.width
-              setHover(Math.max(0, Math.min(days.length - 1, Math.round(share * (days.length - 1)))))
-            }}
-            onMouseLeave={() => setHover(null)}
+            {...scrub}
           >
             {[0, 53, 107].map((line_) => (
               <line key={line_} x1="0" y1={line_} x2={width} y2={line_} stroke="var(--rule)" />
@@ -212,6 +247,8 @@ export function LineChart({
 
           {hover !== null && at !== null && at !== undefined && (
             <div
+              data-testid="chart-readout"
+              aria-hidden
               className="pointer-events-none absolute top-0 z-2 whitespace-nowrap border border-rule-2 bg-bg px-2.5 py-1.5 text-[11px] rounded-[18px]"
               style={{
                 left: `${(hover / Math.max(1, days.length - 1)) * 100}%`,
@@ -226,6 +263,13 @@ export function LineChart({
               </span>
             </div>
           )}
+          {/* The readout above is drawn for the eye; this says it to a screen
+            * reader as the arrow keys move, since focus sits on the chart. */}
+          <span role="status" className="sr-only">
+            {hover !== null && at != null
+              ? `${pointLabel(days[hover].date)}, ${format(at)}, ${formatDelta(at - start)} since the first reading`
+              : ''}
+          </span>
         </div>
 
         <div className="flex flex-col justify-between pl-3 text-[11px] text-ink-3">

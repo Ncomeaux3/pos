@@ -2537,6 +2537,41 @@ test('finance, the cash flow accounts drawer changes what the card counts', asyn
   await expect(card.getByText(`Cash flow · 6 months · ${on} of ${total} accounts`).filter({ visible: true })).toBeVisible()
 })
 
+// finance-charts phase 2. The charts read on a mouse only, and the cash flow
+// card not at all: nothing said what a bar was worth.
+test('finance, pointing at a chart reads its number', async ({ page }) => {
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
+  await page.goto('/finance')
+  const card = mobile ? page.locator('[data-segments-pane]') : page.getByTestId('finance-cashflow')
+  const bars = card.getByRole('img', { name: /Income against spending/ }).filter({ visible: true })
+  const readout = card.getByTestId('chart-readout')
+  const box = (await bars.boundingBox())!
+
+  // The last month's slot, then the first: a finger taps, a mouse hovers.
+  for (const x of [box.width - box.width / 12, box.width / 12]) {
+    const position = { x, y: box.height / 2 }
+    if (mobile) await bars.tap({ position })
+    else await bars.hover({ position })
+    await expect(readout).toHaveText(/^[A-Z][a-z]{2} \d{4}In-?\$[\d,]+Out-?\$[\d,]+Left over([+-]\$[\d,]+|flat)$/)
+    // Opens toward the middle, so it never hangs past the plot and its axis.
+    const r = (await readout.boundingBox())!
+    expect(r.x).toBeGreaterThanOrEqual(box.x - 1)
+    expect(r.x + r.width).toBeLessThanOrEqual(box.x + box.width + 57)
+  }
+  await expect(card.getByText('Left over', { exact: true }).filter({ visible: true }).first()).toBeVisible()
+
+  // The arrow keys walk the net worth line a day at a time; Escape puts it away.
+  const worth = page.getByRole('img', { name: /Net worth over 30 days/ }).filter({ visible: true })
+  const worthReadout = worth.locator('xpath=..').getByTestId('chart-readout')
+  await worth.focus()
+  await page.keyboard.press('End')
+  const last = await worthReadout.textContent()
+  await page.keyboard.press('ArrowLeft')
+  await expect(worthReadout).not.toHaveText(last!)
+  await page.keyboard.press('Escape')
+  await expect(worthReadout).toBeHidden()
+})
+
 test('finance, the limits drawer holds edits until Done', async ({ page }) => {
   test.skip((page.viewportSize()?.width ?? 0) < 768, 'desktop drawer')
   await page.goto('/finance')

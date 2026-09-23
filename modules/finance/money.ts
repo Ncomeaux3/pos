@@ -118,3 +118,23 @@ export function monthPace(todayIso: string): number {
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate()
   return day / daysInMonth
 }
+
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/**
+ * What the cash flow card says about one month when it is pointed at.
+ *
+ * The year is always there: "Sep 26" beside a date axis reads as a day. In and
+ * out go through balance(), not money(), because spending goes below zero in a
+ * month a refund outran. Left over is a change, so it is signedMoney() and
+ * under half a dollar reads as flat.
+ */
+export function flowReadout(point: { month: string; incomeCents: number; expenseCents: number }) {
+  const [year, month] = point.month.split('-').map(Number)
+  return {
+    month: `${MONTH_NAMES[month - 1]} ${year}`,
+    in: balance(point.incomeCents),
+    out: balance(point.expenseCents),
+    leftOver: signedMoney(point.incomeCents - point.expenseCents),
+  }
+}

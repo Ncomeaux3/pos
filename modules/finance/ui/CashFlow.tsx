@@ -1,6 +1,9 @@
+'use client'
+
 import { ActionButton, CardHead, EmptyState } from '@/components/pos'
+import { useScrub } from '@/components/pos/LineChart'
 import { cn } from '@/lib/utils'
-import { balance, compactMoney, signedMoney } from '../money'
+import { balance, compactMoney, flowReadout, signedMoney } from '../money'
 
 // Six months of income against spending, with what was left over drawn across
 // them. Hand rolled SVG in its own file rather than a primitive in charts.tsx:
@@ -28,6 +31,8 @@ export function CashFlow({
   accounts: { on: number; total: number }
   onAccounts: () => void
 }) {
+  // Before the early returns: a hook is called on every render or on none.
+  const [hover, scrub] = useScrub(months.length, (share) => Math.floor(share * months.length))
   if (months.length === 0) return null
 
   const head = (meta: string) => (
@@ -85,70 +90,117 @@ export function CashFlow({
   const thisMonth = months[months.length - 1]
   const net = thisMonth.incomeCents - thisMonth.expenseCents
   const avgNet = Math.round(nets.reduce((sum, n) => sum + n, 0) / nets.length)
+  const read = hover === null ? null : flowReadout(months[hover])
+
+  // Where zero sits, as a share of the plot from the top. When every month
+  // left something over the floor is zero and the bottom tick already says
+  // "$0"; when one ran a deficit zero floats, so it gets its own label and any
+  // tick close enough to collide with it is left out, the floor included.
+  const zeroAt = y(0) / height
+  const ticks = [hi, lo + (span * 2) / 3, lo + span / 3, lo]
 
   return (
     <div className="flex flex-1 flex-col">
       {head(`${signedMoney(net)} this month`)}
 
       <div className="mt-2 grid flex-1 grid-cols-[1fr_56px]">
-        <svg
-          viewBox={`0 0 ${width} ${height}`}
-          preserveAspectRatio="none"
-          role="img"
-          aria-label={`Income against spending over ${months.length} months. This month ${balance(
-            thisMonth.incomeCents,
-          )} in, ${balance(thisMonth.expenseCents)} out, net ${signedMoney(net)}.`}
-          className="block h-full min-h-[150px] w-full overflow-visible"
-        >
-          {[hi, lo + (span * 2) / 3, lo + span / 3].map((v) => (
-            <line key={v} x1="0" y1={y(v)} x2={width} y2={y(v)} stroke="var(--rule)" />
-          ))}
+        <div className="relative">
+          <svg
+            viewBox={`0 0 ${width} ${height}`}
+            preserveAspectRatio="none"
+            role="img"
+            aria-label={`Income against spending over ${months.length} months. This month ${balance(
+              thisMonth.incomeCents,
+            )} in, ${balance(thisMonth.expenseCents)} out, left over ${signedMoney(net)}.`}
+            className="block h-full min-h-[150px] w-full cursor-crosshair overflow-visible"
+            {...scrub}
+          >
+            {/* The month being read, behind its bars. */}
+            {hover !== null && <rect x={hover * slot} y={0} width={slot} height={height} fill="var(--ink)" fillOpacity={0.06} />}
 
-          {months.map((m, i) => (
-            <g key={m.month}>
-              <rect
-                x={centre(i) - barWidth - gap / 2}
-                y={Math.min(y(m.incomeCents), y(0))}
-                width={barWidth}
-                height={Math.max(1, Math.abs(y(0) - y(m.incomeCents)))}
-                fill="var(--chart-3)"
-                rx={2}
-              />
-              <rect
-                x={centre(i) + gap / 2}
-                y={Math.min(y(m.expenseCents), y(0))}
-                width={barWidth}
-                height={Math.max(1, Math.abs(y(0) - y(m.expenseCents)))}
-                fill="var(--chart-1)"
-                rx={2}
-              />
-            </g>
-          ))}
+            {[hi, lo + (span * 2) / 3, lo + span / 3].map((v) => (
+              <line key={v} x1="0" y1={y(v)} x2={width} y2={y(v)} stroke="var(--rule)" />
+            ))}
 
-          {/* Zero, drawn over the bars: in a month that ran a deficit the net
-            * line crosses it, and that crossing is the whole reading. */}
-          <line x1="0" y1={y(0)} x2={width} y2={y(0)} stroke="var(--rule-2)" vectorEffect="non-scaling-stroke" />
+            {months.map((m, i) => (
+              <g key={m.month}>
+                <rect
+                  x={centre(i) - barWidth - gap / 2}
+                  y={Math.min(y(m.incomeCents), y(0))}
+                  width={barWidth}
+                  height={Math.max(1, Math.abs(y(0) - y(m.incomeCents)))}
+                  fill="var(--chart-3)"
+                  rx={2}
+                />
+                <rect
+                  x={centre(i) + gap / 2}
+                  y={Math.min(y(m.expenseCents), y(0))}
+                  width={barWidth}
+                  height={Math.max(1, Math.abs(y(0) - y(m.expenseCents)))}
+                  fill="var(--chart-1)"
+                  rx={2}
+                />
+              </g>
+            ))}
 
-          <polyline
-            points={netLine}
-            fill="none"
-            stroke="var(--ink-2)"
-            strokeWidth={2}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
-          />
-          {nets.map((n, i) => (
-            <circle key={months[i].month} cx={centre(i)} cy={y(n)} r={2.5} fill="var(--bg-elev)" stroke="var(--ink-2)" vectorEffect="non-scaling-stroke" />
-          ))}
-        </svg>
+            {/* Zero, drawn over the bars: in a month that ran a deficit the net
+              * line crosses it, and that crossing is the whole reading. */}
+            <line x1="0" y1={y(0)} x2={width} y2={y(0)} stroke="var(--rule-2)" vectorEffect="non-scaling-stroke" />
 
-        <div className="flex flex-col justify-between pl-3 text-[11px] text-ink-3">
-          {[hi, lo + (span * 2) / 3, lo + span / 3, lo].map((v, i) => (
-            <span key={i} className="num leading-none">
+            <polyline
+              points={netLine}
+              fill="none"
+              stroke="var(--ink-2)"
+              strokeWidth={2}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              vectorEffect="non-scaling-stroke"
+            />
+            {nets.map((n, i) => (
+              <circle key={months[i].month} cx={centre(i)} cy={y(n)} r={2.5} fill="var(--bg-elev)" stroke="var(--ink-2)" vectorEffect="non-scaling-stroke" />
+            ))}
+          </svg>
+
+          {read && hover !== null && (
+            // Anchored at the slot's near edge, so it opens toward the middle
+            // and never past either end of the plot.
+            <div
+              data-testid="chart-readout"
+              aria-hidden
+              className="pointer-events-none absolute top-0 z-2 grid grid-cols-[auto_auto] gap-x-3 gap-y-0.5 whitespace-nowrap rounded-[18px] border border-rule-2 bg-bg px-2.5 py-1.5 text-[11px]"
+              style={
+                hover < months.length / 2
+                  ? { left: `${(hover / months.length) * 100}%` }
+                  : { left: `${((hover + 1) / months.length) * 100}%`, transform: 'translateX(-100%)' }
+              }
+            >
+              <span className="col-span-2 text-ink-3">{read.month}</span>
+              <span className="text-ink-3">In</span>
+              <span className="num text-right text-ink">{read.in}</span>
+              <span className="text-ink-3">Out</span>
+              <span className="num text-right text-ink">{read.out}</span>
+              <span className="text-ink-3">Left over</span>
+              <span className={cn('num text-right', read.leftOver === 'flat' ? 'text-ink' : read.leftOver.startsWith('+') ? 'text-ok' : 'text-bad')}>
+                {read.leftOver}
+              </span>
+            </div>
+          )}
+          <span role="status" className="sr-only">
+            {read ? `${read.month}: in ${read.in}, out ${read.out}, left over ${read.leftOver}` : ''}
+          </span>
+        </div>
+
+        <div className="relative flex flex-col justify-between pl-3 text-[11px] text-ink-3">
+          {ticks.map((v, i) => (
+            <span key={i} className={cn('num leading-none', lo < 0 && Math.abs(i / 3 - zeroAt) < 0.15 && 'invisible')}>
               {compactMoney(Math.round(v))}
             </span>
           ))}
+          {lo < 0 && (
+            <span className="num absolute left-3 -translate-y-1/2 leading-none text-ink-2" style={{ top: `${zeroAt * 100}%` }}>
+              $0
+            </span>
+          )}
         </div>
       </div>
 
@@ -180,14 +232,14 @@ export function CashFlow({
         </span>
         <span className="flex items-center gap-1.5">
           <span className="h-0.5 w-3 rounded-full bg-ink-2" aria-hidden />
-          Net
+          Left over
         </span>
         <span className="ml-auto">
-          Average net <span className={cn('num', avgNet >= 0 ? 'text-ok' : 'text-bad')}>{signedMoney(avgNet)}</span> a month
+          Average left over <span className={cn('num', Math.abs(avgNet) < 50 ? 'text-ink' : avgNet > 0 ? 'text-ok' : 'text-bad')}>{signedMoney(avgNet)}</span> a month
         </span>
       </div>
       <p className="mt-2 text-[11px] leading-[1.5] text-ink-3">
-        Money between your own accounts is on neither side. A transfer no rule has filed yet may
+        A month above $0 took in more than it spent. Below $0, it spent more. Money between your own accounts is on neither side. A transfer no rule has filed yet may
         still show.
       </p>
     </div>

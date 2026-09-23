@@ -25,8 +25,8 @@ Two that bear on this plan in particular:
 
 | Phase | Goal | Complexity | Depends on | Status | PR |
 |---|---|---|---|---|---|
-| 1 Cash flow accounts | The owner picks which accounts are cash flow; investments stop reading as income | medium | 5c | Built 2026-09-22, PR open | |
-| 2 Chart readouts | Point or tap any chart and read the number; "Net" becomes "Left over" | medium | 1 | Not started | |
+| 1 Cash flow accounts | The owner picks which accounts are cash flow; investments stop reading as income | medium | 5c | Done 2026-09-22 | #130 |
+| 2 Chart readouts | Point or tap any chart and read the number; "Net" becomes "Left over" | medium | 1 | Built 2026-09-22, PR open | |
 | 3 Time range | One 3/6/12/24 month control in the Finance band, saved | low | 2 | Not started | |
 
 Order matters: Phase 1 is the one that fixes a wrong number, so it ships first. Phase 2 makes the corrected chart readable. Phase 3 changes the window over both. They are not parallel-safe: all three touch `modules/finance/ui/Finance.tsx` and two touch `CashFlow.tsx`.
@@ -56,14 +56,14 @@ Exit: standard; migration pushed (`db push: done`). The owner opens the drawer a
 Goal: point at or tap any chart and read the number under the pointer, on a phone as well as a laptop.
 Complexity: medium. Files: `components/pos/LineChart.tsx`, `modules/finance/ui/CashFlow.tsx`, `modules/finance/README.md`.
 
-- [ ] `LineChart` gains pointer and touch: `onPointerMove` and `onPointerDown` beside the existing mouse handlers, `touch-action: none` on the SVG so a scrub does not scroll the page. The four callers (net worth, category trend, fitness trends, and any later one) get it without changing.
-- [ ] `LineChart` gains keyboard: `tabIndex={0}`, left and right arrows move the cursor, Home and End jump to the ends, Escape clears. The existing `aria-label` summary stays, so nothing here is the only way to reach the data.
-- [ ] `CashFlow` gains the same interaction over month slots, with a readout naming the month and giving In, Out and Left over. One readout component shared with `LineChart`'s if the shapes turn out the same; two small ones if they do not. Do not build an abstraction for two callers.
-- [ ] "Net" becomes "Left over" in the legend, the readout and the footer average. The zero line is labelled, and the footer says what being above or below it means in one sentence.
-- [ ] `signedMoney` already reads anything under half a dollar as flat, which is correct here and must not be worked around in the readout.
-- [ ] Contrast: the readout is measured at 11px in both themes against the glass surface it sits on, to the 4.5:1 the project asks for.
-- [ ] Tests: the readout formatting is pure and tested (month label, the three figures, the flat case). The interaction itself is e2e.
-- [ ] e2e: hovering a cash flow month shows its three figures; at 402 a tap shows them; arrow keys move the cursor on the net worth chart.
+- [x] `LineChart` gains pointer and touch: `onPointerMove` and `onPointerDown` beside the existing mouse handlers, `touch-action: none` on the SVG so a scrub does not scroll the page. Built as `pan-y` so a vertical swipe still scrolls; see decisions/log.md 2026-09-22. The four callers (net worth, category trend, fitness trends, and any later one) get it without changing.
+- [x] `LineChart` gains keyboard: `tabIndex={0}`, left and right arrows move the cursor, Home and End jump to the ends, Escape clears. The existing `aria-label` summary stays, so nothing here is the only way to reach the data.
+- [x] `CashFlow` gains the same interaction over month slots, with a readout naming the month and giving In, Out and Left over. One readout component shared with `LineChart`'s if the shapes turn out the same; two small ones if they do not. Do not build an abstraction for two callers.
+- [x] "Net" becomes "Left over" in the legend, the readout and the footer average. The zero line is labelled, and the footer says what being above or below it means in one sentence.
+- [x] `signedMoney` already reads anything under half a dollar as flat, which is correct here and must not be worked around in the readout.
+- [x] Contrast: the readout is measured at 11px in both themes against the glass surface it sits on, to the 4.5:1 the project asks for.
+- [x] Tests: the readout formatting is pure and tested (month label, the three figures, the flat case). The interaction itself is e2e.
+- [x] e2e: hovering a cash flow month shows its three figures; at 402 a tap shows them; arrow keys move the cursor on the net worth chart.
 
 Exit: standard; no migration. ui-verifier confirms the readout does not clip at either edge of either chart at 402 and 1440.
 
