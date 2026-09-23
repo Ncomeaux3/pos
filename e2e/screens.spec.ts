@@ -1484,7 +1484,15 @@ test('notifications, a rule expanded', async ({ page }) => {
 // reloads. Resets itself so later tests see the live state.
 test('notifications, pause all turns amber', async ({ page }) => {
   await page.goto('/notifications')
+  // The button flips before the server has the write, so every click waits
+  // for its action: an unawaited resume left the database paused for every
+  // later run, and this test and the rules table's amber label failed from
+  // then on.
+  const action = () =>
+    page.waitForResponse((r) => r.request().method() === 'POST' && 'next-action' in r.request().headers())
+  const paused = action()
   await page.getByRole('button', { name: 'Pause all' }).click()
+  await paused
 
   const resume = page.getByRole('button', { name: 'Resume all' })
   await expect(resume).toBeVisible()
@@ -1493,7 +1501,11 @@ test('notifications, pause all turns amber', async ({ page }) => {
 
   await shoot(page, 'notifications-paused')
 
+  const resumed = action()
   await page.getByRole('button', { name: 'Resume all' }).click()
+  await resumed
+  // From the server, not the optimistic flip.
+  await page.reload()
   await expect(page.getByRole('button', { name: 'Pause all' })).toBeVisible()
 })
 
