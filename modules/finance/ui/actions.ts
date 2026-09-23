@@ -114,6 +114,16 @@ export async function deleteRule(id: string): Promise<ActionResult & { moved?: n
   }
 }
 
+export async function saveCashFlowAccounts(accountIds: string[]): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    await callTool('finance', 'set_cash_flow_accounts', { account_ids: accountIds }, { source: 'ui' })
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}
+
 export async function saveCountPending(on: boolean): Promise<ActionResult> {
   await requireOwner()
   try {

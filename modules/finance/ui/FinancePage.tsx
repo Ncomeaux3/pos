@@ -125,6 +125,7 @@ export default async function FinancePage() {
       sharePercent: assets > 0 ? Math.max(0, (Number(a.balance_cents) / assets) * 100) : 0,
       txCount: Number(a.tx_count),
       mask: a.mask,
+      inCashFlow: a.in_cash_flow,
     })),
 
     // Every category, for filing. Budgets below are the expense kind only.

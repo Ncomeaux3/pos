@@ -137,3 +137,41 @@ describe('finance.delete_rule', () => {
     expect(await filedAs(row)).toBe('Shopping')
   })
 })
+
+describe('finance.set_cash_flow_accounts', () => {
+  it('switches the listed accounts on, every other open one off, and leaves archived ones alone', async () => {
+    // The tool speaks for every open account, so the local rows it is not
+    // about are put back afterwards.
+    const { rows: before } = await db().query<{ id: string; in_cash_flow: boolean }>(
+      `select id, in_cash_flow from finance.account`,
+    )
+    const { rows } = await db().query<{ id: string; external_id: string }>(
+      `insert into finance.account (name, kind, in_cash_flow, archived, source, external_id) values
+         ('Checking', 'checking', false, false, 'demo', 'cash-on'),
+         ('Brokerage', 'brokerage', true, false, 'demo', 'cash-off'),
+         ('Old card', 'credit', true, true, 'demo', 'cash-archived')
+       returning id, external_id`,
+    )
+    const id = (ext: string) => rows.find((r) => r.external_id === ext)!.id
+
+    try {
+      await manifest.tools.set_cash_flow_accounts.run({ account_ids: [id('cash-on')] }, { source: 'ui' })
+      const { rows: after } = await db().query<{ external_id: string; in_cash_flow: boolean }>(
+        `select external_id, in_cash_flow from finance.account where source = 'demo' order by external_id`,
+      )
+      expect(after).toEqual([
+        { external_id: 'cash-archived', in_cash_flow: true },
+        { external_id: 'cash-off', in_cash_flow: false },
+        { external_id: 'cash-on', in_cash_flow: true },
+      ])
+    } finally {
+      for (const r of before) {
+        await db().query(`update finance.account set in_cash_flow = $2 where id = $1`, [r.id, r.in_cash_flow])
+      }
+    }
+  })
+
+  it('refuses an id that is not a uuid', () => {
+    expect(manifest.tools.set_cash_flow_accounts.input.safeParse({ account_ids: ['nope'] }).success).toBe(false)
+  })
+})

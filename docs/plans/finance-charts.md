@@ -25,7 +25,7 @@ Two that bear on this plan in particular:
 
 | Phase | Goal | Complexity | Depends on | Status | PR |
 |---|---|---|---|---|---|
-| 1 Cash flow accounts | The owner picks which accounts are cash flow; investments stop reading as income | medium | 5c | Not started | |
+| 1 Cash flow accounts | The owner picks which accounts are cash flow; investments stop reading as income | medium | 5c | Built 2026-09-22, PR open | |
 | 2 Chart readouts | Point or tap any chart and read the number; "Net" becomes "Left over" | medium | 1 | Not started | |
 | 3 Time range | One 3/6/12/24 month control in the Finance band, saved | low | 2 | Not started | |
 
@@ -36,18 +36,18 @@ Order matters: Phase 1 is the one that fixes a wrong number, so it ships first. 
 Goal: cash flow counts only the accounts the owner marks as cash, and the choice is visible and changeable in one place.
 Complexity: medium. Files: migration `finance_cash_flow_accounts`, `modules/finance/data.ts`, `modules/finance/manifest.ts`, `modules/finance/jobs/sync-simplefin.ts`, `modules/finance/ui/CashFlowAccounts.tsx` (new), `modules/finance/ui/Finance.tsx`, `modules/finance/ui/FinancePage.tsx`, `modules/finance/ui/actions.ts`, `modules/finance/README.md`, `docs/SPEC.md`.
 
-- [ ] Migration `finance_cash_flow_accounts`: `finance.account` gains `in_cash_flow boolean not null default true`, then `update finance.account set in_cash_flow = false where kind in ('brokerage', 'retirement', 'crypto', 'other')`. On the owner's data that is 13 accounts off and 8 on (checking 1, savings 3, credit 4).
-- [ ] The same migration adds one category, `('Entertainment', 'Movies, events, games and hobbies', 'expense', false, 23) on conflict (name) do nothing`, the way `People` was added in phase 5c. Shopping is left as it is. No rule is seeded: the owner files merchants into it from the Unfiled list, and anything already filed as Shopping is moved by hand or by re-filing its rule.
-- [ ] `sync-simplefin.ts` sets `in_cash_flow` from the kind **on insert only**, beside `kind`, which the upsert already omits from its update list for the same reason. A column default cannot vary by kind, so without this a newly synced brokerage arrives `true` and re-inflates the card silently.
-- [ ] `cashFlowByMonth(months)` joins `finance.account` and filters on `in_cash_flow`. Nothing else changes: the kind rules (income is the income kind, spending is expense plus credit, transfers on neither side, an uncategorised row read by its sign) are untouched.
-- [ ] `categorySpend`, `categorySeries`, `netWorthSeries`, `listAccounts` and `dueSoon` are **not** filtered. The owner's answer was cash flow card only, and net worth is a balance question, not a spending one.
-- [ ] `nightlyDigest`'s `netThisMonthCents` follows, because it already calls `cashFlowByMonth(1)`. Assert this with a test rather than leaving it to inspection.
-- [ ] Tool `set_cash_flow_accounts` on the manifest, unguarded, input `{ account_ids: string[] }`, setting `in_cash_flow` true for those and false for every other non-archived account in one statement. Archived accounts are left alone: the drawer does not list them, so a call could not speak for them. Unguarded because it is a display preference and reversible from the same drawer.
-- [ ] `CashFlowAccounts.tsx`, the `LimitsDrawer` shape, opened from the cash flow card head on both widths: every non-archived account grouped by kind, each with its balance and a switch, a footer counting how many feed cash flow. Held until Done like the limits drawer, since a change re-reads the chart.
-- [ ] The card head says what it is counting: "Cash flow · 6 months · 8 of 21 accounts", so an excluded account is never a silent exclusion. The month count stays whatever the card passes today; Phase 3 is what makes it a choice.
-- [ ] The card footer says plainly that money between your own accounts is on neither side, and that an unfiled transfer may still show. Rules already file `online transfer`, `transfer to` and `transfer from`; 5c and 5d close the rest. No pair-matching heuristic, by decision.
-- [ ] Tests first: `cashFlowByMonth` excludes an off account's rows; the same account's rows still count in `categorySpend`; `nightlyDigest.netThisMonthCents` matches the filtered card.
-- [ ] e2e: the drawer lists the accounts with their switches; turning one off changes the card head's count.
+- [x] Migration `finance_cash_flow_accounts`: `finance.account` gains `in_cash_flow boolean not null default true`, then `update finance.account set in_cash_flow = false where kind in ('brokerage', 'retirement', 'crypto', 'other')`. On the owner's data that is 13 accounts off and 8 on (checking 1, savings 3, credit 4).
+- [x] The same migration adds one category, `('Entertainment', 'Movies, events, games and hobbies', 'expense', false, 23) on conflict (name) do nothing`, the way `People` was added in phase 5c. Shopping is left as it is. No rule is seeded: the owner files merchants into it from the Unfiled list, and anything already filed as Shopping is moved by hand or by re-filing its rule.
+- [x] `sync-simplefin.ts` sets `in_cash_flow` from the kind **on insert only**, beside `kind`, which the upsert already omits from its update list for the same reason. A column default cannot vary by kind, so without this a newly synced brokerage arrives `true` and re-inflates the card silently.
+- [x] `cashFlowByMonth(months)` joins `finance.account` and filters on `in_cash_flow`. Nothing else changes: the kind rules (income is the income kind, spending is expense plus credit, transfers on neither side, an uncategorised row read by its sign) are untouched.
+- [x] `categorySpend`, `categorySeries`, `netWorthSeries`, `listAccounts` and `dueSoon` are **not** filtered. The owner's answer was cash flow card only, and net worth is a balance question, not a spending one.
+- [x] `nightlyDigest`'s `netThisMonthCents` follows, because it already calls `cashFlowByMonth(1)`. Assert this with a test rather than leaving it to inspection.
+- [x] Tool `set_cash_flow_accounts` on the manifest, unguarded, input `{ account_ids: string[] }`, setting `in_cash_flow` true for those and false for every other non-archived account in one statement. Archived accounts are left alone: the drawer does not list them, so a call could not speak for them. Unguarded because it is a display preference and reversible from the same drawer.
+- [x] `CashFlowAccounts.tsx`, the `LimitsDrawer` shape, opened from the cash flow card head on both widths: every non-archived account grouped by kind, each with its balance and a switch, a footer counting how many feed cash flow. Held until Done like the limits drawer, since a change re-reads the chart.
+- [x] The card head says what it is counting: "Cash flow · 6 months · 8 of 21 accounts", so an excluded account is never a silent exclusion. The month count stays whatever the card passes today; Phase 3 is what makes it a choice.
+- [x] The card footer says plainly that money between your own accounts is on neither side, and that an unfiled transfer may still show. Rules already file `online transfer`, `transfer to` and `transfer from`; 5c and 5d close the rest. No pair-matching heuristic, by decision.
+- [x] Tests first: `cashFlowByMonth` excludes an off account's rows; the same account's rows still count in `categorySpend`; `nightlyDigest.netThisMonthCents` matches the filtered card.
+- [x] e2e: the drawer lists the accounts with their switches; turning one off changes the card head's count.
 
 Exit: standard; migration pushed (`db push: done`). The owner opens the drawer and confirms the 21 accounts are sorted correctly, in particular the 7 in `other`.
 

@@ -45,6 +45,22 @@ async function addIn(categoryName: string, cents: number, monthsBack: number): P
   )
 }
 
+/** A row in an account the owner has switched out of cash flow, a brokerage. */
+async function addOff(categoryName: string, cents: number, monthsBack: number): Promise<void> {
+  const { rows } = await db().query<{ id: string }>(
+    `insert into finance.account (name, kind, in_cash_flow, source, external_id)
+     values ('Brokerage', 'brokerage', false, 'demo', 'test-brokerage')
+     on conflict (source, external_id) do update set name = excluded.name returning id`,
+  )
+  await db().query(
+    `insert into finance.transaction (account_id, descriptor, amount_cents, occurred_on, category_id, source)
+     values ($1, $2, $3,
+             (date_trunc('month', core.today()) - make_interval(months => $4::int))::date + 5,
+             $5, 'demo')`,
+    [rows[0].id, categoryName, cents, monthsBack, await category(categoryName)],
+  )
+}
+
 afterEach(async () => {
   await db().query(`delete from finance.transaction where source = 'demo'`)
   await db().query(`delete from finance.subscription where source = 'demo'`)
@@ -164,6 +180,22 @@ describe('cashFlowByMonth', () => {
     expect(Number(now?.income_cents)).toBe(9_000)
   })
 
+  it('counts only accounts in cash flow, while budgets still read every account', async () => {
+    // A brokerage sale reads as income and a buy as spending; neither is money
+    // the owner lives on, so an account switched out of cash flow is off both.
+    await addIn('Groceries', 30_000, 1)
+    await addOff('Groceries', 50_000, 1)
+    await addOff('Income', -900_000, 1)
+
+    const month = (await cashFlowByMonth(6)).at(-2)
+    expect(Number(month?.expense_cents)).toBe(30_000)
+    expect(Number(month?.income_cents)).toBe(0)
+
+    await addOff('Groceries', 7_000, 0)
+    const groceries = (await categorySpend()).find((c) => c.name === 'Groceries')
+    expect(Number(groceries?.spent_cents)).toBe(7_000)
+  })
+
   it('returns every month of the window, so a quiet month draws as zero rather than vanishing', async () => {
     const flow = await cashFlowByMonth(3)
     expect(flow.map((m) => m.month.slice(8))).toEqual(['01', '01', '01'])
@@ -255,5 +287,15 @@ describe('nightlyDigest', () => {
 
     const digest = await nightlyDigest()
     expect(digest.netThisMonthCents).toBe(370_000)
+  })
+
+  it('nets only the accounts the cash flow card counts, so the tile and the card agree', async () => {
+    await addIn('Income', -400_000, 0)
+    await addOff('Groceries', 250_000, 0)
+
+    const digest = await nightlyDigest()
+    const card = (await cashFlowByMonth(1))[0]
+    expect(digest.netThisMonthCents).toBe(400_000)
+    expect(digest.netThisMonthCents).toBe(Number(card.income_cents) - Number(card.expense_cents))
   })
 })
