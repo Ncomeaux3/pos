@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { balance, budgetTone, compactMoney, monthPace, percent, signedMoney, transactionAmount } from './money'
+import { balance, budgetTone, compactMoney, flowReadout, monthPace, percent, signedMoney, transactionAmount } from './money'
 
 describe('money rendering', () => {
   it('separates a debt from a fall, because the same glyph means two things', () => {
@@ -77,5 +77,28 @@ describe('monthPace', () => {
     expect(monthPace('2026-02-14')).toBeCloseTo(14 / 28, 3)
     // 2028 is a leap year.
     expect(monthPace('2028-02-14')).toBeCloseTo(14 / 29, 3)
+  })
+})
+
+describe('flowReadout', () => {
+  it('names the month with its year and gives in, out and what was left over', () => {
+    expect(flowReadout({ month: '2026-09-01', incomeCents: 420_000, expenseCents: 310_050 })).toEqual({
+      month: 'Sep 2026',
+      in: '$4,200',
+      out: '$3,101',
+      leftOver: '+$1,100',
+    })
+  })
+
+  it('signs a month that spent more than it took in', () => {
+    expect(flowReadout({ month: '2026-01-01', incomeCents: 100_000, expenseCents: 164_000 }).leftOver).toBe('-$640')
+  })
+
+  it('reads under half a dollar either way as flat, not -$0', () => {
+    expect(flowReadout({ month: '2026-03-01', incomeCents: 200_000, expenseCents: 200_040 }).leftOver).toBe('flat')
+  })
+
+  it('keeps the sign of spending a refund outran', () => {
+    expect(flowReadout({ month: '2026-04-01', incomeCents: 0, expenseCents: -2_500 }).out).toBe('-$25')
   })
 })

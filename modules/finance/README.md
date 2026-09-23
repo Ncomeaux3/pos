@@ -164,9 +164,21 @@ uses the switch: budgets, the category trend and net worth see every account,
 and `netThisMonthCents` follows because it is `cashFlowByMonth(1)`.
 
 The sign fallback has one known ceiling: an **unfiled** card payment is `+` in
-checking and `-` on the card, so it adds the same amount to both bars. The net
-line and `netThisMonthCents` are unaffected, and the built-in payment rules
+checking and `-` on the card, so it adds the same amount to both bars. The left
+over line and `netThisMonthCents` are unaffected, and the built-in payment rules
 normally file these before the chart ever sees them.
+
+Every chart reads out under the pointer (finance-charts phase 2). `useScrub` in
+`components/pos/LineChart.tsx` is the one interaction for `LineChart` and the
+cash flow card: pointer events cover a mouse and a finger, `touch-action:
+pan-y` lets a sideways scrub read the chart while an up or down swipe still
+scrolls, and the chart takes focus so the arrows, Home, End and Escape do the
+same from a keyboard, with a `role="status"` line saying it to a screen reader.
+The cash flow readout is `flowReadout()` in `money.ts`: the month with its year,
+In and Out through `balance()` (spending goes below zero when a refund outran a
+month), and Left over through `signedMoney()`, so under half a dollar is flat.
+"Net" is "Left over" on the card, and zero gets its own "$0" label when a month
+ran a deficit and the floor is no longer zero.
 
 `dueSoon(14)` reads both `finance.subscription` and `finance.recurring`,
 deduped by `recurring_id` or name. They are not the same set and nothing
