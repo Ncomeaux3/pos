@@ -42,7 +42,7 @@ Order: bugs, then look and forms, then data pulls, then Calendar and integration
 | 5c Finance: rules, back-filing and the transfer fix | Rules drawer with provenance and back-filing, peer payments out of transfers, an Uncategorised filter | medium | 6a | 5b | Done 2026-09-22: `rules.ts` re-files history through the whole rule set plus the refund matcher, `Rule.priority` puts the peer patterns ahead of the transfer ones and the migration back-filed 9 rows out of `Account transfer`, Rules drawer with provenance and an uncapped Unfiled list, All/Uncategorised/Pending chips, sweep raised to 5000. Exit met the same day: the owner filed the Unfiled list by hand, 3 rows left (AMC Theatres, held for Entertainment); #126 and #128 made it findable | #124 |
 | 5d Finance: the model arm | One batched Haiku call fills what the rules miss; at 0.8 it writes a rule, below it the merchant is listed unfiled | medium | 6a | 5c | Deferred 2026-09-22: the backlog was filed by hand, so the model arm has little to file. Revisit if Unfiled grows | |
 | 6a Calendar module | `calendar` schema, the `calendar` manifest seam on nine modules, month grid with day list, recurring rules drawn | high | 5b | 4 | Built 2026-09-23: seam on nine modules (workouts for Fitness, module-root links for four until Phase 13), `calendar.event` and `calendar.settings`, shared `MonthGrid`, week strip on the phone, chips saved, Add event drawer; eleven owner answers in decisions/log.md | |
-| 6b Recurring tasks | Repeat rule on a task, next instance on completion, Tasks calendar day list | medium | 7a | 6a | | |
+| 6b Recurring tasks | Repeat rule on a task, next instance on completion, Tasks calendar day list | medium | 7a | 6a | Built 2026-09-23: `repeat` and a unique `repeat_from` on `tasks.task`, `repeat.ts` walks the rule, complete and the review's Drop write the next instance, Repeat select in the drawer, day list and muted projections on the Tasks Calendar and the seam | |
 | 7a Google: Calendar feed | One OAuth app, refresh token in connections, events pulled nightly and on demand | high | 6b | 6a | | |
 | 7b Apple: .ics feeds and Reminders webhook | iCloud calendar by subscription URL, Reminders through a Shortcut posting to a webhook | medium | 7c | 6a | | |
 | 7c Gmail to proposals | Labelled mail parsed by rules then Haiku into task and event proposals in review state | high | 7b | 7a | | |
@@ -309,11 +309,11 @@ Exit: standard; migration pushed (`db push: done`).
 Goal: "Use the Amex credits" comes back every month by itself.
 Complexity: medium. Files: migration `tasks_repeat`, `modules/tasks/manifest.ts`, `modules/tasks/data.ts`, `modules/tasks/repeat.ts` (+ test), `modules/tasks/ui/TaskDrawer.tsx`, `modules/tasks/ui/Calendar.tsx`, `modules/calendar` seam.
 
-- [ ] `tasks.task.repeat jsonb null`: `{ every: 'day' | 'week' | 'month' | 'year', on?: number[] (weekdays 0 to 6, or a day of month 1 to 31 or -1 for last), interval?: number }`. `nextDue(repeat, fromDate, tz)` pure and tested (month end clamping, last day, weekly sets, the owner's timezone through `core/clock.ts`).
-- [ ] `complete` (the existing tool path) writes the next instance when `repeat` is set: same title, notes, project, goal_ref, skills copied as automatic links, `due = nextDue(repeat, due)`, `repeat` carried; the completed row keeps `repeat` for history. One open instance at a time by construction.
-- [ ] Drawer: a Repeat select (None, Daily, Weekly on ..., Monthly on the ..., Yearly) with the caption "Next: {date}".
-- [ ] Tasks Calendar: selecting a day lists that day's tasks under the grid (the owner's ask), including projected instances of repeating tasks in a lighter tone (from `nextDue` walked forward, no rows written). The Calendar module seam does the same.
-- [ ] e2e: complete a monthly task; a new open task exists with next month's date; the calendar shows the projection.
+- [x] `tasks.task.repeat jsonb null`: `{ every: 'day' | 'week' | 'month' | 'year', on?: number[] (weekdays 0 to 6, or a day of month 1 to 31 or -1 for last), interval?: number }`. `nextDue(repeat, fromDate, tz)` pure and tested (month end clamping, last day, weekly sets, the owner's timezone through `core/clock.ts`).
+- [x] `complete` (the existing tool path) writes the next instance when `repeat` is set: same title, notes, project, goal_ref, skills copied as automatic links, `due = nextDue(repeat, due)`, `repeat` carried; the completed row keeps `repeat` for history. One open instance at a time by construction.
+- [x] Drawer: a Repeat select (None, Daily, Weekly on ..., Monthly on the ..., Yearly) with the caption "Next: {date}".
+- [x] Tasks Calendar: selecting a day lists that day's tasks under the grid (the owner's ask), including projected instances of repeating tasks in a lighter tone (from `nextDue` walked forward, no rows written). The Calendar module seam does the same.
+- [x] e2e: complete a monthly task; a new open task exists with next month's date; the calendar shows the projection.
 
 Exit: standard; `db push: done`.
 

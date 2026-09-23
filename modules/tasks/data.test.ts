@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from '@/core/db'
+import { getModule } from '@/core/modules'
+import { callTool } from '@/core/tools'
 import { listByGoal, listTasks, patchTask } from './data'
 
 // Against pos_test, because the thing worth proving is one SQL expression:
@@ -80,3 +82,83 @@ describe('a project linked to a goal', () => {
     expect(board['No project'].goal_ref).toBeNull()
   })
 })
+
+describe('complete on a repeating task', () => {
+  // v1.2 phase 6b. Far enough ahead that today never overtakes the due date.
+  it('writes one next instance with the rule and the skills, however often it is completed', async () => {
+    const written = await callTool(
+      'tasks',
+      'write',
+      { title: 'Use the Amex credits', due_on: '2030-01-31', repeat: { every: 'month', on: [31] } },
+      { source: 'ui' },
+    )
+    const id = (written as { result: { id: string } }).result.id
+    await db().query(
+      `insert into core.skill_links (entity_ref, skill_id, confidence, classified_by, is_manual)
+       select id, 'personal-finance', 1, 'human', true from core.entities
+        where module = 'tasks' and entity_id = $1
+       on conflict (entity_ref, skill_id) do nothing`,
+      [id],
+    )
+
+    await callTool('tasks', 'complete', { id }, { source: 'ui' })
+    await callTool('tasks', 'complete', { id, done: false }, { source: 'ui' })
+    await callTool('tasks', 'complete', { id }, { source: 'ui' })
+
+    const { rows } = await db().query<{ id: string; due_on: string; repeat: unknown; status: string }>(
+      `select id, due_on::text, repeat, status from tasks.task where repeat_from = $1`,
+      [id],
+    )
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ due_on: '2030-02-28', status: 'open', repeat: { every: 'month', on: [31] } })
+
+    const links = await db().query<{ is_manual: boolean }>(
+      `select l.is_manual from core.skill_links l join core.entities e on e.id = l.entity_ref
+        where e.entity_id = $1 and l.skill_id = 'personal-finance'`,
+      [rows[0].id],
+    )
+    expect(links.rows).toEqual([{ is_manual: false }])
+  })
+
+  it('writes nothing for a one-off task', async () => {
+    const written = await callTool('tasks', 'write', { title: 'Renew passport' }, { source: 'ui' })
+    const id = (written as { result: { id: string } }).result.id
+    await callTool('tasks', 'complete', { id }, { source: 'ui' })
+    const { rows } = await db().query(`select 1 from tasks.task where repeat_from = $1`, [id])
+    expect(rows).toHaveLength(0)
+  })
+
+  it('writes the next instance when the weekly review drops it, and not for a row it did not close', async () => {
+    const written = await callTool(
+      'tasks',
+      'write',
+      { title: 'Water the plants', due_on: '2030-01-06', repeat: { every: 'week' } },
+      { source: 'ui' },
+    )
+    const id = (written as { result: { id: string } }).result.id
+    const apply = getModule('tasks')!.review!.apply!
+    await apply({ carry: [], carryTo: '2030-01-07', drop: [id], values: {} })
+    // Already done now, so a second drop closes nothing and writes nothing.
+    await apply({ carry: [], carryTo: '2030-01-07', drop: [id], values: {} })
+
+    const { rows } = await db().query<{ due_on: string }>(
+      `select due_on::text from tasks.task where repeat_from = $1`,
+      [id],
+    )
+    expect(rows).toEqual([{ due_on: '2030-01-13' }])
+  })
+
+  it('refuses a rule whose days can never come', async () => {
+    for (const repeat of [
+      { every: 'week', on: [7] },
+      { every: 'month', on: [0] },
+      { every: 'month', on: [1, 15] },
+      { every: 'day', on: [1] },
+    ]) {
+      await expect(
+        callTool('tasks', 'write', { title: 'Bad rule', repeat }, { source: 'ui' }),
+      ).rejects.toThrow()
+    }
+  })
+})
+

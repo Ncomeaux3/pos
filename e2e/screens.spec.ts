@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import { generateKeyPairSync } from 'node:crypto'
 import { expect, test as base, type Locator, type Page } from '@playwright/test'
+import { nextDue } from '../modules/tasks/repeat'
 
 // CI's dev server serves a chunk per module, and on its runner the gap between
 // first paint and hydration is close to a second. A click in that gap lands on
@@ -1881,6 +1882,57 @@ test('tasks, completing one emits the event that earns XP', async ({ page }) => 
   // Exact, because the toast "Done. Read DDIA ch. 5, Replication" is still on
   // screen and a substring match resolved to both.
   await expect(page.getByText('Read DDIA ch. 5, Replication', { exact: true })).toBeVisible()
+})
+
+test('tasks, a monthly task comes back next month and the calendar shows the one after', async ({ page }) => {
+  // v1.2 phase 6b. Due today, monthly on today's date; the expected dates come
+  // from the same nextDue the tool uses, so the 31st clamps the same way.
+  const now = new Date()
+  const iso = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const today = iso(now)
+  const rule = { every: 'month' as const, on: [now.getDate()] }
+  const next = nextDue(rule, today)
+  const after = nextDue(rule, next)
+  const title = `Use the Amex credits ${Date.now()}`
+  const action = () =>
+    page.waitForResponse((r) => r.request().method() === 'POST' && 'next-action' in r.request().headers())
+
+  await page.goto('/tasks')
+  await page.getByRole('button', { name: 'New task' }).first().click()
+  const drawer = page.getByRole('dialog')
+  await drawer.getByLabel('Title').fill(title)
+  await drawer.getByRole('combobox', { name: 'Repeat' }).selectOption('month')
+  await expect(drawer.getByText(/^Next: \w{3} \d{1,2} \w{3}( \d{4})?$/)).toBeVisible()
+  const created = action()
+  await drawer.getByRole('button', { name: 'Create' }).click()
+  await created
+
+  const completed = action()
+  await page.getByRole('button', { name: `Complete ${title}` }).click()
+  await completed
+  await page.reload()
+
+  // The month grid: next month's day holds the new open task, and the month
+  // after holds its projection, muted and labelled as expected.
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const day = (d: string) => new RegExp(`^${MON[Number(d.slice(5, 7)) - 1]} ${Number(d.slice(8, 10))},`)
+  const list = page.locator('section[aria-labelledby="tasks-day"]')
+  // Its own row: the desktop and phone runs share the database, so the other
+  // run's task can be on the same day.
+  const row = list.getByRole('button', { name: new RegExp(`^${title}`) })
+
+  await page.getByRole('tab', { name: 'Calendar' }).click()
+  await page.getByRole('button', { name: 'Next month' }).click()
+  await page.getByRole('button', { name: day(next) }).click()
+  await expect(list).toHaveAttribute('data-day', next)
+  await expect(row).toBeVisible()
+  await expect(row).not.toContainText('Expected')
+
+  await page.getByRole('button', { name: 'Next month' }).click()
+  await page.getByRole('button', { name: day(after) }).click()
+  await expect(list).toHaveAttribute('data-day', after)
+  await expect(row).toContainText('Expected, from its repeat')
 })
 
 test('tasks, a skill linked by hand shows Manual, survives a reload and reaches the tree', async ({ page }) => {

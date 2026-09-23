@@ -4,6 +4,7 @@ import { ownerToday } from '@/core/today'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
 import { calendarFor } from './calendar'
+import { nextAfter, type Repeat } from './repeat'
 import { deleteTask, findOrCreateProject, listByGoal, patchProject, patchTask } from './data'
 import { nightlyDigest, rollCounts, rollForward } from './jobs/nightly-digest'
 import { dueLabel, hoursLabel, loadLabel, slipMeta } from './shape'
@@ -16,6 +17,101 @@ const priority = z.enum(['P1', 'P2', 'P3'])
 // wrong for anyone who crosses a timezone.
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD')
 const time = z.string().regex(/^\d{2}:\d{2}$/, 'Expected HH:MM')
+
+// Checked here rather than trusted: the rule is walked in a loop by the
+// calendar and the complete tool, and a weekday of 9 or a month day of 0
+// would be a date that never comes.
+const repeat = z
+  .object({
+    every: z.enum(['day', 'week', 'month', 'year']),
+    on: z.array(z.number().int()).max(7).optional(),
+    interval: z.number().int().min(1).max(365).optional(),
+  })
+  .refine(
+    ({ every, on = [] }) =>
+      every === 'week'
+        ? on.every((d) => d >= 0 && d <= 6)
+        : every === 'month'
+          ? on.length <= 1 && on.every((d) => d === -1 || (d >= 1 && d <= 31))
+          : on.length === 0,
+    { message: 'Weekdays are 0 to 6; a month day is 1 to 31 or -1 for the last', path: ['on'] },
+  )
+
+/**
+ * Write the instance after a completed repeating task: same fields, the next
+ * due date, the rule carried, its skills copied as automatic links. The
+ * unique repeat_from makes this a no-op the second time, so a task completed,
+ * reopened and completed again still has one successor. Returns the new id,
+ * or null when there is nothing to write.
+ */
+async function writeNext(id: string): Promise<string | null> {
+  const { rows } = await db().query<{
+    title: string
+    notes: string
+    due_on: string | null
+    due_at: string | null
+    priority: string
+    project_id: string | null
+    goal_ref: string | null
+    estimated_minutes: number | null
+    remind_minutes: number | null
+    source: string
+    repeat: Repeat
+  }>(
+    `select title, notes, due_on::text, due_at::text, priority, project_id, goal_ref,
+            estimated_minutes, remind_minutes, source, repeat
+       from tasks.task where id = $1 and repeat is not null`,
+    [id],
+  )
+  const t = rows[0]
+  if (!t) return null
+
+  const inserted = await db().query<{ id: string }>(
+    `insert into tasks.task
+       (title, notes, due_on, due_at, priority, project_id, goal_ref,
+        estimated_minutes, remind_minutes, source, status, repeat, repeat_from)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'open', $11, $12)
+     on conflict (repeat_from) do nothing
+     returning id`,
+    [
+      t.title,
+      t.notes,
+      nextAfter(t.repeat, t.due_on, await ownerToday()),
+      t.due_at,
+      t.priority,
+      t.project_id,
+      t.goal_ref,
+      t.estimated_minutes,
+      t.remind_minutes,
+      t.source,
+      t.repeat,
+      id,
+    ],
+  )
+  const nextId = inserted.rows[0]?.id
+  if (!nextId) return null
+
+  // No creation event: the XP is in completing it, and a monthly task would
+  // otherwise earn a creation every month for being written by the tool.
+  const entityRef = await register({
+    module: 'tasks',
+    entityType: 'task',
+    entityId: nextId,
+    title: t.title,
+    text: t.notes,
+    emit: false,
+  })
+  await db().query(
+    `insert into core.skill_links (entity_ref, skill_id, weight, confidence, classified_by, is_manual)
+     select $1, l.skill_id, l.weight, l.confidence, l.classified_by, false
+       from core.skill_links l
+       join core.entities e on e.id = l.entity_ref
+      where e.module = 'tasks' and e.entity_type = 'task' and e.entity_id = $2
+     on conflict (entity_ref, skill_id) do nothing`,
+    [entityRef, id],
+  )
+  return nextId
+}
 
 export default defineModule({
   id: 'tasks',
@@ -43,6 +139,7 @@ export default defineModule({
         goal_ref: z.uuid().nullable().optional(),
         estimated_minutes: z.number().int().min(0).max(10_000).nullable().optional(),
         remind_minutes: z.number().int().min(0).max(20_160).nullable().optional(),
+        repeat: repeat.nullable().optional(),
       }),
       run: async (input, ctx) => {
         const projectId =
@@ -65,6 +162,7 @@ export default defineModule({
               estimated_minutes: input.estimated_minutes,
             }),
             ...(input.remind_minutes !== undefined && { remind_minutes: input.remind_minutes }),
+            ...(input.repeat !== undefined && { repeat: input.repeat }),
           })
 
           // No register() on an update. It emits the creation event, and a task
@@ -81,8 +179,8 @@ export default defineModule({
         const { rows } = await db().query<{ id: string }>(
           `insert into tasks.task
              (title, notes, due_on, due_at, priority, project_id, goal_ref,
-              estimated_minutes, remind_minutes, source, status)
-           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+              estimated_minutes, remind_minutes, source, status, repeat)
+           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
            returning id`,
           [
             input.title,
@@ -96,6 +194,7 @@ export default defineModule({
             input.remind_minutes ?? null,
             ctx.source === 'agent' ? 'agent' : 'manual',
             status,
+            input.repeat ?? null,
           ],
         )
 
@@ -137,7 +236,8 @@ export default defineModule({
     }),
 
     complete: defineTool({
-      description: 'Mark a task done, or reopen it. Completing emits the event that earns XP.',
+      description:
+        'Mark a task done, or reopen it. Completing emits the event that earns XP, and completing a repeating task writes its next instance.',
       input: z.object({ id: z.uuid(), done: z.boolean().default(true) }),
       run: async ({ id, done }) => {
         const { rows } = await db().query<{ title: string; status: string }>(
@@ -161,6 +261,8 @@ export default defineModule({
             title: rows[0].title,
             eventType: 'task_completed',
           })
+          const next = await writeNext(id)
+          return { id, status: rows[0].status, next }
         }
 
         return { id, status: rows[0].status }
@@ -337,11 +439,14 @@ export default defineModule({
         )
       }
       if (drop.length > 0) {
-        await db().query(
+        const { rows } = await db().query<{ id: string }>(
           `update tasks.task set status = 'done', completed_at = now()
-            where id = any($1) and status = 'open'`,
+            where id = any($1) and status = 'open'
+            returning id`,
           [drop],
         )
+        // Dropping skips this instance, not the series.
+        for (const { id } of rows) await writeNext(id)
       }
     },
   },

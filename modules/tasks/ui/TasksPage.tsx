@@ -45,6 +45,7 @@ function toTask(
     projectGoalRef: row.project_goal_ref,
     estimateMinutes: row.estimated_minutes,
     remindMinutes: row.remind_minutes,
+    repeat: row.repeat,
     source: row.source,
     entityRef: links.get(row.id)?.entityRef ?? null,
     skills: links.get(row.id)?.skills ?? [],

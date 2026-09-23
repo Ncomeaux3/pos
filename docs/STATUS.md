@@ -46,7 +46,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-23 (v1.2 phase 6a, the Calendar module, built with its PR open; finance-charts complete with #134). Production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-23 (v1.2 phase 6b, recurring tasks, built with its PR open; 6a merged as #136). Production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -70,12 +70,24 @@ against the Vercel domain. Laptop notes: `.env` has no VAPID pair, so `pnpm setu
 and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
-## Next: v1.2 Phase 6b, recurring tasks
+## Next: v1.2 Phase 7a, the Google Calendar feed
 
-Phase 6a (the Calendar module) is built with its PR open; 6b depends on it.
-6b puts the repeat rule on a task and draws projected instances through the
-shared `components/pos/MonthGrid.tsx` and the tasks `calendar` seam that 6a
-added. Earlier, and kept for its record:
+Phase 6b (recurring tasks) is built with its PR open; 6a merged as #136. 7a
+needs OWNER-TODO 22 (the Google Cloud project and OAuth consent) first. 7b
+also depends only on 6a and can run beside 7a. Earlier, and kept for its
+record:
+
+### v1.2 Phase 6b: recurring tasks (built 2026-09-23)
+
+`tasks.task.repeat` holds the rule and `repeat_from` (unique) the instance a
+repeat was written from. `modules/tasks/repeat.ts` walks the rule (month end
+clamping without drift, the last day, weekday sets, intervals); `complete`
+and the weekly review's Drop write the next instance past both the old due
+date and today, copying fields and skills and emitting no creation event. The
+drawer has a Repeat select with a Next caption; the Tasks Calendar selects a
+day and lists its tasks under the grid, with later repeats drawn muted, and
+the Calendar module's seam projects them the same way. Migration
+`20260923213423_tasks_repeat`.
 
 ### finance-charts Phase 1 (done)
 

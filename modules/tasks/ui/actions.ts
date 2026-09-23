@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireOwner } from '@/core/auth'
 import { callTool, ToolInputError } from '@/core/tools'
+import type { Repeat } from '../repeat'
 
 // Server actions are standalone POST endpoints addressed by id, so the (app)
 // layout does not run for them and each one authenticates independently.
@@ -38,6 +39,7 @@ export type WriteInput = {
   goal_ref?: string | null
   estimated_minutes?: number | null
   remind_minutes?: number | null
+  repeat?: Repeat | null
 }
 
 export async function writeTask(input: WriteInput): Promise<ActionResult> {
