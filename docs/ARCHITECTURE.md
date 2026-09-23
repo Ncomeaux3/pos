@@ -121,10 +121,11 @@ Core guarantees, driven by the manifest:
 - Guarded tools called from `/api/mcp` or by the orchestrator write a `core.proposals` row instead of the target table. Writes you make in the UI are never guarded. Approving on the Review page calls the same tool with `source='agent'` and records the approval.
 - Every registered entity is embedded nightly and searchable through `core.search`.
 - A module whose required integration is not connected shows a "Connect <provider>" prompt on its pages instead of empty tables.
+- A module with a `calendar(range)` seam puts its dated rows on the Calendar screen. `core/calendar-registry.ts` asks every module at once and leaves out, with a row in the Errors tab, any that throws. Each `CalendarItem` carries its own `href`, so the Calendar reads no module schema and links through to the owning screen. Repeats (a monthly charge, a service interval) are projected on read and marked `projected`; nothing stores future dates. (v1.2 phase 6a)
 
 Module rules:
 - Own Postgres schema named after `id`. No foreign keys into other module schemas. Links go through `core.entities`.
-- Every created row goes through `core/entities.register()`, which registers the entity, runs `classify()`, and emits an event. One call.
+- Every created row goes through `core/entities.register()`, which registers the entity, runs `classify()`, and emits an event. One call. The one exception is `calendar.event`: a feed brings hundreds of meetings, and each would take a classifier pass for nothing an appointment earns.
 - Import scripts set `source='notion_import'`, use the Notion page id as `external_id`, upsert on it, and emit events dated to the original completion date so XP reflects real history. Rules classify at import time; unmatched rows are picked up by the nightly model batch.
 
 ## Integration contract

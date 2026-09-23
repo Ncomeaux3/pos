@@ -3,6 +3,7 @@ import { db } from '@/core/db'
 import { get, normaliseUrl } from '@/core/fetching'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
+import { calendarFor } from './calendar'
 import { fillWeek } from './fill'
 import { nightlyDigest } from './jobs/nightly-digest'
 import { parseRecipe } from './jsonld'
@@ -280,6 +281,7 @@ export default defineModule({
    */
   guarded: [],
   requires: [],
+  calendar: calendarFor,
 
   metrics: {
     meals_cooked_this_week: {

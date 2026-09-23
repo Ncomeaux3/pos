@@ -12,6 +12,7 @@ import { seed as seedMeals } from '@/modules/meals/seed'
 import { seed as seedIdeas } from '@/modules/ideas/seed'
 import { seed as seedHome } from '@/modules/home/seed'
 import { seed as seedInsurance } from '@/modules/insurance/seed'
+import { seed as seedCalendar } from '@/modules/calendar/seed'
 
 // A local database or nothing. This file deletes outright: core.notifications,
 // core.job_runs, core.reviews, every idea that is not demo, and several module
@@ -107,6 +108,11 @@ const mealCount = await seedMeals()
 const ideaCount = await seedIdeas()
 const homeCount = await seedHome()
 const policyCount = await seedInsurance()
+const eventCount = await seedCalendar()
+// The calendar test switches a module off and adds an event; a run killed
+// midway would leave either behind for the next.
+await db().query(`update calendar.settings set hidden = '{}'`)
+await db().query(`delete from calendar.event where source = 'manual' and title like 'E2E %'`)
 
 // The coach runs against the seeded history for the same reason the subscription
 // detector does: the Plan tab has to show what the rules actually produced. It
@@ -391,5 +397,5 @@ if (hae.length === 0) {
 const { assembleSummary } = await import('@/core/orchestrator')
 await assembleSummary()
 
-console.log(`indexed ${index.indexed}, embedded ${index.embedded}, 2 proposals, 7 alerts, 2 runs, ${taskCount} tasks, ${goalCount} goals, ${txCount} transactions, ${detected.found} subscriptions detected, ${brainCount} notes, ${travelCount} travel rows, ${fitCount} workouts, ${healthCount} health rows, ${mealCount} meal rows, ${ideaCount} ideas, ${homeCount} home rows, ${policyCount} policies, ${coached.proposed} coach proposal`)
+console.log(`indexed ${index.indexed}, embedded ${index.embedded}, 2 proposals, 7 alerts, 2 runs, ${taskCount} tasks, ${goalCount} goals, ${txCount} transactions, ${detected.found} subscriptions detected, ${brainCount} notes, ${travelCount} travel rows, ${fitCount} workouts, ${healthCount} health rows, ${mealCount} meal rows, ${ideaCount} ideas, ${homeCount} home rows, ${policyCount} policies, ${eventCount} events, ${coached.proposed} coach proposal`)
 process.exit(0)

@@ -3,6 +3,7 @@ import { db } from '@/core/db'
 import { encrypt } from '@/core/crypto'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
+import { calendarFor } from './calendar'
 import { nightlyDigest, remind } from './jobs/nightly-digest'
 import InsurancePage from './ui/InsurancePage'
 import { annualCents, type Cadence } from './premium'
@@ -196,6 +197,7 @@ export default defineModule({
    */
   guarded: ['write_policy', 'renew_policy', 'delete_policy'],
   requires: [],
+  calendar: calendarFor,
 
   metrics: {
     annual_premium: {

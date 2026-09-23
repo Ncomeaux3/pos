@@ -4,6 +4,7 @@ import { register } from '@/core/entities'
 import { listMetrics } from '@/core/metrics'
 import { defineModule, defineTool } from '@/core/module-contract'
 import { getModule } from '@/core/modules'
+import { calendarFor } from './calendar'
 import { checkIn, deleteGoal, measuredGoals, patchGoal } from './data'
 import { nightlyDigest, pullMetrics } from './jobs/nightly-digest'
 import GoalsPage from './ui/GoalsPage'
@@ -147,6 +148,7 @@ export default defineModule({
   // nightly metric pull would be unusable behind an approval.
   guarded: ['write', 'delete'],
   requires: [],
+  calendar: calendarFor,
 
   // What Goals contributes to the Weekly Review. A goal that computes itself
   // needs no input, which is what the step says out loud.

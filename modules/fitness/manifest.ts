@@ -4,6 +4,7 @@ import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
 import { toReadings } from '@/integrations/apple_shortcuts/client'
 import { BODY_METRIC_KINDS, toBodyMetrics, toWorkouts } from '@/integrations/health_auto_export/client'
+import { calendarFor } from './calendar'
 import { writeReadings } from './inbound'
 import { coachReview } from './jobs/coach'
 import { syncStrava } from './jobs/sync-strava'
@@ -243,6 +244,7 @@ export default defineModule({
    */
   guarded: ['write_plan'],
   requires: ['strava'],
+  calendar: calendarFor,
 
   metrics: {
     workouts_this_week: {

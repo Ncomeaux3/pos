@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
+import { calendarFor } from './calendar'
 import { completeFinishedTrips, nightlyDigest } from './jobs/nightly-digest'
 import { summarise, type Destination } from './span'
 import TravelPage from './ui/TravelPage'
@@ -463,6 +464,7 @@ export default defineModule({
    */
   guarded: ['write_trip', 'delete_trip', 'merge_trip'],
   requires: [],
+  calendar: calendarFor,
 
   metrics: {
     places_visited: {

@@ -3,6 +3,7 @@ import { db } from '@/core/db'
 import { ownerToday } from '@/core/today'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
+import { calendarFor } from './calendar'
 import { deleteTask, findOrCreateProject, listByGoal, patchProject, patchTask } from './data'
 import { nightlyDigest, rollCounts, rollForward } from './jobs/nightly-digest'
 import { dueLabel, hoursLabel, loadLabel, slipMeta } from './shape'
@@ -205,6 +206,7 @@ export default defineModule({
 
   guarded: ['delete'],
   requires: [],
+  calendar: calendarFor,
 
   // What a goal can point at. Goals never queries the tasks schema; it stores
   // the key and asks the registry for the number.

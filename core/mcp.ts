@@ -1,7 +1,9 @@
 import { z } from 'zod'
 import { getModules } from './modules'
 import { search } from './search'
-import { callTool } from './tools'
+import { callQuery, callTool } from './tools'
+
+const QUERY_INPUT = z.object({ sql: z.string().min(1) })
 
 // What an agent can reach. Every module tool, plus the two core provides, all
 // of it going through callTool so the guard cannot be walked around: an agent
@@ -94,12 +96,11 @@ export function registerTools(server: Registrar): string[] {
       {
         title: `${manifest.nav.label}: query`,
         description: `Read-only SQL against the ${manifest.id} and core schemas. SELECT only, 5s timeout, 500 rows.`,
-        inputSchema: z.object({ sql: z.string().min(1) }),
+        inputSchema: QUERY_INPUT,
       },
       async (input) => {
         try {
-          const result = await callTool(manifest.id, 'query', input, { source: 'agent' })
-          return text(result.status === 'done' ? result.result : result)
+          return text(await callQuery(manifest.id, QUERY_INPUT.parse(input).sql))
         } catch (error) {
           return failure(error)
         }

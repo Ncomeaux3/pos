@@ -71,7 +71,7 @@ test('dashboard shell', async ({ page }) => {
   const mobile = (page.viewportSize()?.width ?? 0) < 768
   await expect(nav.getByRole('link', { name: 'Today' })).toBeVisible()
 
-  // The phone bar holds Today, Tasks, Finance and Browse, and Browse is the
+  // The phone bar holds Today, Tasks, Finance, Calendar and Browse, and Browse is the
   // page where Review lives. What is worth asserting is that Review is
   // reachable, wherever it sits.
   if (mobile) {
@@ -86,7 +86,7 @@ test('dashboard shell', async ({ page }) => {
     await expect(page.getByTestId('dashboard-attention')).toBeVisible()
     await expect(page.getByTestId('dashboard-today')).toBeVisible()
     await expect(page.getByTestId('dashboard-week')).toBeVisible()
-    await expect(page.getByTestId('dashboard-bento').locator(':scope > div:visible')).toHaveCount(12)
+    await expect(page.getByTestId('dashboard-bento').locator(':scope > div:visible')).toHaveCount(13)
   } else {
     // By href: the sidebar prefixes each label with its two character index and
     // appends the pending count, so the accessible name is "RV Review 2", and
@@ -107,6 +107,7 @@ test('dashboard shell', async ({ page }) => {
     expect(labels).toEqual([
       'Today',
       'Tasks',
+      'Calendar',
       'Goals',
       'Skills',
       'Second Brain',
@@ -168,6 +169,7 @@ test('dashboard shell', async ({ page }) => {
       'Finance',
       'Goals',
       'Skills',
+      'Calendar · today',
       'Second Brain',
       'Ideas',
       'Health',
@@ -233,7 +235,8 @@ test('browse lists the rail groups', async ({ page }) => {
   // Plan, Knowledge, Life, Review.
   const lists = page.getByRole('list')
   await expect(lists).toHaveCount(4)
-  await expect(lists.nth(0).getByRole('link')).toHaveCount(3)
+  // Plan: Tasks, Calendar, Goals, Skills.
+  await expect(lists.nth(0).getByRole('link')).toHaveCount(4)
   await expect(lists.nth(2).getByRole('link')).toHaveCount(7)
   await expect(lists.nth(2).getByRole('link', { name: 'Finance' })).toBeVisible()
   // Not in the list: the desktop rail beside it still has its own Today.
@@ -2076,6 +2079,109 @@ test('tasks, a project lends its goal to its tasks, and the plus knows its colum
   const date = drawer.getByLabel('Due date')
   await date.fill('2026-12-24')
   await expect(date).toHaveValue('2026-12-24')
+})
+
+/** YYYY-MM-DD `days` after `iso`, at noon UTC so no zone moves the day. */
+function addIsoDays(iso: string, days: number): string {
+  const d = new Date(`${iso}T12:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+/**
+ * Select a day on the Calendar the way the owner would: month arrows and the
+ * day number on the desktop grid, week arrows and a day pill on the phone.
+ * Relative to the day the page opened on, which is the owner's today, not the
+ * test machine's.
+ */
+async function calendarDay(page: Page, today: string, days: number) {
+  const target = addIsoDays(today, days)
+  const d = new Date(`${target}T12:00:00Z`)
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
+  if (mobile) {
+    const weekOf = (iso: string) => addIsoDays(iso, -new Date(`${iso}T12:00:00Z`).getUTCDay())
+    const weeks = Math.round((Date.parse(weekOf(target)) - Date.parse(weekOf(today))) / (7 * 86_400_000))
+    for (let i = 0; i < weeks; i++) await page.getByRole('button', { name: 'Next week' }).click()
+    const long = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
+    const [weekday, rest] = [long.split(' ')[0], long.split(' ').slice(1).join(' ')]
+    await page.getByRole('button', { name: new RegExp(`^${weekday}, ${rest},`) }).click()
+  } else {
+    const months = (Number(target.slice(0, 4)) - Number(today.slice(0, 4))) * 12 + Number(target.slice(5, 7)) - Number(today.slice(5, 7))
+    for (let i = 0; i < months; i++) await page.getByRole('button', { name: 'Next month' }).click()
+    const mon = d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' })
+    await page.getByRole('button', { name: new RegExp(`^${mon} ${d.getUTCDate()},`) }).click()
+  }
+  await expect(page.locator('section[data-day]')).toHaveAttribute('data-day', target)
+}
+
+test('calendar, every module on its day, a chip that stays off, and an event added and deleted', async ({ page }) => {
+  const action = () =>
+    page.waitForResponse((r) => r.request().method() === 'POST' && 'next-action' in r.request().headers())
+
+  await page.goto('/calendar')
+  await expect(page.getByRole('heading', { name: 'Calendar', exact: true })).toBeVisible()
+  const day = page.locator('section[data-day]')
+  const today = (await day.getAttribute('data-day')) ?? ''
+
+  // Today: the seed's task due today, under its module.
+  await expect(day.getByText('Read DDIA ch. 5, Replication')).toBeVisible()
+  await shoot(page, 'calendar')
+
+  // Twelve days out: a task and an appointment on the same day.
+  await calendarDay(page, today, 12)
+  await expect(day.getByText('Fix the garage door sensor')).toBeVisible()
+  await expect(day.getByText(/Annual physical/)).toBeVisible()
+
+  // The Tokyo trip, as an all-day item on its first day. From a fresh load,
+  // since the helper counts from today.
+  await page.goto('/calendar')
+  await calendarDay(page, today, 54)
+  await expect(day.getByText(/^Tokyo, November, day 1 of \d+$/)).toBeVisible()
+
+  // A chip switched off hides its module, and the server has it after a reload.
+  await page.goto('/calendar')
+  const tasksChip = page.getByRole('group', { name: 'Modules shown' }).getByRole('button', { name: 'Tasks' })
+  const hid = action()
+  await tasksChip.click()
+  await hid
+  await expect(day.getByText('Read DDIA ch. 5, Replication')).toBeHidden()
+  await page.reload()
+  await expect(tasksChip).toHaveAttribute('aria-pressed', 'false')
+  await expect(day.getByText('Read DDIA ch. 5, Replication')).toBeHidden()
+  const shown = action()
+  await tasksChip.click()
+  await shown
+  await expect(day.getByText('Read DDIA ch. 5, Replication')).toBeVisible()
+
+  // An event typed here: the form names a missing title, then Add saves it.
+  await page.getByRole('button', { name: 'New event' }).first().click()
+  const drawer = page.getByRole('dialog', { name: 'New event' })
+  // A new event starts all day; this one is timed.
+  await drawer.getByRole('switch', { name: 'All day' }).click()
+  await drawer.getByLabel('Starts').fill('07:15')
+  await drawer.getByRole('button', { name: 'Add' }).click()
+  await expect(drawer.getByText('Title is required')).toBeVisible()
+  await drawer.getByLabel('Title').fill('E2E standup')
+  const added = action()
+  await drawer.getByLabel('Title').press('Enter')
+  await added
+  await expect(day.getByText('E2E standup')).toBeVisible()
+  // The drawer's param leaves the URL one fetch after the save; a reload
+  // before that would open the drawer again rather than test the row.
+  await expect(page).not.toHaveURL(/event=/)
+  await page.reload()
+  await expect(day.getByText('E2E standup')).toBeVisible()
+
+  // Opening it edits it; Delete removes it for good.
+  await day.getByText('E2E standup').click()
+  const edit = page.getByRole('dialog', { name: 'Edit event' })
+  await expect(edit.getByLabel('Starts')).toHaveValue('07:15')
+  const deleted = action()
+  await edit.getByRole('button', { name: 'Delete' }).click()
+  await deleted
+  await expect(page).not.toHaveURL(/event=/)
+  await page.reload()
+  await expect(day.getByText('E2E standup')).toBeHidden()
 })
 
 test('goals, progress by area with the rule behind each status', async ({ page }) => {
