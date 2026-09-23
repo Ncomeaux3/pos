@@ -70,8 +70,9 @@ export async function seed(): Promise<number> {
   for (const a of ACCOUNTS) {
     const { rows } = await db().query<{ id: string }>(
       `insert into finance.account
-         (name, institution, kind, balance_cents, mask, source, external_id)
-       values ($1, $2, $3, $4, $5, 'demo', $6)
+         (name, institution, kind, in_cash_flow, balance_cents, mask, source, external_id)
+       -- The sync job's default: holdings start out of cash flow.
+       values ($1, $2, $3, $3::text not in ('brokerage', 'retirement', 'crypto', 'other'), $4, $5, 'demo', $6)
        on conflict (source, external_id) do update
          set balance_cents = excluded.balance_cents, name = excluded.name
        returning id`,

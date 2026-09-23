@@ -75,11 +75,14 @@ async function connectionId(): Promise<string | null> {
   return rows[0]?.id ?? null
 }
 
-async function storeAccount(a: Account, connection: string | null): Promise<string> {
+export async function storeAccount(a: Account, connection: string | null): Promise<string> {
   const { rows } = await db().query<{ id: string }>(
     `insert into finance.account
-       (name, institution, kind, balance_cents, mask, connection_id, source, external_id, synced_at)
-     values ($1, $2, $3, $4, $5, $6, 'simplefin', $7, now())
+       (name, institution, kind, in_cash_flow, balance_cents, mask, connection_id, source, external_id, synced_at)
+     -- in_cash_flow from the kind on insert only, as the migration set it, and
+     -- left out of the update below with kind: the owner decides it after that.
+     values ($1, $2, $3, $3::text not in ('brokerage', 'retirement', 'crypto', 'other'),
+             $4, $5, $6, 'simplefin', $7, now())
      on conflict (source, external_id) do update
        set name = excluded.name,
            institution = excluded.institution,

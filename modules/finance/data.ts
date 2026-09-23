@@ -13,6 +13,8 @@ export type AccountRow = {
   balance_cents: string
   mask: string
   archived: boolean
+  /** Whether the cash flow card counts this account's rows. */
+  in_cash_flow: boolean
   /** Balance thirty days ago, for the change column. Null when it was not tracked yet. */
   balance_30d_cents: string | null
   tx_count: string
@@ -27,7 +29,7 @@ export type AccountRow = {
  */
 export async function listAccounts(): Promise<AccountRow[]> {
   const { rows } = await db().query<AccountRow>(
-    `select a.id, a.name, a.institution, a.kind, a.balance_cents::text, a.mask, a.archived,
+    `select a.id, a.name, a.institution, a.kind, a.balance_cents::text, a.mask, a.archived, a.in_cash_flow,
             (select b.balance_cents::text from finance.balance_daily b
               where b.account_id = a.id and b.on_date <= core.today() - 30
               order by b.on_date desc limit 1) as balance_30d_cents,
@@ -280,6 +282,18 @@ export async function getCountPending(): Promise<boolean> {
   return rows[0]?.count_pending ?? false
 }
 
+/**
+ * The listed accounts feed cash flow and every other open one does not, in one
+ * statement. Archived accounts are not in the drawer, so a call cannot speak
+ * for them and they keep what they had.
+ */
+export async function setCashFlowAccounts(ids: string[]): Promise<void> {
+  await db().query(
+    `update finance.account set in_cash_flow = (id = any($1::uuid[])) where not archived`,
+    [ids],
+  )
+}
+
 export async function setCountPending(on: boolean): Promise<void> {
   await db().query(
     `insert into finance.settings (id, count_pending) values (true, $1)
@@ -327,6 +341,11 @@ export type MonthFlow = {
  *
  * Every month of the window comes back, zero or not: a gap drawn as a missing
  * bar and a gap drawn as no bar are different claims about the month.
+ *
+ * Only accounts with `in_cash_flow` count. A brokerage or retirement account's
+ * rows are money moving inside holdings, not money the owner lives on, and the
+ * owner picks which is which in the cash flow drawer. Nothing else here reads
+ * the switch: budgets, the category trend and net worth see every account.
  */
 export async function cashFlowByMonth(months = 6): Promise<MonthFlow[]> {
   const { rows } = await db().query<MonthFlow>(
@@ -342,6 +361,7 @@ export async function cashFlowByMonth(months = 6): Promise<MonthFlow[]> {
               t.amount_cents,
               coalesce(c.kind, case when t.amount_cents < 0 then 'income' else 'expense' end) as kind
          from finance.transaction t
+         join finance.account a on a.id = t.account_id and a.in_cash_flow
          left join finance.category c on c.id = t.category_id
         where (not t.pending or (select count_pending from finance.settings))
      )

@@ -2502,6 +2502,41 @@ test('finance, a card payment is a transfer and a credit nets against its budget
   await shoot(page, 'finance-budget-dining')
 })
 
+// finance-charts phase 1. The card counted every account, so a brokerage buy
+// read as spending; the owner picks which accounts are cash flow here.
+test('finance, the cash flow accounts drawer changes what the card counts', async ({ page }) => {
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
+  await page.goto('/finance')
+  const card = mobile ? page.locator('[data-segments-pane]') : page.getByTestId('finance-cashflow')
+  const head = card.getByText(/Cash flow · 6 months · \d+ of \d+ accounts/).filter({ visible: true })
+  const [, on, total] = (await head.textContent())!.match(/(\d+) of (\d+) accounts/)!.map(Number)
+
+  await card.getByRole('button', { name: 'Cash flow accounts' }).filter({ visible: true }).click()
+  await expect(page).toHaveURL(/cashflow=1/)
+  const drawer = page.getByRole('dialog')
+  await expect(drawer.getByRole('heading', { name: 'Cash flow accounts' })).toBeVisible()
+  await expect(drawer.getByRole('switch')).toHaveCount(total)
+  await expect(drawer.getByText(`${on} of ${total} feed cash flow`)).toBeVisible()
+  await shoot(page, 'finance-cashflow-accounts')
+  await page.waitForLoadState('networkidle')
+
+  // Checking is cash in the seed, so it starts on; turning it off is held
+  // until Done and then drops the head's count by one.
+  const checking = drawer.getByRole('switch', { name: 'Count Checking in cash flow' })
+  await expect(checking).toHaveAttribute('aria-checked', 'true')
+  await checking.click()
+  await expect(drawer.getByText(`${on - 1} of ${total} feed cash flow · 1 unsaved`)).toBeVisible()
+  await drawer.getByRole('button', { name: 'Done' }).click()
+  await expect(page).not.toHaveURL(/cashflow=1/)
+  await expect(card.getByText(`Cash flow · 6 months · ${on - 1} of ${total} accounts`).filter({ visible: true })).toBeVisible()
+
+  // Put it back, so the seed's cash flow reads the same for the next test.
+  await card.getByRole('button', { name: 'Cash flow accounts' }).filter({ visible: true }).click()
+  await page.getByRole('switch', { name: 'Count Checking in cash flow' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click()
+  await expect(card.getByText(`Cash flow · 6 months · ${on} of ${total} accounts`).filter({ visible: true })).toBeVisible()
+})
+
 test('finance, the limits drawer holds edits until Done', async ({ page }) => {
   test.skip((page.viewportSize()?.width ?? 0) < 768, 'desktop drawer')
   await page.goto('/finance')

@@ -1,4 +1,4 @@
-import { CardHead, EmptyState } from '@/components/pos'
+import { ActionButton, CardHead, EmptyState } from '@/components/pos'
 import { cn } from '@/lib/utils'
 import { balance, compactMoney, signedMoney } from '../money'
 
@@ -18,8 +18,30 @@ function monthLabel(iso: string, showYear: boolean): string {
   return showYear ? `${MONTHS[month - 1]} ${String(year).slice(2)}` : MONTHS[month - 1]
 }
 
-export function CashFlow({ months }: { months: MonthFlowPoint[] }) {
+export function CashFlow({
+  months,
+  accounts,
+  onAccounts,
+}: {
+  months: MonthFlowPoint[]
+  /** How many accounts feed the card, so an excluded one is never silent. */
+  accounts: { on: number; total: number }
+  onAccounts: () => void
+}) {
   if (months.length === 0) return null
+
+  const head = (meta: string) => (
+    <div className="mb-1 flex items-start gap-3">
+      <CardHead
+        label={`Cash flow · ${months.length} months · ${accounts.on} of ${accounts.total} accounts`}
+        meta={meta}
+        className="flex-1"
+      />
+      <ActionButton size="sm" onClick={onAccounts} aria-label="Cash flow accounts">
+        Accounts
+      </ActionButton>
+    </div>
+  )
 
   // A fresh install has the axis and nothing on it. Drawing six flat bars at
   // zero would read as six months of no money at all, which is a claim about
@@ -27,7 +49,7 @@ export function CashFlow({ months }: { months: MonthFlowPoint[] }) {
   if (months.every((m) => m.incomeCents === 0 && m.expenseCents === 0)) {
     return (
       <>
-        <CardHead label={`Cash flow · ${months.length} months`} meta="nothing yet" />
+        {head('nothing yet')}
         <EmptyState headline="Nothing to compare" className="mt-3 border-0">
           This fills in as transactions arrive. Income and spending are read from each
           transaction&rsquo;s category: money between your own accounts is on neither side.
@@ -66,11 +88,7 @@ export function CashFlow({ months }: { months: MonthFlowPoint[] }) {
 
   return (
     <div className="flex flex-1 flex-col">
-      <CardHead
-        label={`Cash flow · ${months.length} months`}
-        meta={`${signedMoney(net)} this month`}
-        className="mb-1"
-      />
+      {head(`${signedMoney(net)} this month`)}
 
       <div className="mt-2 grid flex-1 grid-cols-[1fr_56px]">
         <svg
@@ -168,6 +186,10 @@ export function CashFlow({ months }: { months: MonthFlowPoint[] }) {
           Average net <span className={cn('num', avgNet >= 0 ? 'text-ok' : 'text-bad')}>{signedMoney(avgNet)}</span> a month
         </span>
       </div>
+      <p className="mt-2 text-[11px] leading-[1.5] text-ink-3">
+        Money between your own accounts is on neither side. A transfer no rule has filed yet may
+        still show.
+      </p>
     </div>
   )
 }

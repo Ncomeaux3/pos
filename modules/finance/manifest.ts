@@ -3,7 +3,7 @@ import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
 import { MIN_PATTERN_LENGTH, learnable, normalise } from './categorise'
-import { listAccounts, setAlertThreshold, setBudget, setCountPending } from './data'
+import { listAccounts, setAlertThreshold, setBudget, setCashFlowAccounts, setCountPending } from './data'
 import { applyRule, refile, removeRule } from './rules'
 import {
   categoriseNew,
@@ -142,6 +142,16 @@ export default defineModule({
         'Remove a rule and re-file the rows it held, so a row another rule also matches is not orphaned.',
       input: z.object({ id: z.uuid() }),
       run: async ({ id }) => ({ moved: await removeRule(id) }),
+    }),
+
+    set_cash_flow_accounts: defineTool({
+      description:
+        'Which accounts the cash flow card counts: the listed ones on, every other open account off. Archived accounts are left alone.',
+      input: z.object({ account_ids: z.array(z.uuid()) }),
+      run: async ({ account_ids }) => {
+        await setCashFlowAccounts(account_ids)
+        return { on: account_ids.length }
+      },
     }),
 
     set_count_pending: defineTool({

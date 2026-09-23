@@ -152,6 +152,17 @@ emptier than it was. Every month of the window comes back whether it has rows
 or not: a quiet month drawn as a missing bar and one drawn as no bar are
 different claims.
 
+Only accounts with `finance.account.in_cash_flow` count (finance-charts phase
+1). A brokerage buy or a retirement contribution is money moving inside
+holdings, and an uncategorised one read by its sign looked like spending or
+income. The owner sets the switch per account in the Cash flow accounts drawer
+(`?cashflow=1`, tool `set_cash_flow_accounts`); brokerage, retirement, crypto
+and `other` start off, from the migration for existing rows and from the sync
+job and the demo seed on insert, and nothing overwrites it after that. The card
+head says "N of M accounts" so an exclusion is never silent. Only this read
+uses the switch: budgets, the category trend and net worth see every account,
+and `netThisMonthCents` follows because it is `cashFlowByMonth(1)`.
+
 The sign fallback has one known ceiling: an **unfiled** card payment is `+` in
 checking and `-` on the card, so it adds the same amount to both bars. The net
 line and `netThisMonthCents` are unaffected, and the built-in payment rules

@@ -42,6 +42,7 @@ import {
   type BudgetTone,
 } from '../money'
 import { CashFlow, type MonthFlowPoint } from './CashFlow'
+import { CashFlowAccounts } from './CashFlowAccounts'
 import { CategoryTrend, type CategorySeriesPoint } from './CategoryTrend'
 import { RulesDrawer, type RuleItem, type UnfiledItem } from './RulesDrawer'
 import {
@@ -49,6 +50,7 @@ import {
   learnFor,
   recategorise,
   saveBudget,
+  saveCashFlowAccounts,
   saveRule,
   saveCountPending,
   saveThreshold,
@@ -97,6 +99,7 @@ export type FinanceData = {
     sharePercent: number
     txCount: number
     mask: string
+    inCashFlow: boolean
   }[]
   /** Every category, for filing a transaction; budgets are the expense kind only. */
   categories: { id: string; name: string; kind: 'expense' | 'income' | 'transfer' | 'credit' }[]
@@ -300,6 +303,11 @@ export function Finance({ data }: { data: FinanceData }) {
 
   const [, start] = useTransition()
   const toast = useToast()
+  // The same card on both widths, so the head's count and its drawer are shared.
+  const cashFlowAccounts = {
+    accounts: { on: data.accounts.filter((a) => a.inCashFlow).length, total: data.accounts.length },
+    onAccounts: () => setParams({ cashflow: '1' }, { push: true }),
+  }
 
   const run = (action: () => Promise<ActionResult>, ok?: string) =>
     start(async () => {
@@ -426,7 +434,7 @@ export function Finance({ data }: { data: FinanceData }) {
               </Card>
               {data.cashFlow.length > 0 && (
                 <Card className={cn(overviewCard, 'flex min-h-[240px] flex-col')}>
-                  <CashFlow months={data.cashFlow} />
+                  <CashFlow months={data.cashFlow} {...cashFlowAccounts} />
                 </Card>
               )}
               {data.trendCategories.length > 0 && (
@@ -523,7 +531,7 @@ export function Finance({ data }: { data: FinanceData }) {
                     * empty at 1440 while the column beside it ran on. */}
                   {data.cashFlow.length > 0 && (
                     <Card data-testid="finance-cashflow" className={cn(overviewCard, 'flex min-h-[260px] flex-col')}>
-                      <CashFlow months={data.cashFlow} />
+                      <CashFlow months={data.cashFlow} {...cashFlowAccounts} />
                     </Card>
                   )}
 
@@ -993,6 +1001,15 @@ export function Finance({ data }: { data: FinanceData }) {
           onClose={() => setParams({ rules: null })}
           onSave={saveRule}
           onDelete={deleteRule}
+          toast={toast}
+        />
+      )}
+
+      {params.get('cashflow') === '1' && (
+        <CashFlowAccounts
+          accounts={data.accounts}
+          onClose={() => setParams({ cashflow: null })}
+          onSave={saveCashFlowAccounts}
           toast={toast}
         />
       )}
