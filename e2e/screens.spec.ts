@@ -2373,16 +2373,17 @@ test('finance, cash flow, the category trend and the running balance', async ({ 
   // phone reads its Overview pane, the desktop its cards by test id.
   const cashflow = mobile ? page.locator('[data-segments-pane]') : page.getByTestId('finance-cashflow')
 
-  // Six months of bars with the net line over them. The accessible name is the
-  // assertion because it names the window the bars actually cover.
+  // Twelve months of bars with the net line over them, the chart_months
+  // default (finance-charts phase 3). The accessible name is the assertion
+  // because it names the window the bars actually cover.
   await expect(
-    cashflow.getByRole('img', { name: /Income against spending over 6 months/ }),
+    cashflow.getByRole('img', { name: /Income against spending over 12 months/ }),
   ).toBeVisible()
 
   // The trend is twelve months, not twelve days: LineChart counts its points
   // in the unit it was given, and this fails if that prop is dropped.
   const trend = mobile ? page.locator('[data-segments-pane]') : page.getByTestId('finance-trend')
-  const chart = trend.getByRole('img', { name: /over 12 months/ })
+  const chart = trend.getByRole('img', { name: /over 12 months, \d+ of them recorded/ })
   await expect(chart).toBeVisible()
 
   // Switching the select redraws the same chart with another category, with no
@@ -2508,7 +2509,7 @@ test('finance, the cash flow accounts drawer changes what the card counts', asyn
   const mobile = (page.viewportSize()?.width ?? 0) < 768
   await page.goto('/finance')
   const card = mobile ? page.locator('[data-segments-pane]') : page.getByTestId('finance-cashflow')
-  const head = card.getByText(/Cash flow · 6 months · \d+ of \d+ accounts/).filter({ visible: true })
+  const head = card.getByText(/Cash flow · 12 months · \d+ of \d+ accounts/).filter({ visible: true })
   const [, on, total] = (await head.textContent())!.match(/(\d+) of (\d+) accounts/)!.map(Number)
 
   await card.getByRole('button', { name: 'Cash flow accounts' }).filter({ visible: true }).click()
@@ -2528,13 +2529,48 @@ test('finance, the cash flow accounts drawer changes what the card counts', asyn
   await expect(drawer.getByText(`${on - 1} of ${total} feed cash flow · 1 unsaved`)).toBeVisible()
   await drawer.getByRole('button', { name: 'Done' }).click()
   await expect(page).not.toHaveURL(/cashflow=1/)
-  await expect(card.getByText(`Cash flow · 6 months · ${on - 1} of ${total} accounts`).filter({ visible: true })).toBeVisible()
+  await expect(card.getByText(`Cash flow · 12 months · ${on - 1} of ${total} accounts`).filter({ visible: true })).toBeVisible()
 
   // Put it back, so the seed's cash flow reads the same for the next test.
   await card.getByRole('button', { name: 'Cash flow accounts' }).filter({ visible: true }).click()
   await page.getByRole('switch', { name: 'Count Checking in cash flow' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click()
-  await expect(card.getByText(`Cash flow · 6 months · ${on} of ${total} accounts`).filter({ visible: true })).toBeVisible()
+  await expect(card.getByText(`Cash flow · 12 months · ${on} of ${total} accounts`).filter({ visible: true })).toBeVisible()
+})
+
+// finance-charts phase 3. One control narrows both charts, and the choice
+// survives a reload because it is a setting, not URL or component state.
+test('finance, the chart range pill narrows both charts and survives a reload', async ({ page }) => {
+  // The control sits on the tab row wide and above the cash flow card on a
+  // phone; getByRole skips whichever copy the width hides.
+  const mobile = (page.viewportSize()?.width ?? 0) < 768
+  await page.goto('/finance')
+  const range = page.getByRole('radiogroup', { name: 'Chart range' })
+  const cashflow = mobile ? page.locator('[data-segments-pane]') : page.getByTestId('finance-cashflow')
+  const trend = mobile ? page.locator('[data-segments-pane]') : page.getByTestId('finance-trend')
+
+  // The save action's POST, not any request that happens to be in flight.
+  const action = () =>
+    page.waitForResponse((r) => r.request().method() === 'POST' && r.ok() && 'next-action' in r.request().headers())
+
+  try {
+    const saved = action()
+    await range.getByRole('radio', { name: '3m' }).click()
+    await saved
+  await expect(cashflow.getByText(/Cash flow · 3 months/).filter({ visible: true })).toBeVisible()
+    await expect(trend.getByText(/over 3 months/).filter({ visible: true })).toBeVisible()
+
+    await page.reload()
+    await expect(range.getByRole('radio', { name: '3m' })).toHaveAttribute('aria-checked', 'true')
+    await expect(cashflow.getByText(/Cash flow · 3 months/).filter({ visible: true })).toBeVisible()
+    await expect(trend.getByText(/over 3 months/).filter({ visible: true })).toBeVisible()
+  } finally {
+    // Put it back even on a failure: two tests above expect the default.
+    const restored = action()
+    await range.getByRole('radio', { name: '12m' }).click()
+    await restored
+  }
+  await expect(cashflow.getByText(/Cash flow · 12 months/).filter({ visible: true })).toBeVisible()
 })
 
 // finance-charts phase 2. The charts read on a mouse only, and the cash flow

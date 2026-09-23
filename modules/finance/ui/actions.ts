@@ -134,6 +134,16 @@ export async function saveCountPending(on: boolean): Promise<ActionResult> {
   }
 }
 
+export async function saveChartMonths(months: number): Promise<ActionResult> {
+  await requireOwner()
+  try {
+    await callTool('finance', 'set_chart_months', { months }, { source: 'ui' })
+    return done()
+  } catch (error) {
+    return failed(error)
+  }
+}
+
 /** Limits are in dollars on screen and cents in the database. Converted once, here. */
 export async function saveBudget(categoryId: string, limitDollars: number): Promise<ActionResult> {
   await requireOwner()

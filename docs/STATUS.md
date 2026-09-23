@@ -31,7 +31,9 @@ phases from the owner's first day on the phase 5b cash flow card: a per-account
 `in_cash_flow` switch so investments stop reading as income, a readout on hover
 and tap with "Net" renamed "Left over", and a 3/6/12/24 month range saved in
 `finance.settings`). Phase 1 also adds an `Entertainment` expense category
-(#127). 5c is closed; independent of 5d. Not started.
+(#127). 5c is closed; independent of 5d. Phase 1 merged (#130), Phase 2 merged
+(#132), Phase 3 (the range) built 2026-09-23 with its PR open; the plan is
+complete when it merges.
 
 **Queued after v1.2: docs/plans/skills-v2.md** (2026-09-15, six phases from the owner's Skill Tree rewrite in docs/SKILLS.md: the nine-attribute tree, per-event XP snapshots, projects, challenges and achievements, the digest, the screen). Not started.
 

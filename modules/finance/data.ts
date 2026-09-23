@@ -302,6 +302,22 @@ export async function setCountPending(on: boolean): Promise<void> {
   )
 }
 
+/** How many months the cash flow card and the category trend show. Defaults to 12. */
+export async function getChartMonths(): Promise<number> {
+  const { rows } = await db().query<{ chart_months: number }>(
+    `select chart_months from finance.settings where id`,
+  )
+  return rows[0]?.chart_months ?? 12
+}
+
+export async function setChartMonths(months: number): Promise<void> {
+  await db().query(
+    `insert into finance.settings (id, chart_months) values (true, $1)
+     on conflict (id) do update set chart_months = excluded.chart_months`,
+    [months],
+  )
+}
+
 /**
  * What the last bank pull said, per account, for the band. Read from the
  * job's own log row, so the band and the Agent log never disagree.
