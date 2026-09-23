@@ -31,6 +31,7 @@ Owner: Nick. Solo, nights and weekends. Finish one module before starting the ne
 - Plan mode for anything touching more than one file or a migration. Write the plan to docs/plans/<name>.md, get approval, then a fresh session implements it.
 - Write the test before the feature for classification rules, recurring detection, and XP calculation.
 - Show evidence of verification (test output, command result), not a claim that it works.
+- An e2e test that toggles a persisted setting waits for the action's POST and asserts the restored state after a reload; an optimistic button flip is not proof the write landed.
 - Commit after each completed step with a descriptive message. Log any decision to decisions/log.md.
 - When compacting, preserve the list of modified files, open questions, and the test command.
 - A red CI check is a merge gate: never merge a PR while any check is red, and say so if asked to. Branch protection on main requires `check`, `screens` and `migrations` green and binds admins too (set 2026-09-15 in v1.1 phase 12), so GitHub refuses the merge as well.

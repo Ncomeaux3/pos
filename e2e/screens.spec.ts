@@ -1470,10 +1470,19 @@ test('notifications, a rule expanded', async ({ page }) => {
   // The snoozed note spells out the day count ("7 days"), not the state
   // chip's compact "7D". Snoozing and then muting/unmuting clears the snooze
   // again, so the rule is back to ON for later tests and the shot below.
-  await page.getByRole('button', { name: '7d' }).click()
-  await expect(page.getByText('Snoozed for 7 days, then back on.')).toBeVisible()
-  await page.getByRole('button', { name: 'Mute' }).click()
-  await page.getByRole('button', { name: 'Unmute' }).click()
+  // Each click waits for its action, as pause all does: the buttons flip
+  // before the write lands, and shoot() reloads straight after.
+  const action = () =>
+    page.waitForResponse((r) => r.request().method() === 'POST' && 'next-action' in r.request().headers())
+  for (const name of ['7d', 'Mute', 'Unmute']) {
+    const saved = action()
+    await page.getByRole('button', { name }).click()
+    await saved
+    if (name === '7d') await expect(page.getByText('Snoozed for 7 days, then back on.')).toBeVisible()
+  }
+  // From the server, not the optimistic flip.
+  await page.reload()
+  await page.getByText('Policy renewal').first().click()
   await expect(page.getByText('Active. 3 channels.')).toBeVisible()
 
   await shoot(page, 'notifications-rule')
