@@ -201,6 +201,24 @@ describe('cashFlowByMonth', () => {
     expect(flow.map((m) => m.month.slice(8))).toEqual(['01', '01', '01'])
     expect(flow.every((m) => Number(m.income_cents) === 0 && Number(m.expense_cents) === 0)).toBe(true)
   })
+
+  // finance-charts phase 3. The range control asks for any of 3, 6, 12 or 24.
+  it('runs to 24 consecutive months ending at the current one, empty months included', async () => {
+    const flow = await cashFlowByMonth(24)
+    expect(flow).toHaveLength(24)
+    expect(flow.every((m) => Number(m.income_cents) === 0 && Number(m.expense_cents) === 0)).toBe(true)
+
+    const months = flow.map((m) => m.month)
+    for (let i = 1; i < months.length; i++) {
+      const prev = new Date(`${months[i - 1]}T00:00:00Z`)
+      prev.setUTCMonth(prev.getUTCMonth() + 1)
+      expect(months[i]).toBe(prev.toISOString().slice(0, 10))
+    }
+    // The database's today, not the test runner's: the spine is built on
+    // core.today(), and the UTC month differs from it for hours at each turn.
+    const { rows } = await db().query<{ month: string }>(`select to_char(core.today(), 'YYYY-MM') as month`)
+    expect(months[months.length - 1].slice(0, 7)).toBe(rows[0].month)
+  })
 })
 
 describe('dueSoon', () => {

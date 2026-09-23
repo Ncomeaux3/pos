@@ -4,6 +4,7 @@ process.env.DATABASE_URL ??= 'postgresql://postgres:postgres@127.0.0.1:54322/pos
 
 const { db } = await import('@/core/db')
 const { default: manifest } = await import('./manifest')
+const { getChartMonths, setChartMonths } = await import('./data')
 
 // v1.2 phase 5c. Editing a rule is an insert and a delete, because
 // (pattern, category_id) is unique. The order of those two is the whole of
@@ -173,5 +174,28 @@ describe('finance.set_cash_flow_accounts', () => {
 
   it('refuses an id that is not a uuid', () => {
     expect(manifest.tools.set_cash_flow_accounts.input.safeParse({ account_ids: ['nope'] }).success).toBe(false)
+  })
+})
+
+describe('finance.set_chart_months', () => {
+  it('refuses anything outside 3, 6, 12 or 24 and accepts the set', () => {
+    const parse = (months: unknown) => manifest.tools.set_chart_months.input.safeParse({ months }).success
+    expect(parse(1)).toBe(false)
+    expect(parse(5)).toBe(false)
+    expect(parse(36)).toBe(false)
+    expect(parse(3)).toBe(true)
+    expect(parse(6)).toBe(true)
+    expect(parse(12)).toBe(true)
+    expect(parse(24)).toBe(true)
+  })
+
+  it('stores the value it is given', async () => {
+    const before = await getChartMonths()
+    try {
+      await manifest.tools.set_chart_months.run({ months: 24 }, { source: 'ui' })
+      expect(await getChartMonths()).toBe(24)
+    } finally {
+      await setChartMonths(before)
+    }
   })
 })

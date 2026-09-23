@@ -5,8 +5,8 @@ import { useScrub } from '@/components/pos/LineChart'
 import { cn } from '@/lib/utils'
 import { balance, compactMoney, flowReadout, signedMoney } from '../money'
 
-// Six months of income against spending, with what was left over drawn across
-// them. Hand rolled SVG in its own file rather than a primitive in charts.tsx:
+// A window of months of income against spending, with what was left over
+// drawn across them. Hand rolled SVG in its own file rather than a primitive in charts.tsx:
 // there is one caller, and a bar chart with a line over it is the only shape
 // this screen needs. The month labels sit outside the SVG so they are not
 // stretched by preserveAspectRatio.
@@ -15,7 +15,7 @@ export type MonthFlowPoint = { month: string; incomeCents: number; expenseCents:
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-/** "Sep", and "Sep 25" in January so a year's turn is not two identical labels. */
+/** "Sep", and "Sep 25" on the first label of a year so its turn is not two identical labels. */
 function monthLabel(iso: string, showYear: boolean): string {
   const [year, month] = iso.split('-').map(Number)
   return showYear ? `${MONTHS[month - 1]} ${String(year).slice(2)}` : MONTHS[month - 1]
@@ -91,6 +91,10 @@ export function CashFlow({
   const net = thisMonth.incomeCents - thisMonth.expenseCents
   const avgNet = Math.round(nets.reduce((sum, n) => sum + n, 0) / nets.length)
   const read = hover === null ? null : flowReadout(months[hover])
+  // Every step-th month is labelled, six labels at most at every width: the
+  // card is half the page wide on a desktop, so the viewport says nothing
+  // about how many fit.
+  const step = Math.ceil(months.length / 6)
 
   // Where zero sits, as a share of the plot from the top. When every month
   // left something over the floor is zero and the bottom tick already says
@@ -209,12 +213,19 @@ export function CashFlow({
           className="grid text-center text-[11px] text-ink-3"
           style={{ gridTemplateColumns: `repeat(${months.length}, minmax(0, 1fr))` }}
         >
+          {/* Every month keeps its column, and a thinned one is invisible rather
+            * than hidden: display none took it out of the grid and the rest slid
+            * left under the wrong bars. Counted from the first so it carries the
+            * year. Flex centring lets a label wider than its column overflow
+            * both sides evenly instead of running off to the right. */}
           {months.map((m, i) => (
             <span
               key={m.month}
-              className={cn('num', months.length > 6 && i % 2 === 1 && 'hidden sm:inline')}
+              className={cn('num flex justify-center whitespace-nowrap', i % step !== 0 && 'invisible')}
             >
-              {monthLabel(m.month, m.month.endsWith('-01-01') || i === 0)}
+              {/* The year on the first label of each year, which is January
+                * only when January is not thinned out. */}
+              {monthLabel(m.month, i === 0 || m.month.slice(0, 4) !== months[i - step]?.month.slice(0, 4))}
             </span>
           ))}
         </div>

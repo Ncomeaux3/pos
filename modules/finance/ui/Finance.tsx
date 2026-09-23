@@ -51,6 +51,7 @@ import {
   recategorise,
   saveBudget,
   saveCashFlowAccounts,
+  saveChartMonths,
   saveRule,
   saveCountPending,
   saveThreshold,
@@ -76,6 +77,8 @@ export type FinanceData = {
   alertThreshold: number
   /** The Finance setting: pending charges count toward a budget before they post. */
   countPending: boolean
+  /** The Finance setting: how many months the cash flow card and the category trend show. */
+  chartMonths: number
   /** The integration's label, for the drawer's "Synced nightly from SimpleFIN". */
   provider: string | null
   monthPace: number
@@ -328,6 +331,30 @@ export function Finance({ data }: { data: FinanceData }) {
       })
     })
 
+  // Optimistic: the pill moves before the round trip both series need, since
+  // they are server reads, and moves back if the save fails.
+  const [chartMonths, setChartMonths] = useState(data.chartMonths)
+
+  // One control over both month charts, rendered where each width reads them:
+  // on the tab row wide, above the cash flow card on a phone.
+  const range = (
+    <PillGroup
+      label="Chart range"
+      value={String(chartMonths)}
+      onChange={async (next) => {
+        const before = chartMonths
+        setChartMonths(Number(next))
+        if (!(await runFor(() => saveChartMonths(Number(next)))).ok) setChartMonths(before)
+      }}
+      options={[
+        { value: '3', label: '3m' },
+        { value: '6', label: '6m' },
+        { value: '12', label: '12m' },
+        { value: '24', label: '24m' },
+      ]}
+    />
+  )
+
   // A cancelled subscription leaves the Upcoming list and its KPI count the
   // moment Cancel is pressed, same shape as Inbox.tsx's act(): optimistic,
   // reverted with a toast on failure.
@@ -411,6 +438,7 @@ export function Finance({ data }: { data: FinanceData }) {
         <Segments
           label="Finance views"
           value={tab}
+          end={tab === 'overview' && <div className="ml-auto hidden md:block">{range}</div>}
           onChange={(next) => setParams({ tab: next === 'overview' ? null : next }, { local: true })}
           tabs={TABS.map((t) => ({
             value: t.value,
@@ -433,9 +461,12 @@ export function Finance({ data }: { data: FinanceData }) {
                 <NetWorthCard data={data} />
               </Card>
               {data.cashFlow.length > 0 && (
-                <Card className={cn(overviewCard, 'flex min-h-[240px] flex-col')}>
-                  <CashFlow months={data.cashFlow} {...cashFlowAccounts} />
-                </Card>
+                <>
+                  <div className="flex justify-end">{range}</div>
+                  <Card className={cn(overviewCard, 'flex min-h-[240px] flex-col')}>
+                    <CashFlow months={data.cashFlow} {...cashFlowAccounts} />
+                  </Card>
+                </>
               )}
               {data.trendCategories.length > 0 && (
                 <Card className={cn(overviewCard, 'flex min-h-[280px] flex-col')}>

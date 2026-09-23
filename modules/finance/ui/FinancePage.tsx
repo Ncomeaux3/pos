@@ -8,6 +8,7 @@ import {
   categorySpend,
   dueSoon,
   getAlertThreshold,
+  getChartMonths,
   getCountPending,
   lastPullDetail,
   listAccounts,
@@ -33,6 +34,9 @@ function bandDate(iso: string): string {
 }
 
 export default async function FinancePage() {
+  // Both series take the window as an argument, so they chain on this one read
+  // inside the batch rather than waiting for it ahead of everything else.
+  const months = getChartMonths()
   const [
     accounts,
     series,
@@ -53,14 +57,15 @@ export default async function FinancePage() {
     countPending,
     lastPull,
     settings,
+    chartMonths,
   ] = await Promise.all([
     listAccounts(),
     netWorthSeries(30),
     categorySpend(),
     listCategories(),
     dueSoon(14),
-    cashFlowByMonth(6),
-    categorySeries(12),
+    months.then(cashFlowByMonth),
+    months.then(categorySeries),
     listTransactions({ limit: 60 }),
     // This month in full, because a budget drawer lists the rows behind its
     // Spent figure and that figure is a month-to-date sum. Filtering the 60
@@ -84,6 +89,7 @@ export default async function FinancePage() {
     getCountPending(),
     lastPullDetail(),
     getSettings(),
+    months,
   ])
 
   const netWorth = accounts.reduce((sum, a) => sum + Number(a.balance_cents), 0)
@@ -104,6 +110,7 @@ export default async function FinancePage() {
     todayIso,
     alertThreshold,
     countPending,
+    chartMonths,
     provider: sync.provider,
     monthPace: monthPace(todayIso),
     netWorthCents: netWorth,

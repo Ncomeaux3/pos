@@ -143,7 +143,7 @@ credit" is the plain signed sum. A pending row waits until it posts unless
 
 ### The overview's three reads
 
-`cashFlowByMonth(6)` puts the kinds to work: income is the `income` kind with
+`cashFlowByMonth(chart_months)` puts the kinds to work: income is the `income` kind with
 its sign flipped, spending is `expense` plus `credit` (a credit is a negative
 row, so that sum is already expense minus credit), and a transfer is on neither
 side. A row with no category yet is read by its sign, because that is what the
@@ -195,9 +195,16 @@ charge has to re-run it over what is left, and a number computed on the server
 would be stale in every row below the cancelled one. It is a projection and
 not a forecast, because nothing here knows about pay days.
 
-`categorySeries(12)` returns every expense category at once, about two hundred
-numbers, so the trend card's select is a re-render rather than a round trip.
-Categories with nothing in the whole window are dropped.
+`categorySeries(chart_months)` returns every expense category at once, about
+two hundred numbers at 12 months, so the trend card's select is a re-render
+rather than a round trip. Categories with nothing in the whole window are
+dropped.
+
+Both reads take `finance.settings.chart_months` (finance-charts phase 3), 3, 6,
+12 or 24, default 12, set from the Chart range pills in the Finance band
+through tool `set_chart_months`; the column's own check makes a value outside
+that set impossible to store. Net worth keeps its own 30 day daily line and
+does not read the setting: it answers a different question.
 
 ## Guarded, and what is not
 

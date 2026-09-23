@@ -26,8 +26,8 @@ Two that bear on this plan in particular:
 | Phase | Goal | Complexity | Depends on | Status | PR |
 |---|---|---|---|---|---|
 | 1 Cash flow accounts | The owner picks which accounts are cash flow; investments stop reading as income | medium | 5c | Done 2026-09-22 | #130 |
-| 2 Chart readouts | Point or tap any chart and read the number; "Net" becomes "Left over" | medium | 1 | Built 2026-09-22, PR open | |
-| 3 Time range | One 3/6/12/24 month control in the Finance band, saved | low | 2 | Not started | |
+| 2 Chart readouts | Point or tap any chart and read the number; "Net" becomes "Left over" | medium | 1 | Done 2026-09-22 | #132 |
+| 3 Time range | One 3/6/12/24 month control in the Finance band, saved | low | 2 | Built 2026-09-23, PR open; the control sits on the tab row wide and above cash flow on a phone, and the cash flow month labels thin by column, six at most | |
 
 Order matters: Phase 1 is the one that fixes a wrong number, so it ships first. Phase 2 makes the corrected chart readable. Phase 3 changes the window over both. They are not parallel-safe: all three touch `modules/finance/ui/Finance.tsx` and two touch `CashFlow.tsx`.
 
@@ -72,16 +72,16 @@ Exit: standard; no migration. ui-verifier confirms the readout does not clip at 
 Goal: one control changes the window on both Finance charts, and it is still there tomorrow.
 Complexity: low. Files: migration `finance_chart_months`, `modules/finance/data.ts`, `modules/finance/manifest.ts`, `modules/finance/ui/FinancePage.tsx`, `modules/finance/ui/Finance.tsx`, `modules/finance/ui/actions.ts`, `modules/finance/README.md`.
 
-- [ ] Migration `finance_chart_months`: `finance.settings` gains `chart_months int not null default 12 check (chart_months in (3, 6, 12, 24))`. The check is the allowed set, so an out-of-range value cannot be stored by any path.
-- [ ] Tool `set_chart_months`, unguarded, input `{ months: 3 | 6 | 12 | 24 }`.
-- [ ] `FinancePage` reads `chart_months` and passes it to `cashFlowByMonth` and `categorySeries`. Both already take a month count; neither needs a new shape.
-- [ ] A `PillGroup` in the Finance page band, labelled, four pills. It writes through a server action and `revalidatePath`, the shape `saveCountPending` already uses. A round trip is unavoidable because both series are server reads.
-- [ ] Phone: the band already carries Sync; the range gets its own row rather than competing for that one. Verified at 402, not assumed.
-- [ ] Both card heads say the window they are showing, so a screenshot is self-describing.
-- [ ] Net worth keeps its own 30-day daily line and is not wired to this control. It answers a different question and its `spine()` is built on days.
-- [ ] The category trend drops from a hardcoded 12 to the setting. Its "every category at once" read (v1.2 phase 5b decision) still holds at 24 months: about 20 categories by 24 months is 480 numbers, one read.
-- [ ] Tests: the tool refuses a value outside the set; `cashFlowByMonth(24)` returns 24 months of spine including empty ones.
-- [ ] e2e: choosing 3m narrows both cards and the choice survives a reload.
+- [x] Migration `finance_chart_months`: `finance.settings` gains `chart_months int not null default 12 check (chart_months in (3, 6, 12, 24))`. The check is the allowed set, so an out-of-range value cannot be stored by any path.
+- [x] Tool `set_chart_months`, unguarded, input `{ months: 3 | 6 | 12 | 24 }`.
+- [x] `FinancePage` reads `chart_months` and passes it to `cashFlowByMonth` and `categorySeries`. Both already take a month count; neither needs a new shape.
+- [x] A `PillGroup` in the Finance page band, labelled, four pills. Built on the tab row wide and above the cash flow card on a phone, since the charts live only on Overview and the header band is server rendered and holds Sync; see decisions/log.md 2026-09-22. It writes through a server action and `revalidatePath`, the shape `saveCountPending` already uses. A round trip is unavoidable because both series are server reads.
+- [x] Phone: the band already carries Sync; the range gets its own row rather than competing for that one. Verified at 402, not assumed.
+- [x] Both card heads say the window they are showing, so a screenshot is self-describing.
+- [x] Net worth keeps its own 30-day daily line and is not wired to this control. It answers a different question and its `spine()` is built on days.
+- [x] The category trend drops from a hardcoded 12 to the setting. Its "every category at once" read (v1.2 phase 5b decision) still holds at 24 months: about 20 categories by 24 months is 480 numbers, one read.
+- [x] Tests: the tool refuses a value outside the set; `cashFlowByMonth(24)` returns 24 months of spine including empty ones.
+- [x] e2e: choosing 3m narrows both cards and the choice survives a reload.
 
 Exit: standard; migration pushed (`db push: done`).
 

@@ -3,7 +3,14 @@ import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
 import { MIN_PATTERN_LENGTH, learnable, normalise } from './categorise'
-import { listAccounts, setAlertThreshold, setBudget, setCashFlowAccounts, setCountPending } from './data'
+import {
+  listAccounts,
+  setAlertThreshold,
+  setBudget,
+  setCashFlowAccounts,
+  setChartMonths,
+  setCountPending,
+} from './data'
 import { applyRule, refile, removeRule } from './rules'
 import {
   categoriseNew,
@@ -160,6 +167,16 @@ export default defineModule({
       run: async ({ on }) => {
         await setCountPending(on)
         return { on }
+      },
+    }),
+
+    set_chart_months: defineTool({
+      description:
+        'How many months the cash flow card and the category trend show: 3, 6, 12 or 24.',
+      input: z.object({ months: z.union([z.literal(3), z.literal(6), z.literal(12), z.literal(24)]) }),
+      run: async ({ months }) => {
+        await setChartMonths(months)
+        return { months }
       },
     }),
 
