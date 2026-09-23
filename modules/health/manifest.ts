@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
+import { calendarFor } from './calendar'
 import { nightlyDigest } from './jobs/nightly-digest'
 import HealthPage from './ui/HealthPage'
 import { HealthTile } from './ui/Tile'
@@ -240,6 +241,7 @@ export default defineModule({
    */
   guarded: ['write_appointment'],
   requires: [],
+  calendar: calendarFor,
 
   metrics: {
     screenings_due: {

@@ -14,6 +14,7 @@ export { NAV_GROUPS, type NavGroup, type NavItem } from './nav-groups'
  */
 const RAIL: [string, NavGroup][] = [
   ['tasks', 'plan'],
+  ['calendar', 'plan'],
   ['goals', 'plan'],
   ['skills', 'plan'],
   ['brain', 'knowledge'],

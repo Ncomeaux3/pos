@@ -15,6 +15,7 @@ import { Onboarding, type SetupData } from './Onboarding'
 const MODULE_NOTES: Record<string, string> = {
   finance: 'Net worth, budgets, subscriptions',
   tasks: 'Six views over one list, plus a month grid',
+  calendar: 'Everything dated, from every module, by day',
   goals: 'Progress against a deadline, by life area',
   skills: 'XP from every event, across the tree',
   brain: 'Notes, links and drafts, with search',

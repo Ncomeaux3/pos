@@ -48,6 +48,32 @@ export type ModuleJob = {
   run: () => Promise<unknown>
 }
 
+/**
+ * One dated thing a module shows on the Calendar.
+ *
+ * `startsAt` is YYYY-MM-DD for an all-day item and YYYY-MM-DDTHH:MM in the
+ * owner's zone for a timed one; the day is always its first ten characters.
+ */
+export type CalendarItem = {
+  /** Unique within the module for the range; a projected repeat adds its date. */
+  id: string
+  module: string
+  title: string
+  /** One grey line under the title: a location, an amount. */
+  meta?: string
+  startsAt: string
+  endsAt?: string
+  allDay: boolean
+  href: string
+  /** What sort of row it is inside its module: 'task', 'trip', 'charge'. */
+  kind: string
+  /** Already happened: a done task, a logged workout. Drawn muted. */
+  done?: boolean
+  /** Walked forward from a cadence, not a stored row. Drawn muted. */
+  projected?: boolean
+  entityRef?: string
+}
+
 /** One row another module keeps about an entity: a task on a goal. */
 export type LinkedItem = { title: string; meta: string; done: boolean; href?: string }
 
@@ -108,6 +134,12 @@ export type ModuleManifest = {
    * erroring.
    */
   metrics?: Record<string, { label: string; unit: string; get: () => Promise<number> }>
+  /**
+   * This module's dated rows between two days, inclusive, both YYYY-MM-DD.
+   * The Calendar asks every module and draws what comes back; it reads no
+   * module schema, the same split as `review` and `linked`.
+   */
+  calendar?: (range: { from: string; to: string }) => Promise<CalendarItem[]>
 
   /**
    * The module's own dashboard tile, rendered from its own digest payload.

@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
+import { calendarFor } from './calendar'
 import { listServices, ownerToday, toSchedule } from './data'
 import { nightlyDigest } from './jobs/nightly-digest'
 import HomePage from './ui/HomePage'
@@ -203,6 +204,7 @@ export default defineModule({
    */
   guarded: ['write_asset'],
   requires: [],
+  calendar: calendarFor,
 
   metrics: {
     upkeep_next_year: {

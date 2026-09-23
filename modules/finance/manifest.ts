@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { db } from '@/core/db'
 import { register } from '@/core/entities'
 import { defineModule, defineTool } from '@/core/module-contract'
+import { calendarFor } from './calendar'
 import { MIN_PATTERN_LENGTH, learnable, normalise } from './categorise'
 import {
   listAccounts,
@@ -282,6 +283,7 @@ export default defineModule({
    */
   guarded: ['set_budget', 'set_alert_threshold', 'write_subscription'],
   requires: ['simplefin'],
+  calendar: calendarFor,
 
   /** The module says how its own numbers read. See ModuleManifest.tile. */
   // What Finance puts on the week ahead: the charges it has detected, dated.

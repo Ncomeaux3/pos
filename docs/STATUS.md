@@ -32,8 +32,7 @@ phases from the owner's first day on the phase 5b cash flow card: a per-account
 and tap with "Net" renamed "Left over", and a 3/6/12/24 month range saved in
 `finance.settings`). Phase 1 also adds an `Entertainment` expense category
 (#127). 5c is closed; independent of 5d. Phase 1 merged (#130), Phase 2 merged
-(#132), Phase 3 (the range) built 2026-09-23 with its PR open; the plan is
-complete when it merges.
+(#132), Phase 3 (the range) merged (#134); the plan is complete.
 
 **Queued after v1.2: docs/plans/skills-v2.md** (2026-09-15, six phases from the owner's Skill Tree rewrite in docs/SKILLS.md: the nine-attribute tree, per-event XP snapshots, projects, challenges and achievements, the digest, the screen). Not started.
 
@@ -47,7 +46,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-22 (v1.2 phase 5c closed at 3 uncategorised rows; #126 and #128 merged; 5d deferred). Production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-23 (v1.2 phase 6a, the Calendar module, built with its PR open; finance-charts complete with #134). Production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -71,7 +70,14 @@ against the Vercel domain. Laptop notes: `.env` has no VAPID pair, so `pnpm setu
 and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
-## Next: finance-charts Phase 1
+## Next: v1.2 Phase 6b, recurring tasks
+
+Phase 6a (the Calendar module) is built with its PR open; 6b depends on it.
+6b puts the repeat rule on a task and draws projected instances through the
+shared `components/pos/MonthGrid.tsx` and the tasks `calendar` seam that 6a
+added. Earlier, and kept for its record:
+
+### finance-charts Phase 1 (done)
 
 **5c is closed.** The owner filed the Unfiled list by hand on 2026-09-22. What
 is left uncategorised is 3 rows, all AMC Theatres, held for the Entertainment
@@ -125,6 +131,21 @@ below it the merchant is listed unfiled, and peer descriptors never leave the
 machine.
 
 ## Done
+
+**v1.2 Phase 6a: Calendar module** (2026-09-23, branch `phase-6a-calendar`).
+One calendar of everything dated in POS. A `calendar(range)` seam on the
+manifest, answered by nine modules from their own `calendar.ts` with a test
+each (42 tests): task due dates, goal deadlines, every day of a trip and its
+itinerary items, policy expiries, Home services and Finance recurring charges
+projected forward by interval or cadence, appointments and refills, meal plan
+entries and logged workouts. `core/calendar-registry.ts` composes them and
+leaves out, with a row in the Errors tab, any module that throws. The module's
+own schema holds typed events (`calendar.event`, ready for the Google and
+iCloud feeds of 7a and 7b) and the chips the owner switched off
+(`calendar.settings`). The Tasks month grid became `components/pos/MonthGrid.tsx`
+and both screens draw it; the phone gets a week strip of day pills. Eleven
+owner answers from a three-round interview are in decisions/log.md under
+2026-09-23.
 
 **v1.2 Phase 5b: Finance, three new views** (2026-09-22, branch
 `phase-5b-finance-views`). The corner under the accounts table was empty at
