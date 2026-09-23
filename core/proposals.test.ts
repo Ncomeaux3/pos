@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
 import { approve, countPending, dismiss, listProposals, propose, reopen } from './proposals'
 import { setSetting } from './settings'
-import { callTool } from './tools'
+import { callQuery, callTool } from './tools'
 
 // Against the real database and the real ideas module, because the thing worth
 // proving is that a guarded agent call does not reach ideas.idea.
@@ -158,29 +158,23 @@ describe('deciding', () => {
 
 describe('the core query tool', () => {
   it('is available on a module that never defined one', async () => {
-    const result = await callTool(
-      'ideas',
-      'query',
-      { sql: 'select count(*)::int as n from ideas.idea' },
-      { source: 'agent' },
-    )
-
-    expect(result.status).toBe('done')
-    expect(result).toMatchObject({ result: [{ n: 0 }] })
+    expect(await callQuery('ideas', 'select count(*)::int as n from ideas.idea')).toEqual([{ n: 0 }])
   })
 
   it('is never guarded, because there is nothing to approve about a select', async () => {
     await setSetting('agent_autonomy', 'observe')
 
-    const result = await callTool('ideas', 'query', { sql: 'select 1 as n' }, { source: 'agent' })
-
-    expect(result.status).toBe('done')
+    expect(await callQuery('ideas', 'select 1 as n')).toEqual([{ n: 1 }])
     expect(await countPending()).toBe(0)
   })
 
   it('refuses a write dressed as a query', async () => {
+    await expect(callQuery('ideas', 'delete from ideas.idea')).rejects.toThrow(/delete/i)
+  })
+
+  it('is not reachable through callTool, which every server action uses', async () => {
     await expect(
-      callTool('ideas', 'query', { sql: 'delete from ideas.idea' }, { source: 'agent' }),
-    ).rejects.toThrow(/delete/i)
+      callTool('ideas', 'query', { sql: 'select 1 as n' }, { source: 'ui' }),
+    ).rejects.toThrow(/callQuery/)
   })
 })

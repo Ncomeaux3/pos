@@ -92,6 +92,24 @@ export type CallResult =
  * over HTTP. A module tool is never reachable by an agent any other way, which
  * is what makes the guard a guarantee rather than a convention.
  */
+/**
+ * The `<module>.query` tool: read-only SQL from an agent.
+ *
+ * Implemented once in core and exposed on every module over MCP, so a module
+ * author never writes one. It reads as pos_readonly and is never guarded:
+ * there is nothing to approve about a select. Kept apart from callTool so no
+ * server action can reach it; the MCP route is its one caller.
+ */
+export async function callQuery(moduleId: string, sql: string): Promise<unknown[]> {
+  if (!getModule(moduleId)) throw new Error(`No module ${moduleId}`)
+  // Scoped to this module plus core. pos_readonly can read every module
+  // schema, so without this `notes.query` would return the bank rows.
+  const others = getModules()
+    .map((m) => m.id)
+    .filter((id) => id !== moduleId)
+  return runQuery(sql, { forbiddenSchemas: others })
+}
+
 export async function callTool(
   moduleId: string,
   toolName: string,
@@ -125,19 +143,10 @@ export async function callTool(
   const manifest = getModule(moduleId)
   if (!manifest) throw new Error(`No module ${moduleId}`)
 
-  // `query` is implemented once in core and exposed on every module, so a
-  // module author never writes one. It reads as pos_readonly and is never
-  // guarded: there is nothing to approve about a select.
-  if (toolName === 'query') {
-    const sql = (input as { sql?: unknown })?.sql
-    if (typeof sql !== 'string') throw new Error('query takes { sql: string }')
-    // Scoped to this module plus core. pos_readonly can read every module
-    // schema, so without this `notes.query` would return the bank rows.
-    const others = getModules()
-      .map((m) => m.id)
-      .filter((id) => id !== moduleId)
-    return { status: 'done', result: await runQuery(sql, { forbiddenSchemas: others }) }
-  }
+  // `query` has its own entry point, callQuery. Every server action goes
+  // through callTool, so SQL reachable from here was reachable from any
+  // screen's form, and nothing but a string comparison stood in between.
+  if (toolName === 'query') throw new Error(`${moduleId}.query goes through callQuery, not callTool`)
 
   const tool = manifest.tools[toolName]
   if (!tool) throw new Error(`No tool ${moduleId}.${toolName}`)
