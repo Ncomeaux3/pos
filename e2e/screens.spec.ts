@@ -871,6 +871,11 @@ test('settings, connections', async ({ page }) => {
     'href',
     '/api/integrations/google/oauth/start',
   )
+  // The two Apple routes (v1.2 phase 7b): a calendar URL to paste, and a
+  // webhook for the Reminders Shortcut to post to.
+  await expect(page.getByText('iCloud and other calendars', { exact: true })).toBeVisible()
+  await expect(page.getByPlaceholder('webcal://p01-calendars.icloud.com/published/2/...')).toBeVisible()
+  await expect(page.getByText('Apple Reminders', { exact: true })).toBeVisible()
   await shoot(page, 'connections')
 })
 
@@ -2221,6 +2226,15 @@ test('calendar, every module on its day, a chip that stays off, and an event add
   await page.goto('/calendar')
   await calendarDay(page, today, 54)
   await expect(day.getByText(/^Tokyo, November, day 1 of \d+$/)).toBeVisible()
+
+  // A subscribed calendar's event (v1.2 phase 7b): on its day, and read only,
+  // so clicking it opens no editor and the next pull's rows stay the feed's.
+  await page.goto('/calendar')
+  await calendarDay(page, today, 6)
+  await expect(day.getByText('School play')).toBeVisible()
+  await day.getByText('School play').click()
+  await expect(page.getByRole('dialog')).toBeHidden()
+  await expect(page).not.toHaveURL(/event=/)
 
   // A chip switched off hides its module, and the server has it after a reload.
   await page.goto('/calendar')
@@ -3777,6 +3791,41 @@ test('health, a weight posted to the Apple webhook shows on the page', async ({ 
     await page.goto('/fitness')
     await expect(page.getByText(/Apple data last arrived \d{2}:\d{2}/)).toBeVisible()
   }
+})
+
+test('tasks, a reminder posted to the Apple webhook becomes a task in its list', async ({ page }) => {
+  // The card is where the owner enables the webhook and reads the secret to
+  // paste into the Shortcut, so the test starts there rather than in the seed.
+  await page.goto('/settings/connections')
+  const card = page
+    .locator('div.glass')
+    .filter({ has: page.getByText('Apple Reminders', { exact: true }) })
+    .first()
+  if (await card.getByRole('button', { name: 'Enable webhook' }).isVisible()) {
+    await card.getByRole('button', { name: 'Enable webhook' }).click()
+  }
+  await card.getByRole('button', { name: 'Reveal' }).click()
+  const secret = (await card.locator('span.flex-1.break-all').textContent())?.trim() ?? ''
+  expect(secret.length).toBeGreaterThan(10)
+
+  // No due date, so the row cannot move the Today counts other tests read.
+  const res = await page.request.post('/api/integrations/apple_reminders/webhook', {
+    headers: { 'x-pos-secret': secret },
+    data: { reminders: [{ id: 'e2e-r1', title: 'E2E reminder, book the MOT', list: 'Errands' }] },
+  })
+  expect(res.status()).toBe(200)
+
+  // The Reminders list is the project it lands under.
+  await page.goto('/tasks?view=project')
+  await expect(page.getByText('E2E reminder, book the MOT')).toBeVisible()
+  await expect(page.getByText('Errands').first()).toBeVisible()
+
+  // The wrong secret is refused, and nothing about the payload is the reason.
+  const refused = await page.request.post('/api/integrations/apple_reminders/webhook', {
+    headers: { 'x-pos-secret': 'not-the-secret' },
+    data: { reminders: [] },
+  })
+  expect(refused.status()).toBe(401)
 })
 test('health, the rail says what is owed with the app\'s own actions', async ({ page }) => {
   await page.goto('/health')

@@ -20,11 +20,24 @@ export default async function CalendarPage() {
     getConnectionStatuses(),
     getSettings(),
   ])
-  // Once Google has a connection row, failed or not: without one the screen is
+  // Once a feed has a connection row, failed or not: without one the screen is
   // complete from the other modules, and a failed pull must stay visible here.
+  const feeds = [
+    connections.google && 'Google',
+    connections.ics && 'iCloud',
+  ].filter((f): f is string => Boolean(f))
+  // One feed is named; two are "Calendar feeds", because the band shares its
+  // row with the avatar and "Google and iCloud" is long enough to push it onto
+  // a second row at the width the band first appears.
   const band =
-    connections.google ? (
-      <SyncBand provider="Google" at={sync.at} status={sync.status} timeZone={settings.timezone} onSync={syncCalendar} />
+    feeds.length > 0 ? (
+      <SyncBand
+        provider={feeds.length === 1 ? feeds[0] : 'Calendar feeds'}
+        at={sync.at}
+        status={sync.status}
+        timeZone={settings.timezone}
+        onSync={syncCalendar}
+      />
     ) : undefined
 
   // The chips: every module that dates anything, in rail order.

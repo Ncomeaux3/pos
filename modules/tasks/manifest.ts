@@ -6,6 +6,7 @@ import { defineModule, defineTool } from '@/core/module-contract'
 import { calendarFor } from './calendar'
 import { nextAfter, type Repeat } from './repeat'
 import { deleteTask, findOrCreateProject, listByGoal, patchProject, patchTask } from './data'
+import { writeReminders } from './inbound'
 import { nightlyDigest, rollCounts, rollForward } from './jobs/nightly-digest'
 import { dueLabel, hoursLabel, loadLabel, slipMeta } from './shape'
 import TasksPage from './ui/TasksPage'
@@ -470,5 +471,13 @@ export default defineModule({
     { name: 'roll_forward', run: rollForward },
     { name: 'nightly_digest', run: nightlyDigest },
   ],
+
+  inbound: {
+    // Open reminders posted by the iOS Shortcut. Not in `requires`: Tasks is
+    // usable, and complete, without a phone posting anything.
+    apple_reminders: async (payload) => {
+      await writeReminders(payload)
+    },
+  },
   entityTypes: ['task'],
 })

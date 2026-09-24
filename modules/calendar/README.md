@@ -42,6 +42,15 @@ Settings > Connections. The Sync band shows on this screen once Google is
 connected; the module has no `requires`, because without Google it is still
 complete from the other modules. Setup: docs/SETUP-INTEGRATIONS.md, Google.
 
+Published calendars (Phase 7b) arrive through the `pull_ics` job, the same
+window and the same delete-what-is-gone rule, from the URLs saved on the
+iCloud card. `integrations/ics/client.ts` holds the parser, which reads plain
+`.ics` with no dependency; what it expands and what it does not is written down
+there and in docs/SETUP-INTEGRATIONS.md. Rows are keyed
+`<hash of the URL>/<uid>`, so two calendars never collide and a removed URL's
+rows are found again. Both pulls write through `jobs/feed.ts`, which is the
+one place a feed's window is upserted and diffed.
+
 Times are the owner's wall clock and are turned into instants in SQL in the
 owner's zone, so the server's zone (UTC on Vercel) never enters it.
 

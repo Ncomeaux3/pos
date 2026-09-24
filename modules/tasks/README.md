@@ -28,6 +28,24 @@ history. `repeat_from` names the instance it came from and is unique, so
 completing, reopening and completing again still leaves one successor. Later
 dates are projected on the calendars, never written.
 
+## Apple Reminders
+
+`inbound.ts` writes the open reminders an iOS Shortcut posts, as tasks with
+`source = 'apple_reminders'`, upserted on `(source, external_id)`. Apple owns
+the fields it sends on those rows (title, notes, due, and the list as the
+project); a post never touches the rest, so a priority, an estimate, a goal or
+a hand-linked skill survives the sync. A field Apple leaves out keeps what is
+here, which is the SPEC's "never overwrite a manual field": notes typed in POS
+outlive a reminder that has none. Clearing a due date in Reminders therefore
+does not clear it here.
+
+A reminder missing from the posts for two days is completed here, emitting the
+same `task_completed` event finishing it in the app would. The sweep keys on
+`updated_at`, which the table's trigger writes on every upsert, and runs only
+when a payload arrives, so a phone that stops posting closes nothing. Nothing
+travels back: Apple has no Reminders API, so a task completed here leaves the
+reminder standing.
+
 ## The owner's day
 
 Every date question goes through `core.today()`, never `current_date`.

@@ -3,6 +3,7 @@ import { defineModule, defineTool } from '@/core/module-contract'
 import { deleteEvent, listEvents, setHidden, toItems, writeEvent } from './data'
 import { nightlyDigest } from './jobs/nightly-digest'
 import { pullGoogle } from './jobs/pull-google'
+import { pullIcs } from './jobs/pull-ics'
 import CalendarPage from './ui/CalendarPage'
 import { CalendarTile } from './ui/Tile'
 
@@ -88,6 +89,7 @@ export default defineModule({
   // other module still feeds it.
   jobs: [
     { name: 'pull_google', run: pullGoogle },
+    { name: 'pull_ics', run: pullIcs },
     { name: 'nightly_digest', run: nightlyDigest },
   ],
 })

@@ -23,6 +23,8 @@ Every card runs its own Test on save and tells you what it saw.
 | **SimpleFIN** | token | ~$1.50/mo | **Client, real Test and nightly sync built. Needs a bridge subscription.** |
 | **Health Auto Export** | webhook | paid iOS app | **Webhook writes workouts and sixteen body metrics. Needs the app and one paste.** |
 | **Apple Health (Shortcuts)** | webhook | free | **Readings from an iOS Shortcut you build once; workouts need Health Auto Export. Recipe below.** |
+| **iCloud and other calendars** | token | free | **Parser, nightly pull and a calendar list built. Needs a published calendar URL (OWNER-TODO 24).** |
+| **Apple Reminders** | webhook | free | **Webhook writes tasks. Needs the Shortcut below (OWNER-TODO 25).** |
 
 Everything in bold has a client and a real Test button. None of them is
 connected, because each needs an account only you have.
@@ -526,6 +528,141 @@ same way it does for Health Auto Export: one row per metric per day on
 `(kind, measured_on)`, a workout upserted on its start instant and earning its
 `workout_logged` XP once, and a value you typed by hand never touched. Rows
 carry `source = 'apple_shortcuts'`.
+
+---
+
+## iCloud and other calendars
+
+**Buys you:** an iCloud calendar (or any published calendar) on the Calendar
+screen beside everything else POS dates, read only, pulled nightly and on the
+Sync button.
+
+**Costs you:** five minutes and one paste per calendar. Apple has no Calendar
+API, and a private iCloud calendar needs CalDAV and an app specific password,
+which this version does not do. A published calendar is a plain `.ics` file
+over https, which is what this reads.
+
+### 1. Publish the calendar (once per calendar)
+
+On a Mac, **Calendar.app**, right click the calendar in the sidebar, **Share
+Calendar**, tick **Public Calendar**, then **Copy Link**. On iPhone,
+**Calendar > Calendars > the (i) beside one > Public Calendar > Share Link**.
+
+The link starts `webcal://`. Anyone who has it can read that calendar, so
+publish the ones you would put on a shared screen and leave the rest.
+
+### 2. Connect
+
+**Settings > Connections > iCloud and other calendars**, paste the link into
+**Calendar URL**, **Save & test**. The card then says how many events each
+calendar holds in the pull's own window. Under it, **Calendars** lists what is
+saved, with **Remove** per row and a field to add the next one.
+
+### How the pull works
+
+`modules/calendar/jobs/pull-ics.ts`, job `pull_ics`. Each run reads 30 days
+back to 365 ahead from every saved URL and upserts into `calendar.event` with
+`source = 'ics'` and `external_id` `<url key>/<uid>`, the url key being a hash
+of the address so two calendars never collide. Anything in the window a feed
+stops sending is deleted, and a URL you remove takes its events with it on the
+next run, as does disconnecting the card.
+
+The fetch goes through `core/fetching.ts`, so the address rules that protect
+every other pasted URL apply here: https only (a `webcal://` link is rewritten),
+no private or loopback addresses, redirects re-checked at each hop.
+
+What the parser reads: `VEVENT` with `UID`, `SUMMARY`, `LOCATION`, `URL`,
+`STATUS`, `DTSTART` and `DTEND` (a date, a UTC stamp, a `TZID` zone or a
+floating time), `EXDATE`, a moved instance's `RECURRENCE-ID`, and `RRULE` with
+`FREQ` daily, weekly, monthly or yearly plus `INTERVAL`, `COUNT` and `UNTIL`.
+`BYDAY` is expanded in the two places it is unambiguous: the days of a week
+(`FREQ=WEEKLY;BYDAY=TU,TH`) and an ordinal weekday of a month
+(`FREQ=MONTHLY;BYDAY=2TU`, the second Tuesday). A cancelled event is skipped.
+
+Every other rule, including `BYMONTHDAY`, `BYSETPOS`, `BYDAY` under a daily or
+yearly rule, and a fortnightly rule that counts weeks from a Sunday, keeps its
+first event and the job log's line names it. A guessed series would put wrong
+days on the calendar and look exactly like a right one, which is the failure
+this avoids. An event with `DURATION` but no `DTEND` is stored with no end
+time, and a calendar over 5 MB is refused rather than read to the cap, because
+a body cut short looks to the pull like a calendar whose later events were
+deleted.
+
+Events are read only in POS: edit them in the calendar they came from. They
+are not registered in `core.entities`, so they earn no XP and are not
+classified to skills; a feed of meetings is not work done.
+
+---
+
+## Apple Reminders
+
+**Buys you:** your open reminders as tasks, with their list as the project.
+One way: Apple has no Reminders API, so nothing POS does can tick a reminder.
+
+**Costs you:** ten minutes building a Shortcut, once.
+
+### What the Shortcut posts
+
+```json
+{ "reminders": [
+    { "id": "F1D4-...", "title": "Book the MOT", "due": "2026-10-05T09:00:00-05:00",
+      "notes": "Garage on Oakwood", "list": "Errands" } ] }
+```
+
+`id` is the only required field: it is how a reminder finds its own task again.
+`due` may be a bare `2026-10-05` or an ISO 8601 stamp, whose date and time are
+read as written. `title`, `notes` and `list` are optional.
+
+### Connect, tap by tap
+
+Before you start, in POS: **Settings > Connections > Apple Reminders > Enable
+webhook**. Leave the page open; you come back twice, for COPY and REVEAL.
+
+1. **Shortcuts > +**. Tap the name at the top, call it `POS Reminders`.
+2. **Add Action**, search `Find Reminders`.
+   - *Add Filter* > **Is Completed** > **is false**.
+   - Leave the limit off, so every open reminder goes in each post.
+3. **+**, search `Repeat with Each`, input the **Reminders** from step 2.
+4. Inside the repeat, **+**, search `Dictionary`. Five **Text** items, each
+   value picked with *Select Variable* > **Repeat Item** > then the detail:
+   `id` (Repeat Item > *Get Details of Reminders* > **Identifier**), `title`
+   (**Name**), `due` (**Due Date**, then *Format Date* > **ISO 8601**),
+   `notes` (**Notes**), `list` (**List**).
+5. Still inside the repeat, **+**, search `Add to Variable`, variable name
+   `rows`, input the **Dictionary**.
+6. After the repeat, **+**, search `Dictionary`. One item, type **Array**,
+   key `reminders`, value *Select Variable* > **rows**.
+7. **+**, search `Get Contents of URL`.
+   - URL: switch to POS, COPY the inbound URL, switch back, paste.
+   - *Show More*. Method **POST**. Headers > *Add new header*: key
+     `x-pos-secret`, value: switch to POS, REVEAL, COPY, switch back, paste.
+   - Request Body: **JSON**, the whole Dictionary from step 6.
+8. **+**, search `Show Result`, input **Contents of URL**. `{"ok":true}` means
+   it landed; POS > Tasks > By project shows the lists.
+9. **Automation tab > + > Time of Day**, 7:05 AM, Daily, **Run Immediately**,
+   choose POS Reminders. Add a second automation on **Reminder > When a
+   reminder is changed** if your iOS offers it, so edits arrive the same day.
+
+### What happens next
+
+Each post goes through `/api/integrations/apple_reminders/webhook`. The secret
+is checked, the shape is validated, then the Tasks module upserts one task per
+reminder on `(source, external_id)` with `source = 'apple_reminders'`.
+
+Apple owns the fields it sends on those rows: title, notes, due date and list.
+Everything else is yours and a post never touches it, so a priority, an
+estimate, a goal or a skill you linked here survives every sync. A task you
+complete in POS is never reopened by a later post.
+
+A field Apple leaves out keeps what is here, so notes or a due date you typed
+in POS on an Apple task are not wiped by the next post. The cost of that rule:
+clearing a due date in Reminders does not clear it here. Clear it here instead.
+
+A reminder missing from the posts for two days is done in Apple, or deleted,
+and its task is completed here, earning the same XP finishing it in POS would.
+That sweep runs when a payload arrives, so a phone that stops posting closes
+nothing. It also means the Shortcut must post **every** open reminder each
+time: a filter that sends one list would close the tasks of the others.
 
 ---
 

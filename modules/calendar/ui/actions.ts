@@ -66,14 +66,22 @@ export async function itemsFor(range: { from: string; to: string }): Promise<Cal
   return calendarItems(RANGE.parse(range))
 }
 
-/** Pull Google now. The nightly job and this write the same core.jobs row. */
+/** Pull every feed now. The nightly job and this write the same core.jobs rows. */
 export async function syncCalendar(): Promise<{ ran: number; failed: string[]; detail?: string }> {
   await requireOwner()
   const result = await syncModule('calendar')
   revalidatePath('/calendar')
-  // The pull's own line ("40 events from 2 calendars, 1 removed") as the toast.
+  // Each pull's own line ("40 events from 2 calendars, 1 removed") as the
+  // toast. A feed that is not connected says it skipped, and saying so beside
+  // the one that ran would read as a failure, so only the ones that ran speak.
   const { rows } = await db().query<{ detail: string | null }>(
-    `select log #>> '{output,detail}' as detail from core.jobs where module = 'calendar' and name = 'pull_google'`,
+    `select log #>> '{output,detail}' as detail from core.jobs
+      where module = 'calendar' and name like 'pull\\_%' and log #>> '{output,skipped}' = 'false'
+      order by name`,
   )
-  return { ...result, ...(rows[0]?.detail && { detail: rows[0].detail }) }
+  const detail = rows
+    .map((r) => r.detail)
+    .filter(Boolean)
+    .join(' ')
+  return { ...result, ...(detail && { detail }) }
 }

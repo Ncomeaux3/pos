@@ -198,16 +198,26 @@ Two sources are built and live in production (PRs #17, #18, #19, all
 
 ## v1.2, in the order the phases need them (docs/plans/pos-v1-2.md)
 
-- [ ] **24. Make the iCloud calendars public and paste their URLs**, free,
-      5 minutes, before Phase 7b. Calendar.app, right click a calendar,
-      Get Info, tick Public Calendar, copy the `webcal://` URL, paste it into
-      the ICS card in Settings > Connections. One URL per calendar. A public
-      calendar is readable by anyone with the URL, so use it for the ones you
-      would put on a shared screen and skip the rest.
-- [ ] **25. Install the Reminders Shortcut**, free, 10 minutes, before Phase
-      7b. The exact Shortcut steps land in docs/SETUP-INTEGRATIONS.md with the
-      phase; it posts your open reminders to the app's webhook with a shared
-      secret from the Connections card.
+- [ ] **24. Publish the iCloud calendars and paste their URLs**, free,
+      5 minutes, now that Phase 7b has shipped. Calendar.app, right click a
+      calendar, **Share Calendar**, tick **Public Calendar**, **Copy Link**
+      (on iPhone: Calendar > Calendars > the (i) > Public Calendar > Share
+      Link). Paste the first into **Settings > Connections > iCloud and other
+      calendars > Calendar URL**, Save & test; add the rest under the card.
+      A published calendar is readable by anyone with the URL, so publish the
+      ones you would put on a shared screen and skip the rest. Then tell me
+      how many events the card reports per calendar, so the count goes in
+      STATUS.md the way the Google one will. Full steps:
+      docs/SETUP-INTEGRATIONS.md, "iCloud and other calendars".
+- [ ] **25. Build the Reminders Shortcut**, free, 10 minutes, now that Phase
+      7b has shipped. **Settings > Connections > Apple Reminders > Enable
+      webhook**, then build `POS Reminders` tap by tap from
+      docs/SETUP-INTEGRATIONS.md, "Apple Reminders": Find Reminders (not
+      completed), a dictionary per reminder, POST to the inbound URL with the
+      `x-pos-secret` header, and a 7:05 AM daily automation. Two things to
+      know: it must post **every** open reminder each run (a reminder missing
+      for two days is treated as done), and nothing travels back to Apple, so
+      completing a task in POS leaves the reminder standing.
 - [ ] **26. USDA FoodData Central key**, free, 2 minutes, before Phase 12.
       api.data.gov, request a key with your email, paste it into the USDA
       card in Settings > Connections.
