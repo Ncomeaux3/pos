@@ -143,7 +143,22 @@ const tileClass = 'flex h-full flex-col gap-3 transition-colors duration-150'
 export default async function DashboardPage() {
   // The owner's date, not the server's: on Vercel those differ all evening.
   // `todayIso` is what dates are compared against; `today` is the label.
-  const [settings, todayIso] = await Promise.all([getSettings(), ownerToday()])
+  // One batch, so the page pays one database round trip: only the seven day
+  // list needs the date, and it chains on the cached ownerToday().
+  const [settings, todayIso, latest, digests, run, diary, warnings, proposals, spend, nav, offRail] =
+    await Promise.all([
+      getSettings(),
+      ownerToday(),
+      latestSummary(),
+      latestDigests(),
+      latestRun(),
+      ownerToday().then(nextSevenDays),
+      unreadWarnings(),
+      pendingProposals(),
+      spendByPurpose(),
+      getNav(),
+      getOffRailNav(),
+    ])
   // "Friday 18 September", in the owner's zone.
   const today = new Intl.DateTimeFormat('en-GB', {
     timeZone: settings.timezone,
@@ -151,18 +166,6 @@ export default async function DashboardPage() {
     day: 'numeric',
     month: 'long',
   }).format(new Date())
-
-  const [latest, digests, run, diary, warnings, proposals, spend, nav, offRail] = await Promise.all([
-    latestSummary(),
-    latestDigests(),
-    latestRun(),
-    nextSevenDays(todayIso),
-    unreadWarnings(),
-    pendingProposals(),
-    spendByPurpose(),
-    getNav(),
-    getOffRailNav(),
-  ])
   const rail = [...nav, ...offRail].map((n) => n.href.slice(1))
 
   const summary = latest?.summary
