@@ -215,7 +215,7 @@ export default async function FitnessPage() {
                       {mass(heaviest.best!.weightG).replace(' lb', '')}{' '}
                       <Unit>{`×${heaviest.best!.reps}`}</Unit>
                     </Num>
-                    <Sub>{`${whenLabel(heaviest.startedAt, todayIso)} · ${heaviest.name}`}</Sub>
+                    <Sub>{`${whenLabel(heaviest.startedAt, todayIso, settings.timezone)} · ${heaviest.name}`}</Sub>
                   </>
                 ) : (
                   <>

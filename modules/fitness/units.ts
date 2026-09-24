@@ -1,6 +1,8 @@
-// Units and the few derived numbers the Fitness screen shows. No imports: the
-// screen is a client component and anything reaching core/db.ts drags pg into
-// the browser bundle.
+// Units and the few derived numbers the Fitness screen shows. One import,
+// core/clock.ts, which is itself import free: the screen is a client component
+// and anything reaching core/db.ts drags pg into the browser bundle.
+
+import { isoDateIn } from '@/core/clock'
 //
 // Everything is stored unit free and integer: grams for mass, metres for
 // distance, seconds for time. Pounds and miles are a rendering decision, and
@@ -129,8 +131,8 @@ export function load(workouts: { kind: string; durationS: number }[]): number {
 }
 
 /** "Today", "Yesterday", then "Sep 04": when a set happened, for a tile's sub-line. */
-export function whenLabel(iso: string, todayIso: string): string {
-  const day = iso.slice(0, 10)
+export function whenLabel(iso: string, todayIso: string, timeZone: string): string {
+  const day = isoDateIn(new Date(iso), timeZone)
   const today = new Date(`${todayIso}T00:00:00Z`)
   const days = Math.round((today.getTime() - new Date(`${day}T00:00:00Z`).getTime()) / 86_400_000)
   if (days === 0) return 'Today'
