@@ -37,16 +37,16 @@ All tokens use `light-dark()`, with `prefers-contrast: more` and `prefers-reduce
   | Style | Size / leading (pt) |
   |---|---|
   | Large Title | 34/41 |
-  | Title 1 | 28/34 (verify) |
-  | Title 2 | 22/28 (verify) |
-  | Title 3 | 20/25 (verify) |
+  | Title 1 | 28/34 |
+  | Title 2 | 22/28 |
+  | Title 3 | 20/25 |
   | Headline | 17/22, semibold |
   | Body | 17/22 |
-  | Callout | 16/21 (verify) |
-  | Subheadline | 15/20 (verify) |
-  | Footnote | 13/18 (verify) |
-  | Caption 1 | 12/16 (verify) |
-  | Caption 2 | 11/13 (verify) |
+  | Callout | 16/21 |
+  | Subheadline | 15/20 |
+  | Footnote | 13/18 |
+  | Caption 1 | 12/16 |
+  | Caption 2 | 11/13 |
 
   Each is a utility class (`.text-body` and so on) and a Tailwind `@theme` entry. No Ultralight, Thin or Light weights. The root font size respects the browser's text size setting (rem-based), which is the web's equivalent of Dynamic Type.
 - **Colour:**
@@ -88,7 +88,7 @@ All tokens use `light-dark()`, with `prefers-contrast: more` and `prefers-reduce
 Each phase is one branch and one PR. Every PR is checked by ui-verifier at 402 and 1440 px in both themes, then by spec-reviewer. The `screens` e2e must pass.
 
 **Foundation**
-0. **Notes** (Complexity low, quick-builder):
+0. **Notes** (Complexity low, quick-builder). **Done 2026-09-24:** `docs/design/APPLE-HIG.md`; every type size and the contrast and target numbers confirmed on Apple's pages; Navigation bars is retired into Toolbars; the SF Symbols license is still forum-quoted only (verify in the SF Symbols app); published at https://claude.ai/artifact/4rQxg2WvuuBmJf5RS4dKdb:
    - Write `docs/design/APPLE-HIG.md` (Foundations, Patterns, Components, Liquid Glass and concentricity, licensing, sources) from the appendix. It goes in POS now and moves to `holon-ui` in Phase 1.
    - Publish the notes as an artifact.
    - Fetch the unread pages: Navigation bars (it returned a 404, perhaps renamed), Collaboration, and the primary SF license text.
@@ -134,6 +134,8 @@ Each phase is one branch and one PR. Every PR is checked by ui-verifier at 402 a
 - **Sweeps:** `scripts/check-tokens.sh` passes for each swept module, and grep counts of `text-[` and `rounded-[` fall to 0 by the last module.
 
 ## Appendix: research notes (source for Phase 0)
+
+Updated by Phase 0 (2026-09-24): docs/design/APPLE-HIG.md supersedes these notes. Navigation bars is retired into Toolbars, Collaboration is read (collaboration-and-sharing), and the SF fonts license was read on developer.apple.com/fonts; the SF Symbols license text is still forum-quoted only.
 
 The notes were fetched 2026-09-23 through the `developer.apple.com/tutorials/data/...json` endpoints. About 45 HIG pages were read.
 
