@@ -55,6 +55,17 @@ export default function PrivacyPage() {
             <strong>Apple Health</strong> (through the Health Auto Export app or an Apple Shortcut you set up):
             workouts and the health readings you choose to send, such as weight, heart rate and sleep.
           </li>
+          <li>
+            <strong>A calendar you subscribe to by URL</strong> (an iCloud calendar you have published, or any
+            other calendar with a webcal or https address): the events on it (title, time, location, a link),
+            read only. Anyone with that address can read the calendar, so publish only what you are happy to
+            share.
+          </li>
+          <li>
+            <strong>Apple Reminders</strong> (through an Apple Shortcut you set up): your open reminders,
+            becoming tasks here: title, due date, notes and the list they are in. Nothing is sent back to
+            Apple, so finishing a task here does not tick the reminder.
+          </li>
           <li><strong>Strava:</strong> your activities, if you connect it.</li>
           <li><strong>A GitHub repository you name:</strong> the notes in it, if you connect a notes vault.</li>
           <li>Web pages and YouTube captions you ask the app to save as notes.</li>
@@ -98,7 +109,11 @@ export default function PrivacyPage() {
           sent, when you use it or when the nightly job runs it for you. AI output can be wrong; check it
           before relying on it.
         </p>
-        <p>Google Calendar data is never sent to an AI provider.</p>
+        <p>
+          Calendar data is never sent to an AI provider, whether it came from Google or from a calendar you
+          subscribe to by URL. A reminder that becomes a task is a task, and is suggested skills like any
+          other task you write here.
+        </p>
       </Section>
 
       <Section id="google" title="Information from Google">
@@ -140,8 +155,9 @@ export default function PrivacyPage() {
             notification&apos;s title and text to your device, if you turn push on.
           </li>
           <li>
-            <strong>Services you connect</strong> (Google, SimpleFIN Bridge, Strava): receive the requests needed
-            to fetch your data, under your own account with them.
+            <strong>Services you connect</strong> (Google, SimpleFIN Bridge, Strava, and whoever publishes a
+            calendar you subscribe to by URL): receive the requests needed to fetch your data, under your own
+            account with them.
           </li>
         </ul>
         <p>

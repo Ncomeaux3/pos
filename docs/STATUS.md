@@ -46,7 +46,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-23 (v1.2 phase 7a, the Google Calendar feed, built with its PR open; 6b merged as #137). Production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-24 (v1.2 phase 7b, the Apple `.ics` feeds and the Reminders webhook, built with its PR open; 7a merged as #138). Production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -70,11 +70,42 @@ against the Vercel domain. Laptop notes: `.env` has no VAPID pair, so `pnpm setu
 and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
-## Next: v1.2 Phase 7b (Apple .ics and Reminders), or 7c once 7a merges
+## Next: v1.2 Phase 7c (Gmail to proposals)
 
-Phase 7a (Google Calendar) is built with its PR open; 6b merged as #137. 7b
-depends only on 6a and can start now; 7c (Gmail) waits for 7a. Earlier, and
-kept for its record:
+Phase 7b (Apple `.ics` and Reminders) is built with its PR open; 7a merged as
+#138, 6b as #137. 7c reuses the Google connection 7a built. Earlier, and kept
+for its record:
+
+### v1.2 Phase 7b: Apple .ics feeds and Reminders webhook (built 2026-09-24)
+
+Two providers, no Apple API between them. `integrations/ics/` parses a
+published calendar (`client.ts`, no dependency: folded lines, `TZID` through
+`Intl`, `EXDATE`, `RECURRENCE-ID` overrides, and `RRULE` daily, weekly,
+monthly and yearly with `INTERVAL`, `COUNT`, `UNTIL` and `BYDAY`; anything
+else keeps its first event and the job log names the rule). URLs are pasted on
+the card and then added and removed on a `Feeds` panel, stored in the
+connection's credentials like 7a's picked calendars.
+`modules/calendar/jobs/pull-ics.ts` (job `pull_ics`) reads the same window as
+Google, 30 days back to 365 ahead, keyed `<8 hex of the URL>/<uid>`; both
+pulls now upsert and diff through one `modules/calendar/jobs/feed.ts`, which
+`pull-google.ts` moved onto. The fetch goes through `core/fetching.ts`, so the
+address rules hold for a pasted calendar URL.
+
+`integrations/apple_reminders/` takes the Shortcut's post on the generic
+webhook route, and `modules/tasks/inbound.ts` writes one task per reminder on
+`(source, external_id)`: Apple owns title, notes, due and the list (as the
+project), POS owns everything else and a post never touches it, and a reminder
+missing for two days is completed with the same `task_completed` event
+finishing it in the app emits. Migration `20260924133000_tasks_apple_reminders`
+widens `tasks.task.source`.
+
+Not exercised against the owner's own data yet: OWNER-TODO 24 (publish the
+iCloud calendars) and 25 (build the Shortcut) are open, so the event and task
+counts are still to record here. The `.ics` fetch is deliberately not covered
+by an e2e: `core/fetching.ts` refuses loopback, so the Playwright server
+cannot serve a fixture the pull would fetch; the parser and the pull are unit
+tested against `e2e/fixtures/icloud.ics` and a stubbed fetch, and the demo
+seed carries one `ics` row so the read-only render path is on screen.
 
 ### v1.2 Phase 7a: Google Calendar feed (built 2026-09-23)
 

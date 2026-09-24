@@ -10,7 +10,7 @@ export const LEGAL = {
   governingState: 'Alabama',
   site: 'https://pos-gilt-rho.vercel.app',
   /** The date these versions took effect. Change it with any material edit. */
-  effective: 'September 23, 2026',
+  effective: 'September 24, 2026',
 } as const
 
 /** The three documents, in the order every legal nav lists them. */
