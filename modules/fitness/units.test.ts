@@ -144,9 +144,15 @@ describe('load', () => {
 
 describe('the overview labels', () => {
   it('names when a set happened', () => {
-    expect(whenLabel('2026-09-12T18:00:00.000Z', '2026-09-12')).toBe('Today')
-    expect(whenLabel('2026-09-11T18:00:00.000Z', '2026-09-12')).toBe('Yesterday')
-    expect(whenLabel('2026-09-04T18:00:00.000Z', '2026-09-12')).toBe('Sep 04')
+    expect(whenLabel('2026-09-12T18:00:00.000Z', '2026-09-12', 'America/Chicago')).toBe('Today')
+    expect(whenLabel('2026-09-11T18:00:00.000Z', '2026-09-12', 'America/Chicago')).toBe('Yesterday')
+    expect(whenLabel('2026-09-04T18:00:00.000Z', '2026-09-12', 'America/Chicago')).toBe('Sep 04')
+  })
+
+  it('dates a late-evening set by the owner\'s calendar, not UTC', () => {
+    // 21:30 in Chicago on the 11th is already the 12th in UTC.
+    expect(whenLabel('2026-09-12T02:30:00.000Z', '2026-09-12', 'America/Chicago')).toBe('Yesterday')
+    expect(whenLabel('2026-09-12T02:30:00.000Z', '2026-09-13', 'America/Chicago')).toBe('Sep 11')
   })
 
   it('prints the week in hours and minutes', () => {
