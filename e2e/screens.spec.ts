@@ -891,6 +891,31 @@ test('login, signed out', async ({ page, context }) => {
   await shoot(page, 'login')
 })
 
+test('legal pages, readable signed out and linked from sign-in', async ({ page, context }) => {
+  // Public by design: Google's consent screen links the privacy policy, and a
+  // visitor reads the terms before signing in.
+  await context.clearCookies()
+  await page.goto('/login')
+  await page.getByRole('link', { name: 'Privacy policy', exact: true }).click()
+  await expect(page).toHaveURL(/\/privacy$/)
+  await expect(page.getByRole('heading', { name: 'Privacy policy', level: 1 })).toBeVisible()
+  // Google's Limited Use disclosure, word for word.
+  await expect(page.getByText(/use and transfer of information received from Google APIs to any other app will adhere to/)).toBeVisible()
+  await shoot(page, 'legal-privacy')
+
+  for (const [path, title] of [
+    ['/terms', 'Terms of service'],
+    ['/privacy/health', 'Consumer health data privacy policy'],
+  ]) {
+    await page.goto(path)
+    await expect(page).toHaveURL(new RegExp(`${path}$`))
+    await expect(page.getByRole('heading', { name: title, level: 1 })).toBeVisible()
+  }
+  const nav = page.getByRole('navigation', { name: 'Legal documents' })
+  await expect(nav.getByRole('link')).toHaveCount(3)
+  await expect(nav.getByRole('link', { name: 'Consumer health data' })).toHaveAttribute('aria-current', 'page')
+})
+
 test('login, code sent', async ({ page, context }) => {
   await context.clearCookies()
   // Rendered from the query string, so the sent view is reachable without
@@ -1892,11 +1917,13 @@ test('tasks, completing one emits the event that earns XP', async ({ page }) => 
 test('tasks, a monthly task comes back next month and the calendar shows the one after', async ({ page }) => {
   // v1.2 phase 6b. Due today, monthly on today's date; the expected dates come
   // from the same nextDue the tool uses, so the 31st clamps the same way.
-  const now = new Date()
-  const iso = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  const today = iso(now)
-  const rule = { every: 'month' as const, on: [now.getDate()] }
+  // Today is the owner's, read from the Calendar screen, not the runner's
+  // clock: CI runs in UTC, and from UTC midnight to the owner's midnight the
+  // two dates differ and the repeat lands a day off.
+  await page.goto('/calendar')
+  const today = (await page.locator('section[data-day]').getAttribute('data-day')) ?? ''
+  expect(today).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  const rule = { every: 'month' as const, on: [Number(today.slice(8, 10))] }
   const next = nextDue(rule, today)
   const after = nextDue(rule, next)
   const title = `Use the Amex credits ${Date.now()}`

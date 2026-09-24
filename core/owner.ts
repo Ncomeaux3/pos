@@ -27,7 +27,9 @@ export function ownerVerdict(
  */
 export function isPublicPath(pathname: string): boolean {
   if (pathname.startsWith('/api/')) return true
-  return ['/login', '/auth/callback', '/not-owner'].some(
+  // The legal pages: Google's consent screen links to them, and anyone must be
+  // able to read them before signing in.
+  return ['/login', '/auth/callback', '/not-owner', '/terms', '/privacy'].some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
   )
 }

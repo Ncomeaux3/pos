@@ -14,6 +14,7 @@ Owner: Nick. Solo, nights and weekends. Finish one module before starting the ne
 - Unresolved choices: @docs/DECISIONS.md (ask before scaffolding anything they affect)
 - About the owner and how he works: context/owner.md
 - What was decided and why: decisions/log.md (append only)
+- Legal promises and what keeps them true: docs/LEGAL.md (read before adding a provider, analytics, a cookie, email, payments or signup, and update /privacy or /terms first when one changes what they say)
 
 ## Rules that must hold
 - Ask before assuming. If an assumption changes what gets built, stop and ask with AskUserQuestion.
