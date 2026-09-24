@@ -135,6 +135,8 @@ Each phase is one branch and one PR. Every PR is checked by ui-verifier at 402 a
 
 ## Appendix: research notes (source for Phase 0)
 
+Updated by Phase 0 (2026-09-24): docs/design/APPLE-HIG.md supersedes these notes. Navigation bars is retired into Toolbars, Collaboration is read (collaboration-and-sharing), and the SF fonts license was read on developer.apple.com/fonts; the SF Symbols license text is still forum-quoted only.
+
 The notes were fetched 2026-09-23 through the `developer.apple.com/tutorials/data/...json` endpoints. About 45 HIG pages were read.
 
 - **Concentricity.** `ConcentricRectangle` (iOS 26+) corners can be `.concentric`, `.concentric(minimum:)`, `.fixed` or `.square`. The radius shares a centre with the container shape, which is set by `.containerShape(_:)`. It falls back to `ContainerRelativeShape` insetting. In CSS: child radius = max(min, parent radius - padding).
