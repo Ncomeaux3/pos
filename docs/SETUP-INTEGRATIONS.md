@@ -104,14 +104,21 @@ nightly and on the Sync button. Phase 7c adds Gmail to the same connection.
 ### 1. Create the OAuth client (once, about 15 minutes)
 
 1. console.cloud.google.com, top bar project menu, **New project**, name it
-   `pos`, Create, then select it.
+   `Holon`, Create, then select it.
 2. **APIs & Services > Library**, search `Google Calendar API`, **Enable**.
    (7c adds the Gmail API the same way.)
 3. **APIs & Services > OAuth consent screen** (the newer console splits it
    into Branding, Audience and Data access under Google Auth platform:
    verify the labels against what you see): user type **External**, app
-   name `POS`, your email for support and developer contact. Under **Data
-   access**, add the scope `https://www.googleapis.com/auth/calendar.readonly`.
+   name `Holon`, your email for support and developer contact. Google will
+   not switch the app to production without two more fields on **Branding**:
+   - App home page: `https://pos-gilt-rho.vercel.app`
+   - Privacy policy link: a public page with the policy text. POS has no
+     public page yet, so a Google Doc published to the web (File > Share >
+     Publish to web) works; check the link opens in a private window.
+
+   Under **Data access**, add the scope
+   `https://www.googleapis.com/auth/calendar.readonly`.
 4. **Audience**: set the publishing status to **In production**. Do not submit
    for verification. Left at Testing, Google expires the refresh token after 7
    days, so the pull works for a week and then fails looking like a credential
@@ -131,7 +138,7 @@ nightly and on the Sync button. Phase 7c adds Gmail to the same connection.
 ### 2. Connect
 
 Settings > Connections > Google > **Connect with Google**. Google warns that
-the app is unverified: Advanced, Go to POS, tick the calendar permission,
+the app is unverified: Advanced, Go to Holon, tick the calendar permission,
 Continue. Back on Connections the card says Connected; **Test** lists the
 calendars POS can see.
 

@@ -169,7 +169,7 @@ Two sources are built and live in production (PRs #17, #18, #19, all
 
 - [ ] **22. Google Cloud OAuth client**, free, about 15 minutes, needed to use
       Phase 7a (nothing breaks without it). The exact clicks are in
-      docs/SETUP-INTEGRATIONS.md, Google, step 1: a `pos` project, the Google
+      docs/SETUP-INTEGRATIONS.md, Google, step 1: a `Holon` project and app name, a home page and a privacy policy link on Branding, the Google
       Calendar API enabled, an External consent screen with the
       `calendar.readonly` scope, publishing status **In production** (not
       Testing: Testing expires the refresh token after 7 days), a Web
