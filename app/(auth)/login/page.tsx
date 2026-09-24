@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { LEGAL_DOCS } from '@/core/legal'
 import { ActionButton, Eyebrow, HolonLockup, fieldClass } from '@/components/pos'
 import { sendCode, verifyCode } from './actions'
 import { CodeInput } from './CodeInput'
@@ -170,6 +171,14 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
         )}
       </div>
       </main>
+
+      <footer className="flex flex-wrap justify-center gap-x-5 gap-y-2 px-4 pb-6">
+        {LEGAL_DOCS.map((d) => (
+          <Link key={d.href} href={d.href} className="text-[12.5px] text-ink-3 underline-offset-4 hover:text-ink hover:underline">
+            {d.label}
+          </Link>
+        ))}
+      </footer>
     </div>
   )
 }

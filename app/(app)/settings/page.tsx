@@ -1,3 +1,5 @@
+import Link from 'next/link'
+import { LEGAL_DOCS } from '@/core/legal'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { ActionButton, Card, Eyebrow, fieldClass, MetricStrip, MetricTile } from '@/components/pos'
@@ -224,6 +226,14 @@ export default async function SettingsPage({ searchParams }: PageProps<'/setting
       </Card>
 
       <Session email={process.env.OWNER_EMAIL ?? ''} />
+
+      <nav aria-label="Legal documents" className="flex max-w-[720px] flex-wrap gap-x-5 gap-y-2">
+        {LEGAL_DOCS.map((d) => (
+          <Link key={d.href} href={d.href} className="text-[13px] text-ink-3 underline-offset-4 hover:text-ink hover:underline">
+            {d.label}
+          </Link>
+        ))}
+      </nav>
     </div>
   )
 }
