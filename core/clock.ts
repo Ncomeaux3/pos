@@ -46,6 +46,11 @@ export function dayIn(at: Date, timeZone: string): string {
   return `${day} ${MONTHS[month - 1]}`
 }
 
+/** "2026-09-11" in the owner's timezone: the calendar date a timestamp falls on. */
+export function isoDateIn(at: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(at)
+}
+
 /** Minutes since midnight in the owner's timezone. What quiet hours compares. */
 export function minutesIn(at: Date, timeZone: string): number {
   return partsIn(at, timeZone).minutes
