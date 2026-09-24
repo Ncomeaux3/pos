@@ -22,6 +22,7 @@ import {
   type IntegrationManifest,
   deleteCredentials,
   getConnectionStatuses,
+  freshCredentials,
   getCredentials,
   getIntegration,
   getIntegrations,
@@ -86,7 +87,23 @@ async function test(formData: FormData) {
   await requireOwner()
   const id = String(formData.get('id'))
   const manifest = getIntegration(id)
-  const creds = await getCredentials(id)
+  // Refreshed first, so an OAuth token that lapsed an hour ago tests as what
+  // the nightly pull will see rather than as broken.
+  // A refresh the provider refuses is a failed test, not a crashed action.
+  let creds: Awaited<ReturnType<typeof freshCredentials>>
+  try {
+    creds = await freshCredentials(id, manifest?.refresh)
+  } catch (error) {
+    const stored = await getCredentials(id)
+    if (stored) {
+      await saveCredentials(id, stored, {
+        status: 'error',
+        testDetail: error instanceof Error ? error.message : 'Token refresh failed',
+      })
+    }
+    revalidatePath('/settings/connections')
+    return
+  }
   if (!manifest || !creds) return
 
   const result = await manifest.test(creds)
@@ -301,6 +318,8 @@ function ProviderCard({
             </div>
           )}
 
+          {connected && manifest.panel && <ProviderPanel load={manifest.panel} />}
+
           <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
             <form action={test}>
               <input type="hidden" name="id" value={manifest.id} />
@@ -373,4 +392,10 @@ function ProviderCard({
       )}
     </Card>
   )
+}
+
+/** A provider's own settings under its card, loaded only for a connected one. */
+async function ProviderPanel({ load }: { load: NonNullable<IntegrationManifest['panel']> }) {
+  const Panel = await load()
+  return <Panel />
 }

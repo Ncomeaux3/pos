@@ -37,7 +37,9 @@ export async function saveCredentials(
      on conflict (integration_id) do update set
        credentials_encrypted = excluded.credentials_encrypted,
        status = excluded.status,
-       expires_at = excluded.expires_at,
+       -- A save without an expiry (the Test button) keeps the stored one, or the
+       -- next freshCredentials would never know to refresh.
+       expires_at = coalesce(excluded.expires_at, core.connections.expires_at),
        last_tested_at = excluded.last_tested_at,
        last_test_detail = excluded.last_test_detail`,
     [
@@ -48,6 +50,48 @@ export async function saveCredentials(
       extra.testDetail ?? null,
     ],
   )
+}
+
+/**
+ * Rewrites the stored credentials and nothing else, so a token refresh or a
+ * saved preference keeps the status and the last Test line. A missing
+ * expiresAt keeps the stored expiry.
+ */
+export async function updateCredentials(id: string, creds: Credentials, expiresAt?: Date): Promise<void> {
+  await db().query(
+    `update core.connections
+        set credentials_encrypted = $2, expires_at = coalesce($3, expires_at)
+      where integration_id = $1`,
+    [id, encrypt(JSON.stringify(creds)), expiresAt ?? null],
+  )
+}
+
+/**
+ * The stored credentials, refreshed first when the access token expires within
+ * five minutes. The refresh function is passed in rather than looked up in the
+ * registry, because a client calling the registry is the cycle described above.
+ * What refresh returns is merged over what was stored: Google, for one, does
+ * not send the refresh token again.
+ */
+export async function freshCredentials(
+  id: string,
+  refresh: ((creds: Credentials) => Promise<Credentials>) | undefined,
+  now = Date.now(),
+): Promise<Credentials | null> {
+  const { rows } = await db().query<{ credentials_encrypted: string; expires_at: Date | null }>(
+    'select credentials_encrypted, expires_at from core.connections where integration_id = $1',
+    [id],
+  )
+  if (rows.length === 0) return null
+  const creds: Credentials = JSON.parse(decrypt(rows[0].credentials_encrypted))
+  const expiresAt = rows[0].expires_at
+
+  if (!refresh || !creds.refresh_token || !expiresAt || expiresAt.getTime() - now > 5 * 60_000) return creds
+
+  const next = { ...creds, ...(await refresh(creds)) }
+  const at = Number(next.expires_at)
+  await updateCredentials(id, next, Number.isFinite(at) ? new Date(at * 1000) : undefined)
+  return next
 }
 
 /** Disconnect deletes the row. Nothing else changes. */

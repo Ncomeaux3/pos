@@ -5,6 +5,8 @@ import { z } from 'zod'
 import { requireOwner } from '@/core/auth'
 import { calendarItems } from '@/core/calendar-registry'
 import type { CalendarItem } from '@/core/module-contract'
+import { db } from '@/core/db'
+import { syncModule } from '@/core/sync'
 import { callTool, ToolInputError } from '@/core/tools'
 
 // Server actions are standalone POST endpoints addressed by id, so the (app)
@@ -62,4 +64,16 @@ const RANGE = z
 export async function itemsFor(range: { from: string; to: string }): Promise<CalendarItem[]> {
   await requireOwner()
   return calendarItems(RANGE.parse(range))
+}
+
+/** Pull Google now. The nightly job and this write the same core.jobs row. */
+export async function syncCalendar(): Promise<{ ran: number; failed: string[]; detail?: string }> {
+  await requireOwner()
+  const result = await syncModule('calendar')
+  revalidatePath('/calendar')
+  // The pull's own line ("40 events from 2 calendars, 1 removed") as the toast.
+  const { rows } = await db().query<{ detail: string | null }>(
+    `select log #>> '{output,detail}' as detail from core.jobs where module = 'calendar' and name = 'pull_google'`,
+  )
+  return { ...result, ...(rows[0]?.detail && { detail: rows[0].detail }) }
 }

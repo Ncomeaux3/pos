@@ -3,6 +3,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
 import {
   deleteCredentials,
+  freshCredentials,
   getCredentials,
   getIntegration,
   getIntegrations,
@@ -31,6 +32,7 @@ describe('the integration registry', () => {
       'anthropic',
       'apple_shortcuts',
       'github_vault',
+      'google',
       'health_auto_export',
       'resend',
       'simplefin',
@@ -125,6 +127,36 @@ describe('credentials', () => {
     await saveCredentials('anthropic', { api_key: 'x' })
     process.env.ENCRYPTION_KEY = randomBytes(32).toString('base64')
     await expect(getCredentials('anthropic')).rejects.toThrow()
+  })
+})
+
+describe('freshCredentials', () => {
+  const inAMinute = () => new Date(Date.now() + 60_000)
+  const refresh = async () => ({ access_token: 'new', expires_at: String(Math.floor(Date.now() / 1000) + 3600) })
+
+  it('refreshes a token about to lapse, keeping the refresh token and the other fields', async () => {
+    await saveCredentials('google', { access_token: 'old', refresh_token: 'r', calendars: '["a"]' }, { expiresAt: inAMinute() })
+    await expect(freshCredentials('google', refresh)).resolves.toEqual({
+      access_token: 'new',
+      refresh_token: 'r',
+      calendars: '["a"]',
+      expires_at: expect.any(String),
+    })
+    await expect(getCredentials('google')).resolves.toMatchObject({ access_token: 'new', refresh_token: 'r' })
+    const { rows } = await db().query<{ expires_at: Date }>('select expires_at from core.connections')
+    expect(rows[0].expires_at.getTime()).toBeGreaterThan(Date.now() + 30 * 60_000)
+  })
+
+  it('leaves a token with time to spare alone', async () => {
+    await saveCredentials('google', { access_token: 'old', refresh_token: 'r' }, { expiresAt: new Date(Date.now() + 3_600_000) })
+    await expect(freshCredentials('google', refresh)).resolves.toMatchObject({ access_token: 'old' })
+  })
+
+  // The Test button saves without an expiry; that must not switch refresh off.
+  it('keeps the stored expiry when a later save has none', async () => {
+    await saveCredentials('google', { access_token: 'old', refresh_token: 'r' }, { expiresAt: inAMinute() })
+    await saveCredentials('google', { access_token: 'old', refresh_token: 'r' }, { testDetail: 'ok' })
+    await expect(freshCredentials('google', refresh)).resolves.toMatchObject({ access_token: 'new' })
   })
 })
 

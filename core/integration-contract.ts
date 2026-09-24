@@ -6,6 +6,7 @@
 // Keeping the contract in its own leaf module is what stops that being a cycle,
 // the same way core/module-contract.ts does for modules.
 
+import type { ComponentType } from 'react'
 import type { z } from 'zod'
 
 // One folder, one manifest, per external account. The Connections page, the
@@ -24,7 +25,16 @@ export type TokenField = {
 
 export type IntegrationAuth =
   | { type: 'token'; fields: TokenField[] }
-  | { type: 'oauth2'; authorizeUrl: string; tokenUrl: string; scopes: string[] }
+  | {
+      type: 'oauth2'
+      authorizeUrl: string
+      tokenUrl: string
+      scopes: string[]
+      /** How the scopes are joined. Strava wants a comma (the default), Google a space. */
+      scopeSeparator?: string
+      /** Extra authorize parameters, such as Google's access_type=offline. */
+      params?: Record<string, string>
+    }
   | { type: 'webhook' }
 
 export type TestResult = { ok: boolean; detail: string }
@@ -53,6 +63,13 @@ export type IntegrationManifest = {
   webhookSchema?: z.ZodTypeAny
   webhook?: (payload: unknown) => Promise<void>
   docsUrl?: string
+  /**
+   * Settings rendered under the card once connected, for a choice only this
+   * provider has (which Google calendars to pull). A server component, loaded
+   * lazily so the registry, which the cron and MCP routes import, never pulls
+   * UI into their module graph.
+   */
+  panel?: () => Promise<ComponentType>
 }
 
 export function defineIntegration(manifest: IntegrationManifest): IntegrationManifest {

@@ -41,10 +41,11 @@ async function handle(request: Request, { params }: { params: Promise<{ id: stri
   authorize.searchParams.set('client_id', clientId)
   authorize.searchParams.set('redirect_uri', `${origin}/api/integrations/${id}/oauth/callback`)
   authorize.searchParams.set('response_type', 'code')
-  authorize.searchParams.set('scope', manifest.auth.scopes.join(','))
+  authorize.searchParams.set('scope', manifest.auth.scopes.join(manifest.auth.scopeSeparator ?? ','))
   authorize.searchParams.set('state', state)
-  // Strava needs this to re-prompt rather than silently reusing a narrower grant.
-  authorize.searchParams.set('approval_prompt', 'auto')
+  for (const [key, value] of Object.entries(manifest.auth.params ?? {})) {
+    authorize.searchParams.set(key, value)
+  }
 
   const jar = await cookies()
   jar.set(oauthStateCookie(id), state, {

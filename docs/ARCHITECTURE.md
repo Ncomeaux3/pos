@@ -136,18 +136,21 @@ Every external account is one folder with one manifest. The Connections page, th
 export default defineIntegration({
   id: 'strava',
   label: 'Strava',
-  auth: { type: 'oauth2', authorizeUrl, tokenUrl, scopes: ['activity:read_all'] },
+  auth: { type: 'oauth2', authorizeUrl, tokenUrl, scopes: ['activity:read_all'],
+          scopeSeparator: ' ', params: { access_type: 'offline' } },   // both optional: comma, no extras
   // or  { type: 'token', fields: [{ key: 'access_url', label: 'SimpleFIN access URL', secret: true }] }
   // or  { type: 'webhook' }   inbound only; the page shows the URL and a shared secret to paste into the sender
   test: async (creds) => ({ ok: true, detail: 'Athlete 12345' }),
   refresh: async (creds) => newCreds,          // oauth2 only
   webhook: async (payload) => void,            // webhook type only, payload validated with zod
+  panel: async () => (await import('./ui/CalendarPicker')).CalendarPicker,  // optional, lazy: a server component under the card once connected
 })
 ```
 
 Core guarantees:
 - The provider appears on Settings > Connections as Not connected, with the right form or Connect button.
 - Credentials are encrypted with `core/crypto.ts` and stored in `core.connections`. Modules call `getCredentials('simplefin')`. No module reads a provider secret from `.env`.
+- An oauth2 client that needs a current token calls `freshCredentials(id, refresh)`, which refreshes one expiring within five minutes and stores it; the refresh function is passed in because a client reaching the registry is an import cycle. The token exchange is form encoded, as RFC 6749 requires.
 - `test()` runs on save and on a Test button. Result and timestamp show on the card.
 - OAuth2 refresh runs in the nightly job before module syncs.
 - A webhook payload that passes the secret and the zod schema is handed to every module's `inbound[<integration id>]`. The integration owns the translation in its `client.ts`, the module owns the write, the same split as a sync job; core matches ids and names neither.

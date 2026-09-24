@@ -43,7 +43,7 @@ Order: bugs, then look and forms, then data pulls, then Calendar and integration
 | 5d Finance: the model arm | One batched Haiku call fills what the rules miss; at 0.8 it writes a rule, below it the merchant is listed unfiled | medium | 6a | 5c | Deferred 2026-09-22: the backlog was filed by hand, so the model arm has little to file. Revisit if Unfiled grows | |
 | 6a Calendar module | `calendar` schema, the `calendar` manifest seam on nine modules, month grid with day list, recurring rules drawn | high | 5b | 4 | Built 2026-09-23: seam on nine modules (workouts for Fitness, module-root links for four until Phase 13), `calendar.event` and `calendar.settings`, shared `MonthGrid`, week strip on the phone, chips saved, Add event drawer; eleven owner answers in decisions/log.md | |
 | 6b Recurring tasks | Repeat rule on a task, next instance on completion, Tasks calendar day list | medium | 7a | 6a | Built 2026-09-23: `repeat` and a unique `repeat_from` on `tasks.task`, `repeat.ts` walks the rule, complete and the review's Drop write the next instance, Repeat select in the drawer, day list and muted projections on the Tasks Calendar and the seam | |
-| 7a Google: Calendar feed | One OAuth app, refresh token in connections, events pulled nightly and on demand | high | 6b | 6a | | |
+| 7a Google: Calendar feed | One OAuth app, refresh token in connections, events pulled nightly and on demand | high | 6b | 6a | Built 2026-09-23: `integrations/google/`, `pull_google` as a full window each run (owner's choice over sync tokens), calendar picker panel on the Connections card, Sync band on Calendar once connected, `freshCredentials` for the hour-long token; count waits on OWNER-TODO 22 | |
 | 7b Apple: .ics feeds and Reminders webhook | iCloud calendar by subscription URL, Reminders through a Shortcut posting to a webhook | medium | 7c | 6a | | |
 | 7c Gmail to proposals | Labelled mail parsed by rules then Haiku into task and event proposals in review state | high | 7b | 7a | | |
 | 8 Fitness: source band and manual forms | Strava off the band, Apple Health shown as the source, exercise, plan and goal forms; docs/plans/fitness-workout-detail.md Phases 1 and 2 run before this as their own PRs | medium | 9, 10a | 2 | | |
@@ -320,13 +320,14 @@ Exit: standard; `db push: done`.
 ## Phase 7a: Google Calendar feed
 
 Goal: the owner's Google calendars appear in the Calendar module, read only.
-Complexity: high. Files: `integrations/google/` (manifest, `client.ts`, OAuth start and callback routes under `app/api/oauth/google/`), `modules/calendar/jobs/pull-google.ts`, `docs/SETUP-INTEGRATIONS.md`, `docs/OWNER-TODO.md` (step 22 becomes this).
+Complexity: high. Files: `integrations/google/` (manifest, `client.ts`; built on the generic `app/api/integrations/[id]/oauth/*` routes, so no Google route), `modules/calendar/jobs/pull-google.ts`, `docs/SETUP-INTEGRATIONS.md`, `docs/OWNER-TODO.md` (step 22 becomes this).
 
-- [ ] Owner step first: Google Cloud project, OAuth consent (internal or testing with the owner as test user), scopes `calendar.readonly` and `gmail.readonly` (7c reuses the app), client id and secret into Vercel env `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (infrastructure, like VAPID). Written as OWNER-TODO 22 with exact clicks.
-- [ ] OAuth routes follow the existing Strava routes' shape (`maxDuration` 30, state cookie, refresh token stored in `core.connections` through `saveCredentials`); the Connections card shows Connect, Test (lists calendars), Disconnect.
-- [ ] `pull-google.ts`: `events.list` with `syncToken` per calendar (stored in the connection metadata), `singleEvents=true`, window 30 days back to 365 ahead, upsert into `calendar.event` with `source = 'google'`. Nightly and on the Calendar screen's Sync button. Deleted events (`status = 'cancelled'`) delete the row.
-- [ ] Calendar picker in Settings > Connections: which Google calendars to include (a list of ids in the connection metadata).
-- [ ] Unit tests on the response mapping with a fixture; the pull is exercised against the real account by the owner and the count recorded.
+- [x] Owner step first (written as OWNER-TODO 22 and SETUP-INTEGRATIONS, Google; the owner has not run it yet): Google Cloud project, OAuth consent published In production and unverified (Testing expires refresh tokens after 7 days), scope `calendar.readonly` only by the owner's answer (7c adds `gmail.readonly` to the same app), client id and secret into Vercel env `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (infrastructure, like VAPID). Written as OWNER-TODO 22 with exact clicks.
+- [x] OAuth routes follow the existing Strava routes' shape (`maxDuration` 30, state cookie, refresh token stored in `core.connections` through `saveCredentials`); the Connections card shows Connect, Test (lists calendars), Disconnect.
+- [x] `pull-google.ts`: `events.list` over the full window each run, 30 days back to 365 ahead, deleting what Google stopped returning (the owner's answer, replacing the planned `syncToken`), `singleEvents=true`, upsert into `calendar.event` with `source = 'google'`. Nightly and on the Calendar screen's Sync button. A cancelled or deleted event drops out of the window and its row is deleted.
+- [x] Calendar picker in Settings > Connections: which Google calendars to include (a list of ids in the connection metadata).
+- [x] Unit tests on the response mapping with a fixture.
+- [ ] The pull exercised against the real account by the owner and the count recorded (waits on OWNER-TODO 22).
 
 Exit: the owner's events on the Calendar screen; standard checks.
 
