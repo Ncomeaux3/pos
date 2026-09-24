@@ -165,30 +165,21 @@ Two sources are built and live in production (PRs #17, #18, #19, all
       Settings > General, and add a new one. The emailed code is the way in
       meanwhile.
 
-## v2 phase 5: Gmail
+## v1.2 Phase 7a: Google Calendar
 
-Not needed until v2 phase 5, which starts after v1.1 ships and after items 12
-to 16. Listed now because the research that produced it is fresh and one setting
-in it is easy to get wrong in a way that looks like a bug six days later.
-
-- [ ] **22. Google Cloud project for Gmail**, free, about 15 minutes. Create a
-      project at console.cloud.google.com, enable the Gmail API, create an
-      OAuth client of type Web application with the POS callback as its
-      redirect URI, and add the scope `https://www.googleapis.com/auth/gmail.readonly`.
-      Then the setting that matters: set the OAuth consent screen's publishing
-      status to **In production**. Do not submit for verification. Leaving it
-      at Testing expires every refresh token after 7 days, so the nightly sync
-      would work for a week and then fail, looking like a credential problem
-      rather than a dropdown. You will see an "unverified app" warning when you
-      connect; click through it. That is the documented path for an app under
-      100 users, and it is why POS never needs the CASA security assessment a
-      restricted scope otherwise carries (a few hundred to a few thousand
-      dollars a year). Also create a Gmail label and file into it whatever you
-      want POS to read: the connector queries that label alone.
-
-      Every claim here is marked verify. Google's documentation domains were
-      blocked by the proxy when this was researched, so it rests on secondary
-      sources. Check the console before trusting the 7-day figure.
+- [ ] **22. Google Cloud OAuth client**, free, about 15 minutes, needed to use
+      Phase 7a (nothing breaks without it). The exact clicks are in
+      docs/SETUP-INTEGRATIONS.md, Google, step 1: a `Holon` project and app name, a home page and a privacy policy link on Branding, the Google
+      Calendar API enabled, an External consent screen with the
+      `calendar.readonly` scope, publishing status **In production** (not
+      Testing: Testing expires the refresh token after 7 days), a Web
+      application client with both redirect URIs, and `GOOGLE_CLIENT_ID` and
+      `GOOGLE_CLIENT_SECRET` in Vercel and `.env`. Then Settings >
+      Connections > Google > Connect, click through the unverified app
+      warning, pick calendars under the card, and press Sync on the Calendar
+      screen. Tell me the count the toast shows ("N events from M calendars")
+      so it goes in STATUS.md. Phase 7c later enables the Gmail API on the
+      same project, adds `gmail.readonly`, and asks for one more Connect.
 
 ## Holon release, on your phone (after the `holon` to `main` merge)
 
@@ -225,8 +216,6 @@ in it is easy to get wrong in a way that looks like a bug six days later.
       the same window. Tell me the two numbers.
 - [ ] **28. Label three emails `POS` in Gmail** after Phase 7c deploys (a
       reservation, a bill, an invite) and check the proposals on Review.
-- Step 22 (Google Cloud project) moves up: it is needed before Phase 7a, not
-  v2 phase 5, and gains the Calendar read scope beside Gmail's.
 
 ## Decisions I would like from you
 

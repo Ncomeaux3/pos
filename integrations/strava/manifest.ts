@@ -12,6 +12,8 @@ export default defineIntegration({
     authorizeUrl: 'https://www.strava.com/oauth/authorize',
     tokenUrl: 'https://www.strava.com/oauth/token',
     scopes: ['activity:read_all', 'profile:read_all'],
+    // Re-prompts rather than silently reusing a narrower grant.
+    params: { approval_prompt: 'auto' },
   },
 
   // Reads the athlete the token belongs to. Cheapest authenticated call Strava

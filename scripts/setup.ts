@@ -32,8 +32,15 @@ function checkEnv(): void {
   const keys = [...example.matchAll(/^([A-Z][A-Z0-9_]*)=/gm)].map((m) => m[1])
 
   // Blank is as good as missing for anything the app actually reads. The OAuth
-  // client pairs are the exception: nothing needs them until Fitness ships.
-  const optional = new Set(['STRAVA_CLIENT_ID', 'STRAVA_CLIENT_SECRET', 'RESEND_FROM'])
+  // client pairs are the exception: each is needed only once its provider is
+  // connected, and the Connect button says so when it is missing.
+  const optional = new Set([
+    'STRAVA_CLIENT_ID',
+    'STRAVA_CLIENT_SECRET',
+    'GOOGLE_CLIENT_ID',
+    'GOOGLE_CLIENT_SECRET',
+    'RESEND_FROM',
+  ])
   const missing = keys.filter((k) => !optional.has(k) && !process.env[k])
 
   if (missing.length > 0) {

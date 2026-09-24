@@ -287,6 +287,7 @@ until every place holding it is updated. Nothing rotates on its own.
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase dashboard (Project Settings > API keys), then Vercel and `.env` | Nothing once Vercel has the new value; storage uploads and setup fail until it does. |
 | Database password (inside `DATABASE_URL` and the `BACKUP_DATABASE_URL` GitHub secret) | Supabase dashboard (Project Settings > Database), then Vercel, `.env` and the GitHub secret | Every connection until all three are updated; the backup goes red until the GitHub secret is. |
 | `STRAVA_CLIENT_SECRET` | Strava API settings, then Vercel and `.env` | Nothing until the next token refresh, which fails until Vercel has it. |
+| `GOOGLE_CLIENT_SECRET` (and `GOOGLE_CLIENT_ID` if the client is recreated) | Google Cloud console > Credentials > the OAuth client > Add secret, then Vercel and `.env`, then delete the old secret | The hourly token refresh fails until Vercel has the new secret, so the Calendar pull goes red. A new client id also needs a Reconnect on Settings > Connections. |
 | `BACKUP_REPO_TOKEN`, `SUPABASE_ACCESS_TOKEN` | GitHub repo secrets (a GitHub PAT with contents write on pos-backups; a Supabase personal access token) | The nightly backup, until updated. |
 
 Provider keys (Anthropic, Resend, SimpleFIN, Health Auto Export's shared secret) are

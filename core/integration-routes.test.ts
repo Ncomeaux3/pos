@@ -13,9 +13,13 @@ vi.mock('next/headers', () => ({
   }),
 }))
 
+// The start route is behind the owner check; these tests are the owner.
+vi.mock('@/core/auth', () => ({ requireOwner: async () => ({}) }))
+
 const { db } = await import('./db')
-const { saveCredentials } = await import('./integrations')
+const { getCredentials, saveCredentials } = await import('./integrations')
 const { expiryFrom, oauthStateCookie } = await import('./oauth')
+const { GET: oauthStart } = await import('../app/api/integrations/[id]/oauth/start/route')
 const { GET: oauthCallback } = await import('../app/api/integrations/[id]/oauth/callback/route')
 const { POST: webhook } = await import('../app/api/integrations/[id]/webhook/route')
 
@@ -74,6 +78,72 @@ describe('oauth callback', () => {
     cookieJar.set(oauthStateCookie('strava'), 'matching')
     const res = await oauthCallback(new Request(url('state=matching&error=access_denied')), params('strava'))
     expect(decodeURIComponent(res.headers.get('location') ?? '')).toContain('access_denied')
+  })
+})
+
+// v1.2 phase 7a. Google needs space separated scopes, offline access to earn a
+// refresh token, and a form encoded token exchange; Strava keeps its comma and
+// its approval_prompt.
+describe('oauth, per provider', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
+  })
+
+  it("sends Google its scope, offline access and consent, and Strava its own", async () => {
+    vi.stubEnv('GOOGLE_CLIENT_ID', 'google-client')
+    vi.stubEnv('STRAVA_CLIENT_ID', 'strava-client')
+    const start = async (id: string) =>
+      new URL(
+        (await oauthStart(new Request(`https://pos.example.com/api/integrations/${id}/oauth/start`), params(id))).headers.get(
+          'location',
+        ) ?? '',
+      ).searchParams
+
+    const google = await start('google')
+    expect(google.get('scope')).toBe('https://www.googleapis.com/auth/calendar.readonly')
+    expect(google.get('access_type')).toBe('offline')
+    expect(google.get('prompt')).toBe('consent')
+    expect(google.get('redirect_uri')).toBe('https://pos.example.com/api/integrations/google/oauth/callback')
+    expect(google.has('approval_prompt')).toBe(false)
+
+    const strava = await start('strava')
+    expect(strava.get('scope')).toBe('activity:read_all,profile:read_all')
+    expect(strava.get('approval_prompt')).toBe('auto')
+  })
+
+  it('exchanges the code form encoded and stores the refresh token and expiry', async () => {
+    let sent: unknown
+    vi.stubGlobal('fetch', async (_url: string, init: RequestInit) => {
+      sent = init.body
+      return Response.json({ access_token: 'at', refresh_token: 'rt', expires_in: 3599 })
+    })
+    cookieJar.set(oauthStateCookie('google'), 'matching')
+    await oauthCallback(
+      new Request('https://pos.example.com/api/integrations/google/oauth/callback?state=matching&code=c1'),
+      params('google'),
+    )
+
+    expect(sent).toBeInstanceOf(URLSearchParams)
+    expect((sent as URLSearchParams).get('grant_type')).toBe('authorization_code')
+    await expect(getCredentials('google')).resolves.toEqual({ access_token: 'at', refresh_token: 'rt' })
+    const { rows } = await db().query<{ expires_at: Date }>('select expires_at from core.connections')
+    expect(rows[0].expires_at.getTime()).toBeGreaterThan(Date.now() + 50 * 60_000)
+  })
+})
+
+describe('oauth reconnect', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it("keeps the provider's own settings, such as Google's calendar picks", async () => {
+    await saveCredentials('google', { access_token: 'old', refresh_token: 'old-r', calendars: '["work"]' })
+    vi.stubGlobal('fetch', async () => Response.json({ access_token: 'at', refresh_token: 'rt', expires_in: 3599 }))
+    cookieJar.set(oauthStateCookie('google'), 'matching')
+    await oauthCallback(
+      new Request('https://pos.example.com/api/integrations/google/oauth/callback?state=matching&code=c1'),
+      params('google'),
+    )
+    await expect(getCredentials('google')).resolves.toEqual({ access_token: 'at', refresh_token: 'rt', calendars: '["work"]' })
   })
 })
 

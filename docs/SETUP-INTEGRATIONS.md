@@ -18,6 +18,7 @@ Every card runs its own Test on save and tells you what it saw.
 | Voyage | token | free tier | Connected, 3 req/min without a card |
 | Resend | token | free | Connected |
 | **Strava** | oauth2 | Strava subscription ($11.99/mo since June 2026, to create an API app) | **Client and sync job built. Deferred by the owner 2026-09-13; Apple Health covers watch workouts.** |
+| **Google** | oauth2 | free | **Calendar read client, nightly pull and calendar picker built. Needs a Google Cloud OAuth client (OWNER-TODO 22).** |
 | **Obsidian vault** | token | free | **Client built. Needs a repo and a token.** |
 | **SimpleFIN** | token | ~$1.50/mo | **Client, real Test and nightly sync built. Needs a bridge subscription.** |
 | **Health Auto Export** | webhook | paid iOS app | **Webhook writes workouts and sixteen body metrics. Needs the app and one paste.** |
@@ -92,6 +93,72 @@ anything unrecognised lands on `other`. A windsurf is still a workout.
 
 Access tokens last six hours. The nightly pass refreshes before any module sync,
 using the refresh token, so you do not have to think about it.
+
+---
+
+## Google
+
+**Buys you:** your Google calendars on the Calendar screen, read only, pulled
+nightly and on the Sync button. Phase 7c adds Gmail to the same connection.
+
+### 1. Create the OAuth client (once, about 15 minutes)
+
+1. console.cloud.google.com, top bar project menu, **New project**, name it
+   `Holon`, Create, then select it.
+2. **APIs & Services > Library**, search `Google Calendar API`, **Enable**.
+   (7c adds the Gmail API the same way.)
+3. **APIs & Services > OAuth consent screen** (the newer console splits it
+   into Branding, Audience and Data access under Google Auth platform:
+   verify the labels against what you see): user type **External**, app
+   name `Holon`, your email for support and developer contact. Google will
+   not switch the app to production without two more fields on **Branding**:
+   - App home page: `https://pos-gilt-rho.vercel.app`
+   - Privacy policy link: a public page with the policy text. POS has no
+     public page yet, so a Google Doc published to the web (File > Share >
+     Publish to web) works; check the link opens in a private window.
+
+   Under **Data access**, add the scope
+   `https://www.googleapis.com/auth/calendar.readonly`.
+4. **Audience**: set the publishing status to **In production**. Do not submit
+   for verification. Left at Testing, Google expires the refresh token after 7
+   days, so the pull works for a week and then fails looking like a credential
+   problem (Google's production readiness page states the 7-day limit for
+   Testing). In production and unverified, Google shows an "unverified app"
+   warning on consent and caps the app at 100 users, which is fine for one
+   (both from Google's OAuth production readiness overview,
+   developers.google.com/identity/protocols/oauth2/production-readiness/overview).
+5. **Credentials > Create credentials > OAuth client ID**, type **Web
+   application**. Authorized redirect URIs, both:
+   - `https://pos-gilt-rho.vercel.app/api/integrations/google/oauth/callback`
+   - `http://localhost:3000/api/integrations/google/oauth/callback`
+6. Copy the client id and secret into Vercel (Settings > Environment
+   Variables, Production) and your local `.env` as `GOOGLE_CLIENT_ID` and
+   `GOOGLE_CLIENT_SECRET`, then redeploy.
+
+### 2. Connect
+
+Settings > Connections > Google > **Connect with Google**. Google warns that
+the app is unverified: Advanced, Go to Holon, tick the calendar permission,
+Continue. Back on Connections the card says Connected; **Test** lists the
+calendars POS can see.
+
+### 3. Pick calendars
+
+Under the card, **Calendars to show** starts with the ones ticked in Google
+Calendar's own sidebar. Change the ticks and **Save calendars**; the next sync
+uses the new list, and a calendar unticked leaves the Calendar screen with all
+of its events.
+
+### How the pull works
+
+`modules/calendar/jobs/pull-google.ts`, job `pull_google`. Each run reads 30
+days back to 365 ahead from every picked calendar, recurring events expanded
+into their instances, and upserts them into `calendar.event` with
+`source = 'google'` and `external_id` `<calendar id>/<event id>`. Anything in
+the window Google no longer returns is deleted, so a moved or cancelled event
+follows on the next run. The access token lasts an hour and is refreshed
+before any call that needs it (`freshCredentials` in `core/credentials.ts`).
+Events are read only in POS: edit them in Google.
 
 ---
 

@@ -866,6 +866,11 @@ test('settings, connections', async ({ page }) => {
   await expect(page.getByText('Last test').first()).toBeVisible()
   await expect(page.getByText(/^(Connected since|Token expires)$/).first()).toBeVisible()
   await expect(page.getByText('Not connected').first()).toBeVisible()
+  // Google (v1.2 phase 7a): an OAuth card whose Connect leaves for Google.
+  await expect(page.getByRole('link', { name: 'Connect with Google' })).toHaveAttribute(
+    'href',
+    '/api/integrations/google/oauth/start',
+  )
   await shoot(page, 'connections')
 })
 

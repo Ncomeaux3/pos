@@ -46,7 +46,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-23 (v1.2 phase 6b, recurring tasks, built with its PR open; 6a merged as #136). Production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-23 (v1.2 phase 7a, the Google Calendar feed, built with its PR open; 6b merged as #137). Production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -70,12 +70,27 @@ against the Vercel domain. Laptop notes: `.env` has no VAPID pair, so `pnpm setu
 and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
-## Next: v1.2 Phase 7a, the Google Calendar feed
+## Next: v1.2 Phase 7b (Apple .ics and Reminders), or 7c once 7a merges
 
-Phase 6b (recurring tasks) is built with its PR open; 6a merged as #136. 7a
-needs OWNER-TODO 22 (the Google Cloud project and OAuth consent) first. 7b
-also depends only on 6a and can run beside 7a. Earlier, and kept for its
-record:
+Phase 7a (Google Calendar) is built with its PR open; 6b merged as #137. 7b
+depends only on 6a and can start now; 7c (Gmail) waits for 7a. Earlier, and
+kept for its record:
+
+### v1.2 Phase 7a: Google Calendar feed (built 2026-09-23)
+
+`integrations/google/` (manifest, `client.ts`, a `CalendarPicker` panel on the
+Connections card) and `modules/calendar/jobs/pull-google.ts` (job
+`pull_google`, nightly and on the Calendar screen's Sync band). A full window
+each run, 30 days back to 365 ahead, deleting what Google stopped returning
+(owner's choice over sync tokens); `calendar.readonly` only. The oauth2
+contract gained `scopeSeparator`, `params` and `panel`; the token exchange is
+form encoded; `freshCredentials` refreshes an hour-long token on read; a save
+without an expiry keeps the stored one. No migration. Not yet exercised
+against Google: OWNER-TODO 22 (the OAuth client) is open, so the production
+event count is still to record here. Follow-up: Strava's sync never
+refreshes its token (its client comment names a nightly pass that does not
+exist; only the Test button refreshes now); `freshCredentials('strava',
+refresh)` in its client is the one-line fix.
 
 ### v1.2 Phase 6b: recurring tasks (built 2026-09-23)
 

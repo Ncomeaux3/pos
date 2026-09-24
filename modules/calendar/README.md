@@ -36,6 +36,12 @@ iCloud (`google`, `ics`), upserted on `(source, external_id)`. Only a typed
 event can be edited or deleted; a feed's rows are the feed's, and the next
 pull would overwrite an edit.
 
+Google (Phase 7a) arrives through the `pull_google` job: a full window each
+run, 30 days back to 365 ahead, from the calendars picked on the Google card in
+Settings > Connections. The Sync band shows on this screen once Google is
+connected; the module has no `requires`, because without Google it is still
+complete from the other modules. Setup: docs/SETUP-INTEGRATIONS.md, Google.
+
 Times are the owner's wall clock and are turned into instants in SQL in the
 owner's zone, so the server's zone (UTC on Vercel) never enters it.
 

@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { getIntegration, saveCredentials, stateMatches } from '@/core/integrations'
+import { getCredentials, getIntegration, saveCredentials, stateMatches } from '@/core/integrations'
 import { type TokenResponse, expiryFrom, oauthStateCookie } from '@/core/oauth'
 import { withLog } from '@/core/log'
 
@@ -47,10 +47,12 @@ async function handle(request: Request, { params }: { params: Promise<{ id: stri
   try {
     const res = await fetch(manifest.auth.tokenUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({
-        client_id: process.env[`${id.toUpperCase()}_CLIENT_ID`],
-        client_secret: process.env[`${id.toUpperCase()}_CLIENT_SECRET`],
+      // Form encoded, as RFC 6749 section 4.1.3 requires. Google accepts
+      // nothing else; Strava takes either.
+      headers: { Accept: 'application/json' },
+      body: new URLSearchParams({
+        client_id: process.env[`${id.toUpperCase()}_CLIENT_ID`] ?? '',
+        client_secret: process.env[`${id.toUpperCase()}_CLIENT_SECRET`] ?? '',
         code,
         grant_type: 'authorization_code',
         redirect_uri: `${origin}/api/integrations/${id}/oauth/callback`,
@@ -62,9 +64,12 @@ async function handle(request: Request, { params }: { params: Promise<{ id: stri
     const token = (await res.json()) as TokenResponse
     if (!token.access_token) return back(origin, 'Token exchange returned no access token')
 
+    // Over what was stored, so a reconnect keeps a provider's own settings
+    // (Google's calendar picks) rather than resetting them.
     await saveCredentials(
       id,
       {
+        ...(await getCredentials(id)),
         access_token: token.access_token,
         ...(token.refresh_token ? { refresh_token: token.refresh_token } : {}),
       },

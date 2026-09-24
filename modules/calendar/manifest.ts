@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { defineModule, defineTool } from '@/core/module-contract'
 import { deleteEvent, listEvents, setHidden, toItems, writeEvent } from './data'
 import { nightlyDigest } from './jobs/nightly-digest'
+import { pullGoogle } from './jobs/pull-google'
 import CalendarPage from './ui/CalendarPage'
 import { CalendarTile } from './ui/Tile'
 
@@ -82,5 +83,11 @@ export default defineModule({
     return today === null ? {} : { label: 'Calendar · today', meta: `${today} today` }
   },
 
-  jobs: [{ name: 'nightly_digest', run: nightlyDigest }],
+  // The pull first, so the digest counts what it brought. Not `requires`:
+  // that would call the whole screen unsynced without Google, when every
+  // other module still feeds it.
+  jobs: [
+    { name: 'pull_google', run: pullGoogle },
+    { name: 'nightly_digest', run: nightlyDigest },
+  ],
 })
