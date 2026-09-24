@@ -6,8 +6,7 @@ export const LEGAL = {
   /** The person users agree with. An individual, not a company (owner's answer, 2026-09-23). */
   operator: 'Nick Comeaux',
   email: 'nicholascomeaux00@gmail.com',
-  // TODO(owner): city, state and ZIP. The street alone is not a mailing address.
-  address: '521 Davis Cir SW, [city], Alabama [ZIP]',
+  address: '521 Davis Cir SW, Huntsville, Alabama 35801',
   governingState: 'Alabama',
   site: 'https://pos-gilt-rho.vercel.app',
   /** The date these versions took effect. Change it with any material edit. */
