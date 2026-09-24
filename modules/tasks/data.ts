@@ -1,5 +1,6 @@
 import { db } from '@/core/db'
 import type { Priority } from './quickadd'
+import type { Repeat } from './repeat'
 
 // Reads for the six views, and the two writes behind the tools. Everything the
 // screen needs in one place; the shape it renders lives in ./shape.ts, which a
@@ -24,6 +25,7 @@ export type TaskRow = {
   project_goal_ref: string | null
   estimated_minutes: number | null
   remind_minutes: number | null
+  repeat: Repeat | null
   source: string
   completed_at: Date | null
   /** Days since it was completed, on the owner's calendar. Null while open. */
@@ -38,7 +40,7 @@ const SELECT = `
          -- drawer cannot disagree.
          coalesce(t.goal_ref, p.goal_ref) as goal_ref, g.title as goal_title,
          t.goal_ref as own_goal_ref, p.goal_ref as project_goal_ref,
-         t.estimated_minutes, t.remind_minutes, t.source, t.completed_at,
+         t.estimated_minutes, t.remind_minutes, t.repeat, t.source, t.completed_at,
          -- On the owner's calendar, in the database, because a completion at
          -- 20:00 in Chicago is tomorrow in UTC and was showing as yesterday's.
          case when t.completed_at is null then null
@@ -139,6 +141,7 @@ const PATCHABLE = [
   'goal_ref',
   'estimated_minutes',
   'remind_minutes',
+  'repeat',
 ] as const
 
 export type TaskPatch = Partial<Record<(typeof PATCHABLE)[number], unknown>>

@@ -20,6 +20,14 @@ the goal picker is empty today and fills in on its own.
 `status` has three values. `review` is a real row that does not count as work
 until the owner accepts it, which is what an agent-created task is.
 
+**A repeating task is one row at a time.** `repeat` holds the rule
+(`{ every, on?, interval? }`, walked by `repeat.ts`). Completing the task, or
+dropping it in the weekly review, writes the next instance with the next due
+date past both the old one and today; the done row keeps its rule for
+history. `repeat_from` names the instance it came from and is unique, so
+completing, reopening and completing again still leaves one successor. Later
+dates are projected on the calendars, never written.
+
 ## The owner's day
 
 Every date question goes through `core.today()`, never `current_date`.
@@ -37,7 +45,7 @@ same function, so the page and the digest cannot disagree.
 | `get_digest` | Open counts, planned minutes, what was completed, the next five due |
 | `write` | Create a task, or update one by passing its id |
 | `write_project` | Create a project, or rename, link to a goal, or archive one by id |
-| `complete` | Mark done or reopen. Completing emits `task_completed`, which is the XP |
+| `complete` | Mark done or reopen. Completing emits `task_completed`, which is the XP, and writes a repeating task's next instance |
 | `approve` | Accept an agent-proposed task out of review |
 
 Nothing is guarded. An agent-created task already lands in `review`, which is

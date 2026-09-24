@@ -3,6 +3,7 @@
 // component and anything reaching core/db.ts drags pg into the browser bundle.
 
 import { dueLabel, estimateLabel, type Priority } from './quickadd'
+import type { Repeat } from './repeat'
 
 export type View = 'today' | 'week' | 'goal' | 'project' | 'review' | 'done'
 
@@ -33,6 +34,8 @@ export type Task = {
   projectGoalRef: string | null
   estimateMinutes: number | null
   remindMinutes: number | null
+  /** The rule a repeating task comes back by. Null for a one-off. */
+  repeat: Repeat | null
   source: string
   /** The registry row the skill links hang off. Null for a task registered before the registry. */
   entityRef: string | null

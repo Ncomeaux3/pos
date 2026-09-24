@@ -14,6 +14,7 @@ import {
 } from '@/components/pos'
 import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
+import { nextAfter, repeatLabel, sameRule, type Repeat } from '../repeat'
 import type { Task } from '../shape'
 import { writeTask, type ActionResult, type WriteInput } from './actions'
 
@@ -38,6 +39,41 @@ const REMIND = [
   { value: '30', label: '30 min before' },
   { value: '1440', label: 'Day before' },
 ]
+
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/** "Fri 23 Oct", with the year when it is not `thisYear`'s. */
+function dayLabel(iso: string, thisYear: string): string {
+  const d = new Date(`${iso}T00:00:00Z`)
+  const year = iso.slice(0, 4) === thisYear ? '' : ` ${iso.slice(0, 4)}`
+  return `${DOW[d.getUTCDay()]} ${d.getUTCDate()} ${MON[d.getUTCMonth()]}${year}`
+}
+
+/**
+ * The drawer's repeat options, worded from the due date: weekly on its
+ * weekday, monthly on its day. `custom` is a rule written through the tool
+ * (two weekdays, an interval) that none of these describes; it is kept as is.
+ */
+type RepeatKey = '' | 'day' | 'week' | 'month' | 'last' | 'year' | 'custom'
+
+function ruleFor(key: RepeatKey, due: string, custom: Repeat | null): Repeat | null {
+  const d = new Date(`${due}T00:00:00Z`)
+  if (key === 'day') return { every: 'day' }
+  if (key === 'week') return { every: 'week', on: [d.getUTCDay()] }
+  if (key === 'month') return { every: 'month', on: [d.getUTCDate()] }
+  if (key === 'last') return { every: 'month', on: [-1] }
+  if (key === 'year') return { every: 'year' }
+  if (key === 'custom') return custom
+  return null
+}
+
+function keyFor(repeat: Repeat | null, due: string): RepeatKey {
+  if (!repeat) return ''
+  const keys: RepeatKey[] = ['day', 'week', 'month', 'last', 'year']
+  const same = keys.find((k) => sameRule(ruleFor(k, due, null)!, repeat))
+  return same ?? 'custom'
+}
 
 function isoFrom(today: Date, days: number): string {
   const d = new Date(today)
@@ -101,6 +137,7 @@ export function TaskDrawer({
     // a value, so saving never copies the project's goal onto the task.
     goal: task?.ownGoalRef ?? prefill?.goal_ref ?? '',
     notes: task?.notes ?? '',
+    repeat: keyFor(task?.repeat ?? null, dueInDays === null ? isoFrom(today, 0) : isoFrom(today, dueInDays)),
   }
   const [draft, setDraft] = useState(initial)
   const dirty = (Object.keys(initial) as (keyof typeof initial)[]).some((k) => draft[k] !== initial[k])
@@ -116,6 +153,16 @@ export function TaskDrawer({
   const set = (key: keyof typeof draft) => (e: { target: { value: string } }) =>
     setDraft((d) => ({ ...d, [key]: e.target.value }))
 
+  const dueOn =
+    draft.due === 'date'
+      ? draft.dueDate || null
+      : DUE_DAYS[draft.due] === null
+        ? null
+        : isoFrom(today, DUE_DAYS[draft.due]!)
+  // A repeat with no due date counts from today, as the complete tool does.
+  const todayIso = isoFrom(today, 0)
+  const rule = ruleFor(draft.repeat as RepeatKey, dueOn ?? todayIso, task?.repeat ?? null)
+
   const save = () => {
     if (!submit()) return
     const title = draft.title.trim()
@@ -123,12 +170,8 @@ export function TaskDrawer({
       ...(task && { id: task.id }),
       title,
       notes: draft.notes,
-      due_on:
-        draft.due === 'date'
-          ? draft.dueDate || null
-          : DUE_DAYS[draft.due] === null
-            ? null
-            : isoFrom(today, DUE_DAYS[draft.due]!),
+      due_on: dueOn,
+      repeat: rule,
       due_at: draft.time || null,
       priority: draft.priority,
       project: draft.project || null,
@@ -262,6 +305,29 @@ export function TaskDrawer({
             />
           </Field>
         </div>
+
+        <label className="flex flex-col gap-1.5">
+          <Eyebrow>Repeat</Eyebrow>
+          <select aria-label="Repeat" value={draft.repeat} onChange={set('repeat')} className={field}>
+            <option value="">Does not repeat</option>
+            {(['day', 'week', 'month', 'last', 'year'] as const).map((k) => {
+              const r = ruleFor(k, dueOn ?? todayIso, null)!
+              return (
+                <option key={k} value={k}>
+                  {k === 'year' ? `Yearly on ${dayLabel(dueOn ?? todayIso, (dueOn ?? todayIso).slice(0, 4)).slice(4)}` : repeatLabel(r)}
+                </option>
+              )
+            })}
+            {task?.repeat && draft.repeat === 'custom' && (
+              <option value="custom">{repeatLabel(task.repeat)}</option>
+            )}
+          </select>
+          {rule && (
+            <span className="t-caption num text-ink-3">
+              Next: {dayLabel(nextAfter(rule, dueOn, todayIso), todayIso.slice(0, 4))}
+            </span>
+          )}
+        </label>
 
         <label className="flex flex-col gap-1.5">
           <Eyebrow>Goal</Eyebrow>
