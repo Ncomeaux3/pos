@@ -3,4 +3,4 @@ allowBuilds:
   sharp: false
   unrs-resolver: false
 minimumReleaseAgeExclude:
-  - '@ncomeaux3/holon-ui@0.1.0'
+  - '@ncomeaux3/holon-ui@0.1.0 || 0.1.1'
