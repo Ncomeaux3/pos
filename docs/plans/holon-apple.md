@@ -24,7 +24,7 @@ On approval, copy this file to `docs/plans/holon-apple.md` (the project conventi
 - **New repo** `holon-ui`. The package is `@<github-owner>/holon-ui` (verify the owner scope; GitHub Packages requires it).
 - **No build step:** it ships `.tsx` source and `tokens.css`. POS lists the package in `transpilePackages` in `next.config`. Add a build when a non-Next consumer appears.
 - **Package contents:** anything with no POS data dependency. That means tokens, Button, Chip, Card, Sheet (from `Overlay`), Row/RowList, Segments, Switch/PillGroup, TabBar/MobileTabBar, Sidebar shell, FormField/field, edit primitives, Toast, EmptyState, PageHeader (large title), SwipeRow and gestures, PageTransition, LineChart and charts, MonthGrid, CommandPalette, `useIsPhone`, `useOptimisticAction`.
-- **Stays in POS:** SkillPicker, SyncBand, ReviewShell, WizardShell, Logo (Holon brand assets, which can move later), AvatarMenu's POS links.
+- **Stays in POS:** SkillPicker, SyncBand, ReviewShell, WizardShell, Logo (Holon brand assets, which can move later), and the pieces Phase 2 lists as staying.
 - **`components/pos/index.ts` becomes a re-export barrel** of the package plus the POS-only pieces, so the 49 module files that import `@/components/pos` keep compiling unchanged.
 - **Release:** semver tags. A GitHub Action publishes on tag. POS pins an exact version. `.npmrc` reads `NODE_AUTH_TOKEN`, which is set in GitHub Actions and in Vercel (new env var names go in `.env.example`).
 
@@ -75,6 +75,7 @@ All tokens use `light-dark()`, with `prefers-contrast: more` and `prefers-reduce
 - **Alert:** a required title, at most 3 buttons, never Yes or No as labels, and Cancel is never the default. This replaces ad hoc confirms (`ConfirmButton`).
 - **Segmented control:** at most 5 segments on the phone. Text and icons are never mixed. It selects state and never performs an action.
 - **Lists:** inset grouped rows, disclosure chevrons for drill-down, and swipe actions (the existing SwipeRow).
+- **Toast:** a transient overlay, so it counts as a popover and is glass.
 - **Tab bar:** 5 tabs or fewer. It floats, minimises on scroll (already built in 3b) and uses monochrome glass.
 - **Sidebar:** two levels at most, never hidden by default, icons in the accent colour.
 - **Large title header:** a 34pt title that collapses into an inline 17pt semibold title on scroll, through a CSS scroll-driven animation. This replaces the band-and-title `PageHeader`.
@@ -93,19 +94,23 @@ Each phase is one branch and one PR. Every PR is checked by ui-verifier at 402 a
    - Publish the notes as an artifact.
    - Fetch the unread pages: Navigation bars (it returned a 404, perhaps renamed), Collaboration, and the primary SF license text.
    - Check: every section cites its URL, and no unverified number lacks a "verify" mark.
-1. **`holon-ui` repo and tokens:** **Built 2026-09-24, awaiting the owner's mockup approval:** https://github.com/Ncomeaux3/holon-ui (private); 420 text pairs pass 4.5:1 in both themes, base and under Increase Contrast and Reduce Transparency, including text on button fills and on clear glass over white media; the HIG notes moved there. Still open: the radii (26, 18, 12) stay Holon values marked verify, because the HIG pages give no radius numbers and the kit was not read. For Phase 3: POS `app/globals.css` and the package both define `--red`, `--green`, `--accent`, `--glass-edge`, `--glass-line`, `--font-sans`, `--shadow-pop` and `--color-accent` (POS `var(--accent-soft)`, the package the strong accent), and theme.css redefines Tailwind's `--ease-out`; the alias layer settles each before `tokens.css` is imported. POS `--lift` and `--pop` wrap whole shadows in `light-dark()`, which takes colours only, so both are invalid today. Installing needs a token with `read:packages`.
+1. **`holon-ui` repo and tokens:** **Done 2026-09-24, the owner approved the demo; holon-ui #1 and POS #148 merged:** https://github.com/Ncomeaux3/holon-ui (private); 420 text pairs pass 4.5:1 in both themes, base and under Increase Contrast and Reduce Transparency, including text on button fills and on clear glass over white media; the HIG notes moved there. Still open: the radii (26, 18, 12) stay Holon values marked verify, because the HIG pages give no radius numbers and the kit was not read. For Phase 3: POS `app/globals.css` and the package both define `--red`, `--green`, `--accent`, `--glass-edge`, `--glass-line`, `--font-sans`, `--shadow-pop` and `--color-accent` (POS `var(--accent-soft)`, the package the strong accent), and theme.css redefines Tailwind's `--ease-out`; the alias layer settles each before `tokens.css` is imported. POS `--lift` and `--pop` wrap whole shadows in `light-dark()`, which takes colours only, so both are invalid today. Installing needs a token with `read:packages`.
    - Scaffold the repo, `tokens.css`, the Tailwind v4 `@theme` export, the publish workflow and a README contract.
    - Build one static reference page (`demo/index.html`) showing type, colour, materials, concentric nesting and targets in both themes. This is the owner's **mockup gate**: Nick approves it before Phase 2.
    - Check: a contrast script asserts every text-on-surface token pair is at least 4.5:1 in both themes, and fails the CI if not.
-2. **Components into the package:**
-   - Move and restyle the list in Architecture. Add `Alert` and `Sheet` detents.
-   - Make `components/pos/index.ts` a re-export barrel.
-   - Check: POS `pnpm typecheck`, `pnpm test` and `pnpm lint` stay green with zero edits in `modules/`.
+2. **Components into the package**, inside `holon-ui` only (the owner's answer, 2026-09-24: POS cannot install the package until Phase 3). Two PRs:
+   - **2a, primitives. Built 2026-09-24, PR open:** Button (the HIG roles `normal`, `primary`, `cancel`, `destructive`, old variant names kept as aliases), Chip, Card (opaque grouped, `Chevron` added), Row and RowList (inset grouped), Switch, PillGroup and SnoozeControl, FormField (clear button, `valid` from `useFormErrors`), edit (ConfirmButton now asks through an Alert), Toast, EmptyState, text, gestures (the maths moved from `core/gestures.ts`, plus an up swipe), `Sheet` with medium and large detents (`Overlay` kept as an alias; a dirty sheet asks through an Alert), and `Alert` (a native modal `<dialog>`). Checks: `tsc`, 13 `node:test` cases, the contrast script, `demo/components.html` through ui-verifier, and a dry run in a throwaway POS worktree: 15 files shimmed to the package, `transpilePackages` added, `pnpm typecheck` and `pnpm lint` exit 0 with zero edits in `modules/` or `app/`. vitest could not run there (its config loads `.env` and a live test database), so Phase 3 proves the suite.
+   - **2b, navigation and data:** TabBar, Segments (built on TabBar), MobileTabBar split out of Sidebar, a Sidebar shell taking its items as props, PageHeader as a collapsing large title, SwipeRow, PageTransition, LineChart and charts (`core/series` moves in), MonthGrid, CommandPalette with items and search as props, `useIsPhone`, `useOptimisticAction`. Same checks, the dry run repeated over both halves.
+   - Stays in POS: SkillPicker, SyncBand, ReviewShell, WizardShell, Logo, AvatarMenu, Avatar, BackControl, BandSearch, searchState, ThemeSwitch, DataTable, DiffRow, Copy, EdgeBack, PullToRefresh.
 3. **POS consumes the package and the shell:**
-   - Add the package (`.npmrc`, `NODE_AUTH_TOKEN` in Vercel and CI, `transpilePackages`).
-   - `app/globals.css` imports `tokens.css` and keeps the alias layer.
+   - Add the package (`.npmrc`, `NODE_AUTH_TOKEN` in Vercel and CI, `transpilePackages`). Needs Actions billing fixed (or a local `npm publish`) and a token with `read:packages` and `write:packages`.
+   - Flip `components/pos`: each moved file becomes a re-export shim, as the 2a dry run did, so deep imports keep working.
+   - `lib/utils` re-exports the package's `cn`, which knows the type styles; the stock merge reads `text-body` as a colour and drops it beside `text-label`.
+   - `app/globals.css` imports `tokens.css` and keeps the alias layer, and adds `@source` for the package's `src` so Tailwind generates its classes.
    - Build the shell: tab bar, sidebar, large-title header, scroll edge effect, the grouped canvas, and opaque cards.
-   - Check: a Vercel preview builds with the private package, and a full `screens` e2e run passes.
+   - e2e that the flip breaks: screens.spec.ts line 763 presses the armed `ConfirmButton` label ("Drop 1 edit"), which is now the Alert's title, not a button; and any test that presses Escape on a dirty drawer now meets an Alert where Playwright used to dismiss a `window.confirm`. The `page.on('dialog')` tests at 3501 and 4267 are untouched: their confirms live in TripDrawer and PolicyDrawer, which the module sweeps move to the Alert.
+   - The existing `confirmLabel` values ("Really delete", "Confirm disconnect", "Archive?") become Alert titles verbatim; each caller gets a `title` that names what goes, in its module sweep.
+   - Check: a Vercel preview builds with the private package, `pnpm test` passes with the flip, and a full `screens` e2e run passes.
 
 **Module sweeps**, one PR each, in this order: Home, Tasks, Finance, Calendar, Goals, Fitness and Health, Meals, Travel (the globe untouched), Insurance and Home, Second Brain, Ideas, Skills (the constellation untouched), then Settings, Notifications, Agent log, Browse, Login and legal.
 - Per module:
