@@ -17,6 +17,9 @@ importers:
       '@modelcontextprotocol/server':
         specifier: ^2.0.0
         version: 2.0.0
+      '@ncomeaux3/holon-ui':
+        specifier: 0.1.0
+        version: 0.1.0(lucide-react@1.47.0(react@19.3.0))(next@16.3.5(@babel/core@7.29.7(supports-color@7.2.0))(@playwright/test@1.63.0)(@types/node@26.6.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@supabase/ssr':
         specifier: ^0.12.7
         version: 0.12.7(@supabase/supabase-js@2.116.0)
@@ -746,6 +749,15 @@ packages:
     peerDependencies:
       '@emnapi/core': ^1.7.1 || ^2.0.0-alpha.4
       '@emnapi/runtime': ^1.7.1 || ^2.0.0-alpha.4
+
+  '@ncomeaux3/holon-ui@0.1.0':
+    resolution: {integrity: sha512-5HRXb5mvGSefNAzSMcZY3JHRB31c8YZvBAd3zYCyqBbMOT9bWDpvulJ+LABkJUrLrX2v74v0AHKdA7TuAaS7/Q==, tarball: https://npm.pkg.github.com/download/@ncomeaux3/holon-ui/0.1.0/cbf9676e101a3810b92d11038b1a9798ff965516}
+    engines: {node: '>=22'}
+    peerDependencies:
+      lucide-react: ^1.47
+      next: ^16
+      react: ^19
+      react-dom: ^19
 
   '@next/env@16.3.5':
     resolution: {integrity: sha512-NWEXVDMqoEo0ktmU6u0sE2Vg0LOcsD7NnOTJNo3/fEaTfsg+F1bMIxuDmQbda4e3yTIQwVdUREF2yIuMOusKtg==}
@@ -4345,6 +4357,14 @@ snapshots:
       '@emnapi/runtime': 1.10.0
       '@tybys/wasm-util': 0.10.4
     optional: true
+
+  '@ncomeaux3/holon-ui@0.1.0(lucide-react@1.47.0(react@19.3.0))(next@16.3.5(@babel/core@7.29.7(supports-color@7.2.0))(@playwright/test@1.63.0)(@types/node@26.6.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+    dependencies:
+      cn: 0.3.2
+      lucide-react: 1.47.0(react@19.3.0)
+      next: 16.3.5(@babel/core@7.29.7(supports-color@7.2.0))(@playwright/test@1.63.0)(@types/node@26.6.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      react: 19.3.0
+      react-dom: 19.3.0(react@19.3.0)
 
   '@next/env@16.3.5': {}
 

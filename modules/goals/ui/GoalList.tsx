@@ -61,9 +61,9 @@ export function StatusMark({ status, className }: { status: Status; className?: 
 }
 const STATUS_STROKE: Record<Status, string> = {
   done: 'var(--accent)',
-  on_track: 'var(--green)',
+  on_track: 'var(--positive)',
   at_risk: 'var(--amber)',
-  stalled: 'var(--red)',
+  stalled: 'var(--risk)',
 }
 const STATUS_BG: Record<Status, string> = {
   done: 'bg-brand',

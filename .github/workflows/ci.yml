@@ -25,6 +25,11 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
+      # holon-ui is a private GitHub Packages npm package. pnpm only reads a
+      # registry credential from user-level config, so it is set here, not in .npmrc.
+      - run: pnpm config set //npm.pkg.github.com/:_authToken "$NODE_AUTH_TOKEN"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
       - run: pnpm install --frozen-lockfile
 
       # Known-vulnerable dependencies fail the build. --prod so a dev-only
@@ -95,6 +100,11 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
+      # holon-ui is a private GitHub Packages npm package. pnpm only reads a
+      # registry credential from user-level config, so it is set here, not in .npmrc.
+      - run: pnpm config set //npm.pkg.github.com/:_authToken "$NODE_AUTH_TOKEN"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
 

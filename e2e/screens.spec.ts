@@ -757,10 +757,11 @@ test('settings, skills', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Rename TypeScript' }).press('Enter')
   await expect(page.getByText('was TypeScript')).toBeVisible()
 
-  // Reset drops every override, so the tab returns to the committed yaml. Two
-  // presses: nothing here is a modal, per the design.
+  // Reset drops every override, so the tab returns to the committed yaml. It
+  // asks first through holon-ui's Alert, titled with what goes.
   await page.getByRole('button', { name: /Reset to skills.yaml/ }).click()
-  await page.getByRole('button', { name: /Drop 1 edit/ }).click()
+  const ask = page.getByRole('dialog', { name: 'Drop 1 edit' })
+  await ask.getByRole('button', { name: 'Reset to skills.yaml' }).click()
   await expect(page.getByText('was TypeScript')).toBeHidden()
 })
 

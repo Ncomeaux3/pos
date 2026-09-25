@@ -29,6 +29,9 @@ const csp = [
 ].join('; ')
 
 const nextConfig: NextConfig = {
+  // holon-ui ships .tsx source with no build step (holon-apple plan).
+  transpilePackages: ['@ncomeaux3/holon-ui'],
+
   // The dev overlay button sits exactly on the sidebar's theme toggle, so it
   // covers the control in every screenshot taken against a dev server.
   devIndicators: false,
