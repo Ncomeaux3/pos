@@ -34,7 +34,7 @@ and tap with "Net" renamed "Left over", and a 3/6/12/24 month range saved in
 (#127). 5c is closed; independent of 5d. Phase 1 merged (#130), Phase 2 merged
 (#132), Phase 3 (the range) merged (#134); the plan is complete.
 
-**Alongside v1.2: docs/plans/holon-apple.md** (2026-09-23, Holon moved toward the Apple HIG as a reusable package, `Ncomeaux3/holon-ui`, private). Phase 0 (the HIG notes, #144) and Phase 1 (tokens, contrast check and demo, holon-ui #1 and #148) merged 2026-09-24 after the owner approved the demo. Phase 2 is two holon-ui PRs, 2a primitives (holon-ui #2) and 2b navigation and data (holon-ui #3, stacked on #2), both built with PRs open; Phase 2a and 2b merged (holon-ui #2, #4). Phase 3 is built on `holon-apple-phase-3`: holon-ui 0.1.0 published locally, POS on the package through shims and three wrappers, the shell in place; holon-ui 0.1.1 carries the phone bar title fix; Phase 3 merged as #151. Module sweeps: Home built on `claude/module-passes-home-6kb8i3` with its PR open; Tasks is next.
+**Alongside v1.2: docs/plans/holon-apple.md** (2026-09-23, Holon moved toward the Apple HIG as a reusable package, `Ncomeaux3/holon-ui`, private). Phase 0 (the HIG notes, #144) and Phase 1 (tokens, contrast check and demo, holon-ui #1 and #148) merged 2026-09-24 after the owner approved the demo. Phase 2 is two holon-ui PRs, 2a primitives (holon-ui #2) and 2b navigation and data (holon-ui #3, stacked on #2), both built with PRs open; Phase 2a and 2b merged (holon-ui #2, #4). Phase 3 is built on `holon-apple-phase-3`: holon-ui 0.1.0 published locally, POS on the package through shims and three wrappers, the shell in place; holon-ui 0.1.1 carries the phone bar title fix; Phase 3 merged as #151. Module sweeps: Home merged as #152; Tasks built on `holon-apple-sweep-tasks` with its PR open; Finance is next.
 
 **Queued after v1.2: docs/plans/skills-v2.md** (2026-09-15, six phases from the owner's Skill Tree rewrite in docs/SKILLS.md: the nine-attribute tree, per-event XP snapshots, projects, challenges and achievements, the digest, the screen). Not started.
 
@@ -48,7 +48,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-09-25 (holon-apple Home sweep, built with its PR open; Phase 3 merged as #151). Production `pos-gilt-rho.vercel.app`
+Last updated: 2026-09-25 (holon-apple Tasks sweep, built with its PR open; the Home sweep merged as #152). Production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md

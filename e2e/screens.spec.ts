@@ -2149,12 +2149,19 @@ test('tasks, a project lends its goal to its tasks, and the plus knows its colum
   await expect(page.getByText('Added. Phase6')).toBeVisible()
   await projects.getByLabel('Phase6 goal').selectOption({ label: 'Net worth $300k' })
   await expect(page.getByText('Saved', { exact: true })).toBeVisible()
+  // The list is an opaque grouped card since the Tasks sweep: glass is for navigation only.
+  await expect(projects.getByLabel('Phase6 goal').locator('xpath=ancestor::div[contains(@class,"rounded-card")]')).toHaveClass(
+    /bg-grouped-2/,
+  )
   await page.keyboard.press('Escape')
 
   const line = page.getByLabel('Add a task')
   await line.fill('Fund the brokerage #Phase6')
   await line.press('Enter')
   await expect(page.getByText('Added. Fund the brokerage')).toBeVisible()
+  // The 20px Complete ring taps as 44px at every width (HIT's pseudo element).
+  const ring = page.getByRole('button', { name: 'Complete Fund the brokerage' }).first()
+  expect(await ring.evaluate((el) => parseFloat(getComputedStyle(el, '::before').height))).toBeGreaterThanOrEqual(44)
 
   // The goal drawer lists it through the linked seam, which reads the same
   // coalesce as the board: the task has no goal of its own.

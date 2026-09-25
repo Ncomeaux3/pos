@@ -191,7 +191,7 @@ export function TaskDrawer({
       dirty={dirty}
       eyebrow={
         <>
-          Tasks <span className="text-ink-4">/</span> {task ? 'Edit' : 'New task'}
+          Tasks <span className="text-secondary-label">/</span> {task ? 'Edit' : 'New task'}
         </>
       }
       title={task ? task.title : 'New task'}
@@ -225,7 +225,7 @@ export function TaskDrawer({
             value={draft.title}
             onChange={set('title')}
             placeholder="What needs doing?"
-            className={cn(field, 'text-[16px] md:text-[15px]')}
+            className={cn(field, 'text-body')}
           />
         </Field>
 
@@ -323,7 +323,7 @@ export function TaskDrawer({
             )}
           </select>
           {rule && (
-            <span className="t-caption num text-ink-3">
+            <span className="num text-subheadline text-secondary-label">
               Next: {dayLabel(nextAfter(rule, dueOn, todayIso), todayIso.slice(0, 4))}
             </span>
           )}
@@ -340,7 +340,7 @@ export function TaskDrawer({
             ))}
           </select>
           {inherited && (
-            <span className="t-caption text-ink-3">
+            <span className="text-subheadline text-secondary-label">
               Counts toward the project&apos;s goal, {inherited.title}, unless a goal is set here.
             </span>
           )}
@@ -363,17 +363,17 @@ export function TaskDrawer({
           {task?.entityRef ? (
             <SkillPicker entityRef={task.entityRef} links={task.skills} skills={skills} className="mt-2" />
           ) : (
-            <p className="mt-2 text-[12px] text-ink-4">Classified when it is created.</p>
+            <p className="mt-2 text-footnote text-secondary-label">Classified when it is created.</p>
           )}
         </div>
 
-        <div className="glass grid grid-cols-2 gap-px overflow-hidden rounded-[18px] [&>*]:shadow-[-1px_-1px_0_var(--rule)]">
+        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-card bg-grouped-2 [&>*]:shadow-[-1px_-1px_0_var(--separator)]">
           <div className="px-4 py-3">
             <Eyebrow>Source</Eyebrow>
             <div
               className={cn(
-                'num mt-1 text-[13px]',
-                task?.source.startsWith('agent') ? 'text-warn' : 'text-ink',
+                'num mt-1 text-subheadline',
+                task?.source.startsWith('agent') ? 'text-orange-text' : 'text-label',
               )}
             >
               {task?.source ?? 'manual'}
@@ -381,9 +381,9 @@ export function TaskDrawer({
           </div>
           <div className="px-4 py-3">
             <Eyebrow>Reminder channel</Eyebrow>
-            <div className="num mt-1 text-[13px] text-ink">
+            <div className="num mt-1 text-subheadline text-label">
               {reminderChannels ? reminderChannels.join(' · ') : 'Off'} ·{' '}
-              <Link href="/settings/notifications" className="text-action hover:underline">
+              <Link href="/settings/notifications" className="text-accent hover:underline">
                 change
               </Link>
             </div>

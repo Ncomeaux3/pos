@@ -4,6 +4,7 @@ import { Check } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { CHEVRON, RowList, STRETCH, STRETCH_WRAP, useToast } from '@/components/pos'
+import { HIT } from '@/components/pos/button-classes'
 import { cn } from '@/lib/utils'
 import type { TasksDigest } from '../jobs/nightly-digest'
 import { hoursLabel } from '../shape'
@@ -32,7 +33,7 @@ export function TasksTile({ payload }: { payload: Record<string, unknown> }) {
   const toast = useToast()
 
   if (upcoming.length === 0 && due === 0 && overdue === 0) {
-    return <p className="t-caption px-1 text-ink-3">Nothing due today.</p>
+    return <p className="px-1 text-footnote text-secondary-label">Nothing due today.</p>
   }
 
   const tick = (id: string) => {
@@ -56,7 +57,7 @@ export function TasksTile({ payload }: { payload: Record<string, unknown> }) {
           // the check circle sits above it (v1.2 phase 3d).
           <div
             key={t.id}
-            className={cn(STRETCH_WRAP, 'flex items-start gap-3 px-4 py-2.5 before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-rule first:before:hidden')}
+            className={cn(STRETCH_WRAP, 'flex items-start gap-3 px-4 py-2.5 before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-separator first:before:hidden')}
           >
             <button
               type="button"
@@ -64,33 +65,28 @@ export function TasksTile({ payload }: { payload: Record<string, unknown> }) {
               onClick={() => tick(t.id)}
               aria-label={`Complete ${t.title}`}
               className={cn(
-                // 20px ring, 44px hit area on touch through the pseudo element.
+                HIT,
+                // 20px ring, a 44px hit area through HIT.
                 'relative z-10 mt-px grid size-5 shrink-0 place-items-center rounded-full border transition-colors duration-150',
-                'before:absolute before:-inset-3 before:content-[""] sm:before:inset-0',
-                on ? 'border-action bg-action text-action-fg' : 'border-rule-2 hover:border-action',
+                on ? 'border-accent bg-accent text-accent-fg' : 'border-gray hover:border-accent',
               )}
             >
               {on && <Check size={12} strokeWidth={3} aria-hidden />}
             </button>
             <Link href={`/tasks?task=${t.id}`} className={cn(STRETCH, 'min-w-0 flex-1')}>
-              <span
-                className={cn(
-                  'block truncate text-[14.5px] font-medium leading-[1.35]',
-                  on ? 'text-ink-3 line-through' : 'text-ink',
-                )}
-              >
+              <span className={cn('block truncate text-body', on ? 'text-secondary-label line-through' : 'text-label')}>
                 {t.title}
               </span>
-              <span className="t-caption mt-0.5 block truncate text-ink-3">
+              <span className="mt-0.5 block truncate text-subheadline text-secondary-label">
                 {t.project ?? 'No project'}
               </span>
             </Link>
             <span
               className={cn(
-                'num shrink-0 pt-0.5 text-[12.5px]',
-                tag.tone === 'action' && 'font-medium text-action',
-                tag.tone === 'bad' && 'font-medium text-bad',
-                !tag.tone && 'text-ink-3',
+                'num shrink-0 pt-0.5 text-subheadline',
+                tag.tone === 'action' && 'font-medium text-accent',
+                tag.tone === 'bad' && 'font-medium text-red-text',
+                !tag.tone && 'text-secondary-label',
               )}
             >
               {tag.text}
