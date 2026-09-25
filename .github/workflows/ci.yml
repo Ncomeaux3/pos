@@ -68,6 +68,8 @@ jobs:
 
       - run: pnpm typecheck
       - run: pnpm lint
+      # The holon-apple sweep guard: no arbitrary type or radius in a swept module.
+      - run: bash scripts/check-tokens.sh
 
       # The login page shipped with a class that was a thrown-error string:
       # a client module's export interpolated by a server component. Dev does

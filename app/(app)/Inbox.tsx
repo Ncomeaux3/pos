@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { ActionButton, useToast } from '@/components/pos'
+import { HIT } from '@/components/pos/button-classes'
 import { cn } from '@/lib/utils'
 import { readAlert, snoozeAlert } from './notifications/actions'
 import { approveProposal, dismissProposal } from './review/actions'
@@ -12,10 +13,10 @@ import { approveProposal, dismissProposal } from './review/actions'
 // decision made here and a decision made there are the same write. Nothing
 // is a dashboard only code path.
 
-/** A row in the band: a hairline above every row but the first, sand tinted. */
+/** A row in the band: a hairline above every row but the first. */
 const ROW =
   'flex flex-wrap items-start gap-x-3 gap-y-2 px-1 py-2.5 ' +
-  'border-t border-[color-mix(in_srgb,var(--sand)_45%,transparent)] first:border-t-0'
+  'border-t border-separator first:border-t-0'
 
 export function WarningList({
   warnings,
@@ -48,7 +49,7 @@ export function WarningList({
   const shown = warnings.filter((w) => !gone.includes(w.id))
 
   if (shown.length === 0) {
-    return <p className="t-caption px-1 py-2.5 text-ink-3">No warnings open.</p>
+    return <p className="px-1 py-2.5 text-footnote text-secondary-label">No warnings open.</p>
   }
 
   return (
@@ -60,7 +61,7 @@ export function WarningList({
           className={cn(ROW, phoneLimit !== undefined && i >= phoneLimit && 'max-md:hidden')}
         >
           <span
-            className={cn('mt-[7px] size-2 shrink-0 rounded-full', w.urgent ? 'bg-bad' : 'bg-warn')}
+            className={cn('mt-[7px] size-2 shrink-0 rounded-full', w.urgent ? 'bg-red' : 'bg-orange')}
             aria-hidden
           />
           <span className="min-w-0 flex-1 basis-[200px]">
@@ -68,11 +69,11 @@ export function WarningList({
               * queued it named the screen, or the alert centre has it. */}
             <Link
               href={w.href ?? '/notifications'}
-              className="block text-[14.5px] font-medium leading-[1.35] text-ink hover:text-action"
+              className={cn(HIT, 'block text-body text-label hover:text-accent')}
             >
               {w.title}
             </Link>
-            {w.sub && <span className="t-caption mt-0.5 block truncate text-ink-3">{w.sub}</span>}
+            {w.sub && <span className="mt-0.5 block truncate text-subheadline text-secondary-label">{w.sub}</span>}
           </span>
 
           <span className="ml-auto flex shrink-0 gap-1.5">
@@ -136,7 +137,7 @@ export function ProposalList({
   const shown = proposals.filter((p) => !gone.includes(p.id))
 
   if (shown.length === 0) {
-    return <p className="t-caption px-1 py-2.5 text-ink-3">Nothing waiting for review.</p>
+    return <p className="px-1 py-2.5 text-footnote text-secondary-label">Nothing waiting for review.</p>
   }
 
   return (
@@ -147,7 +148,7 @@ export function ProposalList({
           data-testid="proposal-row"
           className={cn(ROW, phoneLimit !== undefined && i >= phoneLimit && 'max-md:hidden')}
         >
-          <span className="mt-[7px] size-2 shrink-0 rounded-full bg-action" aria-hidden />
+          <span className="mt-[7px] size-2 shrink-0 rounded-full bg-accent" aria-hidden />
           <span className="min-w-0 flex-1 basis-[200px]">
             {editing === p.id ? (
               // Approving an edited title is what Edit is for: the proposal
@@ -163,12 +164,12 @@ export function ProposalList({
                   }
                 }}
                 aria-label={`Edit ${p.title}`}
-                className="w-full rounded-xl border border-action bg-bg-elev px-3 py-1.5 text-[14.5px] text-ink outline-none"
+                className="w-full rounded-control border border-accent bg-grouped-2 px-3 py-1.5 text-body text-label outline-none"
               />
             ) : (
-              <span className="block text-[14.5px] font-medium leading-[1.35] text-ink">{p.title}</span>
+              <span className="block text-body text-label">{p.title}</span>
             )}
-            <span className="t-caption mt-0.5 block truncate text-ink-3">
+            <span className="mt-0.5 block truncate text-subheadline text-secondary-label">
               Proposal from {p.from}, waiting for review
             </span>
           </span>
@@ -219,7 +220,7 @@ export function ProposalList({
 function More({ count, href }: { count: number; href: string }) {
   if (count <= 0) return null
   return (
-    <Link href={href} className="px-1 py-2 text-[13px] font-medium text-action hover:underline md:hidden">
+    <Link href={href} className="inline-flex min-h-11 items-center px-1 text-subheadline font-medium text-accent hover:underline md:hidden">
       and {count} more &rarr;
     </Link>
   )

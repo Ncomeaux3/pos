@@ -1,2 +1,2 @@
 // Moved to holon-ui (holon-apple Phase 3). Kept so deep imports keep resolving.
-export { BASE, SIZE, VARIANT } from '@ncomeaux3/holon-ui'
+export { BASE, HIT, SIZE, VARIANT } from '@ncomeaux3/holon-ui'

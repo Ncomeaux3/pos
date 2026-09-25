@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { Card, EmptyState, PaceBar, PageHeader, Row, RowList, StatusDot } from '@/components/pos'
+import { BASE, HIT, SIZE, VARIANT } from '@/components/pos/button-classes'
 import { db } from '@/core/db'
 import { Bento, ArrangeToggle, type Tile } from './Bento'
 import { SevenDays } from './DashboardTiles'
@@ -108,10 +109,10 @@ const ORDER = ['finance', 'goals', 'skills']
 function SectionHead({ id, title, meta }: { id: string; title: string; meta?: string }) {
   return (
     <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 px-1 pb-3">
-      <h2 id={id} className="text-[20px] font-semibold leading-tight tracking-[-0.015em] text-ink">
+      <h2 id={id} className="text-title-3 font-semibold text-label">
         {title}
       </h2>
-      {meta && <span className="t-caption num text-ink-3">{meta}</span>}
+      {meta && <span className="text-footnote num text-secondary-label">{meta}</span>}
     </div>
   )
 }
@@ -123,13 +124,13 @@ function SectionHead({ id, title, meta }: { id: string; title: string; meta?: st
 function TileHead({ href, name, meta }: { href: string; name: string; meta?: string }) {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-      <h2 className="text-[15px] font-semibold leading-tight text-ink">
-        <Link href={href} aria-label={`Open ${name}`} className="hover:text-action">
+      <h2 className="text-headline text-label">
+        <Link href={href} aria-label={`Open ${name}`} className={cn(HIT, 'hover:text-accent')}>
           {name}
         </Link>
       </h2>
       {meta && (
-        <Link href={href} className="t-caption text-ink-3 hover:text-ink">
+        <Link href={href} className={cn(HIT, 'text-footnote text-secondary-label hover:text-label')}>
           {meta}
         </Link>
       )}
@@ -226,10 +227,10 @@ export default async function DashboardPage() {
         <Card className={tileClass}>
           <TileHead href="/settings" name="Model spend" meta={`cap ${money(capCents)} this month`} />
           <div className="mt-0.5 flex items-baseline gap-2.5">
-            <span className="num text-[24px] font-semibold leading-none tracking-[-0.02em] text-ink">
+            <span className="num text-title-2 font-semibold text-label">
               {money(spendCents)}
             </span>
-            <span className="t-caption num text-ink-3">
+            <span className="text-footnote num text-secondary-label">
               {capCents > 0 ? `${Math.round((spendCents / capCents) * 100)}% of cap` : 'no cap set'}
             </span>
           </div>
@@ -239,7 +240,7 @@ export default async function DashboardPage() {
             tone={spendCents >= capCents ? 'bad' : spendCents > capCents * 0.8 ? 'warn' : 'brand'}
           />
           {spend.length === 0 ? (
-            <p className="t-caption text-ink-3">
+            <p className="text-footnote text-secondary-label">
               Nothing has been spent this month. Past the cap, research runs are refused and logged.
             </p>
           ) : (
@@ -247,15 +248,15 @@ export default async function DashboardPage() {
               {spend.map((row) => (
                 <div
                   key={`${row.purpose}.${row.model}`}
-                  className="grid grid-cols-[1fr_auto_auto] gap-3 border-b border-rule py-[7px] text-[13px] last:border-b-0"
+                  className="grid grid-cols-[1fr_auto_auto] gap-3 border-b border-separator py-2 text-footnote last:border-b-0"
                 >
-                  <span className="truncate text-ink">
+                  <span className="truncate text-label">
                     {capitalise(row.purpose)} · {modelName(row.model)}
                   </span>
-                  <span className="num t-caption text-ink-3">
+                  <span className="num text-secondary-label">
                     {row.calls.toLocaleString('en-US')} {row.calls === 1 ? 'call' : 'calls'}
                   </span>
-                  <span className="num t-caption text-ink">{money(row.cents)}</span>
+                  <span className="num text-label">{money(row.cents)}</span>
                 </div>
               ))}
             </div>
@@ -303,17 +304,17 @@ export default async function DashboardPage() {
       />
 
       <section className="mt-5 max-w-[920px] md:mt-6">
-        <p className="label text-ink-3">{today}</p>
+        <p className="text-subheadline text-secondary-label">{today}</p>
         {/* The opening statement, at the size the design gives it. It reads
           * as a sentence, not a heading, and the parts of it that name
           * something you can open are links, the one piece of colour in it. */}
-        <p className="mt-2 text-pretty text-[clamp(22px,2.2vw,30px)] font-normal leading-[1.25] tracking-[-0.03em] text-ink">
+        <p className="mt-2 text-pretty text-title-2 text-label md:text-title-1">
           {/* The one place the owner's name appears since it left the rail. */}
           {settings.owner_name && <span className="font-semibold">{greeting}, {settings.owner_name}. </span>}
           {segments.length > 0
             ? segments.map((s, i) =>
                 s.href ? (
-                  <Link key={i} href={s.href} className="text-action hover:underline">
+                  <Link key={i} href={s.href} className="text-accent hover:underline">
                     {s.text}
                   </Link>
                 ) : (
@@ -324,7 +325,7 @@ export default async function DashboardPage() {
         </p>
         {/* Hidden on a phone: none of the phone artboards puts a paragraph
           * under its opening line. */}
-        <p className="mt-2 hidden text-[13px] text-ink-3 md:block">
+        <p className="mt-2 hidden text-footnote text-secondary-label md:block">
           {latest
             ? 'Written from module digests only. Raw data is touched when you ask a direct question.'
             : 'Press Run now, or wait for the nightly cron.'}
@@ -339,20 +340,21 @@ export default async function DashboardPage() {
       )}
 
       {/* Only actionable things, and only when there are any: a warning, a
-        * proposal, or an alert the nightly summary raised. Sand, because this
-        * is the one warm surface on the page and it is meant to be read
-        * first. Every row's action is the same write its own screen makes. */}
+        * proposal, or an alert the nightly summary raised. Opaque like every
+        * card (holon-apple sweep, 2026-09-25: the sand fill put Approve and the
+        * grey lines under 4.5:1); being first on the page is what says read
+        * this first. Every row's action is the same write its own screen makes. */}
       {attention > 0 && (
         <section
           aria-labelledby="attention"
           data-testid="dashboard-attention"
-          className="mt-6 rounded-[18px] bg-sand-surface px-4 py-3.5 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--sand)_45%,transparent)] md:px-5 md:py-4"
+          className="mt-6 rounded-card bg-grouped-2 px-4 py-3.5 md:px-5 md:py-4"
         >
           <div className="flex items-baseline justify-between gap-3 px-1">
-            <h2 id="attention" className="text-[15px] font-semibold leading-tight text-ink">
+            <h2 id="attention" className="text-headline text-label">
               Needs attention
             </h2>
-            <span className="t-caption num text-ink-3">
+            <span className="text-footnote num text-secondary-label">
               {attention} {attention === 1 ? 'item' : 'items'}
             </span>
           </div>
@@ -386,15 +388,15 @@ export default async function DashboardPage() {
               {alerts.map((a) => (
                 <div
                   key={a.title}
-                  className="flex items-start gap-3 border-t border-[color-mix(in_srgb,var(--sand)_45%,transparent)] px-1 py-2.5 first:border-t-0"
+                  className="flex items-start gap-3 border-t border-separator px-1 py-2.5 first:border-t-0"
                 >
                   <span
-                    className={cn('mt-[7px] size-2 shrink-0 rounded-full', a.tone === 'bad' ? 'bg-bad' : a.tone === 'ok' ? 'bg-ok' : 'bg-warn')}
+                    className={cn('mt-[7px] size-2 shrink-0 rounded-full', a.tone === 'bad' ? 'bg-red' : a.tone === 'ok' ? 'bg-green' : 'bg-orange')}
                     aria-hidden
                   />
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[14.5px] font-medium leading-[1.35] text-ink">{a.title}</span>
-                    {a.detail && <span className="t-caption mt-0.5 block text-ink-3">{a.detail}</span>}
+                    <span className="block text-body text-label">{a.title}</span>
+                    {a.detail && <span className="mt-0.5 block text-subheadline text-secondary-label">{a.detail}</span>}
                   </span>
                 </div>
               ))}
@@ -416,16 +418,10 @@ export default async function DashboardPage() {
             <SectionHead id="today-work" title="Today" meta={tasksHead?.meta} />
             <TasksTile payload={tasks.payload} />
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <Link
-                href="/tasks?task=new"
-                className="inline-flex h-11 items-center rounded-full border border-glass-line bg-glass-strong px-4 text-[13px] font-medium text-ink shadow-[inset_0_1px_0_var(--glass-edge),var(--lift)] hover:bg-bg-elev sm:h-9"
-              >
+              <Link href="/tasks?task=new" className={cn(BASE, SIZE.md, VARIANT.normal)}>
                 Add a task
               </Link>
-              <Link
-                href="/tasks"
-                className="inline-flex h-11 items-center rounded-full px-4 text-[13px] font-medium text-ink-3 hover:bg-glass hover:text-ink sm:h-9"
-              >
+              <Link href="/tasks" className={cn(BASE, SIZE.md, VARIANT.cancel)}>
                 All tasks
               </Link>
             </div>
@@ -457,7 +453,7 @@ export default async function DashboardPage() {
       {/* The system's own line, last: discoverable, and below every piece of
         * personal work. The last run's own clock, in the owner's zone, and
         * that run's outcome rather than the standing state of every job. */}
-      <p className="mt-8 px-1 t-caption text-ink-3">
+      <p className="mt-8 px-1 text-footnote text-secondary-label">
         <StatusDot
           tone={!run ? 'idle' : run.status === 'clean' ? 'ok' : run.status === 'partial' ? 'warn' : 'bad'}
           className="mr-2 inline-block align-middle"
@@ -469,7 +465,7 @@ export default async function DashboardPage() {
           Model spend this month {money(spendCents)}
           {capCents > 0 ? ` of ${money(capCents)}` : ''}.
         </span>{' '}
-        <Link href="/agent-log" className="text-action hover:underline">
+        <Link href="/agent-log" className={cn(HIT, 'text-accent hover:underline')}>
           Agent log
         </Link>
       </p>
@@ -493,7 +489,7 @@ function GenericDigest({ payload }: { payload: Record<string, unknown> }) {
     .slice(0, 4)
 
   if (entries.length === 0) {
-    return <p className="t-caption text-ink-3">This module wrote no numbers last night.</p>
+    return <p className="text-footnote text-secondary-label">This module wrote no numbers last night.</p>
   }
 
   return (
@@ -502,7 +498,7 @@ function GenericDigest({ payload }: { payload: Record<string, unknown> }) {
         <Row
           key={key}
           title={readableKey(key)}
-          right={<span className="num text-sm text-ink">{readableValue(key, value)}</span>}
+          right={<span className="num text-body text-label">{readableValue(key, value)}</span>}
         />
       ))}
     </RowList>

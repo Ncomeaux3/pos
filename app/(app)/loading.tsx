@@ -4,12 +4,12 @@
 export default function Loading() {
   return (
     <div aria-busy="true" aria-label="Loading" className="animate-pulse">
-      <div className="mb-6 h-4 w-32 bg-rule" />
-      <div className="mb-8 h-8 w-56 bg-rule" />
+      <div className="mb-6 h-4 w-32 rounded-control bg-fill-3" />
+      <div className="mb-8 h-8 w-56 rounded-control bg-fill-3" />
       <div className="grid gap-3 md:grid-cols-2">
-        <div className="h-32 border border-rule rounded-[18px]" />
-        <div className="h-32 border border-rule rounded-[18px]" />
-        <div className="h-32 border border-rule rounded-[18px]" />
+        <div className="h-32 rounded-card bg-grouped-2" />
+        <div className="h-32 rounded-card bg-grouped-2" />
+        <div className="h-32 rounded-card bg-grouped-2" />
       </div>
     </div>
   )
