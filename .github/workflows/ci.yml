@@ -78,7 +78,7 @@ jobs:
         run: |
           pnpm start &
           for i in $(seq 1 30); do curl -sf -o login.html localhost:3000/login && break; sleep 1; done
-          grep -q 'w-full rounded-xl' login.html
+          grep -qF 'w-full min-h-(--target) rounded-control' login.html
           if grep -q 'Attempted to call' login.html; then exit 1; fi
 
       # vitest builds its own pos_test database from the migrations, so this

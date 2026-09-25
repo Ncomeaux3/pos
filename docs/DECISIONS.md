@@ -89,7 +89,7 @@ From the prod-auditor report of 2026-09-14 (8 present, 5 partial, 0 absent, no c
 | 4. Auth and permissions | Present | | proxy.ts (matcher excludes `brand/`, the icons moved there from `icons/`), requireOwner(), bearer on /api/mcp and /api/cron, passkeys |
 | 5. Hosting and deployment | Present | | Vercel git integration, previews per branch, rollback in docs/SETUP-SUPABASE.md section 7 |
 | 6. Cloud and compute | Present | 12 | maxDuration on the cron (300), MCP (60), webhook and both OAuth routes (30) |
-| 7. CI/CD and version control | Present | 12 | Branch protection on main requires `check`, `screens` and `migrations`, enforced for admins, since 2026-09-15; the served-login smoke grep in ci.yml reads the input's `w-full rounded-xl` class and moves with it |
+| 7. CI/CD and version control | Present | 12 | Branch protection on main requires `check`, `screens` and `migrations`, enforced for admins, since 2026-09-15; the served-login smoke grep in ci.yml reads the input's `w-full min-h-(--target) rounded-control` class (holon-ui's fieldClass since holon-apple Phase 3) and moves with it |
 | 8. Security and data access | Present | 12 | .env gitignored, CSP, dependabot, `pnpm audit --prod --audit-level=high` in the check job |
 | 9. Rate limiting | Present | | core/ratelimit.ts, 60 per minute per IP, 429 with retry-after |
 | 10. Caching and CDN | Present | | Request-scoped React cache() on settings, today and skill names since Phase 3; no TTL caches by decision, single user and freshness wins |
