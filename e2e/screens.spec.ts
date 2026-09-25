@@ -2767,6 +2767,12 @@ test('finance, the cash flow accounts drawer changes what the card counts', asyn
   await expect(checking).toHaveAttribute('aria-checked', 'true')
   await checking.click()
   await expect(drawer.getByText(`${on - 1} of ${total} feed cash flow · 1 unsaved`)).toBeVisible()
+  // A held switch asks through the Alert on Escape; Keep editing keeps it.
+  await page.keyboard.press('Escape')
+  const ask = page.getByRole('dialog', { name: 'Discard changes?' })
+  await ask.getByRole('button', { name: 'Keep editing' }).click()
+  await expect(ask).toBeHidden()
+  await expect(checking).toHaveAttribute('aria-checked', 'false')
   await drawer.getByRole('button', { name: 'Done' }).click()
   await expect(page).not.toHaveURL(/cashflow=1/)
   await expect(card.getByText(`Cash flow · 12 months · ${on - 1} of ${total} accounts`).filter({ visible: true })).toBeVisible()
@@ -2876,9 +2882,22 @@ test('finance, the limits drawer holds edits until Done', async ({ page }) => {
   await limit.fill('$1,250.50')
   await expect(page.getByText('2 unsaved changes')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Reset' }).click()
+  // holon-apple Finance sweep: Escape on held edits asks through the Alert,
+  // not window.confirm, and Keep editing leaves every edit in place.
+  await page.keyboard.press('Escape')
+  const ask = page.getByRole('dialog', { name: 'Discard changes?' })
+  await expect(ask).toBeVisible()
+  await ask.getByRole('button', { name: 'Keep editing' }).click()
+  await expect(ask).toBeHidden()
+  await expect(page.getByText('2 unsaved changes')).toBeVisible()
+
+  // Cancel pairs with Done and drops the held edits without asking, as the
+  // close control does; reopening shows nothing was written.
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(page).not.toHaveURL(/limits=1/)
+  await page.getByRole('button', { name: /edit limits/i }).click()
   await expect(page.getByText('No changes')).toBeVisible()
-  await page.getByRole('button', { name: 'Done' }).click()
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click()
   await expect(page).not.toHaveURL(/limits=1/)
 })
 

@@ -43,7 +43,7 @@ export function CategoryTrend({
             </option>
           ))}
         </select>
-        <span className="label text-[11px] text-ink-3">
+        <span className="label text-caption-1 text-secondary-label">
           {balance(chosen.months.reduce((sum, m) => sum + m, 0))} over {months.length} months
         </span>
       </div>

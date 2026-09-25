@@ -27,21 +27,21 @@ export function FinanceTile({ payload }: { payload: Record<string, unknown> }) {
     <div className="flex flex-1 flex-col">
       <div className="mt-0.5 grid grid-cols-2 gap-[18px]">
         <div>
-          <span className="block text-[11px] text-ink-3">Net worth</span>
-          <span className="num mt-1.5 block text-[30px] font-light leading-none tracking-[-0.02em] text-ink">
+          <span className="block text-caption-1 text-secondary-label">Net worth</span>
+          <span className="num mt-1.5 block text-title-2 font-semibold text-label">
             {money(netWorth)}
           </span>
-          <span className={`num mt-1.5 block text-[11px] ${change >= 0 ? 'text-ok' : 'text-bad'}`}>
+          <span className={`num mt-1.5 block text-caption-1 ${change >= 0 ? 'text-green-text' : 'text-red-text'}`}>
             {delta(change)} · 30d
           </span>
         </div>
 
         <div>
-          <span className="block text-[11px] text-ink-3">Due in 14 days</span>
-          <span className="num mt-1.5 block text-[30px] font-light leading-none tracking-[-0.02em] text-ink">
+          <span className="block text-caption-1 text-secondary-label">Due in 14 days</span>
+          <span className="num mt-1.5 block text-title-2 font-semibold text-label">
             {money(upcoming)}
           </span>
-          <span className="num mt-1.5 block truncate text-[11px] text-ink-3">
+          <span className="num mt-1.5 block truncate text-caption-1 text-secondary-label">
             {next
               ? `next: ${next.name} · ${next.inDays === 0 ? 'today' : `in ${next.inDays}d`}`
               : `${d.upcomingCount ?? 0} ${d.upcomingCount === 1 ? 'charge' : 'charges'}`}

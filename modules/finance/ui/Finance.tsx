@@ -25,6 +25,7 @@ import {
   fieldClass,
   useToast,
 } from '@/components/pos'
+import { HIT } from '@/components/pos/button-classes'
 import { Segments } from '@/components/pos/Segments'
 import type { Day } from '@/core/series'
 import { useSearchState } from '@/components/pos/searchState'
@@ -199,9 +200,9 @@ const monthLabel = (iso: string) => {
 }
 
 /** The artboard's card: 1px rule on the elevated ground, 14px 20px inside. */
-const overviewCard = 'border-rule px-5 py-3.5'
+const overviewCard = 'border-separator px-5 py-3.5'
 /** Its rows: 9px; the hover tint is DataRow's own, on the rows that open something. */
-const overviewRow = 'lg:py-[9px] lg:gap-y-0'
+const overviewRow = 'lg:min-h-11 lg:py-[9px] lg:gap-y-0'
 
 /** One cell of the KPI strip: eyebrow, 34px figure, an 11px tracked line. */
 /** The KPI strip's four cells: the phone's overview summary and the desktop's one-page dashboard share them. */
@@ -519,26 +520,26 @@ export function Finance({ data }: { data: FinanceData }) {
                     >
                       {data.accounts.map((a) => (
                         <DataRow key={a.id} onClick={() => setParams({ account: a.id }, { push: true })} className={overviewRow}>
-                          <span className="min-w-0 truncate text-[13px] text-ink">
+                          <span className="min-w-0 truncate text-footnote text-label">
                             {a.name}
-                            <span className="label ml-1.5 text-[11px] text-ink-3">{a.txCount} tx →</span>
+                            <span className="label ml-1.5 text-caption-1 text-secondary-label">{a.txCount} tx →</span>
                           </span>
-                          <span className="truncate text-[13px] text-ink-3">{a.institution}</span>
-                          <span className="num text-right text-[13px] text-ink">{balance(a.balanceCents)}</span>
+                          <span className="truncate text-footnote text-secondary-label">{a.institution}</span>
+                          <span className="num text-right text-footnote text-label">{balance(a.balanceCents)}</span>
                           <span
                             className={cn(
-                              'num text-right text-[13px]',
+                              'num text-right text-footnote',
                               a.changeCents === null || a.changeCents === 0
-                                ? 'text-ink-3'
+                                ? 'text-secondary-label'
                                 : a.changeCents > 0
-                                  ? 'text-ok'
-                                  : 'text-bad',
+                                  ? 'text-green-text'
+                                  : 'text-red-text',
                             )}
                           >
                             {/* Not tracked is not the same as no change, and must not
                                 render as one. */}
                             {a.changeCents === null ? (
-                              <span title={CHANGE_NOTE} className="label whitespace-nowrap text-[11px]">no history yet</span>
+                              <span title={CHANGE_NOTE} className="label whitespace-nowrap text-caption-1">no history yet</span>
                             ) : a.changeCents === 0 ? (
                               'flat'
                             ) : (
@@ -546,10 +547,10 @@ export function Finance({ data }: { data: FinanceData }) {
                             )}
                           </span>
                           <span className="flex items-center justify-end gap-2">
-                            <span className="h-0.5 w-14 bg-rule-2" aria-hidden>
-                              <span className="block h-0.5 bg-brand" style={{ width: `${Math.max(0, Math.min(100, a.sharePercent))}%` }} />
+                            <span className="h-0.5 w-14 bg-fill-3" aria-hidden>
+                              <span className="block h-0.5 bg-accent" style={{ width: `${Math.max(0, Math.min(100, a.sharePercent))}%` }} />
                             </span>
-                            <span className="num w-[34px] shrink-0 text-right text-[11px] text-ink-2">
+                            <span className="num w-[34px] shrink-0 text-right text-caption-1 text-secondary-label">
                               {a.balanceCents > 0 ? `${Math.round(a.sharePercent)}%` : '\u2014'}
                             </span>
                           </span>
@@ -591,15 +592,15 @@ export function Finance({ data }: { data: FinanceData }) {
                       >
                         {upcoming.map((u, i) => (
                           <DataRow key={u.id} className={cn(overviewRow, 'md:gap-x-3')}>
-                            <span className="num text-[12px] text-ink">
+                            <span className="num text-footnote text-label">
                               {shortDate(u.nextChargeOn)}
-                              <span className="mt-0.5 block text-[11px] text-ink-3">
+                              <span className="mt-0.5 block text-caption-1 text-secondary-label">
                                 {weekday(u.nextChargeOn)} · {inDays(data.todayIso, u.nextChargeOn)}
                               </span>
                             </span>
                             <span className="min-w-0">
-                              <span className="block truncate text-[13px] text-ink">{u.name}</span>
-                              <span className="mt-0.5 block truncate text-[11px] text-ink-3">
+                              <span className="block truncate text-footnote text-label">{u.name}</span>
+                              <span className="mt-0.5 block truncate text-caption-1 text-secondary-label">
                                 {u.isSubscription ? 'Subscription' : 'Detected'} · {u.cadence}
                                 {u.vendor ? ` · ${u.vendor}` : ''}
                               </span>
@@ -626,13 +627,13 @@ export function Finance({ data }: { data: FinanceData }) {
                                   Cancel
                                 </ActionButton>
                               )}
-                              <span className="num text-right text-[13px] text-ink">{money(u.amountCents, true)}</span>
+                              <span className="num text-right text-footnote text-label">{money(u.amountCents, true)}</span>
                             </span>
                             {projecting && (
                               <span
                                 className={cn(
-                                  'num text-right text-[13px]',
-                                  balanceAfter[i] < 0 ? 'text-bad' : 'text-ink-2',
+                                  'num text-right text-footnote',
+                                  balanceAfter[i] < 0 ? 'text-red-text' : 'text-secondary-label',
                                 )}
                               >
                                 {balance(balanceAfter[i])}
@@ -641,17 +642,17 @@ export function Finance({ data }: { data: FinanceData }) {
                           </DataRow>
                         ))}
                         <DataRow className="border-b-0 md:gap-x-3 md:pb-0.5 md:pt-2.5">
-                          <span className="label text-[11px] text-ink-3">Total</span>
-                          <span className="text-[12px] text-ink-3">
+                          <span className="label text-caption-1 text-secondary-label">Total</span>
+                          <span className="text-footnote text-secondary-label">
                             {upcoming.length} {upcoming.length === 1 ? 'charge' : 'charges'} ·{' '}
                             {money(monthlySubscriptions, true)}/mo in recurring charges
                           </span>
-                          <span className="num text-right text-[13px] text-ink">{money(upcomingTotal, true)}</span>
+                          <span className="num text-right text-footnote text-label">{money(upcomingTotal, true)}</span>
                           {projecting && (
                             <span
                               className={cn(
-                                'num text-right text-[13px]',
-                                (balanceAfter.at(-1) ?? 0) < 0 ? 'text-bad' : 'text-ink',
+                                'num text-right text-footnote',
+                                (balanceAfter.at(-1) ?? 0) < 0 ? 'text-red-text' : 'text-label',
                               )}
                             >
                               {balance(balanceAfter.at(-1) ?? data.checkingCents ?? 0)}
@@ -661,7 +662,7 @@ export function Finance({ data }: { data: FinanceData }) {
                       </DataTable>
                     )}
                     {upcoming.length > 0 && projecting && (
-                      <p className="t-caption mt-2.5 text-ink-3">{BALANCE_NOTE}</p>
+                      <p className="text-footnote mt-2.5 text-secondary-label">{BALANCE_NOTE}</p>
                     )}
                   </Card>
 
@@ -669,7 +670,7 @@ export function Finance({ data }: { data: FinanceData }) {
                     <div className="mb-1 flex items-center justify-between gap-3.5">
                       <Eyebrow>Budgets · {monthLabel(data.todayIso)}</Eyebrow>
                       <span className="flex items-center gap-3.5">
-                        <span className={cn('label text-[11px]', hot.length > 0 ? 'text-warn' : 'text-ink-3')}>
+                        <span className={cn('label text-caption-1', hot.length > 0 ? 'text-orange-text' : 'text-secondary-label')}>
                           {hot.length} over {data.alertThreshold}%
                         </span>
                         {/* Rules live with transactions, and the desktop page has no
@@ -693,7 +694,7 @@ export function Finance({ data }: { data: FinanceData }) {
                           {shownBudgets.map((b) => {
                             const used = b.limitCents ? budgetTone(b.spentCents, b.limitCents, data.alertThreshold, b.isFixed) : null
                             const over = used !== null && (used.tone === 'warn' || used.tone === 'bad')
-                            const tone = used === null || used.tone === 'fixed' ? 'text-ink' : toneText(used.tone)
+                            const tone = used === null || used.tone === 'fixed' ? 'text-label' : toneText(used.tone)
                             return (
                               <DataRow
                                 key={b.id}
@@ -701,7 +702,7 @@ export function Finance({ data }: { data: FinanceData }) {
                                 className={cn(overviewRow, 'lg:block lg:py-1.5')}
                               >
                                 <span className="grid items-baseline gap-x-3.5 lg:grid-cols-[minmax(0,1fr)_auto_44px]">
-                                  <span className={cn('min-w-0 truncate text-[13px]', tone)}>
+                                  <span className={cn('min-w-0 truncate text-footnote', tone)}>
                                     {b.name}
                                     {b.isFixed ? (
                                       <StatusChip tone="quiet" className="ml-1.5">Fixed</StatusChip>
@@ -709,11 +710,11 @@ export function Finance({ data }: { data: FinanceData }) {
                                       <StatusChip tone="warn" className="ml-1.5">over {data.alertThreshold}%</StatusChip>
                                     ) : null}
                                   </span>
-                                  <span className="num text-[12px] text-ink-2">
+                                  <span className="num text-footnote text-secondary-label">
                                     {money(b.spentCents)}{' '}
-                                    <span className="text-ink-3">/ {b.limitCents ? money(b.limitCents) : 'no limit'}</span>
+                                    <span className="text-secondary-label">/ {b.limitCents ? money(b.limitCents) : 'no limit'}</span>
                                   </span>
-                                  <span className={cn('num text-right text-[12px]', tone)}>
+                                  <span className={cn('num text-right text-footnote', tone)}>
                                     {used === null ? '\u2014' : `${used.pct}%`}
                                   </span>
                                 </span>
@@ -723,14 +724,14 @@ export function Finance({ data }: { data: FinanceData }) {
                           })}
                         </DataTable>
                         <div className="grid items-baseline gap-x-3.5 pt-2.5 lg:grid-cols-[minmax(0,1fr)_auto_44px]">
-                          <span className="label text-[11px] text-ink-3">
-                            Total · <span className="text-ink-2">{money(Math.max(0, budgetTotals.limit - budgetTotals.spent))} left</span> ·
+                          <span className="label text-caption-1 text-secondary-label">
+                            Total · <span className="text-label">{money(Math.max(0, budgetTotals.limit - budgetTotals.spent))} left</span> ·
                             pace mark at day {dayOfMonth(data.todayIso)}
                           </span>
-                          <span className="num text-[12px] text-ink">
-                            {money(budgetTotals.spent)} <span className="text-ink-3">/ {money(budgetTotals.limit)}</span>
+                          <span className="num text-footnote text-label">
+                            {money(budgetTotals.spent)} <span className="text-secondary-label">/ {money(budgetTotals.limit)}</span>
                           </span>
-                          <span className="num text-right text-[12px] text-ink">
+                          <span className="num text-right text-footnote text-label">
                             {budgetTotals.limit > 0 ? `${Math.round((budgetTotals.spent / budgetTotals.limit) * 100)}%` : '\u2014'}
                           </span>
                         </div>
@@ -759,17 +760,17 @@ export function Finance({ data }: { data: FinanceData }) {
                   onClick={() => setParams({ account: a.id }, { push: true })}
                   right={
                     <>
-                      <span className="num text-[14px] text-ink">{balance(a.balanceCents)}</span>
+                      <span className="num text-body text-label">{balance(a.balanceCents)}</span>
                       <span
                         className={cn(
-                          'label text-[11px]',
+                          'label text-caption-1',
                           a.changeCents === null
-                            ? 'text-ink-3'
+                            ? 'text-secondary-label'
                             : a.changeCents > 0
-                              ? 'text-ok'
+                              ? 'text-green-text'
                               : a.changeCents < 0
-                                ? 'text-bad'
-                                : 'text-ink-3',
+                                ? 'text-red-text'
+                                : 'text-secondary-label',
                         )}
                       >
                         {/* Not tracked is not the same as no change, and must not
@@ -782,7 +783,7 @@ export function Finance({ data }: { data: FinanceData }) {
                   {a.balanceCents > 0 && (
                     <div className="flex items-center gap-2.5">
                       <PaceBar value={a.sharePercent} max={100} className="flex-1" />
-                      <span className="label w-9 shrink-0 text-right text-[11px] text-ink-3">
+                      <span className="label w-9 shrink-0 text-right text-caption-1 text-secondary-label">
                         {Math.round(a.sharePercent)}%
                       </span>
                     </div>
@@ -795,7 +796,7 @@ export function Finance({ data }: { data: FinanceData }) {
           {tab === 'budgets' && (
             <div className="mt-[18px] max-w-3xl space-y-3">
               <div className="flex items-center justify-between gap-3">
-                <span className={cn('label text-[11px]', hot.length > 0 ? 'text-warn' : 'text-ink-3')}>
+                <span className={cn('label text-caption-1', hot.length > 0 ? 'text-orange-text' : 'text-secondary-label')}>
                   {hot.length} over {data.alertThreshold}%
                 </span>
                 {/* The same drawer the desktop card opens; the phone has no card head to hold it. */}
@@ -803,7 +804,7 @@ export function Finance({ data }: { data: FinanceData }) {
                   Edit limits
                 </ActionButton>
               </div>
-              <p className="t-caption text-ink-3">
+              <p className="text-footnote text-secondary-label">
                 The tick on each bar is where you would be if you spent evenly through the month. A
                 limit you set here applies to this month only, so raising one in March does not rewrite
                 what February was measured against.
@@ -817,13 +818,13 @@ export function Finance({ data }: { data: FinanceData }) {
                     <button
                       type="button"
                       onClick={() => setParams({ budget: b.id }, { push: true })}
-                      className={cn(STRETCH, 't-body text-left', tone ?? 'text-ink')}
+                      className={cn(STRETCH, 'text-body text-left', tone ?? 'text-label')}
                     >
                       {b.name}
                     </button>
                     <div className="flex items-center gap-2">
                       {b.isFixed && <Chip tone="quiet">Fixed</Chip>}
-                      <span className={cn('num text-[12px]', tone ?? 'text-ink-3')}>
+                      <span className={cn('num text-footnote', tone ?? 'text-secondary-label')}>
                         {money(b.spentCents)}
                         {b.limitCents ? ` of ${money(b.limitCents)}` : ' spent, no limit'}
                       </span>
@@ -833,7 +834,7 @@ export function Finance({ data }: { data: FinanceData }) {
                     </div>
                   </div>
                   <BudgetBar budget={b} pace={data.monthPace} threshold={data.alertThreshold} />
-                  <p className="t-caption text-ink-3">{b.description}</p>
+                  <p className="text-footnote text-secondary-label">{b.description}</p>
                 </Card>
                 )
               })}
@@ -863,7 +864,7 @@ export function Finance({ data }: { data: FinanceData }) {
                       }
                     >
                       {projecting ? (
-                        <span className="label text-[11px] text-ink-3">
+                        <span className="label text-caption-1 text-secondary-label">
                           Leaves {balance(balanceAfter[i])} in checking
                         </span>
                       ) : null}
@@ -910,7 +911,7 @@ export function Finance({ data }: { data: FinanceData }) {
                 className={cn(fieldClass, 'mt-3 w-full')}
               />
               {searching && pool === null ? (
-                <p className="mt-3.5 text-[12px] text-ink-3">Searching…</p>
+                <p className="mt-3.5 text-footnote text-secondary-label">Searching…</p>
               ) : searching && shownTransactions.length === 0 ? (
                 <EmptyState headline="Nothing matches" className="mt-3.5">
                   No transaction has &ldquo;{q}&rdquo; in its description, category or account, or
@@ -994,7 +995,7 @@ export function Finance({ data }: { data: FinanceData }) {
           />
           <Card className="mt-3.5 flex items-center gap-3.5">
             <Eyebrow className="flex-1">Monthly limit</Eyebrow>
-            <span className="num text-[13px] text-ink-3">$</span>
+            <span className="num text-footnote text-secondary-label">$</span>
             <input
               inputMode="decimal"
               defaultValue={openBudget.limitCents ? openBudget.limitCents / 100 : ''}
@@ -1005,7 +1006,7 @@ export function Finance({ data }: { data: FinanceData }) {
               }}
               className={cn(fieldClass, 'num w-24 text-right')}
             />
-            <span className="num text-[11px] text-ink-3">
+            <span className="num text-caption-1 text-secondary-label">
               per month
               {openBudget.limitCents
                 ? ` · ${money(Math.max(0, Math.round((openBudget.limitCents - openBudget.spentCents) / Math.max(1, daysLeft))))}/day left`
@@ -1084,7 +1085,7 @@ function BudgetBar({
 }) {
   if (!budget.limitCents) {
     return (
-      <p className="t-caption text-ink-3">
+      <p className="text-footnote text-secondary-label">
         No limit set. {money(budget.spentCents)} spent this month.
       </p>
     )
@@ -1102,7 +1103,7 @@ function BudgetBar({
         className={cn(compact && 'h-0.5 rounded-none [&>div]:rounded-none')}
       />
       {compact ? null : (
-        <span className={cn('label block text-[11px]', toneText(tone))}>{label}</span>
+        <span className={cn('label block text-caption-1', toneText(tone))}>{label}</span>
       )}
     </div>
   )
@@ -1115,7 +1116,7 @@ function statTone(tone: BudgetTone): 'warn' | 'bad' | undefined {
 
 /** The text colour a budget's number and name read in. Fixed costs stay quiet. */
 function toneText(tone: BudgetTone): string {
-  return tone === 'bad' ? 'text-bad' : tone === 'warn' ? 'text-warn' : tone === 'ok' ? 'text-ok' : 'text-ink-3'
+  return tone === 'bad' ? 'text-red-text' : tone === 'warn' ? 'text-orange-text' : tone === 'ok' ? 'text-green-text' : 'text-secondary-label'
 }
 
 /**
@@ -1210,15 +1211,15 @@ function TransactionList({
     <div className="mt-3.5">
       <div className="flex items-center justify-between">
         <Eyebrow>{caption}</Eyebrow>
-        <span className="label text-[11px] text-ink-3">
+        <span className="label text-caption-1 text-secondary-label">
           {total !== undefined && total > transactions.length
             ? `${transactions.length} of ${total} transactions`
             : `${transactions.length} ${transactions.length === 1 ? 'transaction' : 'transactions'}`}
         </span>
       </div>
-      <div className="mt-2 grid grid-cols-[64px_minmax(0,1fr)_auto] gap-x-3 border-b border-rule-2 py-[7px]">
+      <div className="mt-2 grid grid-cols-[64px_minmax(0,1fr)_auto] gap-x-3 border-b border-separator py-[7px]">
         {['Date', 'Merchant', 'Amount'].map((h, i) => (
-          <span key={h} className={cn('label text-[11px] text-ink-3', i === 2 && 'text-right')}>
+          <span key={h} className={cn('label text-caption-1 text-secondary-label', i === 2 && 'text-right')}>
             {h}
           </span>
         ))}
@@ -1227,21 +1228,22 @@ function TransactionList({
         const amount = transactionAmount(t.amountCents)
         const open = editing === t.id
         return (
-          <div key={t.id} className="border-b border-rule">
-            <div className="grid grid-cols-[64px_minmax(0,1fr)_auto] items-center gap-x-3 py-[9px] text-[13px]">
-              <span className="num text-[11px] text-ink-3">{shortDate(t.occurredOn)}</span>
+          <div key={t.id} className="border-b border-separator">
+            <div className="grid grid-cols-[64px_minmax(0,1fr)_auto] items-center gap-x-3 py-[9px] text-footnote">
+              <span className="num text-caption-1 text-secondary-label">{shortDate(t.occurredOn)}</span>
               <span className="min-w-0">
-                <span className="block text-ink md:truncate">{t.descriptor}</span>
-                <span className="mt-0.5 block text-[11px] text-ink-3 md:truncate">
+                <span className="block text-label md:truncate">{t.descriptor}</span>
+                <span className="mt-0.5 block text-caption-1 text-secondary-label">
                   <button
                     type="button"
                     aria-label={`File ${t.descriptor}`}
                     aria-expanded={open}
                     onClick={() => setEditing(open ? null : t.id)}
                     className={cn(
-                      // A text link in a dense row: the hit area grows on a coarse pointer without moving the row.
-                      'underline-offset-2 hover:text-ink hover:underline pointer-coarse:-my-3 pointer-coarse:py-3',
-                      (override[t.id] ?? t.categoryName) ? (t.isManual ? 'text-ink-2' : 'text-ink-3') : 'text-warn',
+                      // A text link in a dense row: HIT grows the tap area to 44px without moving the row.
+                      HIT,
+                      'underline-offset-2 hover:text-label hover:underline',
+                      (override[t.id] ?? t.categoryName) ? (t.isManual ? 'text-label' : 'text-secondary-label') : 'text-orange-text',
                     )}
                   >
                     {override[t.id] ?? t.categoryName ?? 'Uncategorised'}
@@ -1261,7 +1263,7 @@ function TransactionList({
                   {showAccount && ` · ${t.accountName}`}
                 </span>
               </span>
-              <span className={cn('num text-right text-[13px]', amount.incoming ? 'text-ok' : 'text-ink')}>
+              <span className={cn('num text-right text-footnote', amount.incoming ? 'text-green-text' : 'text-label')}>
                 {amount.text}
               </span>
             </div>
@@ -1293,7 +1295,7 @@ function TransactionList({
               </div>
             )}
             {offer?.id === t.id && (
-              <div className="flex flex-wrap items-center gap-2 pb-2.5 text-[12px] text-ink-2">
+              <div className="flex flex-wrap items-center gap-2 pb-2.5 text-footnote text-secondary-label">
                 <span className="min-w-0 flex-1">
                   Always file {t.descriptor} as {offer.name}?
                 </span>
@@ -1355,15 +1357,6 @@ function LimitsDrawer({
   const countPendingChanged = nextCountPending !== countPending
   const count = changed.length + (thresholdChanged ? 1 : 0) + (countPendingChanged ? 1 : 0)
 
-  const close = () => {
-    if (count > 0 && !window.confirm(`Discard ${count} unsaved change${count === 1 ? '' : 's'}?`)) return
-    onClose()
-  }
-  const reset = () => {
-    setLimits({})
-    setNextThreshold(threshold)
-    setNextCountPending(countPending)
-  }
   const done = () =>
     start(async () => {
       const result = await onSave(
@@ -1391,18 +1384,19 @@ function LimitsDrawer({
   return (
     <Overlay
       open
-      onClose={close}
+      onClose={onClose}
+      dirty={count > 0}
       eyebrow="Finance / Budgets / Settings"
       title="Budget limits"
       lede="Monthly limits per category. Spent this month is shown for reference. Changes apply when you press Done and are never overwritten by a job."
       footer={
         <>
-          <span className="label text-[11px] text-ink-3">
+          <span className="label text-caption-1 text-secondary-label">
             {count === 0 ? 'No changes' : `${count} unsaved change${count === 1 ? '' : 's'}`}
           </span>
           <span className="flex gap-2.5">
-            <ActionButton variant="outline" onClick={reset} disabled={count === 0 || pending}>
-              Reset
+            <ActionButton variant="outline" onClick={onClose} disabled={pending}>
+              Cancel
             </ActionButton>
             <ActionButton variant="solid" onClick={done} disabled={pending}>
               Done <span aria-hidden="true">&rarr;</span>
@@ -1411,29 +1405,29 @@ function LimitsDrawer({
         </>
       }
     >
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_130px] gap-x-3.5 border-b border-rule-2 py-[7px]">
-        <span className="label text-[11px] text-ink-3">Category</span>
-        <span className="label text-right text-[11px] text-ink-3">Spent</span>
-        <span className="label text-right text-[11px] text-ink-3">Monthly limit</span>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_130px] gap-x-3.5 border-b border-separator py-[7px]">
+        <span className="label text-caption-1 text-secondary-label">Category</span>
+        <span className="label text-right text-caption-1 text-secondary-label">Spent</span>
+        <span className="label text-right text-caption-1 text-secondary-label">Monthly limit</span>
       </div>
       {budgets.map((b) => {
         const used = b.limitCents ? budgetTone(b.spentCents, b.limitCents, threshold, b.isFixed) : null
         const tone = used === null || used.tone === 'fixed' ? null : toneText(used.tone)
         return (
-          <div key={b.id} className="grid grid-cols-[minmax(0,1fr)_auto_130px] items-center gap-x-3.5 border-b border-rule py-2.5 text-[13px]">
+          <div key={b.id} className="grid grid-cols-[minmax(0,1fr)_auto_130px] items-center gap-x-3.5 border-b border-separator py-2.5 text-footnote">
             <span className="min-w-0">
-              <span className={cn('block truncate', tone ?? 'text-ink')}>{b.name}</span>
-              <span className="mt-0.5 block truncate text-[11px] text-ink-3">
+              <span className={cn('block truncate', tone ?? 'text-label')}>{b.name}</span>
+              <span className="mt-0.5 block truncate text-caption-2 text-secondary-label">
                 {b.isFixed && !/^fixed\b/i.test(b.description) ? `Fixed${b.description ? ' · ' : ''}` : ''}
                 {b.description}
               </span>
             </span>
-            <span className={cn('num text-right text-[12px]', tone ?? 'text-ink-2')}>
+            <span className={cn('num text-right text-footnote', tone ?? 'text-secondary-label')}>
               {money(b.spentCents)}
               {used !== null ? ` · ${used.pct}%` : ''}
             </span>
             <span className="flex items-center justify-end gap-1.5">
-              <span className="num text-[13px] text-ink-3">$</span>
+              <span className="num text-footnote text-secondary-label">$</span>
               <input
                 inputMode="decimal"
                 value={limits[b.id] ?? (b.limitCents ? String(b.limitCents / 100) : '')}
@@ -1445,10 +1439,10 @@ function LimitsDrawer({
           </div>
         )
       })}
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_130px] items-center gap-x-3.5 py-3 text-[13px]">
-        <span className="label text-[11px] text-ink-3">Total</span>
-        <span className="num text-right text-[12px] text-ink">{money(totals.spent)}</span>
-        <span className="num text-right text-[13px] text-ink">{money(totals.limit)}</span>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_130px] items-center gap-x-3.5 py-3 text-footnote">
+        <span className="label text-caption-1 text-secondary-label">Total</span>
+        <span className="num text-right text-footnote text-label">{money(totals.spent)}</span>
+        <span className="num text-right text-footnote text-label">{money(totals.limit)}</span>
       </div>
 
       <Card className="mt-2 flex flex-col gap-2.5">
@@ -1462,11 +1456,11 @@ function LimitsDrawer({
             value={nextThreshold}
             onChange={(e) => setNextThreshold(Number(e.target.value))}
             aria-label="Alert threshold"
-            className="flex-1 accent-action"
+            className="h-11 flex-1 accent-accent"
           />
-          <span className="num w-11 text-right text-[13px] text-ink">{nextThreshold}%</span>
+          <span className="num w-11 text-right text-footnote text-label">{nextThreshold}%</span>
         </div>
-        <p className="text-[12px] leading-[1.5] text-ink-3">
+        <p className="text-footnote leading-[1.5] text-secondary-label">
           Categories past this share of their limit are flagged in the digest and count toward
           &quot;Budgets over threshold&quot;.
         </p>
@@ -1474,16 +1468,16 @@ function LimitsDrawer({
 
       <Card className="mt-2 flex flex-col gap-2.5">
         <Eyebrow>Pending charges</Eyebrow>
-        <label className="flex items-center gap-2.5 text-[13px] text-ink">
+        <label className="flex min-h-11 items-center gap-2.5 text-footnote text-label">
           <input
             type="checkbox"
             checked={nextCountPending}
             onChange={(e) => setNextCountPending(e.target.checked)}
-            className="accent-action"
+            className="accent-accent"
           />
           Count pending charges toward budgets
         </label>
-        <p className="text-[12px] leading-[1.5] text-ink-3">
+        <p className="text-footnote leading-[1.5] text-secondary-label">
           Off, a charge counts once the bank posts it; the amount and the date can both move
           until then. On, the live number.
         </p>

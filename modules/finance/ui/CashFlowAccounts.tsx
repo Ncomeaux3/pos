@@ -42,10 +42,6 @@ export function CashFlowAccounts({
   const count = accounts.filter((a) => on[a.id] !== a.inCashFlow).length
   const feeding = accounts.filter((a) => on[a.id]).length
 
-  const close = () => {
-    if (count > 0 && !window.confirm(`Discard ${count} unsaved change${count === 1 ? '' : 's'}?`)) return
-    onClose()
-  }
   const done = () =>
     start(async () => {
       if (count > 0) {
@@ -66,23 +62,20 @@ export function CashFlowAccounts({
   return (
     <Overlay
       open
-      onClose={close}
+      onClose={onClose}
+      dirty={count > 0}
       eyebrow="Finance / Cash flow"
       title="Cash flow accounts"
       lede="The cash flow card counts money in and out of these accounts only. Turn off anything that holds money rather than spends it, such as investments and retirement. Budgets and net worth still read every account."
       footer={
         <>
-          <span className="label text-[11px] text-ink-3">
+          <span className="label text-caption-1 text-secondary-label">
             {feeding} of {accounts.length} feed cash flow
             {count > 0 ? ` · ${count} unsaved` : ''}
           </span>
           <span className="flex gap-2.5">
-            <ActionButton
-              variant="outline"
-              onClick={() => setOn(Object.fromEntries(accounts.map((a) => [a.id, a.inCashFlow])))}
-              disabled={count === 0 || pending}
-            >
-              Reset
+            <ActionButton variant="outline" onClick={onClose} disabled={pending}>
+              Cancel
             </ActionButton>
             <ActionButton variant="solid" onClick={done} disabled={pending}>
               Done <span aria-hidden="true">&rarr;</span>
@@ -97,13 +90,13 @@ export function CashFlowAccounts({
           {g.rows.map((a) => (
             <div
               key={a.id}
-              className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3.5 border-b border-rule py-2.5 text-[13px]"
+              className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3.5 border-b border-separator py-2.5 text-footnote"
             >
               <span className="min-w-0">
-                <span className="block truncate text-ink">{a.name}</span>
-                {a.institution && <span className="mt-0.5 block truncate text-[11px] text-ink-3">{a.institution}</span>}
+                <span className="block truncate text-label">{a.name}</span>
+                {a.institution && <span className="mt-0.5 block truncate text-caption-1 text-secondary-label">{a.institution}</span>}
               </span>
-              <span className="num text-right text-[12px] text-ink-2">{balance(a.balanceCents)}</span>
+              <span className="num text-right text-footnote text-secondary-label">{balance(a.balanceCents)}</span>
               <Switch
                 checked={on[a.id]}
                 onChange={(next) => setOn((o) => ({ ...o, [a.id]: next }))}
