@@ -155,9 +155,12 @@ test('dashboard shell', async ({ page }) => {
     // Holon phase 3: warnings, proposals, today's tasks and the week ahead
     // are sections above the grid, in that order, and the grid holds one
     // summary per module: the three most used first, then rail order, then
-    // the model spend. A summary is a glass card at 16px 20px.
+    // the model spend. A summary is an opaque card at 16px 20px.
     const attention = page.getByTestId('dashboard-attention')
     await expect(attention.getByRole('heading', { name: 'Needs attention' })).toBeVisible()
+    // Opaque like every card since the Home sweep: on the old sand fill,
+    // Approve and the grey lines read under 4.5:1.
+    await expect(attention).toHaveClass(/bg-grouped-2/)
     await expect(attention.getByRole('button', { name: 'Snooze' }).first()).toBeVisible()
     await expect(attention.getByRole('button', { name: 'Approve' }).first()).toBeVisible()
     await expect(page.getByTestId('dashboard-today').getByRole('heading', { name: 'Today' })).toBeVisible()

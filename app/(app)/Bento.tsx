@@ -6,6 +6,7 @@ import { useState, useTransition, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { useLongPress } from '@/components/pos/gestures'
 import { ActionButton, useToast } from '@/components/pos'
+import { BASE, SIZE, VARIANT } from '@/components/pos/button-classes'
 import type { Settings } from '@/core/settings'
 import { arrange } from '@/core/dashboard-layout'
 import { saveDashboardLayout } from './shell-actions'
@@ -99,7 +100,7 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
     // arrange mode the banner takes 18px of that and the grid 22px more.
     <div className="mt-[22px]">
       {arranging && (
-        <div className="-mt-1 mb-[22px] flex flex-wrap items-center justify-between gap-3 border border-dashed border-brand px-3.5 py-2.5 text-[12px] text-ink-2 rounded-[18px]">
+        <div className="-mt-1 mb-[22px] flex flex-wrap items-center justify-between gap-3 rounded-card border border-dashed border-accent px-3.5 py-2.5 text-footnote text-label">
           <span>
             Arrange mode: <span className="max-md:hidden">drag tiles, or </span>use ‹ › and Hide on
             each. The layout is saved for every device.
@@ -133,11 +134,11 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
               )}
             >
               {arranging && (
-                <div className="flex items-center justify-between border border-b-0 border-brand bg-brand-soft px-2 py-1 rounded-[18px]">
+                <div className="flex items-center justify-between rounded-t-card border border-b-0 border-accent bg-grouped-2 px-2 py-1">
                   <ActionButton variant="quiet" size="sm" aria-label={`Move ${id} earlier`} onClick={() => move(id, -1)}>
                     ‹
                   </ActionButton>
-                  <span className="label text-ink-3">Drag</span>
+                  <span className="text-footnote text-secondary-label">Drag</span>
                   <span className="flex items-center gap-1">
                     <ActionButton variant="quiet" size="sm" aria-label={`Hide ${id}`} onClick={() => hide(id)}>
                       Hide
@@ -159,9 +160,9 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
       {arranging && hiddenTiles.length > 0 && (
         <div
           data-testid="dashboard-hidden"
-          className="mt-[22px] flex flex-wrap items-center gap-2 text-[12px] text-ink-3"
+          className="mt-[22px] flex flex-wrap items-center gap-2 text-footnote text-secondary-label"
         >
-          <span className="label">Hidden</span>
+          <span>Hidden</span>
           {hiddenTiles.map((id) => (
             <ActionButton key={id} variant="outline" size="sm" aria-label={`Show ${id}`} onClick={() => show(id)}>
               {id} · Show
@@ -181,12 +182,12 @@ export function ArrangeToggle() {
     <Link
       href={arranging ? '/' : '/?arrange=1'}
       className={cn(
-        // 12px in 8px 12px, and filled accent while arranging, as drawn.
+        // The package's button, 44px at every width, Primary while arranging.
         // Arrange is desktop only (2026-09-13 decision).
-        'hidden h-11 shrink-0 items-center border px-3 text-[12px] transition-colors duration-150 sm:h-[33px] md:inline-flex rounded-full',
-        arranging
-          ? 'border-brand bg-brand text-bg'
-          : 'border-rule-2 text-ink-2 hover:border-ink hover:text-ink',
+        BASE,
+        SIZE.md,
+        arranging ? VARIANT.primary : VARIANT.normal,
+        'hidden md:inline-flex',
       )}
     >
       {arranging ? 'Done' : 'Arrange'}

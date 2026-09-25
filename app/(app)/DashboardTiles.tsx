@@ -32,7 +32,7 @@ export function SevenDays({ items, today }: { items: Item[]; today: string }) {
 
   if (items.length === 0) {
     return (
-      <p className="t-caption px-1 text-ink-3">
+      <p className="px-1 text-footnote text-secondary-label">
         Nothing is scheduled. Modules put their dated things here as they queue them.
       </p>
     )
@@ -44,14 +44,14 @@ export function SevenDays({ items, today }: { items: Item[]; today: string }) {
         <Link
           key={item.id}
           href={item.href ?? `/${item.module}`}
-          className="relative flex items-start gap-3 px-4 py-2.5 transition-colors duration-150 before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-rule first:before:hidden hover:bg-ink/[.06]"
+          className="relative flex items-start gap-3 px-4 py-2.5 transition-colors duration-150 before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-separator first:before:hidden hover:bg-fill-4 active:bg-fill-3"
         >
-          <span className="num w-11 shrink-0 pt-px text-[12px] text-ink-3">{when(item.at)}</span>
+          <span className="num w-11 shrink-0 pt-px text-subheadline text-secondary-label">{when(item.at)}</span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[14.5px] font-medium leading-[1.35] text-ink">
+            <span className="block truncate text-body text-label">
               {item.title}
             </span>
-            <span className="t-caption mt-0.5 block truncate text-ink-3">{item.meta}</span>
+            <span className="mt-0.5 block truncate text-subheadline text-secondary-label">{item.meta}</span>
           </span>
           <span aria-hidden="true" className={`${CHEVRON} self-center`}>
             &rsaquo;
