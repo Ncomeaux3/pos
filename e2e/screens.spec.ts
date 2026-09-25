@@ -127,15 +127,15 @@ test('dashboard shell', async ({ page }) => {
     await expect(nav.getByText('Knowledge', { exact: true })).toBeVisible()
     await expect(nav.getByText('Life', { exact: true })).toBeVisible()
 
-    // A rail row is a 38px pill with the route's icon before its label, and
-    // the Review badge is filled with the action colour.
+    // A rail row is a 44px target (holon-ui, the HIG) with the route's icon
+    // before its label, and the Review badge is filled with the action colour.
     const row = nav.locator('a[href="/finance"]')
     const geometry = await row.evaluate((a) => ({
       height: getComputedStyle(a).height,
       radius: getComputedStyle(a).borderRadius,
       icon: a.querySelector('svg') !== null,
     }))
-    expect(geometry).toEqual({ height: '38px', radius: '10px', icon: true })
+    expect(geometry).toEqual({ height: '44px', radius: '12px', icon: true })
 
     const badge = nav.locator('a[href="/review"] span').last()
     const accent = await page.evaluate(() =>
@@ -183,23 +183,24 @@ test('dashboard shell', async ({ page }) => {
     ])
     const tile = await bento.locator(':scope > div > div').first().evaluate((el) => ({
       padding: getComputedStyle(el).padding,
-      glass: el.classList.contains('glass'),
+      // An opaque grouped card (holon-ui): glass is for navigation only.
+      grouped: el.classList.contains('bg-grouped-2'),
     }))
-    expect(tile).toEqual({ padding: '16px 20px', glass: true })
+    expect(tile).toEqual({ padding: '16px 20px', grouped: true })
     // The band's search, with the artboard's question rather than PageHeader's default.
     await expect(page.getByRole('button', { name: /What are you looking for/ })).toBeVisible()
 
-    // The footer holds the Collapse row alone: the utilities and the theme
+    // The rail ends with the Collapse row alone: the utilities and the theme
     // control are behind the avatar at the end of band one (v1.2 Phase 3b).
-    const footer = page.getByRole('navigation', { name: /sections/i })
-    await expect(footer.getByRole('link')).toHaveCount(0)
+    const footer = page.getByRole('complementary')
+    await expect(footer.getByRole('link', { name: /^(Settings|Notifications|Agent log)$/ })).toHaveCount(0)
     await expect(footer.getByRole('group', { name: 'Theme' })).toHaveCount(0)
     await expect(footer.getByRole('button', { name: 'Collapse' })).toBeVisible()
     await expect(page.getByRole('main').getByRole('button', { name: 'Account' })).toBeVisible()
     const labelSize = await footer
       .getByRole('button', { name: 'Collapse' })
       .evaluate((b) => getComputedStyle(b).fontSize)
-    expect(labelSize).toBe('13px')
+    expect(labelSize).toBe('15px') // subheadline
   }
 
   await shoot(page, 'dashboard')
@@ -209,7 +210,8 @@ test('the collapsed rail keeps its controls inside 72px and on one centre line',
   test.skip(testInfo.project.name !== 'desktop', 'The rail is a desktop thing')
   await page.goto('/')
   const rail = page.getByRole('navigation', { name: 'Modules' }).locator('xpath=..')
-  const footer = page.getByRole('navigation', { name: /sections/i })
+  // The toggle sits under the nav in the rail and names what it will do.
+  const footer = page.getByRole('complementary')
   await footer.getByRole('button', { name: 'Collapse' }).click()
   await expect.poll(async () => (await rail.boundingBox())?.width).toBe(72)
   const railBox = (await rail.boundingBox())!
@@ -220,11 +222,11 @@ test('the collapsed rail keeps its controls inside 72px and on one centre line',
     const icon = await page.getByRole('navigation', { name: 'Modules' }).getByRole('link', { name }).locator('svg').boundingBox()
     expect(Math.abs(icon!.x + icon!.width / 2 - centre)).toBeLessThanOrEqual(1)
   }
-  const chevron = await footer.getByRole('button', { name: 'Collapse' }).locator('svg').boundingBox()
+  const chevron = await footer.getByRole('button', { name: 'Expand' }).locator('svg').boundingBox()
   expect(Math.abs(chevron!.x + chevron!.width / 2 - centre)).toBeLessThanOrEqual(1)
 
   // Expanding restores the labels.
-  await footer.getByRole('button', { name: 'Collapse' }).click()
+  await footer.getByRole('button', { name: 'Expand' }).click()
   await expect.poll(async () => (await rail.boundingBox())?.width).toBe(232)
   await expect(page.getByRole('navigation', { name: 'Modules' }).getByRole('link', { name: 'Today' }).locator('.truncate')).toHaveCSS('opacity', '1')
 })
@@ -1770,8 +1772,9 @@ test('tasks, a row expands in place and EDIT opens the form drawer', async ({ pa
   await expect(drawer.getByText('Linked skills')).toBeVisible()
   await shoot(page, 'tasks-drawer')
 
-  // On the phone the drawer is PosPhone's sheet: full width, on the bottom
-  // edge, at most 74% of the screen.
+  // On the phone the drawer is holon-ui's sheet: full width, on the bottom
+  // edge, sized to its content up to the large detent, which leaves the
+  // status bar and a 10px gap above it (12px floor in a browser tab).
   if (mobile) {
     // Measured once the 260ms slide in has landed: one tap opens it now, so
     // the first paint can still be mid flight.
@@ -1779,13 +1782,13 @@ test('tasks, a row expands in place and EDIT opens the form drawer', async ({ pa
     const box = (await drawer.boundingBox())!
     expect(box.x).toBe(0)
     expect(box.width).toBe(viewport.width)
-    expect(box.height).toBeLessThanOrEqual(viewport.height * 0.78 + 1)
+    expect(box.y).toBeGreaterThanOrEqual(22 - 1)
   }
 
   // Edits hold until Save, then land as one write.
   await drawer.getByLabel('Estimate · min').fill('95')
   await drawer.getByRole('button', { name: /^Save/ }).click()
-  const toast = page.getByText('Saved')
+  const toast = page.getByText('Saved', { exact: true })
   await expect(toast).toBeVisible()
   // The toast clears the phone tab bar rather than sitting under it.
   if (mobile) {
@@ -2142,7 +2145,7 @@ test('tasks, a project lends its goal to its tasks, and the plus knows its colum
   await projects.getByRole('button', { name: 'Add' }).click()
   await expect(page.getByText('Added. Phase6')).toBeVisible()
   await projects.getByLabel('Phase6 goal').selectOption({ label: 'Net worth $300k' })
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible()
   await page.keyboard.press('Escape')
 
   const line = page.getByLabel('Add a task')
@@ -2533,7 +2536,8 @@ test('finance, net worth and the budget pace marks', async ({ page }) => {
     await expect(page.getByRole('tablist', { name: 'Finance views' })).toBeVisible()
     await expect(page.getByText('Balances, upcoming charges, and budgets. Synced nightly, amounts in USD.')).toBeVisible()
     const strip = page.getByTestId('finance-kpis')
-    await expect(strip.locator('.eyebrow')).toHaveText([
+    // Each tile's label is its first line (holon-ui MetricTile's Eyebrow).
+    await expect(strip.locator('div > span:first-child')).toHaveText([
       'Net worth',
       '30-day change',
       'Due in 14 days',
@@ -3234,7 +3238,7 @@ test('second brain, the capture box saves a note and shows related while typing'
   await expect(box.getByText('Related', { exact: true })).toBeVisible()
 
   await box.getByRole('button', { name: /^Save/ }).click()
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible()
   await expect(page).toHaveURL(/folder=note/)
   await expect(page.getByRole('button', { name: /^Captured/ }).first()).toContainText(title)
   await expect(page.getByRole('heading', { name: title })).toBeVisible()
@@ -3581,7 +3585,7 @@ test('travel, a trip holds a list of destinations', async ({ page }) => {
   await rows.nth(1).getByRole('button', { name: 'Remove Porto' }).click()
   await expect(rows).toHaveCount(1)
   await dialog.getByRole('button', { name: /^Save/ }).click()
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible()
   await expect.poll(pinned).toBe(before + 1)
   await expect(dialog).toContainText(/Apr 2.+Apr 6/)
 
@@ -3769,7 +3773,7 @@ test('health, a weight posted to the Apple webhook shows on the page', async ({ 
   // The secret lives in core.connections and the card is the one place it is
   // shown, so the test reads it where the owner would.
   await page.goto('/settings/connections')
-  const card = page.locator('div.glass').filter({ has: page.getByText('Health Auto Export', { exact: true }) }).first()
+  const card = page.locator('div.rounded-card').filter({ has: page.getByText('Health Auto Export', { exact: true }) }).first()
   await card.getByRole('button', { name: 'Reveal' }).click()
   const secret = (await card.locator('span.flex-1.break-all').textContent())?.trim() ?? ''
   expect(secret.length).toBeGreaterThan(10)
@@ -3799,7 +3803,7 @@ test('tasks, a reminder posted to the Apple webhook becomes a task in its list',
   // paste into the Shortcut, so the test starts there rather than in the seed.
   await page.goto('/settings/connections')
   const card = page
-    .locator('div.glass')
+    .locator('div.rounded-card')
     .filter({ has: page.getByText('Apple Reminders', { exact: true }) })
     .first()
   if (await card.getByRole('button', { name: 'Enable webhook' }).isVisible()) {
@@ -4240,7 +4244,7 @@ test('insurance, the edit form holds changes until Save', async ({ page }) => {
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('Premium', { exact: true }).fill('15')
   await dialog.getByRole('button', { name: /^Save/ }).click()
-  await expect(page.getByText('Saved')).toBeVisible()
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: /Apartment, renters/ })).toContainText('$15')
 
   // Put it back, so the fixture is the same for the next run.
