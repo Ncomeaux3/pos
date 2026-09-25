@@ -10,6 +10,7 @@ import {
   StatusChip,
   fieldClass,
 } from '@/components/pos'
+import { HIT } from '@/components/pos/button-classes'
 import { cn } from '@/lib/utils'
 import { BUILTIN_RULES, learnable, normalise } from '../categorise'
 import { balance, transactionAmount } from '../money'
@@ -143,7 +144,7 @@ export function RulesDrawer({
       lede="A rule files every transaction whose description contains its pattern (a three letter one as a whole word). Changing one re-files the history it matches straight away, so past budgets move with it. A row you filed by hand is never touched."
       footer={
         <>
-          <span className="label text-[11px] text-ink-3">
+          <span className="label text-caption-1 text-secondary-label">
             {rules.length} of yours · {BUILTIN_RULES.length} built in · {unfiled.length} unfiled
           </span>
           <ActionButton variant="solid" onClick={onClose} disabled={pending}>
@@ -159,16 +160,16 @@ export function RulesDrawer({
         </EmptyState>
       ) : (
         <>
-          <div className={cn(headRow, 'mt-2 border-b border-rule-2 py-[7px]')}>
-            <span className="label text-[11px] text-ink-3">Pattern</span>
-            <span className="label text-[11px] text-ink-3">Files as</span>
-            <span className="label text-[11px] text-ink-3">&nbsp;</span>
+          <div className={cn(headRow, 'mt-2 border-b border-separator py-[7px]')}>
+            <span className="label text-caption-1 text-secondary-label">Pattern</span>
+            <span className="label text-caption-1 text-secondary-label">Files as</span>
+            <span className="label text-caption-1 text-secondary-label">&nbsp;</span>
           </div>
           {rules.map((r) => (
-            <div key={r.id} className={cn(headRow, 'border-b border-rule py-2.5 text-[13px]')}>
+            <div key={r.id} className={cn(headRow, 'border-b border-separator py-2.5 text-footnote')}>
               <span className="min-w-0">
-                <span className="block truncate text-ink">{r.pattern}</span>
-                <span className="mt-0.5 block text-[11px] text-ink-3">
+                <span className="block truncate text-label">{r.pattern}</span>
+                <span className="mt-0.5 block text-caption-1 text-secondary-label">
                   <StatusChip tone={r.classifiedBy === 'model' ? 'brand' : 'quiet'}>
                     {r.classifiedBy === 'model'
                       ? r.confidence === null
@@ -210,28 +211,28 @@ export function RulesDrawer({
       <Card className="mt-3.5 flex flex-col gap-2.5">
         <Eyebrow>Unfiled merchants</Eyebrow>
         {unfiled.length === 0 ? (
-          <p className="text-[12px] leading-[1.5] text-ink-3">
+          <p className="text-footnote leading-[1.5] text-secondary-label">
             Every transaction has a category. Nothing to file.
           </p>
         ) : (
           <>
-            <p className="text-[12px] leading-[1.5] text-ink-3">
+            <p className="text-footnote leading-[1.5] text-secondary-label">
               What no rule matched, biggest first. Filing one writes a rule and moves every row it
               matches at once.
             </p>
             {unfiled.map((u) => (
-              <div key={u.pattern} className="border-b border-rule py-2 last:border-0">
+              <div key={u.pattern} className="border-b border-separator py-2 last:border-0">
                 {/* Stacked below md: beside a 140px select the text had 80px
                   * and a wrapped title ran to seven lines. */}
-                <div className="grid grid-cols-1 items-center gap-x-3 gap-y-2 text-[13px] md:grid-cols-[minmax(0,1fr)_140px_80px] md:gap-y-0">
+                <div className="grid grid-cols-1 items-center gap-x-3 gap-y-2 text-footnote md:grid-cols-[minmax(0,1fr)_140px_80px] md:gap-y-0">
                   <span className="min-w-0">
-                    <span className="block break-words text-ink">{u.label}</span>
-                    <span className="mt-0.5 block text-[11px] text-ink-3">
+                    <span className="block break-words text-label">{u.label}</span>
+                    <span className="mt-0.5 block text-caption-1 text-secondary-label">
                       {/* balance(), not money(): money() is absolute by design and a
                         * group where refunds outran charges is a real negative. */}
                       {u.pattern} · {u.count} {u.count === 1 ? 'row' : 'rows'} · {balance(u.totalCents)}
                     </span>
-                    <span className="mt-0.5 block text-[11px] text-ink-3">{direction(u.rows)}</span>
+                    <span className="mt-0.5 block text-caption-1 text-secondary-label">{direction(u.rows)}</span>
                   </span>
                   {canFile(u.pattern) ? (
                     <select
@@ -255,17 +256,17 @@ export function RulesDrawer({
                       ))}
                     </select>
                   ) : (
-                    <span className="text-[12px] text-ink-3">No pattern to learn</span>
+                    <span className="text-footnote text-secondary-label">No pattern to learn</span>
                   )}
-                  <span className="label justify-self-end text-[11px] text-ink-3 max-md:empty:hidden">
+                  <span className="label justify-self-end text-caption-1 text-secondary-label max-md:empty:hidden">
                     {busy === u.pattern ? '…' : ''}
                   </span>
                 </div>
                 {/* Native disclosure: the description is often cut short by the
                   * bank, and the date, account and direction are what tell an
                   * interest credit from an interest charge. */}
-                <details className="mt-1.5 text-[12px]">
-                  <summary className="cursor-pointer text-ink-2">
+                <details className="mt-1.5 text-footnote">
+                  <summary className={cn(HIT, 'cursor-pointer text-secondary-label')}>
                     Show {u.count === 1 ? 'the transaction' : `${u.count} transactions`}
                   </summary>
                   <ul className="mt-1.5 flex flex-col gap-1.5">
@@ -274,14 +275,14 @@ export function RulesDrawer({
                       return (
                         <li key={i} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3">
                           <span className="min-w-0">
-                            <span className="block break-words text-ink">{r.descriptor}</span>
-                            <span className="block text-[11px] text-ink-3">
+                            <span className="block break-words text-label">{r.descriptor}</span>
+                            <span className="block text-caption-1 text-secondary-label">
                               {fullDate(r.occurredOn)} · {r.account}
                             </span>
                           </span>
-                          <span className={cn('num text-right', amount.incoming ? 'text-ok' : 'text-ink')}>
+                          <span className={cn('num text-right', amount.incoming ? 'text-green-text' : 'text-label')}>
                             {amount.text}
-                            <span className="block text-[11px] text-ink-3">{amount.incoming ? 'in' : 'out'}</span>
+                            <span className="block text-caption-1 text-secondary-label">{amount.incoming ? 'in' : 'out'}</span>
                           </span>
                         </li>
                       )
@@ -296,22 +297,22 @@ export function RulesDrawer({
 
       <Card className="mt-3.5 flex flex-col gap-2.5">
         <Eyebrow>Built in</Eyebrow>
-        <p className="text-[12px] leading-[1.5] text-ink-3">
+        <p className="text-footnote leading-[1.5] text-secondary-label">
           These ship with the app and are not editable. A rule you write beats one of these, so
           overriding one is writing your own with the same pattern.
         </p>
-        <div className={cn(headRow, 'border-b border-rule-2 py-[7px]')}>
-          <span className="label text-[11px] text-ink-3">Pattern</span>
-          <span className="label text-[11px] text-ink-3">Files as</span>
-          <span className="label text-[11px] text-ink-3">&nbsp;</span>
+        <div className={cn(headRow, 'border-b border-separator py-[7px]')}>
+          <span className="label text-caption-1 text-secondary-label">Pattern</span>
+          <span className="label text-caption-1 text-secondary-label">Files as</span>
+          <span className="label text-caption-1 text-secondary-label">&nbsp;</span>
         </div>
         {BUILTIN_RULES.map((r) => (
           <div
             key={`${r.pattern}-${r.category}`}
-            className={cn(headRow, 'border-b border-rule py-2 text-[13px] last:border-0')}
+            className={cn(headRow, 'border-b border-separator py-2 text-footnote last:border-0')}
           >
-            <span className="min-w-0 truncate text-ink-2">{r.pattern}</span>
-            <span className="truncate text-[13px] text-ink-3">{r.category}</span>
+            <span className="min-w-0 truncate text-secondary-label">{r.pattern}</span>
+            <span className="truncate text-footnote text-secondary-label">{r.category}</span>
             <StatusChip tone="quiet" className="justify-self-end">Built in</StatusChip>
           </div>
         ))}

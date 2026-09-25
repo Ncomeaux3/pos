@@ -22,6 +22,8 @@ SWEPT=(
   'app/(app)/loading.tsx'
   # Tasks
   'modules/tasks/ui'
+  # Finance
+  'modules/finance/ui'
 )
 
 # The two surfaces kept unchanged in feel (owner, 2026-09-18).
@@ -68,7 +70,7 @@ fi
 # package's tokens instead (label, secondary-label, accent, separator, fill,
 # grouped, red, orange, green), its type styles rather than `t-caption`, and
 # its focus ring rather than `--accent-soft`.
-alias=$(code '\b(text|bg|border|ring|fill|stroke|outline|divide)-(ink(-[234])?|rule(-2)?|action|bad|warn|ok|brand(-soft)?|sand(-surface)?|glass(-[a-z]+)?|bg-elev|bg|field)\b|\bt-caption\b|--accent-soft\b')
+alias=$(code '\b(text|bg|border|ring|fill|stroke|outline|divide|accent|caret|decoration)-(ink(-[234])?|rule(-2)?|action|bad|warn|ok|brand(-soft)?|sand(-surface)?|glass(-[a-z]+)?|bg-elev|bg|field)\b|\bt-caption\b|--accent-soft\b')
 if [ -n "$alias" ]; then
   echo 'Holon alias token in a swept module; use the holon-ui name:'
   echo "$alias"

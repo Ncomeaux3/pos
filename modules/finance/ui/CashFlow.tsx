@@ -120,10 +120,10 @@ export function CashFlow({
             {...scrub}
           >
             {/* The month being read, behind its bars. */}
-            {hover !== null && <rect x={hover * slot} y={0} width={slot} height={height} fill="var(--ink)" fillOpacity={0.06} />}
+            {hover !== null && <rect x={hover * slot} y={0} width={slot} height={height} fill="var(--label)" fillOpacity={0.06} />}
 
             {[hi, lo + (span * 2) / 3, lo + span / 3].map((v) => (
-              <line key={v} x1="0" y1={y(v)} x2={width} y2={y(v)} stroke="var(--rule)" />
+              <line key={v} x1="0" y1={y(v)} x2={width} y2={y(v)} stroke="var(--separator)" />
             ))}
 
             {months.map((m, i) => (
@@ -149,19 +149,19 @@ export function CashFlow({
 
             {/* Zero, drawn over the bars: in a month that ran a deficit the net
               * line crosses it, and that crossing is the whole reading. */}
-            <line x1="0" y1={y(0)} x2={width} y2={y(0)} stroke="var(--rule-2)" vectorEffect="non-scaling-stroke" />
+            <line x1="0" y1={y(0)} x2={width} y2={y(0)} stroke="var(--separator)" vectorEffect="non-scaling-stroke" />
 
             <polyline
               points={netLine}
               fill="none"
-              stroke="var(--ink-2)"
+              stroke="var(--secondary-label)"
               strokeWidth={2}
               strokeLinejoin="round"
               strokeLinecap="round"
               vectorEffect="non-scaling-stroke"
             />
             {nets.map((n, i) => (
-              <circle key={months[i].month} cx={centre(i)} cy={y(n)} r={2.5} fill="var(--bg-elev)" stroke="var(--ink-2)" vectorEffect="non-scaling-stroke" />
+              <circle key={months[i].month} cx={centre(i)} cy={y(n)} r={2.5} fill="var(--secondary-system-grouped-background)" stroke="var(--secondary-label)" vectorEffect="non-scaling-stroke" />
             ))}
           </svg>
 
@@ -171,20 +171,20 @@ export function CashFlow({
             <div
               data-testid="chart-readout"
               aria-hidden
-              className="pointer-events-none absolute top-0 z-2 grid grid-cols-[auto_auto] gap-x-3 gap-y-0.5 whitespace-nowrap rounded-[18px] border border-rule-2 bg-bg px-2.5 py-1.5 text-[11px]"
+              className="pointer-events-none absolute top-0 z-2 grid grid-cols-[auto_auto] gap-x-3 gap-y-0.5 whitespace-nowrap rounded-card border border-separator bg-grouped-2 px-2.5 py-1.5 text-caption-1"
               style={
                 hover < months.length / 2
                   ? { left: `${(hover / months.length) * 100}%` }
                   : { left: `${((hover + 1) / months.length) * 100}%`, transform: 'translateX(-100%)' }
               }
             >
-              <span className="col-span-2 text-ink-3">{read.month}</span>
-              <span className="text-ink-3">In</span>
-              <span className="num text-right text-ink">{read.in}</span>
-              <span className="text-ink-3">Out</span>
-              <span className="num text-right text-ink">{read.out}</span>
-              <span className="text-ink-3">Left over</span>
-              <span className={cn('num text-right', read.leftOver === 'flat' ? 'text-ink' : read.leftOver.startsWith('+') ? 'text-ok' : 'text-bad')}>
+              <span className="col-span-2 text-secondary-label">{read.month}</span>
+              <span className="text-secondary-label">In</span>
+              <span className="num text-right text-label">{read.in}</span>
+              <span className="text-secondary-label">Out</span>
+              <span className="num text-right text-label">{read.out}</span>
+              <span className="text-secondary-label">Left over</span>
+              <span className={cn('num text-right', read.leftOver === 'flat' ? 'text-label' : read.leftOver.startsWith('+') ? 'text-green-text' : 'text-red-text')}>
                 {read.leftOver}
               </span>
             </div>
@@ -194,14 +194,14 @@ export function CashFlow({
           </span>
         </div>
 
-        <div className="relative flex flex-col justify-between pl-3 text-[11px] text-ink-3">
+        <div className="relative flex flex-col justify-between pl-3 text-caption-1 text-secondary-label">
           {ticks.map((v, i) => (
             <span key={i} className={cn('num leading-none', lo < 0 && Math.abs(i / 3 - zeroAt) < 0.15 && 'invisible')}>
               {compactMoney(Math.round(v))}
             </span>
           ))}
           {lo < 0 && (
-            <span className="num absolute left-3 -translate-y-1/2 leading-none text-ink-2" style={{ top: `${zeroAt * 100}%` }}>
+            <span className="num absolute left-3 -translate-y-1/2 leading-none text-secondary-label" style={{ top: `${zeroAt * 100}%` }}>
               $0
             </span>
           )}
@@ -210,7 +210,7 @@ export function CashFlow({
 
       <div className="mt-2 grid grid-cols-[1fr_56px]">
         <div
-          className="grid text-center text-[11px] text-ink-3"
+          className="grid text-center text-caption-1 text-secondary-label"
           style={{ gridTemplateColumns: `repeat(${months.length}, minmax(0, 1fr))` }}
         >
           {/* Every month keeps its column, and a thinned one is invisible rather
@@ -232,24 +232,24 @@ export function CashFlow({
         <span />
       </div>
 
-      <div className="label mt-2.5 flex flex-wrap gap-x-[18px] gap-y-2 border-t border-rule pt-2.5 text-[11px] text-ink-3">
+      <div className="label mt-2.5 flex flex-wrap gap-x-[18px] gap-y-2 border-t border-separator pt-2.5 text-caption-1 text-secondary-label">
         <span className="flex items-center gap-1.5">
-          <span className="size-2 rounded-[2px] bg-chart-3" aria-hidden />
+          <span className="size-2 rounded-xs bg-chart-3" aria-hidden />
           Money in
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="size-2 rounded-[2px] bg-chart-1" aria-hidden />
+          <span className="size-2 rounded-xs bg-chart-1" aria-hidden />
           Money out
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-0.5 w-3 rounded-full bg-ink-2" aria-hidden />
+          <span className="h-0.5 w-3 rounded-full bg-secondary-label" aria-hidden />
           Left over
         </span>
         <span className="ml-auto">
-          Average left over <span className={cn('num', Math.abs(avgNet) < 50 ? 'text-ink' : avgNet > 0 ? 'text-ok' : 'text-bad')}>{signedMoney(avgNet)}</span> a month
+          Average left over <span className={cn('num', Math.abs(avgNet) < 50 ? 'text-label' : avgNet > 0 ? 'text-green-text' : 'text-red-text')}>{signedMoney(avgNet)}</span> a month
         </span>
       </div>
-      <p className="mt-2 text-[11px] leading-[1.5] text-ink-3">
+      <p className="mt-2 text-caption-1 leading-[1.5] text-secondary-label">
         A month above $0 took in more than it spent. Below $0, it spent more. Money between your own accounts is on neither side. A transfer no rule has filed yet may
         still show.
       </p>
