@@ -34,7 +34,7 @@ and tap with "Net" renamed "Left over", and a 3/6/12/24 month range saved in
 (#127). 5c is closed; independent of 5d. Phase 1 merged (#130), Phase 2 merged
 (#132), Phase 3 (the range) merged (#134); the plan is complete.
 
-**Alongside v1.2: docs/plans/holon-apple.md** (2026-09-23, Holon moved toward the Apple HIG as a reusable package, `Ncomeaux3/holon-ui`, private). Phase 0 (the HIG notes, #144) and Phase 1 (tokens, contrast check and demo, holon-ui #1 and #148) merged 2026-09-24 after the owner approved the demo. Phase 2 is two holon-ui PRs, 2a primitives (built, PR open) and 2b navigation and data; POS installs the package and flips `components/pos` in Phase 3, which waits on Actions billing and a `read:packages` token.
+**Alongside v1.2: docs/plans/holon-apple.md** (2026-09-23, Holon moved toward the Apple HIG as a reusable package, `Ncomeaux3/holon-ui`, private). Phase 0 (the HIG notes, #144) and Phase 1 (tokens, contrast check and demo, holon-ui #1 and #148) merged 2026-09-24 after the owner approved the demo. Phase 2 is two holon-ui PRs, 2a primitives (holon-ui #2) and 2b navigation and data (holon-ui #3, stacked on #2), both built with PRs open; POS installs the package and flips `components/pos` in Phase 3, which waits on Actions billing and a `read:packages` token.
 
 **Queued after v1.2: docs/plans/skills-v2.md** (2026-09-15, six phases from the owner's Skill Tree rewrite in docs/SKILLS.md: the nine-attribute tree, per-event XP snapshots, projects, challenges and achievements, the digest, the screen). Not started.
 
