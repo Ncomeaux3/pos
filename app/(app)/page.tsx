@@ -391,7 +391,7 @@ export default async function DashboardPage() {
                   className="flex items-start gap-3 border-t border-separator px-1 py-2.5 first:border-t-0"
                 >
                   <span
-                    className={cn('mt-[7px] size-2 shrink-0 rounded-full', a.tone === 'bad' ? 'bg-bad' : a.tone === 'ok' ? 'bg-ok' : 'bg-warn')}
+                    className={cn('mt-[7px] size-2 shrink-0 rounded-full', a.tone === 'bad' ? 'bg-red' : a.tone === 'ok' ? 'bg-green' : 'bg-orange')}
                     aria-hidden
                   />
                   <span className="min-w-0 flex-1">
@@ -465,7 +465,7 @@ export default async function DashboardPage() {
           Model spend this month {money(spendCents)}
           {capCents > 0 ? ` of ${money(capCents)}` : ''}.
         </span>{' '}
-        <Link href="/agent-log" className="text-accent hover:underline">
+        <Link href="/agent-log" className={cn(HIT, 'text-accent hover:underline')}>
           Agent log
         </Link>
       </p>

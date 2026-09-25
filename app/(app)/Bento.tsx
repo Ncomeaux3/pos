@@ -134,7 +134,7 @@ export function Bento({ tiles, layout: saved }: { tiles: Tile[]; layout: Layout 
               )}
             >
               {arranging && (
-                <div className="flex items-center justify-between rounded-t-card border border-b-0 border-accent bg-grouped-2 px-2 py-1">
+                <div className="flex items-center justify-between rounded-t-card border border-b-0 border-accent bg-grouped-2 px-2 py-1.5">
                   <ActionButton variant="quiet" size="sm" aria-label={`Move ${id} earlier`} onClick={() => move(id, -1)}>
                     ‹
                   </ActionButton>

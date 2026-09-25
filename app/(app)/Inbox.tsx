@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { ActionButton, useToast } from '@/components/pos'
+import { HIT } from '@/components/pos/button-classes'
 import { cn } from '@/lib/utils'
 import { readAlert, snoozeAlert } from './notifications/actions'
 import { approveProposal, dismissProposal } from './review/actions'
@@ -60,7 +61,7 @@ export function WarningList({
           className={cn(ROW, phoneLimit !== undefined && i >= phoneLimit && 'max-md:hidden')}
         >
           <span
-            className={cn('mt-[7px] size-2 shrink-0 rounded-full', w.urgent ? 'bg-bad' : 'bg-warn')}
+            className={cn('mt-[7px] size-2 shrink-0 rounded-full', w.urgent ? 'bg-red' : 'bg-orange')}
             aria-hidden
           />
           <span className="min-w-0 flex-1 basis-[200px]">
@@ -68,7 +69,7 @@ export function WarningList({
               * queued it named the screen, or the alert centre has it. */}
             <Link
               href={w.href ?? '/notifications'}
-              className="block text-body text-label hover:text-accent"
+              className={cn(HIT, 'block text-body text-label hover:text-accent')}
             >
               {w.title}
             </Link>
@@ -147,7 +148,7 @@ export function ProposalList({
           data-testid="proposal-row"
           className={cn(ROW, phoneLimit !== undefined && i >= phoneLimit && 'max-md:hidden')}
         >
-          <span className="mt-[7px] size-2 shrink-0 rounded-full bg-action" aria-hidden />
+          <span className="mt-[7px] size-2 shrink-0 rounded-full bg-accent" aria-hidden />
           <span className="min-w-0 flex-1 basis-[200px]">
             {editing === p.id ? (
               // Approving an edited title is what Edit is for: the proposal
