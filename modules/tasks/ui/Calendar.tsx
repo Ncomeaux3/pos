@@ -108,11 +108,11 @@ export function Calendar({
       />
 
       <section aria-labelledby="tasks-day" data-day={selected} className="space-y-3">
-        <h2 id="tasks-day" className="text-[17px] tracking-[-0.01em] text-ink">
+        <h2 id="tasks-day" className="text-title-3 text-label">
           {longDay(selected)}
         </h2>
         {dayTasks.length === 0 ? (
-          <p className="t-caption text-ink-3">Nothing due on this day.</p>
+          <p className="text-footnote text-secondary-label">Nothing due on this day.</p>
         ) : (
           <RowList>
             {dayTasks.map(({ task: t, projected }) => (

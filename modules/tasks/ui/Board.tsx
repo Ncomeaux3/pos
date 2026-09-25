@@ -4,7 +4,7 @@ import { AlarmClock, Check, Filter, Plus } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useMemo, useOptimistic, useState, useTransition } from 'react'
 import { ActionButton, CHEVRON, EmptyState, PillGroup, RowList, STRETCH, StatusChip, useToast } from '@/components/pos'
-import { actionButtonBase, actionButtonSizes, actionButtonVariants } from '@/components/pos/Button'
+import { BASE, HIT, SIZE, VARIANT } from '@/components/pos/button-classes'
 import { cn } from '@/lib/utils'
 import { parseQuickAdd } from '../quickadd'
 import {
@@ -48,13 +48,13 @@ const ProjectsDrawer = dynamic(() => import('./ProjectsDrawer').then((m) => m.Pr
 
 const LONG_DOWS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
-/** The small buttons, as ActionButton draws them: a glass pill, and the soft action fill. */
-export const mini = cn(actionButtonBase, actionButtonSizes.sm, actionButtonVariants.outline)
-export const miniAccent = cn(actionButtonBase, actionButtonSizes.sm, actionButtonVariants.brand)
+/** The small buttons, in the package's own pill: an outline ring, and an accent-tinted fill. */
+export const mini = cn(BASE, SIZE.sm, VARIANT.outline)
+export const miniAccent = cn(BASE, SIZE.sm, VARIANT.brand)
 
 /** P1 in the risk colour, P2 in attention, P3 quiet, as the mockup marks them. */
 export const priorityColor = (p: Task['priority']) =>
-  p === 'P1' ? 'text-bad' : p === 'P2' ? 'text-warn' : 'text-ink-3'
+  p === 'P1' ? 'text-red-text' : p === 'P2' ? 'text-orange-text' : 'text-secondary-label'
 
 const TABS: { value: View | 'calendar'; label: string }[] = [
   ...VIEWS.slice(0, 4),
@@ -87,7 +87,7 @@ export function BoardCrumb() {
   const { label } = useView()
   return (
     <>
-      Tasks <span className="text-ink-4">/</span> {label}
+      Tasks <span className="text-secondary-label">/</span> {label}
     </>
   )
 }
@@ -244,7 +244,7 @@ export function Board({
             aria-pressed={showFilter}
             // Lit while open, and while a filtered view is showing, since no
             // segment is selected then and the crumb is the only other cue.
-            className={cn(mini, 'mb-2 md:hidden', (showFilter || filtered) && 'border-action text-ink')}
+            className={cn(mini, 'mb-2 md:hidden', (showFilter || filtered) && 'border-accent text-label')}
           >
             <Filter size={13} aria-hidden />
           </button>
@@ -297,7 +297,7 @@ export function Board({
               const label =
                 view === 'today' && column.id === 'today' ? (
                   <>
-                    Today<span className="font-normal text-ink-3">, {LONG_DOWS[today.getDay()]} {today.getDate()}</span>
+                    Today<span className="font-normal text-secondary-label">, {LONG_DOWS[today.getDay()]} {today.getDate()}</span>
                   </>
                 ) : (
                   column.label
@@ -324,24 +324,24 @@ export function Board({
                   <div className="flex items-baseline justify-between gap-3 px-1 pb-2.5">
                     <h2
                       className={cn(
-                        'text-[15px] font-semibold leading-tight text-ink',
-                        column.tone === 'ink-2' && 'text-ink-2',
-                        column.tone === 'ink-3' && 'text-ink-3',
-                        column.tone === 'warn' && 'text-warn',
-                        column.tone === 'ok' && 'text-ok',
+                        'text-headline text-label',
+                        column.tone === 'ink-2' && 'text-secondary-label',
+                        column.tone === 'ink-3' && 'text-secondary-label',
+                        column.tone === 'warn' && 'text-orange-text',
+                        column.tone === 'ok' && 'text-green-text',
                       )}
                     >
                       {label}
                     </h2>
                     <span className="flex shrink-0 items-center gap-1.5">
-                      <span className="num text-[13px] text-ink-3">{column.meta}</span>
+                      <span className="num text-subheadline text-secondary-label">{column.meta}</span>
                       {column.drop && (
                         <ActionButton
                           variant="quiet"
                           size="sm"
                           aria-label={`New task in ${column.label}`}
                           onClick={() => openNew(dropPatch(column.drop!))}
-                          // 24px target around a 13px glyph, per WCAG 2.5.8.
+                          // 24px drawn around a 13px glyph; SIZE.sm's HIT keeps the tap area 44px.
                           className="-my-1.5 h-6 w-6 px-0 sm:px-0"
                         >
                           <Plus size={13} aria-hidden />
@@ -355,11 +355,11 @@ export function Board({
                       'min-h-[60px] transition-colors duration-150',
                       // A dashed accent edge says this column will take the card.
                       // A read-only column stays as it is, so it says it will not.
-                      dragging && column.drop && 'border-dashed border-action',
+                      dragging && column.drop && 'border-dashed border-accent',
                     )}
                   >
                     {column.tasks.length === 0 ? (
-                      <p className="px-4 py-[18px] text-center text-[13px] text-ink-3">{column.empty}</p>
+                      <p className="px-4 py-[18px] text-center text-footnote text-secondary-label">{column.empty}</p>
                     ) : (
                       column.tasks.map((task) => (
                         <Row
@@ -542,8 +542,8 @@ function Row({
       className={cn(
         // The inset hairline between rows, drawn by every row but the first;
         // the selected row's soft fill takes its own and the next one's.
-        'before:absolute before:inset-x-4 before:top-0 before:z-10 before:h-px before:bg-rule first:before:hidden',
-        expanded && 'bg-brand-soft before:hidden [&+*]:before:hidden',
+        'before:absolute before:inset-x-4 before:top-0 before:z-10 before:h-px before:bg-separator first:before:hidden',
+        expanded && 'bg-accent/8 before:hidden [&+*]:before:hidden',
       )}
     >
       <article
@@ -551,7 +551,7 @@ function Row({
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
         className={cn(
-          'px-4 py-2.5 transition-colors duration-150 hover:bg-ink/[.06]',
+          'px-4 py-2.5 transition-colors duration-150 hover:bg-label/[.06]',
           draggable && 'cursor-grab active:cursor-grabbing',
         )}
       >
@@ -565,13 +565,13 @@ function Row({
             title={agent ? 'Approve first' : done ? 'Reopen' : 'Complete'}
             aria-label={done ? `Reopen ${task.title}` : `Complete ${task.title}`}
             className={cn(
+              HIT,
               'relative z-10 mt-px grid size-5 shrink-0 place-items-center rounded-full border transition-colors duration-150',
-              'before:absolute before:-inset-3 before:content-[""] sm:before:inset-0',
               done
-                ? 'border-action bg-action text-action-fg'
+                ? 'border-accent bg-accent text-accent-fg'
                 : agent
-                  ? 'border-dashed border-warn'
-                  : 'border-rule-2 hover:border-action',
+                  ? 'border-dashed border-orange'
+                  : 'border-gray hover:border-accent',
             )}
           >
             {done && <Check size={12} strokeWidth={3} aria-hidden />}
@@ -585,17 +585,12 @@ function Row({
             aria-expanded={expanded}
             className={cn(STRETCH, 'min-w-0 flex-1 text-left')}
           >
-            <span
-              className={cn(
-                'block text-[14.5px] font-medium leading-[1.35]',
-                done ? 'text-ink-3 line-through' : 'text-ink',
-              )}
-            >
+            <span className={cn('block text-body', done ? 'text-secondary-label line-through' : 'text-label')}>
               {task.title}
             </span>
             {/* One grey line: the priority when it matters, the project, when
               * it is due, and the reminder. The estimate sits on the right. */}
-            <span className="t-caption mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-ink-3 [&>*+*]:before:mr-1.5 [&>*+*]:before:content-['·']">
+            <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-subheadline text-secondary-label [&>*+*]:before:mr-1.5 [&>*+*]:before:content-['·']">
               {agent && <StatusChip tone="warn">Agent, review</StatusChip>}
               {task.priority !== 'P3' && (
                 <span className={cn('num font-medium', priorityColor(task.priority))}>{task.priority}</span>
@@ -605,13 +600,13 @@ function Row({
                 * mark. In the Today column a task due today with no time says
                 * nothing here: the heading already says today. */}
               {(!inToday || task.dueInDays !== 0 || task.dueAt) && (
-                <span className={cn('num', overdue && 'font-medium text-bad')}>
+                <span className={cn('num', overdue && 'font-medium text-red-text')}>
                   {inToday && task.dueInDays === 0 ? task.dueAt : dueLabel(task.dueInDays, today)}
                   {!(inToday && task.dueInDays === 0) && task.dueAt ? ` · ${task.dueAt}` : ''}
                 </span>
               )}
               {remind && (
-                <span title="Reminder" className="num inline-flex items-center gap-1 text-ink-3">
+                <span title="Reminder" className="num inline-flex items-center gap-1 text-secondary-label">
                   <AlarmClock size={12} aria-hidden />
                   {remind.toLowerCase()}
                 </span>
@@ -620,14 +615,14 @@ function Row({
           </button>
 
           {task.estimateMinutes !== null && task.estimateMinutes > 0 && (
-            <span className="num shrink-0 pt-0.5 text-[12.5px] text-ink-3">{hoursLabel(task.estimateMinutes)}</span>
+            <span className="num shrink-0 pt-0.5 text-subheadline text-secondary-label">{hoursLabel(task.estimateMinutes)}</span>
           )}
           <button
             type="button"
             onClick={onEdit}
             title="Edit task"
             aria-label={`Edit ${task.title}`}
-            className="relative z-10 hidden shrink-0 pt-0.5 text-[12.5px] font-medium text-ink-3 transition-colors duration-150 hover:text-action md:inline-flex"
+            className="relative z-10 hidden shrink-0 pt-0.5 text-subheadline font-medium text-secondary-label transition-colors duration-150 hover:text-accent md:inline-flex"
           >
             Edit
           </button>
@@ -641,15 +636,15 @@ function Row({
 
         {expanded && (
           <div className="mt-3 flex flex-col gap-2.5 pl-8 duration-150 animate-in fade-in">
-            {task.notes && <p className="text-[13px] leading-[1.5] text-ink-2">{task.notes}</p>}
-            <div className="t-caption flex flex-wrap gap-x-3 gap-y-1 text-ink-3">
+            {task.notes && <p className="text-subheadline text-label">{task.notes}</p>}
+            <div className="flex flex-wrap gap-x-3 gap-y-1 text-subheadline text-secondary-label">
               <span>
-                Goal: <span className="text-ink-2">{task.goalTitle ?? 'none'}</span>
+                Goal: <span className="text-label">{task.goalTitle ?? 'none'}</span>
                 {task.goalRef && !task.ownGoalRef && ' · via project'}
               </span>
               <span>
                 Skills:{' '}
-                <span className="text-ink-2">
+                <span className="text-label">
                   {task.skills.length === 0
                     ? 'none'
                     : task.skills
@@ -661,7 +656,7 @@ function Row({
                 {task.skills.length > 0 && (
                   <span
                     className={cn(
-                      by === 'manual' ? 'text-warn' : by === 'model' ? 'text-ink-3' : 'text-ok',
+                      by === 'manual' ? 'text-orange-text' : by === 'model' ? 'text-secondary-label' : 'text-green-text',
                     )}
                   >
                     {by === 'manual' ? 'by hand' : by === 'model' ? 'by model' : 'by rules'}
@@ -669,7 +664,7 @@ function Row({
                 )}
               </span>
               <span>
-                Source: <span className="text-ink-2">{task.source}</span>
+                Source: <span className="text-label">{task.source}</span>
               </span>
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -689,7 +684,7 @@ function Row({
               <button
                 type="button"
                 onClick={onDelete}
-                className={cn(mini, 'ml-auto hover:text-bad')}
+                className={cn(mini, 'ml-auto hover:text-red-text')}
               >
                 Delete
               </button>
@@ -750,11 +745,7 @@ function QuickAdd({
   }
 
   const chipColor = (field: string, value: string) =>
-    field === 'Priority'
-      ? priorityColor(value as Task['priority'])
-      : field === 'Estimate'
-        ? 'text-ink-4'
-        : 'text-ink-3'
+    field === 'Priority' ? priorityColor(value as Task['priority']) : 'text-secondary-label'
 
   return (
     <div className="space-y-2">
@@ -765,13 +756,13 @@ function QuickAdd({
             save()
           }}
           className={cn(
-            'flex h-11 min-w-0 flex-1 basis-[280px] items-center rounded-full border bg-field transition-colors duration-150',
-            // The ring shows while typing and, for the keyboard, while focused.
-            'focus-within:border-action focus-within:shadow-[0_0_0_3px_var(--accent-soft)]',
-            text ? 'border-action bg-bg-elev shadow-[0_0_0_3px_var(--accent-soft)]' : 'border-glass-line',
+            'flex h-11 min-w-0 flex-1 basis-[280px] items-center rounded-full border bg-fill-3 transition-colors duration-150',
+            // The accent edge shows while typing, and the package's focus ring while focused.
+            'focus-within:border-accent focus-within:outline-solid focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-(--focus-ring)',
+            text ? 'border-accent bg-grouped-2' : 'border-separator',
           )}
         >
-          <span className="num pl-4 pr-3 text-[13px] text-ink-4" aria-hidden>
+          <span className="num pl-4 pr-3 text-subheadline text-secondary-label" aria-hidden>
             +
           </span>
           <input
@@ -779,11 +770,11 @@ function QuickAdd({
             onChange={(e) => setText(e.target.value)}
             aria-label="Add a task"
             placeholder="Add a task… e.g. Renew renters policy !p1 #Home @fri 30m"
-            className="min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-ink-4"
+            className="min-w-0 flex-1 bg-transparent text-body text-label outline-none placeholder:text-placeholder"
           />
 
           {text.trim() === '' ? (
-            <span className="num hidden whitespace-nowrap px-4 text-[12px] text-ink-3 lg:inline">
+            <span className="num hidden whitespace-nowrap px-4 text-footnote text-secondary-label lg:inline">
               !p1 · #project · @day · 30m
             </span>
           ) : (
@@ -792,7 +783,7 @@ function QuickAdd({
                 <span
                   key={p.field}
                   className={cn(
-                    'rounded-full bg-glass-strong px-2 py-0.5 text-[11.5px] font-medium shadow-[inset_0_0_0_1px_var(--glass-line)]',
+                    'rounded-full bg-fill-3 px-2 py-0.5 text-caption-1 font-medium shadow-[inset_0_0_0_1px_var(--separator)]',
                     chipColor(p.field, p.value),
                   )}
                 >
@@ -802,7 +793,7 @@ function QuickAdd({
               <button
                 type="submit"
                 disabled={!parsed.title}
-                className="shrink-0 rounded-full bg-ink px-3 py-1.5 text-[12px] font-medium text-bg disabled:bg-rule-2 disabled:text-ink-4"
+                className={cn(BASE, SIZE.sm, VARIANT.primary, 'shrink-0')}
               >
                 Add ↵
               </button>
@@ -812,7 +803,7 @@ function QuickAdd({
       </div>
 
       {text.trim() !== '' && !parsed.title && (
-        <p className="t-caption text-ink-3">Needs a title. Tokens alone are not a task.</p>
+        <p className="text-footnote text-secondary-label">Needs a title. Tokens alone are not a task.</p>
       )}
     </div>
   )
