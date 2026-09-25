@@ -45,7 +45,7 @@ export async function SettingsHeader({ current, skillCount }: { current: string;
         title="Settings"
         lede="Owner preferences and every external account the system can reach. Credentials are encrypted at rest and never live in the repo."
       />
-      <TabLinks tabs={tabs} current={current} label="Settings sections" tabClassName="px-4 pt-2.5" />
+      <TabLinks tabs={tabs} current={current} label="Settings sections" />
     </div>
   )
 }

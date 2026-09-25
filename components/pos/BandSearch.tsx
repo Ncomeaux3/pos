@@ -21,7 +21,7 @@ export function BandSearch({
       type="button"
       onClick={() => window.dispatchEvent(new Event('pos:search'))}
       className={cn(
-        'flex h-11 w-full max-w-[320px] sm:h-9 items-center gap-2.5 rounded-full border border-glass-line bg-field pl-3.5 pr-3 text-left text-ink-3 transition-colors duration-150 hover:text-ink',
+        'flex h-11 w-full max-w-[320px] items-center gap-2.5 rounded-full border border-glass-line bg-field pl-3.5 pr-3 text-left text-ink-3 transition-colors duration-150 hover:text-ink',
         className,
       )}
     >

@@ -56,7 +56,7 @@ export function AvatarMenu({ phone = false, className }: { phone?: boolean; clas
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
         className={cn(
-          'grid size-11 shrink-0 place-items-center rounded-full transition-colors duration-150 hover:bg-glass md:size-9',
+          'grid size-11 shrink-0 place-items-center rounded-full transition-colors duration-150 hover:bg-glass',
           className,
         )}
       >
