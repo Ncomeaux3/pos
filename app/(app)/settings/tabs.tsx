@@ -34,7 +34,8 @@ export async function SettingsHeader({ current, skillCount }: { current: string;
   const tab = tabs.find((t) => t.href === current)
 
   return (
-    <div className="space-y-[18px]">
+    // A fragment: PageHeader's sticky bar holds only inside the page column.
+    <>
       <PageHeader
         eyebrow={`Settings / ${typeof tab?.label === 'string' ? tab.label : 'General'}`}
         status={
@@ -46,6 +47,6 @@ export async function SettingsHeader({ current, skillCount }: { current: string;
         lede="Owner preferences and every external account the system can reach. Credentials are encrypted at rest and never live in the repo."
       />
       <TabLinks tabs={tabs} current={current} label="Settings sections" />
-    </div>
+    </>
   )
 }

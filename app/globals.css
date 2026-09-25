@@ -4,7 +4,8 @@
 /* holon-ui (holon-apple Phase 3): the Apple edition tokens, their Tailwind
  * theme and the navigation styles. POS's own names below are the alias layer
  * the module sweeps retire; where both define a name, the package's wins and
- * POS does not redeclare it. */
+ * POS does not redeclare it, with one exception: --chart-1 to --chart-4 keep
+ * the Holon series (brand, sand, green, purple) until a sweep decides. */
 @import "@ncomeaux3/holon-ui/tokens.css";
 @import "@ncomeaux3/holon-ui/theme.css";
 @import "@ncomeaux3/holon-ui/components.css";
