@@ -71,6 +71,12 @@ v1.2, all 2026-09-20, from the post-Holon interview; the fifteen entries are in 
 
 - Order (bugs, look and forms, Finance data, Calendar and integrations, features, release); read-only feeds; Calendar as a module with a manifest seam; category kinds with transfers out and credits netted; trip spend from linked transactions; USDA and paste-to-draft for Meals; Apple Health as the fitness source; recurrence as a rule on the task; semver with tags and GitHub Releases; the look stays Holon behind a mockup gate; an Errors tab and no Sentry; three Finance corner views; Home add and edit over existing tools; Health keeps its tab with health-type policies only; required-field errors and Enter to submit everywhere.
 
+holon-apple Phase 3, all 2026-09-25; reasons in decisions/log.md under that date:
+
+- holon-ui 0.1.0 published locally while Actions billing is blocked.
+- Registry credentials in user-level config (pnpm 11 ignores a project `.npmrc` token): `~/.npmrc`, CI `pnpm config set` from `NODE_AUTH_TOKEN`, Vercel `NPM_RC`, Dependabot `DEPENDABOT_NPM_TOKEN`; a read-only classic PAT.
+- The package wins every shared token but the four chart series, which keep the Holon palette until a sweep.
+
 ## Production readiness
 
 From the prod-auditor report of 2026-09-14 (8 present, 5 partial, 0 absent, no critical findings); the five partial rows and the rotation row closed by v1.1 phase 12 on 2026-09-15. Every row is decided, scheduled to a phase of docs/plans/pos-v1-1.md, or not needed with a reason.
@@ -83,7 +89,7 @@ From the prod-auditor report of 2026-09-14 (8 present, 5 partial, 0 absent, no c
 | 4. Auth and permissions | Present | | proxy.ts (matcher excludes `brand/`, the icons moved there from `icons/`), requireOwner(), bearer on /api/mcp and /api/cron, passkeys |
 | 5. Hosting and deployment | Present | | Vercel git integration, previews per branch, rollback in docs/SETUP-SUPABASE.md section 7 |
 | 6. Cloud and compute | Present | 12 | maxDuration on the cron (300), MCP (60), webhook and both OAuth routes (30) |
-| 7. CI/CD and version control | Present | 12 | Branch protection on main requires `check`, `screens` and `migrations`, enforced for admins, since 2026-09-15; the served-login smoke grep in ci.yml reads the input's `w-full rounded-xl` class and moves with it |
+| 7. CI/CD and version control | Present | 12 | Branch protection on main requires `check`, `screens` and `migrations`, enforced for admins, since 2026-09-15; the served-login smoke grep in ci.yml reads the input's `w-full min-h-(--target) rounded-control` class (holon-ui's fieldClass since holon-apple Phase 3) and moves with it |
 | 8. Security and data access | Present | 12 | .env gitignored, CSP, dependabot, `pnpm audit --prod --audit-level=high` in the check job |
 | 9. Rate limiting | Present | | core/ratelimit.ts, 60 per minute per IP, 429 with retry-after |
 | 10. Caching and CDN | Present | | Request-scoped React cache() on settings, today and skill names since Phase 3; no TTL caches by decision, single user and freshness wins |

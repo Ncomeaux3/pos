@@ -1,6 +1,15 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/* holon-ui (holon-apple Phase 3): the Apple edition tokens, their Tailwind
+ * theme and the navigation styles. POS's own names below are the alias layer
+ * the module sweeps retire; where both define a name, the package's wins and
+ * POS does not redeclare it, with one exception: --chart-1 to --chart-4 keep
+ * the Holon series (brand, sand, green, purple) until a sweep decides. */
+@import "@ncomeaux3/holon-ui/tokens.css";
+@import "@ncomeaux3/holon-ui/theme.css";
+@import "@ncomeaux3/holon-ui/components.css";
+@source "../node_modules/@ncomeaux3/holon-ui/src";
 
 /* Holon design tokens.
  *
@@ -71,7 +80,6 @@
    * same blue as the ribbon. */
   --action: light-dark(#3157b7, #9bb9ff);
   --action-fg: light-dark(#ffffff, #1c1c1e);
-  --accent: var(--action);
   --accent-soft: light-dark(#eef2fa, rgba(155, 185, 255, 0.16));
   --brand: #416aca;
   --sand: #d6bb9a;
@@ -84,9 +92,7 @@
   --positive: light-dark(#116b33, #5dc98a);
   --attention: light-dark(#875100, #e3b341);
   --risk: light-dark(#b91c1c, #fb8a8a);
-  --green: var(--positive);
   --amber: var(--attention);
-  --red: var(--risk);
 
   --chart-1: var(--brand);
   --chart-2: var(--sand);
@@ -97,19 +103,14 @@
   --selection: light-dark(#eef2fa, rgba(155, 185, 255, 0.28));
 
   /* Cards carry a faint lift; overlays float. */
-  --lift: light-dark(0 1px 2px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.3));
-  --pop: light-dark(0 24px 64px rgba(0, 0, 0, 0.22), 0 24px 64px rgba(0, 0, 0, 0.55));
+  --lift: var(--elevation-lift);
+  --pop: var(--elevation-pop);
 
   /* Glass: a translucent surface over the flat canvas, blurred and saturated,
    * with a one pixel highlight on its top edge and a hairline around it. */
   --glass: light-dark(rgba(255, 255, 255, 0.85), rgba(44, 44, 46, 0.64));
   --glass-strong: light-dark(rgba(255, 255, 255, 0.92), rgba(44, 44, 46, 0.82));
   --glass-panel: light-dark(rgba(255, 255, 255, 0.94), rgba(44, 44, 46, 0.9));
-  /* The phone's tab capsule: see-through enough that content scrolls visibly
-     under it, with the panel's blur so the labels still read. */
-  --glass-tabbar: light-dark(rgba(255, 255, 255, 0.72), rgba(44, 44, 46, 0.7));
-  --glass-edge: light-dark(rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.09));
-  --glass-line: light-dark(rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.08));
   --field: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.07));
   --blur: 28px;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -185,7 +186,6 @@ html {
   --color-secondary-foreground: var(--ink);
   --color-muted: var(--bg-elev);
   --color-muted-foreground: var(--ink-3);
-  --color-accent: var(--accent-soft);
   --color-accent-foreground: var(--ink);
   --color-destructive: var(--risk);
   --color-border: var(--rule-2);
@@ -203,7 +203,6 @@ html {
   /* The system font first (SF on Apple devices, which honours tabular
      figures through .num), then Geist served from app/fonts; the brand stays
      Geist. No monospace anywhere. */
-  --font-sans: -apple-system, BlinkMacSystemFont, var(--font-geist), system-ui, sans-serif;
   --font-brand: var(--font-geist), system-ui, sans-serif;
 
   /* 10px small controls and rail rows, 12px inputs, 18px cards and grouped
@@ -218,7 +217,6 @@ html {
   --radius-3xl: 24px;
   --radius-4xl: 24px;
   --shadow-card: var(--lift);
-  --shadow-pop: var(--pop);
 }
 
 @layer base {
@@ -337,32 +335,6 @@ html {
   @keyframes statusbar-fill {
     from { opacity: 0; }
     to { opacity: 1; }
-  }
-  /* The phone's tab capsule (MobileTabBar). Scrolling down sets
-   * data-tabbar="compact" on <html> and the capsule drops to 48px with its
-   * labels faded; the width holds and the labels stay in the tree for their
-   * accessible names. It used to collapse to a 44px pill of icons, which the
-   * owner found too much movement (2026-09-21). The global reduced-motion
-   * rule zeroes the transition. Height lives here rather than in a utility so
-   * the compact rule can override it. */
-  .tabbar {
-    height: 56px;
-    background: var(--glass-tabbar);
-    transition: height 240ms var(--ease);
-  }
-  .tabbar-label {
-    height: 14px;
-    line-height: 14px;
-    transition:
-      height 240ms var(--ease),
-      opacity 240ms var(--ease);
-  }
-  html[data-tabbar='compact'] .tabbar {
-    height: 48px;
-  }
-  html[data-tabbar='compact'] .tabbar-label {
-    height: 0;
-    opacity: 0;
   }
   @media (prefers-reduced-transparency: reduce) {
     .glass,
@@ -532,86 +504,14 @@ html {
   }
 }
 
-/* The phone's page transitions (components/pos/PageTransition.tsx). A route
- * change on the phone is an iOS push or pop: forward, the new page slides in
- * from the right over the old one, which moves a third of the way left and
- * darkens; back reverses it with the leaving page on top; a tab change
- * cross-fades. Forward and tab are React's ViewTransition classes; back is
- * the browser API with an attribute on <html> for its duration. The page paints its own canvas so each snapshot is one opaque
- * card and the page underneath never shows through the gaps between cards.
- * Untyped means forward, which is every plain link. The desktop keeps the
- * .reveal stagger and runs none of this. Readers who ask for reduced motion
- * get the fade for every case: the global rule above does not reach these
- * pseudo-elements. */
+/* The phone's page column is one opaque snapshot for holon-ui's push, pop and
+ * cross-fade (components.css); goBack() looks for the `page` class. */
 @media (max-width: 767px) {
   .page {
     background: var(--bg);
     transition: background 160ms var(--ease);
     view-transition-name: page;
   }
-  /* Taps during the 300ms are not lost to the overlay. */
-  ::view-transition {
-    pointer-events: none;
-  }
-  ::view-transition-new(.vt-push-in) {
-    animation: vt-slide-side 300ms var(--ease) both reverse;
-  }
-  ::view-transition-old(.vt-push-out) {
-    animation: vt-slide-under 300ms var(--ease) both;
-  }
-  /* Back runs through the browser's own API (goBack in PageTransition.tsx):
-   * the leaving page is named `leaving` for the duration and pops off over
-   * the page it reveals. */
-  html[data-nav='back']::view-transition-group(leaving) {
-    z-index: 1;
-  }
-  html[data-nav='back']::view-transition-old(leaving) {
-    animation: vt-slide-side 300ms var(--ease) both;
-  }
-  html[data-nav='back']::view-transition-new(page) {
-    animation: vt-slide-under 300ms var(--ease) both reverse;
-  }
-  ::view-transition-old(.vt-fade) {
-    animation: vt-fade 300ms var(--ease) both reverse;
-  }
-  ::view-transition-new(.vt-fade) {
-    animation: vt-fade 300ms var(--ease) both;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    ::view-transition-old(.vt-push-out),
-    html[data-nav='back']::view-transition-old(leaving) {
-      animation: vt-fade 300ms var(--ease) both reverse;
-    }
-    ::view-transition-new(.vt-push-in),
-    html[data-nav='back']::view-transition-new(page) {
-      animation: vt-fade 300ms var(--ease) both;
-    }
-  }
-}
-/* The desktop keeps the .reveal stagger. React still snapshots the root when
- * the page boundary is replaced, so the cross-fade it would play is zeroed
- * and the transition is over on the next frame. */
-@media (min-width: 768px) {
-  ::view-transition {
-    pointer-events: none;
-  }
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*) {
-    animation: none;
-  }
-}
-@keyframes vt-slide-side {
-  from { transform: none; }
-  to { transform: translateX(100%); }
-}
-@keyframes vt-slide-under {
-  from { transform: none; filter: brightness(1); }
-  to { transform: translateX(-30%); filter: brightness(0.8); }
-}
-@keyframes vt-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 @layer components {
