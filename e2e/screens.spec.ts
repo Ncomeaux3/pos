@@ -2575,7 +2575,9 @@ test('finance, net worth and the budget pace marks', async ({ page }) => {
   if (mobile) {
     await page.getByRole('tab', { name: /Budgets/ }).click()
     await expect(page).toHaveURL(/tab=budgets/)
-    await expect(page.getByText(/105% used/)).toBeVisible()
+    // By shape, not a figure: the seed dates rows N days ago, so a category's
+    // percentage drifts with the date (105 became 104). Fitness is seeded over.
+    await expect(page.locator('[data-segments-pane]').getByText(/\d+% used · \$[\d,]+ over/).first()).toBeVisible()
   } else {
     await expect(page.getByTestId('finance-budgets').getByText('Fixed', { exact: true })).toBeVisible()
   }
