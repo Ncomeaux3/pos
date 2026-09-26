@@ -2288,8 +2288,9 @@ test('calendar, every module on its day, a chip that stays off, and an event add
   await day.getByText('E2E standup').click()
   const edit = page.getByRole('dialog', { name: 'Edit event' })
   await expect(edit.getByLabel('Starts')).toHaveValue('07:15')
-  const deleted = action()
   await edit.getByRole('button', { name: 'Delete' }).click()
+  const deleted = action()
+  await page.getByRole('dialog', { name: 'Delete this event?' }).getByRole('button', { name: 'Delete' }).click()
   await deleted
   await expect(page).not.toHaveURL(/event=/)
   await page.reload()

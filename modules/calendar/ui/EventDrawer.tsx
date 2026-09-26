@@ -2,6 +2,7 @@
 
 import { useId, useState, useTransition } from 'react'
 import { ActionButton, Field, Overlay, Switch, fieldClass, timeFieldClass, useFormErrors, useToast } from '@/components/pos'
+import { ConfirmButton } from '@/components/pos/edit'
 import type { CalendarItem } from '@/core/module-contract'
 import { cn } from '@/lib/utils'
 import { removeEvent, saveEvent } from './actions'
@@ -86,11 +87,12 @@ export function EventDrawer({
       narrow
       eyebrow="Calendar"
       title={event ? 'Edit event' : 'New event'}
+      // Hidden while a save or delete runs: ConfirmButton takes no disabled.
       actions={
-        event && (
-          <ActionButton variant="danger" onClick={remove} disabled={pending}>
+        event && !pending && (
+          <ConfirmButton confirmLabel="Delete" title="Delete this event?" onConfirm={remove}>
             Delete
-          </ActionButton>
+          </ConfirmButton>
         )
       }
       footer={
@@ -121,7 +123,7 @@ export function EventDrawer({
           <input type="date" value={d.on_date} onChange={set('on_date')} className={cn(fieldClass, 'num w-full')} />
         </Field>
         <div className="flex items-center justify-between gap-3">
-          <span className="text-[14px] text-ink">All day</span>
+          <span className="text-body text-label">All day</span>
           <Switch label="All day" checked={d.all_day} onChange={(all_day) => setD((prev) => ({ ...prev, all_day }))} />
         </div>
         {!d.all_day && (
