@@ -2288,8 +2288,9 @@ test('calendar, every module on its day, a chip that stays off, and an event add
   await day.getByText('E2E standup').click()
   const edit = page.getByRole('dialog', { name: 'Edit event' })
   await expect(edit.getByLabel('Starts')).toHaveValue('07:15')
-  const deleted = action()
   await edit.getByRole('button', { name: 'Delete' }).click()
+  const deleted = action()
+  await page.getByRole('dialog', { name: 'Delete this event?' }).getByRole('button', { name: 'Delete' }).click()
   await deleted
   await expect(page).not.toHaveURL(/event=/)
   await page.reload()
@@ -4052,12 +4053,15 @@ test('ideas, four stage columns with the scores on every card', async ({ page })
 
 test('ideas, the capture line reads tags and scores', async ({ page }) => {
   await page.goto('/ideas')
+  // Its own title: the desktop and phone runs share the database, and the
+  // other run's card made the final count 1 (CI, #155).
+  const title = `Pocket receipt scanner ${Date.now()}`
   const line = page.getByLabel('Capture an idea')
-  await line.fill('Pocket receipt scanner #capture effort:low impact:high')
+  await line.fill(`${title} #capture effort:low impact:high`)
   await line.press('Enter')
-  await expect(page.getByText('Captured. Pocket receipt scanner')).toBeVisible()
+  await expect(page.getByText(`Captured. ${title}`)).toBeVisible()
 
-  const card = page.locator('article').filter({ hasText: 'Pocket receipt scanner' })
+  const card = page.locator('article').filter({ hasText: title })
   await expect(card.getByText('Quick win')).toBeVisible()
   await expect(card.getByText('#capture')).toBeVisible()
 
@@ -4066,7 +4070,7 @@ test('ideas, the capture line reads tags and scores', async ({ page }) => {
   page.once('dialog', (d) => d.accept())
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
   await expect(page.getByText('Deleted')).toBeVisible()
-  await expect(page.locator('article').filter({ hasText: 'Pocket receipt scanner' })).toHaveCount(0)
+  await expect(card).toHaveCount(0)
 })
 
 test('ideas, the effort and impact matrix places every live idea', async ({ page }) => {

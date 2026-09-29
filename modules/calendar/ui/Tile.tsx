@@ -7,7 +7,7 @@ export function CalendarTile({ payload }: { payload: Record<string, unknown> }) 
   const next = d.next ?? []
 
   if (!d.today && !d.tomorrow) {
-    return <p className="t-caption text-ink-3">Nothing is on today or tomorrow.</p>
+    return <p className="text-footnote text-secondary-label">Nothing is on today or tomorrow.</p>
   }
 
   return (
@@ -16,13 +16,13 @@ export function CalendarTile({ payload }: { payload: Record<string, unknown> }) 
         * a title and a day, which a key built from those collides on. */}
       {next.map((i, n) => (
         <div key={n} className="flex items-baseline justify-between gap-3">
-          <span className="truncate text-[14px] text-ink">{i.title}</span>
-          <span className="num shrink-0 text-[11px] text-ink-3">
+          <span className="truncate text-body text-label">{i.title}</span>
+          <span className="num shrink-0 text-caption-1 text-secondary-label">
             {i.allDay ? i.startsAt.slice(5) : i.startsAt.slice(11)}
           </span>
         </div>
       ))}
-      <p className="num text-[11px] text-ink-3">
+      <p className="num text-caption-1 text-secondary-label">
         {d.today ?? 0} today · {d.tomorrow ?? 0} tomorrow
       </p>
     </div>

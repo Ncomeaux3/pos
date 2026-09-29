@@ -192,7 +192,9 @@ export function Calendar({
       <div
         role="group"
         aria-label="Modules shown"
-        className="-mx-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:overflow-visible md:px-0"
+        // py-1: the scroller clips vertically too, and 36px chips need the room
+        // for their 44px hit area.
+        className="-mx-4 -mt-1 flex gap-2 overflow-x-auto px-4 py-1 md:mx-0 md:mt-0 md:flex-wrap md:overflow-visible md:px-0 md:py-0"
       >
         {sources.map((s) => {
           const Icon = NAV_ICON[`/${s.id}`]
@@ -201,12 +203,12 @@ export function Calendar({
             <ActionButton
               key={s.id}
               size="pill"
-              variant={shown ? 'brand' : 'outline'}
+              // Shown is the accent tint, off the grey cancel fill: holon-ui's
+              // outline is an accent tint too, and read as a second shown.
+              variant={shown ? 'brand' : 'quiet'}
               aria-pressed={shown}
               onClick={() => toggle(s.id)}
-              // Shown is the selected state, so it carries the action border;
-              // brand alone is borderless and read as the off one on the canvas.
-              className={cn('shrink-0 gap-1.5', shown ? 'border-action' : 'text-ink-3')}
+              className="shrink-0 gap-1.5"
             >
               {Icon && <Icon size={14} aria-hidden />}
               {s.label}
@@ -232,11 +234,11 @@ export function Calendar({
           <ActionButton size="sm" aria-label="Previous week" onClick={() => select(addDays(selected, -7))}>
             ‹
           </ActionButton>
-          <span className="text-[15px] text-ink">
+          <span className="text-subheadline text-label">
             {MONTHS[Number(week.slice(5, 7)) - 1]} {week.slice(0, 4)}
           </span>
           <div className="flex gap-2">
-            <ActionButton size="sm" onClick={() => select(today)} className={cn(selected === today && 'border-ink text-ink')}>
+            <ActionButton size="sm" variant={selected === today ? 'brand' : 'normal'} onClick={() => select(today)}>
               Today
             </ActionButton>
             <ActionButton size="sm" aria-label="Next week" onClick={() => select(addDays(selected, 7))}>
@@ -257,15 +259,17 @@ export function Calendar({
                 aria-pressed={isSelected}
                 aria-label={`${longDay(iso)}, ${count} ${count === 1 ? 'item' : 'items'}`}
                 className={cn(
-                  'flex min-h-16 flex-col items-center justify-center gap-1 rounded-[12px] border',
-                  isSelected ? 'border-action bg-brand-soft' : 'border-rule bg-bg hover:border-ink',
+                  // Opaque in both states, the ring alone marks the selection: a
+                  // tint over the grey canvas put secondary-label at 4.18:1 in light.
+                  'flex min-h-16 flex-col items-center justify-center gap-1 rounded-control bg-grouped-2',
+                  isSelected ? 'ring-2 ring-inset ring-accent' : 'hover:bg-fill-3',
                 )}
               >
-                <span className="label text-ink-3">{DOW[i].slice(0, 2)}</span>
-                <span className={cn('num text-[15px]', iso === today ? 'font-semibold text-action' : 'text-ink')}>
+                <span className="label text-caption-1 text-secondary-label">{DOW[i].slice(0, 2)}</span>
+                <span className={cn('num text-subheadline', iso === today ? 'font-semibold text-accent' : 'text-label')}>
                   {Number(iso.slice(8))}
                 </span>
-                <span className="num h-3 text-[10px] leading-3 text-ink-3">{count > 0 ? count : ''}</span>
+                <span className="num h-3 text-caption-2 leading-3 text-secondary-label">{count > 0 ? count : ''}</span>
               </button>
             )
           })}
@@ -273,11 +277,11 @@ export function Calendar({
       </div>
 
       <section aria-labelledby="calendar-day" data-day={selected} className="space-y-3">
-        <h2 id="calendar-day" className="text-[17px] tracking-[-0.01em] text-ink">
+        <h2 id="calendar-day" className="text-headline text-label">
           {longDay(selected)}
         </h2>
         {groups.length === 0 ? (
-          <p className="t-caption text-ink-3">
+          <p className="text-footnote text-secondary-label">
             Nothing on this day{hidden.length > 0 ? ' in the modules shown' : ''}.
           </p>
         ) : (
