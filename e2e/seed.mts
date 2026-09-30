@@ -63,9 +63,9 @@ await db().query(`delete from core.entities where module = 'core' and entity_typ
 // tasks no longer existed.
 const taskCount = await seedTasks()
 const goalCount = await seedGoals()
-// The inline add test creates this goal on every run; without this the Life
+// The inline add test creates this goal on every run, titled with a timestamp; without this the Life
 // ops group grows by one card a run.
-await db().query(`delete from goals.goal where title = 'Swim 2km without stopping'`)
+await db().query(`delete from goals.goal where title like 'Swim 2km without stopping%'`)
 // The health log a visit test files this record on every run.
 await db().query(
   `delete from core.entities where module = 'health' and entity_type = 'record'
@@ -76,9 +76,9 @@ await db().query(`delete from health.record where title = 'Ferritin'`)
 // midway leaves it, and the next run then finds two cards with its title.
 await db().query(
   `delete from core.entities where module = 'ideas'
-      and entity_id in (select id::text from ideas.idea where title = 'Pocket receipt scanner')`,
+      and entity_id in (select id::text from ideas.idea where title like 'Pocket receipt scanner%')`,
 )
-await db().query(`delete from ideas.idea where title = 'Pocket receipt scanner'`)
+await db().query(`delete from ideas.idea where title like 'Pocket receipt scanner%'`)
 // Tasks seed before goals exist, so the links between them are drawn here:
 // the Goals drawer lists a goal's tasks and the card names the next one.
 for (const [task, goal] of [

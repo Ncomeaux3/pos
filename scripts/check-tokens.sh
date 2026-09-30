@@ -26,6 +26,8 @@ SWEPT=(
   'modules/finance/ui'
   # Calendar
   'modules/calendar/ui'
+  # Goals
+  'modules/goals/ui'
 )
 
 # The two surfaces kept unchanged in feel (owner, 2026-09-18).

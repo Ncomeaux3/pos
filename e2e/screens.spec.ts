@@ -2365,11 +2365,13 @@ test('goals, adding one inline from the page', async ({ page }) => {
   // reload the theme toggle does.
   await page.getByRole('button', { name: '+ Add a goal inline' }).click()
   await expect(page).toHaveURL(/new=1/)
+  // Its own title: the desktop and phone runs share the database.
+  const title = `Swim 2km without stopping ${Date.now()}`
 
   if (mobile) {
     // One field on the phone; Next opens the drawer for the rest.
     const form = page.locator('form').filter({ hasText: 'Goal' })
-    await form.getByLabel('Goal').fill('Swim 2km without stopping')
+    await form.getByLabel('Goal').fill(title)
     await form.getByRole('button', { name: 'Next' }).click()
 
     const drawer = page.getByRole('dialog')
@@ -2379,23 +2381,23 @@ test('goals, adding one inline from the page', async ({ page }) => {
   } else {
     // Scoped to the form: "Goal" also names a field in the drawer behind it.
     const form = page.locator('form').filter({ hasText: 'Deadline' })
-    await form.getByLabel('Goal').fill('Swim 2km without stopping')
+    await form.getByLabel('Goal').fill(title)
     await form.getByLabel('Target').fill('2')
     await form.getByLabel('Deadline').fill('2027-03-01')
     await form.getByRole('button', { name: 'Add', exact: true }).click()
   }
 
   // The card, not the toast that also names it.
-  await expect(
-    page.getByRole('button', { name: /Swim 2km without stopping/ }).first(),
-  ).toBeVisible()
+  await expect(page.getByRole('button', { name: title })).toBeVisible()
 
-  // And Delete takes it away again, after asking.
-  await page.getByRole('button', { name: /Swim 2km without stopping/ }).first().click()
-  page.once('dialog', (d) => d.accept())
+  // And Delete takes it away again, after asking through the Alert.
+  await page.getByRole('button', { name: title }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
+  const deleted = page.waitForResponse((r) => r.request().method() === 'POST' && 'next-action' in r.request().headers())
+  await page.getByRole('dialog', { name: 'Delete this goal?' }).getByRole('button', { name: 'Delete' }).click()
+  await deleted
   await expect(page.getByText('Deleted')).toBeVisible()
-  await expect(page.locator('article').filter({ hasText: 'Swim 2km without stopping' })).toHaveCount(0)
+  await expect(page.locator('article').filter({ hasText: title })).toHaveCount(0)
 })
 
 test('goals, a check-in moves the goal', async ({ page }) => {

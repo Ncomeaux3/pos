@@ -8,10 +8,12 @@ import type { GoalsDigest } from '../jobs/nightly-digest'
 // count.
 
 const TONE: Record<string, { text: string; bar: string }> = {
-  on_track: { text: 'text-ok', bar: 'bg-ok' },
-  at_risk: { text: 'text-warn', bar: 'bg-warn' },
-  stalled: { text: 'text-bad', bar: 'bg-bad' },
-  done: { text: 'text-ink-3', bar: 'bg-ink-3' },
+  // The accessible shades for the bars too: system green and orange are under
+  // 3:1 on a white card.
+  on_track: { text: 'text-green-text', bar: 'bg-green-text' },
+  at_risk: { text: 'text-orange-text', bar: 'bg-orange-text' },
+  stalled: { text: 'text-red-text', bar: 'bg-red-text' },
+  done: { text: 'text-secondary-label', bar: 'bg-secondary-label' },
 }
 
 const LABEL: Record<string, string> = {
@@ -36,7 +38,7 @@ export function GoalsTile({ payload }: { payload: Record<string, unknown> }) {
   const goals = d.attention ?? []
 
   if (goals.length === 0) {
-    return <p className="t-caption text-ink-3">No goals are being tracked yet.</p>
+    return <p className="text-footnote text-secondary-label">No goals are being tracked yet.</p>
   }
 
   return (
@@ -44,18 +46,18 @@ export function GoalsTile({ payload }: { payload: Record<string, unknown> }) {
       {goals.slice(0, 3).map((g) => {
         const tone = TONE[g.status] ?? TONE.done
         return (
-          <div key={g.id} className="border-b border-rule py-[9px] last:border-b-0">
-            <div className="flex justify-between gap-2.5 text-[13px]">
-              <span className="truncate text-ink">{g.title}</span>
-              <span className={cn('t-caption shrink-0 font-medium', tone.text)}>
+          <div key={g.id} className="border-b border-separator py-[9px] last:border-b-0">
+            <div className="flex justify-between gap-2.5 text-subheadline">
+              <span className="truncate text-label">{g.title}</span>
+              <span className={cn('shrink-0 text-footnote font-medium', tone.text)}>
                 {LABEL[g.status] ?? g.status}
               </span>
             </div>
             <div className="mt-1.5 flex items-center gap-2.5">
-              <div className="h-1 flex-1 rounded-full bg-rule-2">
+              <div className="h-1 flex-1 rounded-full bg-fill-3">
                 <div className={cn('h-1 rounded-full', tone.bar)} style={{ width: `${g.percent}%` }} />
               </div>
-              <span className="num t-caption w-[88px] shrink-0 text-right text-ink-3">
+              <span className="num w-[88px] shrink-0 text-right text-footnote text-secondary-label">
                 {g.current !== undefined && g.target !== undefined ? figure(g) : `${g.percent}%`}
               </span>
             </div>
