@@ -12,6 +12,8 @@ import {
   submitOnModEnter,
   useFormErrors,
 } from '@/components/pos'
+import { SIZE } from '@/components/pos/button-classes'
+import { ConfirmButton } from '@/components/pos/edit'
 import type { Metric } from '@/core/metrics'
 import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
@@ -122,7 +124,7 @@ function View({
       onClose={onClose}
       eyebrow={
         <>
-          Goals <span className="text-ink-4">/</span> {goal.title}
+          Goals <span className="text-secondary-label">/</span> {goal.title}
         </>
       }
       footer={
@@ -142,52 +144,53 @@ function View({
               {goal.archived ? 'Unarchive' : 'Archive'}
             </button>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (!window.confirm(`Delete "${goal.title}"?`)) return
+          <ConfirmButton
+            confirmLabel="Delete"
+            title="Delete this goal?"
+            onConfirm={() => {
               onRun(() => deleteGoal(goal.id), 'Deleted')
               onClose()
             }}
-            className={cn(mini, 'hover:text-bad')}
+            className={SIZE.sm}
           >
             Delete
-          </button>
+          </ConfirmButton>
         </>
       }
     >
       <div className="flex flex-col gap-[18px]">
         <div>
           <div className="flex items-start justify-between gap-3">
-            <h2 className="text-[22px] font-normal leading-[1.2] tracking-[-0.03em] text-ink">{goal.title}</h2>
+            <h2 className="text-title-2 text-label">{goal.title}</h2>
             <StatusMark status={p.status} className="mt-1" />
           </div>
-          <p className="mt-1.5 text-[12px] text-ink-3">
+          <p className="mt-1.5 text-footnote text-secondary-label">
             {goal.area} · {KIND_LABEL[goal.kind]} · {manual ? 'check-ins' : 'computed'}
           </p>
-          {goal.notes && <p className="mt-2.5 text-[13px] leading-[1.55] text-ink-2">{goal.notes}</p>}
+          {goal.notes && <p className="mt-2.5 text-subheadline text-label">{goal.notes}</p>}
         </div>
 
-        <div className="glass grid grid-cols-3 gap-px overflow-hidden rounded-[18px] [&>*]:shadow-[-1px_-1px_0_var(--rule)]">
+        {/* The gaps are the hairlines: opaque cells over a separator fill. */}
+        <div className="grid grid-cols-3 gap-px overflow-hidden rounded-card bg-separator">
           <Cell label="Now" value={formatValue(p.current, goal.kind, goal.unit)} />
           <Cell label="Target" value={formatValue(goal.targetValue, goal.kind, goal.unit)} />
           <Cell label={p.daysLeft >= 0 ? 'Days left' : 'Days over'} value={String(Math.abs(p.daysLeft))} />
         </div>
 
-        <div className="flex flex-col gap-2 border border-rule px-3.5 py-3 rounded-[18px]">
+        <div className="flex flex-col gap-2 rounded-card bg-grouped-2 px-3.5 py-3">
           <Eyebrow>Status rule</Eyebrow>
-          <p className="text-[13px] leading-[1.55] text-ink">
+          <p className="text-footnote text-label">
             {ruleLong(shape, p, goal.unit, formatDate(goal.deadline, todayIso))}
           </p>
           {proj30 && projAll && (
-            <div className="grid grid-cols-2 gap-3 text-[12px] text-ink-3">
+            <div className="grid grid-cols-2 gap-3 text-footnote text-secondary-label">
               <span>
                 Projected · last 30d pace
-                <span className={cn('mt-0.5 block', proj30.ok ? 'text-ok' : 'text-warn')}>{proj30.text}</span>
+                <span className={cn('mt-0.5 block', proj30.ok ? 'text-green-text' : 'text-orange-text')}>{proj30.text}</span>
               </span>
               <span>
                 Projected · all history
-                <span className={cn('mt-0.5 block', projAll.ok ? 'text-ok' : 'text-warn')}>{projAll.text}</span>
+                <span className={cn('mt-0.5 block', projAll.ok ? 'text-green-text' : 'text-orange-text')}>{projAll.text}</span>
               </span>
             </div>
           )}
@@ -196,22 +199,22 @@ function View({
         <div>
           <div className="flex items-baseline justify-between">
             <Eyebrow>History</Eyebrow>
-            <span className="num text-[11px] text-ink-3">
+            <span className="num text-caption-1 text-secondary-label">
               {goal.history.length} points · {manual ? 'check-ins' : 'nightly snapshots'}
             </span>
           </div>
           <svg viewBox="0 0 400 110" preserveAspectRatio="none" className="mt-2 block h-[110px] w-full overflow-visible" aria-hidden>
-            <line x1="0" y1={chart.targetY} x2="400" y2={chart.targetY} stroke="var(--ink-4)" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
-            <line x1="0" y1={chart.paceY1} x2="400" y2={chart.paceY2} stroke="var(--rule-2)" vectorEffect="non-scaling-stroke" />
-            <path d={chart.area} fill="var(--accent-soft)" />
+            <line x1="0" y1={chart.targetY} x2="400" y2={chart.targetY} stroke="var(--gray)" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
+            <line x1="0" y1={chart.paceY1} x2="400" y2={chart.paceY2} stroke="var(--gray)" vectorEffect="non-scaling-stroke" />
+            <path d={chart.area} fill="var(--accent)" fillOpacity={0.15} />
             <path d={chart.path} fill="none" stroke="var(--accent)" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
             {chart.dots.map((d, i) => (
-              <circle key={i} cx={d.x} cy={d.y} r={2.5} fill={d.manual ? 'var(--ink)' : 'var(--accent)'} stroke="var(--bg-elev)" vectorEffect="non-scaling-stroke" />
+              <circle key={i} cx={d.x} cy={d.y} r={2.5} fill={d.manual ? 'var(--label)' : 'var(--accent)'} stroke="var(--secondary-system-grouped-background)" vectorEffect="non-scaling-stroke" />
             ))}
           </svg>
-          <div className="mt-1 flex justify-between text-[11px] text-ink-4">
+          <div className="mt-1 flex justify-between text-caption-1 text-secondary-label">
             <span>{`${MONTHS[startDate.getMonth()]} ${startDate.getDate()}`}</span>
-            <span>dashed = target · grey = needed pace</span>
+            <span>dashed = target · solid = needed pace</span>
             <span>Today</span>
           </div>
           {manual && goal.kind !== 'milestone' && (
@@ -250,7 +253,7 @@ function View({
             </button>
           )}
           {!manual && (
-            <p className="mt-2.5 text-[11px] text-ink-4">
+            <p className="mt-2.5 text-caption-1 text-secondary-label">
               Computed nightly from <span className="num">{goal.metricSource}</span>. Manual check-ins are disabled while a source is set.
             </p>
           )}
@@ -259,19 +262,19 @@ function View({
         <div>
           <div className="flex items-baseline justify-between">
             <Eyebrow>Linked tasks</Eyebrow>
-            <Link href="/tasks?view=goal" className="text-[11px] text-ink-3 hover:text-ink">
+            <Link href="/tasks?view=goal" className="-my-3.5 py-3.5 text-footnote text-secondary-label hover:text-label">
               {doneTasks} / {goal.tasks.length} done →
             </Link>
           </div>
           <div className="mt-1.5 flex flex-col">
-            {goal.tasks.length === 0 && <p className="py-2 text-[12px] text-ink-4">No task points at this goal yet.</p>}
+            {goal.tasks.length === 0 && <p className="py-2 text-footnote text-secondary-label">No task points at this goal yet.</p>}
             {goal.tasks.map((t, i) => (
-              <div key={i} className="flex justify-between gap-2.5 border-b border-rule py-2 text-[13px]">
+              <div key={i} className="flex items-baseline justify-between gap-2.5 border-b border-separator py-2 text-subheadline">
                 <span className="flex min-w-0 items-center gap-2">
-                  <span className={cn('size-3 shrink-0 border rounded-full', t.done ? 'border-brand bg-brand' : 'border-ink-3')} />
-                  <span className={cn('truncate', t.done ? 'text-ink-3 line-through' : 'text-ink')}>{t.title}</span>
+                  <span className={cn('size-3 shrink-0 border rounded-full', t.done ? 'border-accent bg-accent' : 'border-gray')} />
+                  <span className={cn('truncate', t.done ? 'text-secondary-label line-through' : 'text-label')}>{t.title}</span>
                 </span>
-                <span className="num shrink-0 text-[11px] text-ink-3">{t.meta}</span>
+                <span className="num shrink-0 text-caption-1 text-secondary-label">{t.meta}</span>
               </div>
             ))}
           </div>
@@ -282,7 +285,7 @@ function View({
           {goal.entityRef ? (
             <SkillPicker entityRef={goal.entityRef} links={goal.skills} skills={skills} className="mt-2" />
           ) : (
-            <p className="mt-2 text-[12px] text-ink-4">Nothing matched yet.</p>
+            <p className="mt-2 text-footnote text-secondary-label">Nothing matched yet.</p>
           )}
         </div>
 
@@ -290,18 +293,18 @@ function View({
           <div>
             <div className="flex items-baseline justify-between">
               <Eyebrow>Agent proposals</Eyebrow>
-              <Link href="/review" className="text-[11px] text-ink-3 hover:text-ink">
+              <Link href="/review" className="-my-3.5 py-3.5 text-footnote text-secondary-label hover:text-label">
                 Review →
               </Link>
             </div>
             <div className="mt-1.5 flex flex-col">
               {goal.proposals.map((pr) => (
-                <div key={pr.id} className="border-b border-rule py-2">
+                <div key={pr.id} className="border-b border-separator py-2">
                   <div className="flex justify-between gap-2.5">
-                    <span className="text-[11px] text-ink-3">{pr.from}</span>
+                    <span className="text-caption-1 text-secondary-label">{pr.from}</span>
                     <StatusChip tone="warn">Pending</StatusChip>
                   </div>
-                  <div className="mt-[3px] text-[13px] text-ink">{pr.title}</div>
+                  <div className="mt-[3px] text-subheadline text-label">{pr.title}</div>
                 </div>
               ))}
             </div>
@@ -314,9 +317,9 @@ function View({
 
 function Cell({ label, value }: { label: string; value: string }) {
   return (
-    <div className="px-4 py-3">
+    <div className="bg-grouped-2 px-4 py-3">
       <Eyebrow>{label}</Eyebrow>
-      <div className="num mt-1 text-[18px] font-semibold tracking-[-0.01em] text-ink">{value}</div>
+      <div className="num mt-1 text-title-3 font-semibold text-label">{value}</div>
     </div>
   )
 }
@@ -394,7 +397,7 @@ function Form({
       dirty={dirty}
       eyebrow={
         <>
-          Goals <span className="text-ink-4">/</span> {goal ? 'Edit' : 'New goal'}
+          Goals <span className="text-secondary-label">/</span> {goal ? 'Edit' : 'New goal'}
         </>
       }
       footer={
@@ -402,7 +405,7 @@ function Form({
           <ActionButton variant="quiet" onClick={onCancel}>
             Cancel
           </ActionButton>
-          <ActionButton variant="solid" className="h-[38px] gap-2 px-3.5 text-[13px]" type="submit" form={formId}>
+          <ActionButton variant="solid" className="gap-2 px-3.5" type="submit" form={formId}>
             {goal ? 'Save' : 'Create'} <span aria-hidden="true">&rarr;</span>
           </ActionButton>
         </>
@@ -418,7 +421,7 @@ function Form({
         }}
       >
         <Field label="Title" required error={errors.title}>
-          <input value={d.title} onChange={set('title')} className={cn(field, 'px-3 py-2.5 text-[15px]')} />
+          <input value={d.title} onChange={set('title')} className={cn(field, 'px-3 py-2.5')} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1.5">
@@ -463,13 +466,13 @@ function Form({
         <div>
           <div className="flex items-baseline justify-between">
             <Eyebrow>Metric source · optional</Eyebrow>
-            <span className="text-[11px] text-ink-3">progress is computed when set</span>
+            <span className="text-caption-1 text-secondary-label">progress is computed when set</span>
           </div>
           <select
             value={d.metric}
             onChange={set('metric')}
             aria-label="Metric source"
-            className={cn(field, 'mt-2 text-[12px]')}
+            className={cn(field, 'mt-2 text-footnote')}
           >
             <option value="">Manual check-ins</option>
             {metrics.map((m) => (

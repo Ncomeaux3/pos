@@ -61,15 +61,16 @@ export function StatusMark({ status, className }: { status: Status; className?: 
 }
 const STATUS_STROKE: Record<Status, string> = {
   done: 'var(--accent)',
-  on_track: 'var(--positive)',
-  at_risk: 'var(--amber)',
-  stalled: 'var(--risk)',
+  on_track: 'var(--green)',
+  at_risk: 'var(--orange)',
+  stalled: 'var(--red)',
 }
+// The accessible shades: system green and orange are under 3:1 on a white card.
 const STATUS_BG: Record<Status, string> = {
-  done: 'bg-brand',
-  on_track: 'bg-ok',
-  at_risk: 'bg-warn',
-  stalled: 'bg-bad',
+  done: 'bg-accent',
+  on_track: 'bg-green-text',
+  at_risk: 'bg-orange-text',
+  stalled: 'bg-red-text',
 }
 
 export const KIND_LABEL: Record<GoalKind, string> = {
@@ -82,7 +83,7 @@ export const KIND_LABEL: Record<GoalKind, string> = {
 /** The artboard's life areas, in its order; anything else the data has follows. */
 export const AREAS = ['Engineering', 'Business', 'Communication', 'Health', 'Life ops']
 
-/** The small buttons, as ActionButton draws them: a glass pill, and the soft action fill. */
+/** The small buttons, as ActionButton draws them: the Normal tint, and the selected accent tint. */
 export const mini = cn(actionButtonBase, actionButtonSizes.sm, actionButtonVariants.outline)
 export const miniAccent = cn(actionButtonBase, actionButtonSizes.sm, actionButtonVariants.brand)
 export const field = fieldClass
@@ -129,7 +130,7 @@ export function GoalsCrumb() {
   const { params } = useParams()
   return (
     <>
-      Goals <span className="text-ink-4">/</span>{' '}
+      Goals <span className="text-secondary-label">/</span>{' '}
       {params.get('tab') === 'archive' ? 'Archive' : 'Active'}
     </>
   )
@@ -141,7 +142,7 @@ export function NewGoalButton() {
   return (
     <ActionButton
       variant="solid"
-      className="h-11 gap-2 px-3.5 text-[13px] sm:h-9"
+      className="gap-2 px-3.5"
       onClick={() => setParams({ goal: 'new', edit: null }, { push: true })}
     >
       New goal <span aria-hidden="true">&rarr;</span>
@@ -223,7 +224,7 @@ export function GoalList({
           )}
 
           {shown.length === 0 ? (
-            <p className="p-10 text-center text-[13px] text-ink-3">Nothing here yet.</p>
+            <p className="p-10 text-center text-footnote text-secondary-label">Nothing here yet.</p>
           ) : (
             areas.map((area) => {
               const inArea = shown.filter((g) => g.area === area)
@@ -233,9 +234,9 @@ export function GoalList({
 
               return (
                 <section key={area}>
-                  <div className="mb-3 flex items-baseline justify-between gap-3 border-b border-rule-2 pb-2">
-                    <span className="text-[15px] text-ink">{area}</span>
-                    <span className="num text-[11px] text-ink-3">
+                  <div className="mb-3 flex items-baseline justify-between gap-3 border-b border-separator pb-2">
+                    <span className="text-subheadline text-label">{area}</span>
+                    <span className="num text-caption-1 text-secondary-label">
                       {inArea.length} {inArea.length === 1 ? 'goal' : 'goals'} · {onTrack} on track
                     </span>
                   </div>
@@ -312,7 +313,7 @@ function AddGoal({
       <button
         type="button"
         onClick={() => onOpen(true)}
-        className="w-full rounded-[18px] border border-dashed border-rule-2 px-4 py-3 text-left text-[13px] text-ink-3 transition-colors duration-150 hover:border-action hover:text-ink"
+        className="min-h-11 w-full rounded-card border border-dashed border-gray-3 px-4 py-3 text-left text-footnote text-secondary-label transition-colors duration-150 hover:border-accent hover:text-label"
       >
         + Add a goal inline
       </button>
@@ -343,7 +344,7 @@ function AddGoal({
         setDeadline('')
         onOpen(false)
       }}
-      className="grid gap-2.5 rounded-[18px] border border-dashed border-action px-4 py-3.5 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end"
+      className="grid gap-2.5 rounded-card border border-dashed border-accent px-4 py-3.5 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end"
     >
       <label className="flex flex-col gap-1.5">
         <Eyebrow>Goal</Eyebrow>
@@ -442,11 +443,11 @@ function Card({
   return (
     // The title button's hit area is stretched over the whole card; the task
     // link and the check-in controls below sit above it (v1.2 phase 3d).
-    <article className={cn(STRETCH_WRAP, 'glass min-w-0 rounded-[18px] px-[18px] py-4 transition-[background-color,transform] duration-200 hover:-translate-y-0.5')}>
+    <article className={cn(STRETCH_WRAP, 'min-w-0 rounded-card bg-grouped-2 px-[18px] py-4 transition-[background-color,transform] duration-200 hover:-translate-y-0.5')}>
       <div className="flex items-start justify-between gap-2.5">
         <button type="button" onClick={onOpen} className={cn(STRETCH, 'min-w-0 text-left')}>
-          <span className="block text-[15px] font-medium leading-[1.3] tracking-[-0.01em] text-ink">{goal.title}</span>
-          <span className="t-caption mt-0.5 block text-ink-3">
+          <span className="block text-subheadline font-medium text-label">{goal.title}</span>
+          <span className="mt-0.5 block text-footnote text-secondary-label">
             {KIND_LABEL[goal.kind]} · {manual ? 'check-ins' : 'computed'}
           </span>
         </button>
@@ -459,35 +460,35 @@ function Card({
       </div>
 
       <div className="mt-3.5 flex items-baseline justify-between gap-2.5">
-        <span className="num text-[24px] font-semibold leading-none tracking-[-0.02em] text-ink">
+        <span className="num text-title-2 font-semibold text-label">
           {formatValue(p.current, goal.kind, goal.unit)}{' '}
-          <span className="text-[12.5px] font-normal text-ink-3">/ {formatValue(goal.targetValue, goal.kind, goal.unit)}</span>
+          <span className="text-footnote font-normal text-secondary-label">/ {formatValue(goal.targetValue, goal.kind, goal.unit)}</span>
         </span>
-        <span className="num text-[13px] text-ink-2">{Math.round(p.percent)}%</span>
+        <span className="num text-footnote text-secondary-label">{Math.round(p.percent)}%</span>
       </div>
 
       {/* The mark is where a straight line from the start would have you today,
           so the bar shows pace rather than only distance. */}
-      <div className="relative mt-2.5 h-1 rounded-full bg-rule-2">
+      <div className="relative mt-2.5 h-1 rounded-full bg-fill-3">
         <div className={cn('h-full rounded-full', STATUS_BG[p.status])} style={{ width: `${p.percent}%` }} />
         <span
           title="Where you should be today"
-          className="absolute -top-[3px] h-[9px] w-px bg-ink-2"
+          className="absolute -top-[3px] h-[9px] w-px bg-secondary-label"
           style={{ left: `${Math.min(100, p.expectedPercent)}%` }}
         />
       </div>
 
       <div className="mt-3 grid grid-cols-[1fr_auto] items-end gap-3">
         <div className="min-w-0">
-          <p className="t-caption text-ink-3">{goal.rule}</p>
-          <p className="t-caption mt-1 text-ink-3">
-            Deadline <span className="text-ink-2">{formatDate(goal.deadline, todayIso)}</span> ·{' '}
-            <span className="text-ink-2">
+          <p className="text-footnote text-secondary-label">{goal.rule}</p>
+          <p className="mt-1 text-footnote text-secondary-label">
+            Deadline <span className="text-label">{formatDate(goal.deadline, todayIso)}</span> ·{' '}
+            <span className="text-label">
               {p.daysLeft >= 0 ? `${p.daysLeft} days left` : `${-p.daysLeft} days over`}
             </span>
             {fin && (
               <>
-                {' '}· finish ≈ <span className={fin.ok ? 'text-ok' : 'text-warn'}>{fin.text}</span>
+                {' '}· finish ≈ <span className={fin.ok ? 'text-green-text' : 'text-orange-text'}>{fin.text}</span>
               </>
             )}
           </p>
@@ -495,10 +496,11 @@ function Card({
         <Spark history={goal.history} status={p.status} />
       </div>
 
-      <div className="relative z-10 mt-3 flex items-center justify-between gap-2.5 border-t border-rule pt-2.5">
+      <div className="relative z-10 mt-3 flex items-center justify-between gap-2.5 border-t border-separator pt-2.5">
         <Link
           href="/tasks?view=goal"
-          className="t-caption min-w-0 truncate text-ink-3 transition-colors duration-150 hover:text-action"
+          // The padding reaches 44px; the negative margin keeps the row's height.
+          className="-my-3.5 min-w-0 truncate py-3.5 text-footnote text-secondary-label transition-colors duration-150 hover:text-accent"
         >
           {next
             ? `Next: ${next.title} · ${next.meta}`
@@ -523,7 +525,7 @@ function Card({
               onChange={(e) => setValue(e.target.value)}
               aria-label={`Check in on ${goal.title}`}
               placeholder={checkinPlaceholder(goal.unit)}
-              className={cn(field, 'num h-11 w-[84px] px-2.5 py-1 text-[13px] sm:h-6 sm:rounded-full')}
+              className={cn(field, 'num w-[84px] px-2.5 py-1 text-footnote')}
             />
             <button type="submit" className={mini}>
               Check in
@@ -548,7 +550,7 @@ function Card({
           </button>
         )}
         {!manual && (
-          <span className="code t-caption min-w-0 max-w-[60%] truncate text-ink-3">
+          <span className="code min-w-0 max-w-[60%] truncate text-footnote text-secondary-label">
             computed · {goal.metricSource}
           </span>
         )}
