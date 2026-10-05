@@ -486,8 +486,8 @@ html {
   /* 64px hairline grid, used behind empty states and connect cards. */
   .grid-bg {
     background-image:
-      linear-gradient(to right, var(--rule) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--rule) 1px, transparent 1px);
+      linear-gradient(to right, var(--separator) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--separator) 1px, transparent 1px);
     background-size: 64px 64px;
   }
 }

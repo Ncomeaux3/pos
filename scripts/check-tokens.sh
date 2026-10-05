@@ -28,6 +28,9 @@ SWEPT=(
   'modules/calendar/ui'
   # Goals
   'modules/goals/ui'
+  # Fitness and Health
+  'modules/fitness/ui'
+  'modules/health/ui'
 )
 
 # The two surfaces kept unchanged in feel (owner, 2026-09-18).

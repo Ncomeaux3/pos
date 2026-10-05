@@ -25,10 +25,10 @@ import { SetupCard } from './SetupCard'
 import { syncFitness } from './sync'
 
 const GOAL_TONE: Record<string, string> = {
-  stalled: 'text-bad',
-  at_risk: 'text-warn',
-  on_track: 'text-ok',
-  done: 'text-ok',
+  stalled: 'text-red-text',
+  at_risk: 'text-orange-text',
+  on_track: 'text-green-text',
+  done: 'text-green-text',
 }
 
 const GOAL_LABEL: Record<string, string> = {
@@ -47,14 +47,14 @@ const Num = ({ children }: { children: ReactNode }) => (
   <span className="mt-0.5 block leading-none">{children}</span>
 )
 
-/** The 14px grey unit beside a tile's 34px number. */
+/** The grey unit beside a tile's figure. */
 const Unit = ({ children }: { children: string }) => (
-  <span className="text-[14px] text-ink-3">{children}</span>
+  <span className="text-subheadline text-secondary-label">{children}</span>
 )
 
-/** The mono 11px line under a tile's number. */
+/** The mono caption line under a tile's number. */
 const Sub = ({ children }: { children: string }) => (
-  <span className="num mt-2 block text-[11px] font-normal tracking-normal text-ink-3">{children}</span>
+  <span className="num mt-2 block text-caption-1 font-normal text-secondary-label">{children}</span>
 )
 
 export default async function FitnessPage() {
@@ -176,7 +176,7 @@ export default async function FitnessPage() {
           // not a fact about anything.
           state === 'live' &&
           span.count > 0 && (
-            <span className="num text-[11px] text-ink-3">
+            <span className="num text-caption-1 text-secondary-label">
               {span.count} workouts · {span.firstYear} → today
             </span>
           )
@@ -190,10 +190,9 @@ export default async function FitnessPage() {
         />
       ) : (
         <>
-          <MetricStrip className="border-rule bg-rule">
+          <MetricStrip>
             <MetricTile
               size="lg"
-              className="bg-bg px-5 py-4"
               label="This week"
               value={
                 <>
@@ -206,7 +205,6 @@ export default async function FitnessPage() {
             />
             <MetricTile
               size="lg"
-              className="bg-bg px-5 py-4"
               label={heaviest ? `${heaviest.best!.exercise} · best set` : 'Best set'}
               value={
                 heaviest ? (
@@ -220,7 +218,7 @@ export default async function FitnessPage() {
                 ) : (
                   <>
                     <Num>
-                      <span className="text-ink-3">--</span>
+                      <span className="text-secondary-label">--</span>
                     </Num>
                     <Sub>Nothing lifted yet</Sub>
                   </>
@@ -229,7 +227,6 @@ export default async function FitnessPage() {
             />
             <MetricTile
               size="lg"
-              className="bg-bg px-5 py-4"
               label={goal ? goal.title : 'Fitness goal'}
               value={
                 goal ? (
@@ -243,7 +240,7 @@ export default async function FitnessPage() {
                 ) : (
                   <>
                     <Num>
-                      <span className="text-ink-3">--</span>
+                      <span className="text-secondary-label">--</span>
                     </Num>
                     <Sub>No fitness goal</Sub>
                   </>
@@ -252,7 +249,6 @@ export default async function FitnessPage() {
             />
             <MetricTile
               size="lg"
-              className="bg-bg px-5 py-4"
               label="Body metrics"
               value={
                 weight ? (
@@ -265,7 +261,7 @@ export default async function FitnessPage() {
                 ) : (
                   <>
                     <Num>
-                      <span className="text-ink-3">--</span>
+                      <span className="text-secondary-label">--</span>
                     </Num>
                     <Sub>No readings yet</Sub>
                   </>

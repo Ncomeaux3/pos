@@ -21,7 +21,7 @@ import { KIND_LABEL, longWhen, recordDate, type Appointment, type HealthRecord }
 // record, or the Log a visit form. The artboard's drawer has no band of its
 // own, so the shared band's crumb carries the kind.
 
-const key = 'w-[120px] shrink-0 text-[12px] text-ink-3'
+const key = 'w-[120px] shrink-0 text-footnote text-secondary-label'
 
 export function HealthDrawer({
   appointment,
@@ -54,9 +54,9 @@ function Rows({ rows }: { rows: [string, string][] }) {
       {rows
         .filter(([, v]) => v)
         .map(([k, v]) => (
-          <div key={k} className="flex flex-wrap items-baseline gap-2 gap-x-3.5 border-b border-rule py-[13px]">
+          <div key={k} className="flex flex-wrap items-baseline gap-2 gap-x-3.5 border-b border-separator py-[13px]">
             <span className={key}>{k.charAt(0).toUpperCase() + k.slice(1)}</span>
-            <span className="min-w-0 flex-[1_1_160px] text-[14px] leading-[1.45] text-ink">{v}</span>
+            <span className="min-w-0 flex-[1_1_160px] text-subheadline text-label">{v}</span>
           </div>
         ))}
     </div>
@@ -66,8 +66,8 @@ function Rows({ rows }: { rows: [string, string][] }) {
 function Head({ title, sub }: { title: string; sub: string }) {
   return (
     <>
-      <h2 className="text-[22px] font-normal leading-[1.25] tracking-[-0.02em] text-ink">{title}</h2>
-      {sub && <p className="mt-2 text-[12px] leading-[1.5] text-ink-3">{sub}</p>}
+      <h2 className="text-title-2 text-label">{title}</h2>
+      {sub && <p className="mt-2 text-footnote text-secondary-label">{sub}</p>}
     </>
   )
 }
@@ -100,7 +100,7 @@ function AppointmentView({
       {a.notes && (
         <div className="mt-5">
           <Eyebrow>Notes</Eyebrow>
-          <p className="mt-2.5 text-[13px] leading-[1.6] text-ink-2">{a.notes}</p>
+          <p className="mt-2.5 text-footnote text-label">{a.notes}</p>
         </div>
       )}
       <div className="mt-5">
@@ -108,7 +108,7 @@ function AppointmentView({
         {a.entityRef ? (
           <SkillPicker entityRef={a.entityRef} links={a.skills} skills={skills} className="mt-2" />
         ) : (
-          <p className="mt-2 text-[12px] text-ink-4">Nothing matched yet.</p>
+          <p className="mt-2 text-footnote text-secondary-label">Nothing matched yet.</p>
         )}
       </div>
       {!past && (
@@ -139,7 +139,7 @@ function RecordView({ record: r, skills, onClose }: { record: HealthRecord; skil
         {r.entityRef ? (
           <SkillPicker entityRef={r.entityRef} links={r.skills} skills={skills} className="mt-2" />
         ) : (
-          <p className="mt-2 text-[12px] text-ink-4">Nothing matched yet.</p>
+          <p className="mt-2 text-footnote text-secondary-label">Nothing matched yet.</p>
         )}
       </div>
       {r.file && (
@@ -251,7 +251,7 @@ function Form({
             onChange={(e) => setNotes(e.target.value)}
             onKeyDown={submitOnModEnter}
             placeholder="What was decided, what to follow up on"
-            className={cn(fieldClass, 'min-h-24 resize-y leading-[1.5]')}
+            className={cn(fieldClass, 'min-h-24 resize-y leading-normal')}
           />
         </label>
         <div className="flex flex-col gap-1.5">
@@ -262,11 +262,11 @@ function Form({
             accept="application/pdf,image/*"
             disabled={future}
             aria-label="Attachment"
-            className="block w-full text-[12px] text-ink-3 file:mr-3 file:h-8 file:rounded-full file:border file:border-glass-line file:bg-glass-strong file:px-3 file:text-[12px] file:font-medium file:text-ink disabled:opacity-100"
+            className="block w-full text-footnote text-secondary-label file:mr-3 file:min-h-11 file:rounded-full file:border-0 file:bg-fill-3 file:px-3 file:text-footnote file:font-medium file:text-label disabled:opacity-100"
           />
-          {future && <p className="mt-1.5 text-[11px] text-ink-4">Files attach to a record, once the visit has happened.</p>}
+          {future && <p className="mt-1.5 text-caption-1 text-secondary-label">Files attach to a record, once the visit has happened.</p>}
         </div>
-        <p className="text-[12px] leading-[1.5] text-ink-3">
+        <p className="text-footnote text-secondary-label">
           {future
             ? 'Future date: this will appear under Appointments.'
             : 'Past date: this files under Records.'}
