@@ -3535,10 +3535,6 @@ test('travel, typing a destination suggests places and fills the coordinates', a
 // its own trip and deletes it at the end, because the travel tests that follow
 // read the seeded fixture and a stray trip would change what they count.
 test('travel, a trip holds a list of destinations', async ({ page }) => {
-  // Both confirms in this test are the drawer's: merging asks first, and so
-  // does removing a trip.
-  page.on('dialog', (d) => d.accept())
-
   await page.goto('/travel')
   const globe = page.getByRole('group', { name: /Globe showing \d+ places/ })
   // The label counts every pin, not the ones on the near side, so it is a
@@ -3638,7 +3634,9 @@ test('travel, a trip holds a list of destinations', async ({ page }) => {
 
   await page.getByTestId('travel-sections').getByRole('button', { name: /Madrid, after/ }).first().click()
   await expect(page).toHaveURL(/trip=/)
+  // Merging asks first, through an Alert over the drawer.
   await dialog.getByLabel('Merge into').selectOption({ label: 'Iberia, spring' })
+  await page.getByRole('dialog', { name: 'Merge this trip?' }).getByRole('button', { name: 'Merge' }).click()
   await expect(page.getByText('Trips merged')).toBeVisible()
   await expect(page).not.toHaveURL(/trip=/)
   await expect(page.getByTestId('travel-sections')).not.toContainText('Madrid, after')
@@ -3654,8 +3652,36 @@ test('travel, a trip holds a list of destinations', async ({ page }) => {
   // Put the fixture back for the travel tests after this one. Deleting the one
   // trip left takes both pins with it.
   await page.getByRole('button', { name: 'Delete trip' }).click()
+  await page.getByRole('dialog', { name: 'Delete this trip?' }).getByRole('button', { name: 'Delete trip' }).click()
   await expect(page.getByText('Trip deleted')).toBeVisible()
   await expect.poll(pinned).toBe(before)
+})
+
+// The wishlist's ✕ asks before it deletes, through one Alert on the page. The
+// wish is made here and named by the run, so a failed run leaves nothing a
+// later one would match.
+test('travel, removing a wish asks first', async ({ page }) => {
+  const name = `E2E wish ${Date.now()}`
+  await page.goto('/travel')
+  await page.getByRole('button', { name: 'Add to wishlist' }).first().click()
+  await page.getByRole('dialog').getByLabel('Place', { exact: true }).fill(name)
+  await page.getByRole('dialog').getByRole('button', { name: /^Add/ }).click()
+  await expect(page.getByText('Added to the wishlist')).toBeVisible()
+
+  await page.getByRole('button', { name: `Remove ${name}`, exact: true }).click()
+  const alert = page.getByRole('dialog', { name: 'Remove from the wishlist?' })
+  await expect(alert).toContainText(name)
+  // Cancel leaves the wish and does not open it.
+  await alert.getByRole('button', { name: 'Cancel' }).click()
+  await expect(page).not.toHaveURL(/trip=/)
+  await expect(page.getByTestId('travel-sections')).toContainText(name)
+
+  await page.getByRole('button', { name: `Remove ${name}`, exact: true }).click()
+  const removed = page.waitForResponse((r) => r.request().method() === 'POST' && 'next-action' in r.request().headers())
+  await alert.getByRole('button', { name: 'Remove' }).click()
+  await removed
+  await page.reload()
+  await expect(page.getByTestId('travel-sections')).not.toContainText(name)
 })
 
 test('fitness, workouts with pace derived rather than stored', async ({ page }) => {

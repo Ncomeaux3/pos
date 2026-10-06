@@ -1,9 +1,10 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import {
   ActionButton,
   Card,
+  Alert,
   CardHead,
   EmptyState,
   Eyebrow,
@@ -131,16 +132,17 @@ const daysUntil = (iso: string, todayIso: string) =>
 
 const KINDS = ['flight', 'lodging', 'transit', 'activity'] as const
 const KIND_COLOUR: Record<(typeof KINDS)[number], string> = {
-  flight: 'bg-brand',
-  lodging: 'bg-ink-2',
-  transit: 'bg-ink-3',
-  activity: 'bg-warn',
+  flight: 'bg-accent',
+  lodging: 'bg-secondary-label',
+  transit: 'bg-gray',
+  activity: 'bg-orange',
 }
 
 export function Travel({ data }: { data: TravelData }) {
   const { params, set: setParams } = useSearchState()
   const [, start] = useTransition()
   const toast = useToast()
+  const [removing, setRemoving] = useState<Trip | null>(null)
 
   const run = (action: () => Promise<ActionResult>, ok?: string) =>
     start(async () => {
@@ -174,7 +176,7 @@ export function Travel({ data }: { data: TravelData }) {
       <PageHeader
         eyebrow={
           <>
-            Travel <span className="text-ink-4">/</span> Trips
+            Travel <span className="text-secondary-label">/</span> Trips
           </>
         }
         title="Travel"
@@ -244,7 +246,7 @@ export function Travel({ data }: { data: TravelData }) {
         </MetricStrip>
       )}
 
-      <div data-testid="travel-globe" className="relative mt-[18px] h-[clamp(240px,38vh,420px)] border border-rule bg-bg-elev rounded-[18px]">
+      <div data-testid="travel-globe" className="relative mt-[18px] h-[clamp(240px,38vh,420px)] rounded-card border border-separator bg-grouped-2">
         <Globe
           pins={pins}
           onPick={(id) => {
@@ -254,9 +256,9 @@ export function Travel({ data }: { data: TravelData }) {
           }}
           alert={
             data.alert && (
-              <div className="glass flex items-center gap-2.5 rounded-[18px] px-3 py-2 ring-1 ring-warn">
+              <div className="flex items-center gap-2.5 rounded-card bg-grouped-2 px-3 py-2 ring-1 ring-orange">
                 <StatusChip tone="warn">Alert</StatusChip>
-                <span className="min-w-0 text-[12px] text-ink">{data.alert.title}</span>
+                <span className="min-w-0 text-footnote text-label">{data.alert.title}</span>
               </div>
             )
           }
@@ -294,32 +296,32 @@ export function Travel({ data }: { data: TravelData }) {
                         setParams({ trip: t.id, new: null }, { push: true })
                       }
                     }}
-                    className="cursor-pointer px-[18px] text-left transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-ink/[.06]"
+                    className="cursor-pointer px-[18px] text-left transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-fill-4"
                   >
                     <div className="flex items-start justify-between gap-2.5">
                       <div className="min-w-0">
-                        <span className="block text-[16px] leading-[1.3] tracking-[-0.01em] text-ink">{t.name}</span>
-                        <span className="mt-1 block text-[12px] text-ink-3">
+                        <span className="block text-callout font-semibold text-label">{t.name}</span>
+                        <span className="mt-1 block text-footnote text-secondary-label">
                           {dateRange(t, today)} · {nights(t)} nights
                         </span>
                       </div>
                       {t.startsOn && (
-                        <span className="num shrink-0 text-[18px] font-light leading-none text-action">
+                        <span className="num shrink-0 text-title-3 leading-none text-accent">
                           {daysUntil(t.startsOn, today)}
-                          <span className="text-[11px] text-ink-3"> d</span>
+                          <span className="text-caption-1 text-secondary-label"> d</span>
                         </span>
                       )}
                     </div>
-                    <div className="mt-3.5 flex gap-px bg-rule">
+                    <div className="mt-3.5 flex gap-px bg-separator">
                       {KINDS.map((k) => (
                         <span
                           key={k}
                           title={`${k} · ${booked.includes(k) ? 'booked' : 'open'}`}
-                          className={cn('h-[3px] flex-1', booked.includes(k) ? KIND_COLOUR[k] : 'bg-bg-elev')}
+                          className={cn('h-[3px] flex-1', booked.includes(k) ? KIND_COLOUR[k] : 'bg-grouped-2')}
                         />
                       ))}
                     </div>
-                    <div className="mt-2 flex justify-between gap-2.5 text-[11px] text-ink-3">
+                    <div className="mt-2 flex justify-between gap-2.5 text-footnote text-secondary-label">
                       <span>
                         {booked.length}/4 booked{t.pendingCount > 0 ? ` · ${t.pendingCount} in inbox` : ''}
                       </span>
@@ -328,8 +330,8 @@ export function Travel({ data }: { data: TravelData }) {
                       </span>
                     </div>
                     {next && (
-                      <div className="mt-2.5 truncate border-t border-rule pt-2.5 text-[12px] text-ink-2">
-                        <span className="text-ink-3">Next · </span>
+                      <div className="mt-2.5 truncate border-t border-separator pt-2.5 text-footnote text-label">
+                        <span className="text-secondary-label">Next · </span>
                         {next}
                       </div>
                     )}
@@ -389,7 +391,7 @@ export function Travel({ data }: { data: TravelData }) {
                           aria-label={`Remove ${w.name}`}
                           onClick={(e) => {
                             e.stopPropagation()
-                            if (window.confirm(`Remove ${w.name} from the wishlist?`)) run(() => deleteTrip(w.id), 'Removed')
+                            setRemoving(w)
                           }}
                         >
                           ✕
@@ -404,6 +406,19 @@ export function Travel({ data }: { data: TravelData }) {
         </div>
       </div>
 
+      {/* One Alert for the wishlist, outside the rows: a ✕ keeps the row
+        * narrow enough for its chevron at 402, and the Alert's own clicks
+        * never reach a row's click target. */}
+      <Alert
+        open={removing !== null}
+        onClose={() => setRemoving(null)}
+        title="Remove from the wishlist?"
+        message={removing ? `${removing.name} is deleted.` : undefined}
+        actions={[
+          { label: 'Cancel', role: 'cancel' },
+          { label: 'Remove', role: 'destructive', onPress: () => removing && run(() => deleteTrip(removing.id), 'Removed') },
+        ]}
+      />
       {(openTrip || form) && (
         <TripDrawer
           key={openTrip?.id ?? form}

@@ -4,9 +4,11 @@ import Link from 'next/link'
 import { useEffect, useId, useRef, useState, useTransition } from 'react'
 import {
   ActionButton,
+  Alert,
   Card,
   CHEVRON,
   Chip,
+  ConfirmButton,
   EmptyState,
   Eyebrow,
   Field,
@@ -23,6 +25,7 @@ import {
   useToast,
   type ChipTone,
 } from '@/components/pos'
+import { HIT } from '@/components/pos/button-classes'
 import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
 import { actualFor, budgetTotals, parseCategory } from '../budget'
@@ -75,7 +78,11 @@ const shortDate = (iso: string) => `${MONTHS[at(iso).getMonth()]} ${at(iso).getD
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 // The one field style at the drawer's inline density: a row edits in place.
-const inlineInput = cn(fieldClass, 'px-2 py-1 md:text-[12px]')
+// The footnote size is set as a property because holon-ui's tokens.css
+// declares `.text-body` after Tailwind's variants, so `md:text-footnote`
+// loses to fieldClass's body size. ponytail: drop for `md:text-footnote` once
+// holon-ui orders its type styles before the variants.
+const inlineInput = cn(fieldClass, 'px-2 py-1 md:[font-size:var(--type-footnote)] md:[line-height:var(--type-footnote-leading)]')
 
 /** "day 2 19:30 Dinner at Narisawa": which day, what time, what. */
 export function parseItem(text: string): { day: number | null; time: string | null; title: string } | null {
@@ -106,9 +113,9 @@ export function TripDrawer({
   const tab: Tab = tabParam === 'budget' || tabParam === 'packing' || tabParam === 'inbox' ? tabParam : 'itin'
   const setTab = onTab
   const [editing, setEditing] = useState(false)
-  // Held rather than read off the event so the select can be put back when the
-  // confirm is declined; leaving it showing a trip that was not merged reads
-  // as though it had been.
+  // The trip picked to merge into. Picking one asks through an Alert, and
+  // Cancel puts the select back; leaving it showing a trip that was not merged
+  // reads as though it had been.
   const [mergeInto, setMergeInto] = useState('')
   const [, start] = useTransition()
   const toast = useToast()
@@ -144,6 +151,7 @@ export function TripDrawer({
   const others = data.trips
     .filter((t) => t.id !== trip.id)
     .sort((a, b) => a.name.localeCompare(b.name))
+  const mergeTarget = mergeInto ? others.find((t) => t.id === mergeInto) : undefined
   const pending = items.filter((i) => i.status === 'pending')
   const packing = data.packing.filter((p) => p.tripId === trip.id)
   const lines = data.budgetLines.filter((l) => l.tripId === trip.id)
@@ -163,14 +171,14 @@ export function TripDrawer({
       title={
         <span className="flex items-start justify-between gap-3">
           <span className="min-w-0">
-            <span className="block text-[22px] leading-[1.2]">{trip.name}</span>
-            <span className="mt-1.5 block text-[12px] font-normal tracking-normal text-ink-3">
+            <span className="block text-title-2">{trip.name}</span>
+            <span className="mt-1.5 block text-footnote font-normal tracking-normal text-secondary-label">
               {trip.destination ? `${trip.destination} · ` : ''}
               {dateRange(trip, data.todayIso)} · {nights(trip)} nights · {trip.travellers}{' '}
               {trip.travellers === 1 ? 'traveler' : 'travelers'}
             </span>
           </span>
-          <span className="flex shrink-0 items-center gap-1.5 text-[11px] font-normal tracking-normal">
+          <span className="flex shrink-0 items-center gap-1.5 font-normal tracking-normal">
             <ActionButton size="sm" onClick={() => setEditing(true)}>
               Edit details
             </ActionButton>
@@ -180,11 +188,11 @@ export function TripDrawer({
       }
       footer={
         <>
-          <span className="text-[11px] text-ink-3">
+          <span className="text-caption-1 text-secondary-label">
             {data.checkinTrigger ? (
               <>
-                Check-in reminders: <span className="text-ink-2">{data.checkinTrigger.toLowerCase()}</span> ·{' '}
-                <Link href="/notifications" className="hover:text-ink">
+                Check-in reminders: <span className="text-label">{data.checkinTrigger.toLowerCase()}</span> ·{' '}
+                <Link href="/notifications" className={cn(HIT, 'inline-block hover:text-label')}>
                   Notifications
                 </Link>
               </>
@@ -200,22 +208,8 @@ export function TripDrawer({
             <select
               value={mergeInto}
               aria-label="Merge into"
-              onChange={(e) => {
-                const into = e.target.value
-                if (!into) return
-                const target = others.find((t) => t.id === into)
-                if (
-                  target &&
-                  window.confirm(
-                    `Merge ${trip.name} into ${target.name}? Its destinations, itinerary, packing and budget move across, and ${trip.name} is deleted.`,
-                  )
-                ) {
-                  run(() => mergeTrip(trip.id, into), 'Trips merged', onClose)
-                  return
-                }
-                setMergeInto('')
-              }}
-              className={cn(fieldClass, 'w-auto py-1.5 text-ink-3')}
+              onChange={(e) => setMergeInto(e.target.value)}
+              className={cn(fieldClass, 'w-auto py-1.5')}
             >
               <option value="">Merge into…</option>
               {others.map((t) => (
@@ -225,14 +219,27 @@ export function TripDrawer({
               ))}
             </select>
           )}
-          <ActionButton
-            variant="danger"
-            onClick={() => {
-              if (window.confirm(`Delete ${trip.name} and everything under it?`)) run(() => deleteTrip(trip.id), 'Trip deleted', onClose)
-            }}
+          <Alert
+            open={mergeTarget !== undefined}
+            onClose={() => setMergeInto('')}
+            title="Merge this trip?"
+            message={
+              mergeTarget &&
+              `Its destinations, itinerary, packing and budget move to ${mergeTarget.name}, and ${trip.name} is deleted.`
+            }
+            actions={[
+              { label: 'Cancel', role: 'cancel' },
+              { label: 'Merge', role: 'destructive', onPress: () => run(() => mergeTrip(trip.id, mergeInto), 'Trips merged', onClose) },
+            ]}
+          />
+          <ConfirmButton
+            confirmLabel="Delete trip"
+            title="Delete this trip?"
+            message={`${trip.name} and its itinerary, packing and budget are deleted.`}
+            onConfirm={() => run(() => deleteTrip(trip.id), 'Trip deleted', onClose)}
           >
             Delete trip
-          </ActionButton>
+          </ConfirmButton>
         </>
       }
     >
@@ -250,7 +257,7 @@ export function TripDrawer({
         {trip.entityRef ? (
           <SkillPicker entityRef={trip.entityRef} links={trip.skills} skills={data.skills} className="mt-2" />
         ) : (
-          <p className="mt-2 text-[12px] text-ink-4">Nothing matched yet.</p>
+          <p className="mt-2 text-footnote text-secondary-label">Nothing matched yet.</p>
         )}
       </div>
     </Overlay>
@@ -303,19 +310,19 @@ function Itinerary({ trip, items: allItems, run }: { trip: Trip; items: TravelDa
         run={run}
       />
     ) : (
-      <div className={cn(STRETCH_WRAP, 'grid grid-cols-[44px_1fr_auto] items-start gap-2.5 border-b border-rule py-2')}>
-        <span className="num pt-0.5 text-[11px] text-ink-3">{it.occursAt ?? ''}</span>
+      <div className={cn(STRETCH_WRAP, 'grid grid-cols-[44px_1fr_auto] items-start gap-2.5 border-b border-separator py-2')}>
+        <span className="num pt-0.5 text-footnote text-secondary-label">{it.occursAt ?? ''}</span>
         <button type="button" title="Edit" onClick={() => setEditingId(it.id)} className={cn(STRETCH, 'min-w-0 text-left')}>
-          <span className="block text-[13px] text-ink">{it.title}</span>
+          <span className="block text-subheadline text-label">{it.title}</span>
           {(it.detail || it.confirmation) && (
-            <span className="mt-0.5 block text-[11px] text-ink-3">
+            <span className="mt-0.5 block text-footnote text-secondary-label">
               {[it.detail, it.confirmation ? `conf. ${it.confirmation}` : ''].filter(Boolean).join(' · ')}
             </span>
           )}
         </button>
         <span className="relative z-10 flex items-center gap-2">
           <Chip tone={KIND_TONE[it.kind] ?? 'quiet'}>{cap(it.kind)}</Chip>
-          <ActionButton variant="danger" size="sm" aria-label={`Remove ${it.title}`} onClick={() => remove(it.id)} className="h-6 w-6 px-0 text-[11px] sm:px-0">
+          <ActionButton variant="danger" size="sm" aria-label={`Remove ${it.title}`} onClick={() => remove(it.id)} className="h-6 w-6 px-0 text-caption-1 sm:px-0">
             ✕
           </ActionButton>
           <span aria-hidden="true" className={CHEVRON}>
@@ -331,12 +338,12 @@ function Itinerary({ trip, items: allItems, run }: { trip: Trip; items: TravelDa
         const today = items.filter((it) => it.occursOn === day).sort(sortByTime)
         return (
           <div key={day}>
-            <div className="flex items-baseline justify-between border-b border-rule-2 pb-1.5">
-              <span className="text-[13px] text-ink">Day {i + 1}</span>
-              <span className="num text-[11px] text-ink-3">{shortDate(day)}</span>
+            <div className="flex items-baseline justify-between border-b border-separator pb-1.5">
+              <span className="text-subheadline font-semibold text-label">Day {i + 1}</span>
+              <span className="num text-footnote text-secondary-label">{shortDate(day)}</span>
             </div>
             {today.length === 0 ? (
-              <span className="block py-2 text-[12px] text-ink-4">Free day</span>
+              <span className="block py-2 text-footnote text-secondary-label">Free day</span>
             ) : (
               today.map((it) => <Row key={it.id} it={it} />)
             )}
@@ -345,8 +352,8 @@ function Itinerary({ trip, items: allItems, run }: { trip: Trip; items: TravelDa
       })}
       {undated.length > 0 && (
         <div>
-          <div className="flex items-baseline justify-between border-b border-rule-2 pb-1.5">
-            <span className="text-[13px] text-ink">{days.length === 0 ? 'Itinerary' : 'Undated'}</span>
+          <div className="flex items-baseline justify-between border-b border-separator pb-1.5">
+            <span className="text-subheadline font-semibold text-label">{days.length === 0 ? 'Itinerary' : 'Undated'}</span>
           </div>
           {undated.sort(sortByTime).map((it) => (
             <Row key={it.id} it={it} />
@@ -416,7 +423,7 @@ function ItemEditor({
       onDone,
     )
   return (
-    <div className="grid grid-cols-[56px_1fr_90px] items-center gap-1.5 border-b border-rule py-2">
+    <div className="grid grid-cols-[56px_1fr_90px] items-center gap-1.5 border-b border-separator py-2">
       <input value={time} onChange={(e) => setTime(e.target.value)} placeholder="19:30" aria-label="Time" className={cn(inlineInput, 'num')} />
       <input value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Title" className={inlineInput} />
       <select value={kind} onChange={(e) => setKind(e.target.value as Kind)} aria-label="Kind" className={inlineInput}>
@@ -497,7 +504,7 @@ function Budget({
                 const next = typed === null ? null : Math.round(typed * 100)
                 if (next !== null && next !== trip.budgetCents) run(() => saveTrip({ id: trip.id, budget_cents: next }), 'Budget saved')
               }}
-              className="num w-full border-0 border-b border-rule-2 bg-transparent font-semibold text-ink outline-none focus-visible:border-action"
+              className="num w-full border-0 border-b border-separator bg-transparent font-semibold text-label outline-none focus-visible:border-accent"
             />
           }
         />
@@ -505,7 +512,7 @@ function Budget({
         <MetricTile size="sm" label="Remaining" value={money(totals.remaining)} valueTone={totals.remaining < 0 ? 'bad' : undefined} />
       </MetricStrip>
 
-      <div className="label grid grid-cols-[1fr_90px_90px_20px] gap-2.5 text-ink-3">
+      <div className="label grid grid-cols-[1fr_90px_90px_20px] gap-2.5 text-secondary-label">
         <span>Category</span>
         <span className="text-right">Actual</span>
         <span className="text-right">Planned</span>
@@ -516,9 +523,9 @@ function Budget({
           const actual = actualFor(l, itemShapes)
           const pct = l.planned_cents > 0 ? Math.min(100, (actual / l.planned_cents) * 100) : 0
           return (
-            <div key={l.id} className="border-b border-rule py-2">
-              <div className="grid grid-cols-[1fr_90px_90px_20px] items-center gap-2.5 text-[12px]">
-                <span className="text-ink">{l.category}</span>
+            <div key={l.id} className="border-b border-separator py-2">
+              <div className="grid grid-cols-[1fr_90px_90px_20px] items-center gap-2.5 text-footnote">
+                <span className="text-label">{l.category}</span>
                 <input
                   inputMode="decimal"
                   key={`a-${l.id}-${l.actual_override_cents}`}
@@ -535,7 +542,7 @@ function Budget({
                     if (next !== null && next === actual && l.actual_override_cents === null) return
                     run(() => saveBudgetLine({ trip_id: trip.id, category: l.category, actual_override_cents: next }), 'Saved')
                   }}
-                  className={cn(inlineInput, 'num text-right', l.actual_override_cents === null && 'text-ink-2')}
+                  className={cn(inlineInput, 'num text-right', l.actual_override_cents === null && 'text-label/70')}
                 />
                 <input
                   inputMode="decimal"
@@ -549,12 +556,12 @@ function Budget({
                   }}
                   className={cn(inlineInput, 'num text-right')}
                 />
-                <ActionButton variant="danger" size="sm" aria-label={`Remove ${l.category}`} onClick={() => removeLine(l)} className="h-6 w-6 px-0 text-[11px] sm:px-0">
+                <ActionButton variant="danger" size="sm" aria-label={`Remove ${l.category}`} onClick={() => removeLine(l)} className="h-6 w-6 px-0 text-caption-1 sm:px-0">
                   ✕
                 </ActionButton>
               </div>
-              <div className="mt-1.5 h-[3px] bg-rule-2">
-                <div className={cn('h-[3px]', actual > l.planned_cents && l.planned_cents > 0 ? 'bg-bad' : 'bg-brand')} style={{ width: `${pct}%` }} />
+              <div className="mt-1.5 h-[3px] bg-fill-3">
+                <div className={cn('h-[3px]', actual > l.planned_cents && l.planned_cents > 0 ? 'bg-red' : 'bg-accent')} style={{ width: `${pct}%` }} />
               </div>
             </div>
           )
@@ -571,7 +578,7 @@ function Budget({
                 return { ok: true }
               }, 'Five lines to fill in')
             }
-            className="rounded-[18px] border border-dashed border-rule py-4 text-[12px] text-ink-3 hover:text-ink"
+            className="rounded-card border border-dashed border-gray-3 py-4 text-footnote text-secondary-label hover:text-label"
           >
             No lines yet. Start with flights, lodging, food, transit and activities.
           </button>
@@ -595,7 +602,7 @@ function Budget({
           Add
         </ActionButton>
       </form>
-      <p className="text-[11px] text-ink-4">
+      <p className="text-caption-1 text-secondary-label">
         Actuals are the trip&apos;s confirmed itinerary by kind; you can type over any number.
       </p>
     </>
@@ -633,26 +640,26 @@ function Packing({ trip, packing: allPacking, run }: { trip: Trip; packing: Trav
     <>
       <div className="flex items-baseline justify-between">
         <Eyebrow>Packing list</Eyebrow>
-        <span className="num text-[11px] text-ink-3">
+        <span className="num text-footnote text-secondary-label">
           {packed} / {packing.length} packed
         </span>
       </div>
       <div className="-mt-2 grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-x-5">
         {packing.map((p) => (
-          <div key={p.id} className="flex items-center gap-1.5 border-b border-rule">
+          <div key={p.id} className="flex items-center gap-1.5 border-b border-separator">
             <button
               type="button"
               role="checkbox"
               aria-checked={p.packed}
               onClick={() => toggle(p)}
-              className="flex min-w-0 flex-1 items-center gap-2.5 py-[7px] text-left"
+              className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 py-1.5 text-left"
             >
-              <span aria-hidden className={cn('grid size-3.5 shrink-0 place-items-center border rounded-full', p.packed ? 'border-brand bg-brand' : 'border-ink-3')}>
-                {p.packed && <span className="size-1.5 bg-bg" />}
+              <span aria-hidden className={cn('grid size-3.5 shrink-0 place-items-center border rounded-full', p.packed ? 'border-accent bg-accent' : 'border-secondary-label')}>
+                {p.packed && <span className="size-1.5 rounded-full bg-grouped-2" />}
               </span>
-              <span className={cn('truncate text-[12px]', p.packed ? 'text-ink-4 line-through' : 'text-ink')}>{p.label}</span>
+              <span className={cn('truncate text-subheadline', p.packed ? 'text-secondary-label line-through' : 'text-label')}>{p.label}</span>
             </button>
-            <ActionButton variant="danger" size="sm" aria-label={`Remove ${p.label}`} onClick={() => remove(p)} className="h-6 w-6 px-0 text-[11px] sm:px-0">
+            <ActionButton variant="danger" size="sm" aria-label={`Remove ${p.label}`} onClick={() => remove(p)} className="h-6 w-6 px-0 text-caption-1 sm:px-0">
               ✕
             </ActionButton>
           </div>
@@ -697,18 +704,18 @@ function Inbox({ pending: allPending, run }: { pending: TravelData['itinerary'];
   }
   return (
     <>
-      <p className="text-[12px] leading-[1.5] text-ink-3">
+      <p className="text-footnote text-secondary-label">
         Confirmations an agent parsed wait here as itinerary items. Approve to add; nothing is
         added without you.
       </p>
       {pending.map((m) => (
         <Card key={m.id} className="flex flex-col gap-2 px-3.5 py-3">
           <div className="flex justify-between gap-2.5">
-            <span className="min-w-0 truncate text-[11px] text-ink-3">Parsed booking · {m.kind}</span>
+            <span className="min-w-0 truncate text-footnote text-secondary-label">Parsed booking · {m.kind}</span>
             <StatusChip tone="warn">Pending</StatusChip>
           </div>
-          <div className="text-[13px] text-ink">{m.title}</div>
-          <div className="text-[11px] text-ink-3">
+          <div className="text-subheadline text-label">{m.title}</div>
+          <div className="text-footnote text-secondary-label">
             {[m.occursOn ? shortDate(m.occursOn) : '', m.detail, m.amountCents > 0 ? money(m.amountCents) : '']
               .filter(Boolean)
               .join(' · ')}
@@ -788,7 +795,7 @@ function DestinationFields({
   }
 
   return (
-    <div data-testid="destination-row" className="flex flex-col gap-3 border-l border-rule pl-3">
+    <div data-testid="destination-row" className="flex flex-col gap-3 border-l border-separator pl-3">
       <div className="grid grid-cols-[1fr_96px_96px] gap-3">
         <label className="flex flex-col gap-1.5">
           <Eyebrow>{index === 0 ? 'Destination' : `Destination ${index + 1}`}</Eyebrow>
@@ -857,7 +864,7 @@ function DestinationFields({
               variant="danger"
               onClick={onRemove}
               aria-label={`Remove ${row.name || `destination ${index + 1}`}`}
-              className="h-[38px]"
+              className="min-h-11"
             >
               Remove
             </ActionButton>
@@ -963,9 +970,9 @@ function TripForm({
             <ActionButton variant="quiet" onClick={onClose}>
               Cancel
             </ActionButton>
-            <span className="text-[11px] leading-none text-ink-2">Location search by Open-Meteo and GeoNames</span>
+            <span className="text-caption-1 text-secondary-label">Location search by Open-Meteo and GeoNames</span>
           </div>
-          <ActionButton variant="solid" size="lg" className="h-[38px] gap-2 px-3.5 text-[13px]" type="submit" form={formId}>
+          <ActionButton variant="solid" size="lg" type="submit" form={formId}>
             {trip ? 'Save' : mode === 'wish' ? 'Add' : 'Create'} <span aria-hidden="true">&rarr;</span>
           </ActionButton>
         </>
@@ -981,7 +988,7 @@ function TripForm({
         }}
       >
         <Field label={nameLabel} required error={errors.name}>
-          <input value={f.name} onChange={set('name')} placeholder="e.g. Tokyo · November" className={cn(field, 'text-[15px]')} />
+          <input value={f.name} onChange={set('name')} placeholder="e.g. Tokyo · November" className={field} />
         </Field>
 
         {rows.map((row, i) => (
@@ -1025,7 +1032,7 @@ function TripForm({
             <input value={f.notes} onChange={set('notes')} placeholder="Cherry blossoms, late March" className={field} />
           </label>
         )}
-        <p className="text-[11px] text-ink-4">
+        <p className="text-caption-1 text-secondary-label">
           The trip&apos;s dates are the span of its destinations. Coordinates place each pin on the globe;
           without them a destination is listed and not drawn.
         </p>

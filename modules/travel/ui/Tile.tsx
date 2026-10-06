@@ -1,4 +1,3 @@
-import { Eyebrow } from '@/components/pos'
 import type { TravelDigest } from '../jobs/nightly-digest'
 
 // The Travel dashboard tile. The next trip and how far away it is, which is
@@ -11,8 +10,8 @@ export function TravelTile({ payload }: { payload: Record<string, unknown> }) {
   if (!next) {
     return (
       <div className="space-y-2">
-        <p className="t-caption text-ink-3">Nothing booked.</p>
-        <p className="num text-[11px] text-ink-3">
+        <p className="text-subheadline text-secondary-label">Nothing booked.</p>
+        <p className="num text-caption-1 text-secondary-label">
           {d.placesVisited ?? 0} places · {d.countries ?? 0} countries
         </p>
       </div>
@@ -22,13 +21,13 @@ export function TravelTile({ payload }: { payload: Record<string, unknown> }) {
   return (
     <div className="space-y-3">
       <div>
-        <Eyebrow className="block text-ink-3">Next trip</Eyebrow>
-        <span className="block text-[17px] text-ink">{next.destination}</span>
-        <span className="num text-[11px] text-ink-3">
+        <span className="block text-caption-1 text-secondary-label">Next trip</span>
+        <span className="mt-1.5 block text-body text-label">{next.destination}</span>
+        <span className="num text-caption-1 text-secondary-label">
           {next.name} · {next.daysAway} days away
         </span>
       </div>
-      <p className="num text-[11px] text-ink-3">
+      <p className="num text-caption-1 text-secondary-label">
         {d.pending ? `${d.pending} bookings waiting · ` : ''}
         {d.placesVisited ?? 0} places · {d.countries ?? 0} countries
       </p>
