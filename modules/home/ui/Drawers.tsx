@@ -14,6 +14,7 @@ import {
   submitOnModEnter,
   useFormErrors,
 } from '@/components/pos'
+import { HIT } from '@/components/pos/button-classes'
 import { parseNumber } from '@/core/numbers'
 import { cn } from '@/lib/utils'
 import { addMonths, logDate, money, monthKey, monthLabelLong } from '../schedule'
@@ -30,10 +31,10 @@ function FactRows({ facts }: { facts: Fact[] }) {
       {facts.map((f) => (
         <div
           key={f.label}
-          className="flex flex-wrap items-baseline gap-x-3.5 gap-y-2 border-b border-rule py-[13px]"
+          className="flex flex-wrap items-baseline gap-x-3.5 gap-y-2 border-b border-separator py-[13px]"
         >
           <Eyebrow className="w-[126px] shrink-0">{f.label}</Eyebrow>
-          <span className="min-w-0 flex-[1_1_160px] text-[14px] leading-[1.45] text-ink">{f.value}</span>
+          <span className="min-w-0 flex-[1_1_160px] text-body text-label">{f.value}</span>
         </div>
       ))}
     </div>
@@ -41,7 +42,7 @@ function FactRows({ facts }: { facts: Fact[] }) {
 }
 
 const closeFooter = (onClose: () => void) => (
-  <ActionButton variant="accent" className="h-11 px-4 text-[13px] sm:h-10" onClick={onClose}>
+  <ActionButton variant="accent" onClick={onClose}>
     Close
   </ActionButton>
 )
@@ -91,7 +92,7 @@ export function AssetDrawer({
             {asset.entityRef ? (
               <SkillPicker entityRef={asset.entityRef} links={asset.skills} skills={skills} className="mt-2" />
             ) : (
-              <p className="mt-2 text-[12px] text-ink-4">Nothing matched yet.</p>
+              <p className="mt-2 text-footnote text-secondary-label">Nothing matched yet.</p>
             )}
           </div>
         </div>
@@ -121,7 +122,7 @@ export function WarrantyDrawer({
         <div className="space-y-[22px]">
           <FactRows facts={warranty.facts} />
           {warranty.documentUrl && (
-            <a className="block text-[12px] text-brand" href={warranty.documentUrl}>
+            <a className={cn(HIT, 'inline-block text-footnote text-accent hover:underline')} href={warranty.documentUrl}>
               Open the file
             </a>
           )}
@@ -211,10 +212,10 @@ export function LogServiceDrawer({
       lede="Logs what was done and, if you pick an interval, schedules the next one on the calendar."
       footer={
         <div className="flex gap-2.5">
-          <ActionButton variant="accent" className="h-11 px-4 text-[13px] sm:h-10" type="submit" form={formId}>
+          <ActionButton variant="accent" type="submit" form={formId}>
             Save service
           </ActionButton>
-          <ActionButton className="h-11 px-4 text-[13px] sm:h-10" onClick={onClose}>
+          <ActionButton variant="quiet" onClick={onClose}>
             Cancel
           </ActionButton>
         </div>
@@ -313,11 +314,11 @@ export function LogServiceDrawer({
             onChange={(e) => setNotes(e.target.value)}
             onKeyDown={submitOnModEnter}
             placeholder="Part numbers, what to watch, who to call next time"
-            className={cn(fieldClass, 'min-h-[88px] resize-y px-3 py-2.5 text-[14px] leading-[1.5]')}
+            className={cn(fieldClass, 'min-h-[88px] resize-y px-3 py-2.5')}
           />
         </label>
 
-        <p className="text-[12px] leading-[1.5] text-ink-3">
+        <p className="text-footnote text-secondary-label">
           {months === 0
             ? 'One off: nothing gets added to the calendar.'
             : `The next one lands ${months} months out${lands} on the maintenance calendar.`}

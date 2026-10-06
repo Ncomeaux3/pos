@@ -35,6 +35,9 @@ SWEPT=(
   'modules/meals/ui'
   # Travel
   'modules/travel/ui'
+  # Insurance and Home
+  'modules/insurance/ui'
+  'modules/home/ui'
 )
 
 # The two surfaces kept unchanged in feel (owner, 2026-09-18).

@@ -18,6 +18,7 @@ import {
   useToast,
   type SkillLink,
 } from '@/components/pos'
+import { HIT } from '@/components/pos/button-classes'
 import { useSearchState } from '@/components/pos/searchState'
 import { cn } from '@/lib/utils'
 import {
@@ -114,12 +115,12 @@ const shortDate = (iso: string) => {
 
 /** The 6px and 8px dots: what the job's status looks like on the calendar. */
 const DOT: Record<DueStatus, string> = {
-  overdue: 'bg-bad',
-  due: 'bg-warn',
-  soon: 'bg-ink-2',
-  later: 'bg-ink-2',
-  snoozed: 'bg-ink-4',
-  unscheduled: 'bg-ink-2',
+  overdue: 'bg-red',
+  due: 'bg-orange',
+  soon: 'bg-gray',
+  later: 'bg-gray',
+  snoozed: 'bg-gray-4',
+  unscheduled: 'bg-gray',
 }
 
 /** "{asset} · yearly · {vendor}", the line under every job. */
@@ -226,7 +227,7 @@ export function Home({ data }: { data: HomeData }) {
       <PageHeader
         eyebrow={
           <>
-            Home <span className="text-ink-4">/</span> Assets
+            Home <span className="text-secondary-label">/</span> Assets
           </>
         }
         title="Home & Property"
@@ -242,7 +243,6 @@ export function Home({ data }: { data: HomeData }) {
           <ActionButton
             variant="solid"
             size="xl"
-            className="h-11 gap-2 px-3.5 text-[13px] md:h-[51px] md:px-[22px] md:text-[15px]"
             onClick={() => setParams({ log: '1' }, { push: true })}
           >
             Log service <span aria-hidden="true">&rarr;</span>
@@ -298,9 +298,9 @@ export function Home({ data }: { data: HomeData }) {
                         }
                       }}
                       className={cn(
-                        'block w-full cursor-pointer px-[18px] text-left transition-colors duration-150 hover:bg-ink/[.06] active:scale-[.985]',
+                        'block w-full cursor-pointer px-[18px] text-left transition-colors duration-150 hover:bg-fill-3 active:scale-[.985]',
                         state !== 'good' && 'ring-1',
-                        state === 'overdue' ? 'ring-bad' : state === 'due' ? 'ring-warn' : '',
+                        state === 'overdue' ? 'ring-red-text' : state === 'due' ? 'ring-orange-text' : '',
                       )}
                     >
                       <div className="flex items-baseline justify-between gap-2.5">
@@ -309,28 +309,28 @@ export function Home({ data }: { data: HomeData }) {
                           {state === 'overdue' ? 'Overdue' : state === 'due' ? 'Service due' : 'Good'}
                         </StatusChip>
                       </div>
-                      <div className="mt-3 text-[17px] leading-[1.3] tracking-[-0.01em] text-ink">
+                      <div className="mt-3 text-body text-label">
                         {asset.name}
                       </div>
-                      <div className="mt-[5px] text-[11px] leading-[1.45] text-ink-3">{asset.subtitle}</div>
+                      <div className="mt-[5px] text-caption-1 text-secondary-label">{asset.subtitle}</div>
                       <div className="mt-4 flex flex-wrap gap-3.5">
                         <span className="min-w-0 flex-[1_1_90px]">
                           <Eyebrow className="block">Value</Eyebrow>
-                          <span className="num mt-[5px] block text-[16px] text-ink">{money(asset.valueCents)}</span>
+                          <span className="num mt-[5px] block text-callout text-label">{money(asset.valueCents)}</span>
                         </span>
                         <span className="min-w-0 flex-[1_1_90px]">
                           <Eyebrow className="block">Annual cost</Eyebrow>
-                          <span className="num mt-[5px] block text-[16px] text-ink">{money(asset.annualCostCents)}</span>
+                          <span className="num mt-[5px] block text-callout text-label">{money(asset.annualCostCents)}</span>
                         </span>
                       </div>
-                      <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-2 border-t border-rule pt-3">
-                        <span className="min-w-0 flex-[1_1_140px] text-[12px] leading-[1.4] text-ink-2">
+                      <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-2 border-t border-separator pt-3">
+                        <span className="min-w-0 flex-[1_1_140px] text-footnote text-label">
                           {next ? next.title : 'Nothing scheduled'}
                         </span>
                         <span
                           className={cn(
-                            'num shrink-0 text-[11px]',
-                            state === 'good' ? 'text-ink-3' : 'text-warn',
+                            'num shrink-0 text-caption-1',
+                            state === 'good' ? 'text-secondary-label' : 'text-orange-text',
                           )}
                         >
                           {next ? monthLabelLong(monthKey(next.dueOn!)) : 'none'}
@@ -346,7 +346,7 @@ export function Home({ data }: { data: HomeData }) {
           <section>
             <div className="flex flex-wrap items-baseline justify-between gap-4">
               <Eyebrow>Maintenance · next 12 months</Eyebrow>
-              <span className="num text-[11px] text-ink-3">
+              <span className="num text-caption-1 text-secondary-label">
                 {inYear.length} jobs · {money(yearCents)} estimated
               </span>
             </div>
@@ -361,16 +361,18 @@ export function Home({ data }: { data: HomeData }) {
                     onClick={() => setParams({ month: m.key })}
                     aria-pressed={selected}
                     className={cn(
-                      'glass block w-full rounded-[18px] p-3 text-left transition-colors duration-150 active:scale-[.985]',
-                      selected ? 'bg-brand-soft ring-1 ring-action' : 'hover:bg-ink/[.06]',
+                      // Opaque in both states, the ring alone marks the selection, as the
+                      // Calendar day pills do: a tint put secondary-label under 4.5:1.
+                      'block w-full rounded-card bg-grouped-2 p-3 text-left transition-colors duration-150 active:scale-[.985]',
+                      selected ? 'ring-2 ring-inset ring-accent' : 'hover:bg-fill-3',
                     )}
                   >
                     <span className="flex items-baseline justify-between">
-                      <span className={cn('label', selected ? 'text-ink' : 'text-ink-3')}>{m.label}</span>
+                      <span className={cn('label', selected ? 'text-label' : 'text-secondary-label')}>{m.label}</span>
                       <span
                         className={cn(
-                          'num text-[11px]',
-                          m.isCurrent ? 'text-warn' : selected ? 'text-ink' : 'text-ink-3',
+                          'num text-caption-1',
+                          m.isCurrent ? 'text-orange-text' : selected ? 'text-label' : 'text-secondary-label',
                         )}
                       >
                         {m.count}
@@ -383,7 +385,7 @@ export function Home({ data }: { data: HomeData }) {
                           <span key={j.id} className={cn('block size-1.5 rounded-full', DOT[j.status])} />
                         ))}
                     </span>
-                    <span className="mt-2.5 block text-[11px] text-ink-3">
+                    <span className="mt-2.5 block text-caption-1 text-secondary-label">
                       {m.costCents > 0 ? money(m.costCents) : 'No cost'}
                     </span>
                   </button>
@@ -394,7 +396,7 @@ export function Home({ data }: { data: HomeData }) {
             <div className="mt-[18px]">
               <div className="flex flex-wrap items-baseline justify-between gap-3">
                 <Eyebrow>{monthLabelLong(month)}</Eyebrow>
-                <span className="num text-[11px] text-ink-3">
+                <span className="num text-caption-1 text-secondary-label">
                   {monthCents > 0 ? `${money(monthCents)} estimated` : 'No cost'}
                 </span>
               </div>
@@ -431,7 +433,7 @@ export function Home({ data }: { data: HomeData }) {
           <section>
             <div className="flex flex-wrap items-baseline justify-between gap-4">
               <Eyebrow>Warranties & documents</Eyebrow>
-              <span className="num text-[11px] text-ink-3">
+              <span className="num text-caption-1 text-secondary-label">
                 {data.warranties.filter((w) => expiringSoon(w.expiresOn)).length} expiring within a year
               </span>
             </div>
@@ -446,7 +448,7 @@ export function Home({ data }: { data: HomeData }) {
                     <>
                       <Chip tone="quiet">{w.cover}</Chip>
                       {/* No expiry is a real state for a deed, not a missing date. */}
-                      <span className={cn('num text-[12px]', expiringSoon(w.expiresOn) ? 'text-warn' : 'text-ink-3')}>
+                      <span className={cn('num text-footnote', expiringSoon(w.expiresOn) ? 'text-orange-text' : 'text-secondary-label')}>
                         {w.expiresOn ? monthLabelLong(monthKey(w.expiresOn)) : 'No expiry'}
                       </span>
                       <Chip tone={w.documentUrl ? 'neutral' : 'quiet'}>{w.documentUrl ? 'PDF' : 'No file'}</Chip>
@@ -462,7 +464,7 @@ export function Home({ data }: { data: HomeData }) {
           <section>
             <Eyebrow>Needs attention</Eyebrow>
             {attention.length === 0 ? (
-              <p className="mt-3 text-[12px] leading-[1.5] text-ink-3">
+              <p className="mt-3 text-footnote text-secondary-label">
                 Nothing outstanding. The next scheduled job is{' '}
                 {nextUp ? `${nextUp.title} in ${monthLabelLong(monthKey(nextUp.dueOn!))}` : 'not scheduled'}.
               </p>
@@ -471,16 +473,16 @@ export function Home({ data }: { data: HomeData }) {
                 {attention.slice(0, 4).map((job) => (
                   <Card
                     key={job.id}
-                    className={cn('mt-2.5 px-3.5 py-3.5', job.status === 'overdue' && 'ring-1 ring-bad')}
+                    className={cn('mt-2.5 px-3.5 py-3.5', job.status === 'overdue' && 'ring-1 ring-red-text')}
                   >
                     <div className="flex items-baseline justify-between gap-2.5">
                       <StatusChip tone={job.status === 'overdue' ? 'bad' : 'warn'}>
                         {job.status === 'overdue' ? 'Overdue' : 'Due now'}
                       </StatusChip>
-                      <span className="text-[12px] text-ink-3">{dueLabel(job, data.todayIso)}</span>
+                      <span className="text-footnote text-secondary-label">{dueLabel(job, data.todayIso)}</span>
                     </div>
-                    <div className="mt-[7px] text-[14px] leading-[1.4] text-ink">{job.title}</div>
-                    <div className="mt-1 text-[11px] leading-[1.45] text-ink-3">{jobMeta(job)}</div>
+                    <div className="mt-[7px] text-body text-label">{job.title}</div>
+                    <div className="mt-1 text-caption-1 text-secondary-label">{jobMeta(job)}</div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <ActionButton size="sm" variant="accent" onClick={() => done(job)}>
                         Mark done
@@ -501,7 +503,7 @@ export function Home({ data }: { data: HomeData }) {
                   </Card>
                 ))}
                 {attention.length > 4 && (
-                  <p className="mt-2.5 text-[11px] text-ink-3">+{attention.length - 4} more on the calendar</p>
+                  <p className="mt-2.5 text-caption-1 text-secondary-label">+{attention.length - 4} more on the calendar</p>
                 )}
               </>
             )}
@@ -518,13 +520,13 @@ export function Home({ data }: { data: HomeData }) {
                   <Row title="Insurance" amount={`${money(data.propertyPremium * 100)} / yr`} />
                 )}
               </RowList>
-              <p className="mt-3 text-[11px] leading-[1.5] text-ink-3">
+              <p className="mt-3 text-caption-1 text-secondary-label">
                 {data.propertyPremium === null ? (
                   'Coverage lives in Insurance, which is not installed.'
                 ) : (
                   <>
                     Coverage comes from{' '}
-                    <Link href="/insurance" className="border-b border-rule-2 text-ink-2">
+                    <Link href="/insurance" className={cn(HIT, 'inline-block border-b border-opaque-separator text-label hover:border-label')}>
                       Insurance
                     </Link>
                     .

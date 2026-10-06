@@ -4332,8 +4332,9 @@ test('insurance, delete asks first and removes the row', async ({ page }) => {
   await page.goto('/insurance')
   await page.getByRole('button', { name: /Term life/ }).click()
 
-  page.on('dialog', (d) => d.accept())
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
+  await page.getByRole('dialog', { name: 'Delete this policy?' }).getByRole('button', { name: 'Delete' }).click()
+  await expect(page.getByText('Policy deleted')).toBeVisible()
   await expect(page.getByRole('button', { name: /Term life/ })).toHaveCount(0)
 })
 
