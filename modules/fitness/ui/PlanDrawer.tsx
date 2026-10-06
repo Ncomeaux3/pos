@@ -124,7 +124,7 @@ export function PlanDrawer({ plan, onClose }: { plan: Plan | null; onClose: () =
       dirty={dirty}
       eyebrow={
         <>
-          Fitness <span className="text-ink-4">/</span> {plan ? 'Edit plan' : 'New plan'}
+          Fitness <span className="text-secondary-label">/</span> {plan ? 'Edit plan' : 'New plan'}
         </>
       }
       footer={
@@ -197,7 +197,7 @@ export function PlanDrawer({ plan, onClose }: { plan: Plan | null; onClose: () =
             * the exercise name itself in the 402 sheet. */}
           <div className="mt-1.5 flex flex-col gap-2.5">
             {items.map((row, i) => (
-              <div key={row.key} className="flex flex-col gap-1.5 border-b border-rule pb-2.5 last:border-0">
+              <div key={row.key} className="flex flex-col gap-1.5 border-b border-separator pb-2.5 last:border-0">
                 <div className="grid grid-cols-[96px_1fr_24px] gap-1.5">
                   <input
                     aria-label={`Day ${i + 1}`}
@@ -226,7 +226,7 @@ export function PlanDrawer({ plan, onClose }: { plan: Plan | null; onClose: () =
                   </ActionButton>
                 </div>
                 <div className="grid grid-cols-3 gap-1.5">
-                  <label className="flex items-center gap-1.5 text-[11px] text-ink-3">
+                  <label className="flex items-center gap-1.5 text-caption-1 text-secondary-label">
                     Sets
                     <input
                       type="number"
@@ -238,7 +238,7 @@ export function PlanDrawer({ plan, onClose }: { plan: Plan | null; onClose: () =
                       className={fieldClass}
                     />
                   </label>
-                  <label className="flex items-center gap-1.5 text-[11px] text-ink-3">
+                  <label className="flex items-center gap-1.5 text-caption-1 text-secondary-label">
                     Reps
                     <input
                       aria-label={`Reps ${i + 1}`}
@@ -249,7 +249,7 @@ export function PlanDrawer({ plan, onClose }: { plan: Plan | null; onClose: () =
                       className={fieldClass}
                     />
                   </label>
-                  <label className="flex items-center gap-1.5 text-[11px] text-ink-3">
+                  <label className="flex items-center gap-1.5 text-caption-1 text-secondary-label">
                     Lb
                     <input
                       type="number"
@@ -264,7 +264,7 @@ export function PlanDrawer({ plan, onClose }: { plan: Plan | null; onClose: () =
             ))}
           </div>
           {errors.exercises && (
-            <span role="alert" className="text-[12px] leading-[1.4] text-bad">
+            <span role="alert" className="text-footnote text-red-text">
               {errors.exercises}
             </span>
           )}
@@ -278,7 +278,7 @@ export function PlanDrawer({ plan, onClose }: { plan: Plan | null; onClose: () =
           </ActionButton>
         </div>
 
-        <p className="text-[11px] leading-[1.5] text-ink-2">
+        <p className="text-caption-1 text-label">
           Saving a new plan archives the one in force. The coach proposes changes to it; only this
           form and an approved proposal write it.
         </p>

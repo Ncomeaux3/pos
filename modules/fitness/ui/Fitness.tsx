@@ -290,7 +290,7 @@ export function Fitness({ data }: { data: FitnessData }) {
                   </option>
                 ))}
               </select>
-              <label className="flex items-center gap-1.5 text-[11px] text-ink-3">
+              <label className="flex items-center gap-1.5 text-caption-1 text-secondary-label">
                 From
                 <input
                   type="date"
@@ -300,7 +300,7 @@ export function Fitness({ data }: { data: FitnessData }) {
                   className={cn(fieldClass, 'w-auto py-1.5')}
                 />
               </label>
-              <label className="flex items-center gap-1.5 text-[11px] text-ink-3">
+              <label className="flex items-center gap-1.5 text-caption-1 text-secondary-label">
                 To
                 <input
                   type="date"
@@ -321,7 +321,7 @@ export function Fitness({ data }: { data: FitnessData }) {
               )}
             </div>
             {rows.length === 0 ? (
-              <p className="py-4 text-center text-[12px] text-ink-4">No workouts match.</p>
+              <p className="py-4 text-center text-footnote text-secondary-label">No workouts match.</p>
             ) : (
               <DataTable
                 head={['Date', 'Workout', right('Time'), right('Skill')]}
@@ -330,26 +330,26 @@ export function Fitness({ data }: { data: FitnessData }) {
                 {rows.map((w) => (
                   <Fragment key={w.id}>
                     <DataRow
-                      className="py-[9px] text-[13px]"
+                      className="min-h-11 py-[9px] text-footnote"
                       selected={expanded === w.id}
                       onClick={() => setExpanded(expanded === w.id ? null : w.id)}
                     >
-                      <span className="num text-[12px] text-ink-3">{shortDate(w.startedAt, data.timeZone)}</span>
-                      <span className="min-w-0 text-ink">
-                        {w.name} <span className="text-[12px] text-ink-3">{detailOf(w)}</span>
+                      <span className="num text-footnote text-secondary-label">{shortDate(w.startedAt, data.timeZone)}</span>
+                      <span className="min-w-0 text-label">
+                        {w.name} <span className="text-footnote text-secondary-label">{detailOf(w)}</span>
                       </span>
-                      <span className="num text-right text-ink">{duration(w.durationS)}</span>
-                      <span className="text-right text-[12px] text-ink-2">
-                        {w.skills[0] ?? <span className="text-ink-4">unlinked</span>}
+                      <span className="num text-right text-label">{duration(w.durationS)}</span>
+                      <span className="text-right text-footnote text-label">
+                        {w.skills[0] ?? <span className="text-secondary-label">unlinked</span>}
                       </span>
                     </DataRow>
                     {expanded === w.id && (
-                      <div className="border-b border-rule px-0 py-3">
+                      <div className="border-b border-separator px-0 py-3">
                         <Eyebrow>Linked skills</Eyebrow>
                         {w.entityRef ? (
                           <SkillPicker entityRef={w.entityRef} links={w.links} skills={data.skills} className="mt-2" />
                         ) : (
-                          <p className="mt-2 text-[12px] text-ink-4">Nothing matched yet.</p>
+                          <p className="mt-2 text-footnote text-secondary-label">Nothing matched yet.</p>
                         )}
                       </div>
                     )}
@@ -399,7 +399,7 @@ export function Fitness({ data }: { data: FitnessData }) {
                 key={m.kind}
                 title={METRIC_LABELS[m.kind] ?? m.kind}
                 meta={`measured ${m.measuredOn}`}
-                right={<span className="num text-[14px] text-ink">{metricValue(m.kind, m.value)}</span>}
+                right={<span className="num text-subheadline text-label">{metricValue(m.kind, m.value)}</span>}
               />
             ))}
           </RowList>
@@ -438,7 +438,7 @@ export function Fitness({ data }: { data: FitnessData }) {
               />
             </div>
             {!trend ? (
-              <p className="py-8 text-center text-[12px] text-ink-4">Loading</p>
+              <p className="py-8 text-center text-footnote text-secondary-label">Loading</p>
             ) : trend.some((d) => d.observed) ? (
               <LineChart
                 name={METRIC_LABELS[trendKind] ?? trendKind}
@@ -484,12 +484,12 @@ export function Fitness({ data }: { data: FitnessData }) {
                   </>
                 }
               />
-              {data.plan.goal && <p className="t-caption text-ink-2">{data.plan.goal}</p>}
+              {data.plan.goal && <p className="text-footnote text-label">{data.plan.goal}</p>}
               {data.plan.startedOn && (
-                <p className="t-caption text-ink-3">Started {data.plan.startedOn}</p>
+                <p className="text-footnote text-secondary-label">Started {data.plan.startedOn}</p>
               )}
               {data.plan.notes && (
-                <p className="t-caption whitespace-pre-line border-t border-rule pt-2 text-ink-2">
+                <p className="whitespace-pre-line border-t border-separator pt-2 text-footnote text-label">
                   {data.plan.notes}
                 </p>
               )}
@@ -505,7 +505,7 @@ export function Fitness({ data }: { data: FitnessData }) {
                       title={i.exercise}
                       meta={i.notes}
                       right={
-                        <span className="num text-[12px] text-ink-2">
+                        <span className="num text-footnote text-label">
                           {i.sets} x {i.reps || 'as written'}
                           {i.targetWeightG === null ? '' : ` at ${mass(i.targetWeightG)}`}
                         </span>
@@ -518,24 +518,24 @@ export function Fitness({ data }: { data: FitnessData }) {
 
             <Card className="space-y-2">
               <CardHead label="The coach" meta="weekly" />
-              <p className="t-caption text-ink-2">
+              <p className="text-footnote text-label">
                 Deterministic rules over the training log, not a model: a layoff, a volume spike, a
                 lift with no personal best in three sessions, a week that fell short of the plan.
                 Most weeks it has nothing to say, which is the point.
               </p>
-              <p className="t-caption text-ink-3">
+              <p className="text-footnote text-secondary-label">
                 It cannot change this plan. Every suggestion lands in the Review inbox as a
                 proposal and stays there until you approve it.
               </p>
               {data.waiting.length > 0 && (
-                <div className="space-y-1.5 border-t border-rule pt-2">
+                <div className="space-y-1.5 border-t border-separator pt-2">
                   <Eyebrow>Waiting in Review</Eyebrow>
                   {data.waiting.map((w) => (
-                    <p key={w} className="t-caption text-ink-2">
+                    <p key={w} className="text-footnote text-label">
                       {w}
                     </p>
                   ))}
-                  <Link className="t-caption text-brand" href="/review">
+                  <Link className="inline-flex min-h-11 items-center text-footnote text-accent" href="/review">
                     Open the Review inbox
                   </Link>
                 </div>

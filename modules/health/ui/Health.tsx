@@ -21,6 +21,7 @@ import {
 } from '@/components/pos'
 import { useSearchState } from '@/components/pos/searchState'
 import { useOptimisticAction } from '@/components/pos/useOptimisticAction'
+import { HIT } from '@/components/pos/button-classes'
 import { cn } from '@/lib/utils'
 import { dueOn, screeningStatus, type ScreeningStatus } from '../screening'
 import { completeScreening, markMedication, snoozeScreening, type ActionResult } from './actions'
@@ -246,10 +247,10 @@ export function Health({ data }: { data: HealthData }) {
   const drawerOpen = openAppt !== null || openRecord !== null || params.get('new') === '1'
 
   return (
-    <div className="-mx-[18px] flex flex-wrap items-start border-t border-rule md:-mx-7">
+    <div className="-mx-[18px] flex flex-wrap items-start border-t border-separator md:-mx-7">
       <div className="flex min-w-0 flex-[1_1_540px] flex-col gap-7 px-[18px] pb-10 pt-[22px] md:px-7">
         {data.vitals.length === 0 && data.bodyWeightLb === null ? (
-          <p className="text-[12px] text-ink-4">No readings yet. Blood pressure, lipids and glucose live here; weight comes from Fitness.</p>
+          <p className="text-footnote text-secondary-label">No readings yet. Blood pressure, lipids and glucose live here; weight comes from Fitness.</p>
         ) : (
           <MetricStrip>
             {data.bodyWeightLb !== null && (
@@ -344,9 +345,9 @@ export function Health({ data }: { data: HealthData }) {
               })}
             </RowList>
           )}
-          {active.length === 0 && <p className="mt-3 text-[12px] text-ink-4">Nothing prescribed.</p>}
+          {active.length === 0 && <p className="mt-3 text-footnote text-secondary-label">Nothing prescribed.</p>}
           {active.length > 0 && (
-            <p className="mt-3 text-[12px] leading-[1.5] text-ink-3">
+            <p className="mt-3 text-footnote text-secondary-label">
               {takenToday} of {active.length} marked today.
               {lowest && lowest.days <= 10 && lowest.days >= 0 && ` ${lowest.name} is down to ${lowest.days} ${lowest.days === 1 ? 'day' : 'days'}.`}
               {lowest && lowest.days < 0 && ` ${lowest.name} is past its refill date.`}
@@ -396,7 +397,7 @@ export function Health({ data }: { data: HealthData }) {
         </section>
       </div>
 
-      <aside className="flex min-w-0 flex-[1_1_320px] flex-col gap-[26px] border-t border-rule px-[18px] pb-10 pt-[22px] xl:max-w-[400px] md:px-6">
+      <aside className="flex min-w-0 flex-[1_1_320px] flex-col gap-[26px] border-t border-separator px-[18px] pb-10 pt-[22px] xl:max-w-[400px] md:px-6">
         <section>
           <Eyebrow>Due &amp; overdue</Eyebrow>
           {screenings.map((s) => {
@@ -412,15 +413,15 @@ export function Health({ data }: { data: HealthData }) {
                   ? `Last done ${monthYear(s.lastDoneOn)} · ${Math.round(-daysBetween(data.todayIso, s.lastDoneOn) / 30)} months ago`
                   : 'No date on record'
             return (
-              <Card key={s.id} as="article" className={cn('mt-2.5', state === 'overdue' && 'ring-1 ring-bad')}>
+              <Card key={s.id} as="article" className={cn('mt-2.5', state === 'overdue' && 'ring-1 ring-red-text')}>
                 <div className="flex items-center justify-between gap-2.5">
                   <StatusChip tone={state === 'overdue' ? 'bad' : state === 'scheduled' ? 'brand' : state === 'never' ? 'quiet' : 'warn'}>
                     {state === 'scheduled' ? 'Scheduled' : state === 'overdue' ? 'Overdue' : state === 'never' ? 'Never done' : 'Due soon'}
                   </StatusChip>
-                  <span className="num text-[12px] text-ink-3">Every {s.intervalMonths} mo</span>
+                  <span className="num text-footnote text-secondary-label">Every {s.intervalMonths} mo</span>
                 </div>
-                <p className="mt-2.5 text-[14.5px] font-medium leading-[1.35] text-ink">{s.name}</p>
-                <p className="t-caption mt-0.5 text-ink-3">
+                <p className="mt-2.5 text-subheadline font-medium text-label">{s.name}</p>
+                <p className="text-caption-1 mt-0.5 text-secondary-label">
                   {label}
                   {due && state !== 'scheduled' && state !== 'never' ? ` · due ${new Date(`${due}T12:00:00`).getDate()} ${MONTHS[new Date(`${due}T12:00:00`).getMonth()]}` : ''}
                 </p>
@@ -444,7 +445,7 @@ export function Health({ data }: { data: HealthData }) {
             )
           })}
           {screenings.every((s) => ['ok', 'snoozed'].includes(screeningStatus(s, data.todayIso))) && (
-            <p className="mt-3 text-[12px] text-ink-4">Nothing is owed.</p>
+            <p className="mt-3 text-footnote text-secondary-label">Nothing is owed.</p>
           )}
         </section>
 
@@ -453,14 +454,14 @@ export function Health({ data }: { data: HealthData }) {
           {data.coverage.length > 0 && (
             <RowList className="mt-2.5">
               {data.coverage.map((c) => (
-                <Row key={c.label} title={<span className="text-[13.5px] font-normal">{c.label}</span>} amount={c.value} />
+                <Row key={c.label} title={<span className="text-footnote font-normal">{c.label}</span>} amount={c.value} />
               ))}
             </RowList>
           )}
-          <p className="mt-3 text-[12px] leading-[1.5] text-ink-3">
+          <p className="mt-3 text-footnote text-secondary-label">
             {data.coverage.length === 0 ? 'No health, dental or vision policy from Insurance yet: its nightly digest is where these come from. ' : ''}
             Plan details live in{' '}
-            <Link href="/insurance" className="border-b border-rule-2 text-ink-3 hover:text-ink">
+            <Link href="/insurance" className={cn(HIT, 'inline-block text-secondary-label underline decoration-gray underline-offset-4 hover:text-label')}>
               Insurance
             </Link>
             .
@@ -481,7 +482,7 @@ export function Health({ data }: { data: HealthData }) {
               ))}
             </RowList>
           )}
-          {data.providers.length === 0 && <p className="mt-3 text-[12px] text-ink-4">Nobody yet.</p>}
+          {data.providers.length === 0 && <p className="mt-3 text-footnote text-secondary-label">Nobody yet.</p>}
         </section>
       </aside>
 
