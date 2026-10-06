@@ -31,6 +31,8 @@ SWEPT=(
   # Fitness and Health
   'modules/fitness/ui'
   'modules/health/ui'
+  # Meals
+  'modules/meals/ui'
 )
 
 # The two surfaces kept unchanged in feel (owner, 2026-09-18).
