@@ -17,7 +17,7 @@ export function PlaceDrawer({ place, onClose }: { place: TravelData['places'][nu
         <MetricTile size="sm" label="Visited" value={visited} />
         <MetricTile size="sm" label="Where" value={`${place.lat.toFixed(2)}, ${place.lon.toFixed(2)}`} />
       </MetricStrip>
-      <p className="mt-3.5 text-[12px] text-ink-4">This place is not part of a trip.</p>
+      <p className="mt-3.5 text-footnote text-secondary-label">This place is not part of a trip.</p>
     </Overlay>
   )
 }

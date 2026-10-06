@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { HIT as HIT_AREA } from '@/components/pos/button-classes'
 import { cn } from '@/lib/utils'
 import land from '../land.json'
 import { R, clampView, flat, graticule, landPath, project, visible, zoomAt, type Half, type Ring, type Rotation, type View } from '../globe'
@@ -203,9 +204,9 @@ export function Globe({
                 </radialGradient>
               </defs>
               <circle cx={0} cy={0} r={R + 5} fill="url(#globe-rim)" pointerEvents="none" />
-              <circle cx={0} cy={0} r={R} fill={OCEAN} stroke="var(--rule-2)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+              <circle cx={0} cy={0} r={R} fill={OCEAN} stroke="var(--opaque-separator)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
               {graticule(rotation).map((d, i) => (
-                <path key={i} transform={`scale(${R})`} d={d} fill="none" stroke="var(--rule)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                <path key={i} transform={`scale(${R})`} d={d} fill="none" stroke="var(--separator)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
               ))}
               {/* The land: every ring filled and outlined, cut at the horizon, in the unit circle scaled up. */}
               <path data-land transform={`scale(${R})`} d={landPath(RINGS, rotation, 'globe')} {...LAND} />
@@ -220,7 +221,7 @@ export function Globe({
                 {/* Styled here, not on the group: vector-effect does not inherit through a use. */}
                 <path id="flat-land" transform={`scale(${R * 2})`} d={FLAT_LAND} {...LAND} />
               </defs>
-              <rect x={-R * 2} y={-R} width={R * 4} height={R * 2} fill={OCEAN} stroke="var(--rule-2)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+              <rect x={-R * 2} y={-R} width={R * 4} height={R * 2} fill={OCEAN} stroke="var(--opaque-separator)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
               {/* Panned by the same shift `flat()` gives the pins, wrapped like it is so the copy either side always covers the seam. */}
               <g clipPath="url(#flat-box)">
                 <g transform={`translate(${((((rotation.lambda + 180) % 360) + 360) % 360 - 180) / 180 * 2 * R} 0)`}>
@@ -263,9 +264,9 @@ export function Globe({
                 {/* The target: about 24px across on screen whatever the zoom, so a finger lands. */}
                 <circle cx={cx} cy={cy} r={HIT / zoom} fill="transparent" />
                 {pin.kind === 'wishlist' ? (
-                  <circle cx={cx} cy={cy} r={3.5 / zoom} fill="none" stroke="var(--ink-2)" strokeWidth={1} strokeDasharray="1.5 1.5" vectorEffect="non-scaling-stroke" />
+                  <circle cx={cx} cy={cy} r={3.5 / zoom} fill="none" stroke="var(--label)" strokeWidth={1} strokeDasharray="1.5 1.5" vectorEffect="non-scaling-stroke" />
                 ) : (
-                  <circle cx={cx} cy={cy} r={(pin.kind === 'upcoming' ? 4 : 3.5) / zoom} fill={pin.kind === 'upcoming' ? 'var(--accent)' : 'var(--ink-3)'} stroke="var(--bg-deep)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                  <circle cx={cx} cy={cy} r={(pin.kind === 'upcoming' ? 4 : 3.5) / zoom} fill={pin.kind === 'upcoming' ? 'var(--accent)' : 'var(--secondary-label)'} stroke="var(--gray-5)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
                 )}
                 {/* Named at a fixed size on screen: the text is divided by the zoom the group multiplies by. */}
                 {(pin.kind === 'upcoming' || zoom >= LABEL_ZOOM) && (
@@ -275,7 +276,7 @@ export function Globe({
                     y={cy - 5 / zoom}
                     fontSize={font}
                     letterSpacing={font / 12}
-                    fill="var(--ink-2)"
+                    fill="var(--label)"
                     className="uppercase"
                   >
                     {pin.name}
@@ -290,10 +291,10 @@ export function Globe({
       {alert && <div className="absolute right-3 top-3 max-w-[min(360px,70%)]">{alert}</div>}
 
       {/* Below md the legend takes its own line above the controls; the band is too narrow for both corners. */}
-      <div className="pointer-events-none absolute bottom-2.5 left-3 flex flex-wrap gap-3.5 text-[10px] uppercase tracking-[0.06em] text-ink-3 max-md:bottom-[42px]">
-        <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-brand" />Upcoming</span>
-        <span className="flex items-center gap-1.5"><span className="size-[7px] rounded-full bg-ink-3" />Past</span>
-        <span className="flex items-center gap-1.5"><span className="size-[7px] rounded-full border border-dashed border-ink-2" />Wishlist</span>
+      <div className="pointer-events-none absolute bottom-2.5 left-3 flex flex-wrap gap-3.5 text-caption-2 uppercase tracking-[0.06em] text-secondary-label max-md:bottom-[42px]">
+        <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-accent" />Upcoming</span>
+        <span className="flex items-center gap-1.5"><span className="size-[7px] rounded-full bg-secondary-label" />Past</span>
+        <span className="flex items-center gap-1.5"><span className="size-[7px] rounded-full border border-dashed border-label" />Wishlist</span>
       </div>
 
       <div className="absolute bottom-2.5 right-3 flex gap-1">
@@ -316,7 +317,7 @@ export function Globe({
             setMode((m) => (m === 'globe' ? 'flat' : 'globe'))
             setView(HOME)
           }}
-          className={cn(control, 'label w-auto px-2 text-[10px] tracking-[0.08em]')}
+          className={cn(control, 'label w-auto px-2 text-caption-2 tracking-[0.08em]')}
         >
           {mode === 'globe' ? 'Flat' : 'Globe'}
         </button>
@@ -327,14 +328,17 @@ export function Globe({
 
 /** Filled land with borders, for the globe path and the flat one. */
 const LAND = {
-  fill: 'var(--ink-4)',
+  fill: 'var(--secondary-label)',
   fillRule: 'evenodd',
-  stroke: 'var(--ink-3)',
+  stroke: 'var(--gray)',
   strokeWidth: 0.6,
   vectorEffect: 'non-scaling-stroke',
 } as const
 /** The sea: a little accent mixed into the deep background, since there is no blue token. */
-const OCEAN = 'color-mix(in srgb, var(--accent) 18%, var(--bg-deep))'
+const OCEAN = 'color-mix(in srgb, var(--accent) 18%, var(--gray-5))'
 
-const control =
-  'grid size-[26px] place-items-center border border-rule-2 bg-bg text-[13px] text-ink-3 transition-colors duration-150 hover:border-ink hover:text-ink rounded-full'
+// 26px drawn, 44px to the pointer through HIT.
+const control = cn(
+  HIT_AREA,
+  'grid size-[26px] place-items-center rounded-full border border-opaque-separator bg-grouped-2 text-footnote text-secondary-label transition-colors duration-150 hover:border-label hover:text-label',
+)

@@ -37,8 +37,8 @@ export function LoyaltyDrawer({
         {loyalty.map((p) => (
           <DataRow key={p.id}>
             <span className="min-w-0">
-              <span className="block truncate text-ink">{p.name}</span>
-              <span className="mt-0.5 block text-[11px] text-ink-3">{[p.kind, p.statusTier].filter(Boolean).join(' · ')}</span>
+              <span className="block truncate text-label">{p.name}</span>
+              <span className="mt-0.5 block text-footnote text-secondary-label">{[p.kind, p.statusTier].filter(Boolean).join(' · ')}</span>
             </span>
             <input
               inputMode="decimal"
@@ -58,28 +58,28 @@ export function LoyaltyDrawer({
         ))}
       </DataTable>
 
-      <div className="mt-5 border border-rule px-3.5 py-3 rounded-[18px]">
+      <div className="mt-5 rounded-card bg-grouped-2 px-3.5 py-3">
         <div className="flex items-baseline justify-between">
           <Eyebrow>Cents per point</Eyebrow>
-          <Eyebrow className="text-[11px]">Both numbers yours</Eyebrow>
+          <Eyebrow>Both numbers yours</Eyebrow>
         </div>
-        <p className="mt-2 text-[12px] leading-[1.5] text-ink-3">
+        <p className="mt-2 text-footnote text-secondary-label">
           What the cash fare would have been, against the points it would cost. Above about 1.5
           cents a point is usually worth spending them; below it, pay cash and keep the points.
         </p>
         <div className="mt-3 grid grid-cols-2 gap-2.5">
           <label className="space-y-1.5">
-            <Eyebrow className="text-[11px]">Cash fare</Eyebrow>
+            <Eyebrow>Cash fare</Eyebrow>
             <input inputMode="decimal" value={cash} onChange={(e) => setCash(e.target.value)} aria-label="Cash fare in dollars" placeholder="640" className={cn(fieldClass, 'w-full')} />
           </label>
           <label className="space-y-1.5">
-            <Eyebrow className="text-[11px]">Points</Eyebrow>
+            <Eyebrow>Points</Eyebrow>
             <input inputMode="decimal" value={points} onChange={(e) => setPoints(e.target.value)} aria-label="Points required" placeholder="35000" className={cn(fieldClass, 'w-full')} />
           </label>
         </div>
         <div className="mt-3 flex items-baseline gap-2.5">
-          <span className="num text-[22px] font-light leading-none text-ink">{cpp === null ? '--' : `${cpp.toFixed(2)}c`}</span>
-          <span className={cn('text-[12px]', cpp === null ? 'text-ink-3' : cpp >= 1.5 ? 'text-ok' : 'text-warn')}>
+          <span className="num text-title-2 leading-none text-label">{cpp === null ? '--' : `${cpp.toFixed(2)}c`}</span>
+          <span className={cn('text-footnote', cpp === null ? 'text-secondary-label' : cpp >= 1.5 ? 'text-green-text' : 'text-orange-text')}>
             {cpp === null ? 'Enter both' : cpp >= 1.5 ? 'Worth using points' : 'Pay cash'}
           </span>
         </div>
