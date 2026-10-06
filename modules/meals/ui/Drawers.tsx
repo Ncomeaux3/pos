@@ -43,8 +43,8 @@ export function PickDrawer({
     <Overlay open onClose={onClose} eyebrow="Meals / Pick">
       <div className="space-y-[18px]">
         <div>
-          <h2 className="text-[20px] font-normal tracking-[-0.03em] text-ink">Pick a recipe</h2>
-          <p className="mt-1.5 text-[12px] text-ink-3">
+          <h2 className="text-title-2 text-label">Pick a recipe</h2>
+          <p className="mt-1.5 text-footnote text-secondary-label">
             {DOW[new Date(`${onDate}T12:00:00`).getDay()]} · {cap(slot)} · favorites first, then by protein
           </p>
         </div>
@@ -97,8 +97,8 @@ export function GroceryDrawer({
       <div className="space-y-[18px]">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <h2 className="text-[20px] font-normal tracking-[-0.03em] text-ink">Grocery list</h2>
-            <p className="mt-1.5 text-[12px] text-ink-3">
+            <h2 className="text-title-2 text-label">Grocery list</h2>
+            <p className="mt-1.5 text-footnote text-secondary-label">
               {items} items · {done} checked · est. {money(weekCost)}
             </p>
           </div>
@@ -108,17 +108,17 @@ export function GroceryDrawer({
         </div>
 
         {groups.length === 0 && (
-          <div className="border border-dashed border-rule-2 p-[30px] text-center rounded-[18px]">
-            <p className="num text-[22px] font-light text-ink">Nothing planned</p>
-            <p className="mt-1.5 text-[12px] text-ink-3">Plan a meal and its ingredients appear here.</p>
+          <div className="rounded-card border border-dashed border-gray-3 p-[30px] text-center">
+            <p className="text-title-3 text-label">Nothing planned</p>
+            <p className="mt-1.5 text-footnote text-secondary-label">Plan a meal and its ingredients appear here.</p>
           </div>
         )}
 
         {groups.map(({ recipe, n }) => (
           <div key={recipe.id}>
-            <div className="flex items-baseline justify-between border-b border-rule-2 pb-1.5">
-              <span className="text-[13px] text-ink">{recipe.name}</span>
-              <span className="num text-[11px] text-ink-3">
+            <div className="flex items-baseline justify-between border-b border-separator pb-1.5">
+              <span className="text-subheadline font-semibold text-label">{recipe.name}</span>
+              <span className="num text-caption-1 text-secondary-label">
                 {n}× · serves {recipe.servings}
               </span>
             </div>
@@ -132,13 +132,13 @@ export function GroceryDrawer({
                     type="button"
                     aria-pressed={on}
                     onClick={() => setChecked((c) => ({ ...c, [key]: !c[key] }))}
-                    className="flex items-center justify-between gap-2.5 border-b border-rule py-[7px] text-left"
+                    className="flex min-h-11 items-center justify-between gap-2.5 border-b border-separator py-1.5 text-left"
                   >
                     <span className="flex min-w-0 items-center gap-2.5">
-                      <span aria-hidden className={cn('size-3 shrink-0 border rounded-full', on ? 'border-brand bg-brand' : 'border-ink-3')} />
-                      <span className={cn('text-[13px]', on ? 'text-ink-3 line-through' : 'text-ink')}>{ing.item}</span>
+                      <span aria-hidden className={cn('size-3 shrink-0 rounded-full border', on ? 'border-accent bg-accent' : 'border-gray')} />
+                      <span className={cn('text-subheadline', on ? 'text-secondary-label line-through' : 'text-label')}>{ing.item}</span>
                     </span>
-                    <span className="num shrink-0 text-[11px] text-ink-3">
+                    <span className="num shrink-0 text-footnote text-secondary-label">
                       {ing.quantity}
                       {n > 1 && recipe.servings === 1 && ing.quantity ? ` × ${n}` : ''}
                     </span>
@@ -149,7 +149,7 @@ export function GroceryDrawer({
           </div>
         ))}
 
-        <p className="text-[11px] text-ink-4">
+        <p className="text-caption-1 text-secondary-label">
           Built from the planned meals this week. Quantities are as written and are not added up.
         </p>
       </div>
@@ -236,7 +236,7 @@ export function RecipeDrawer({
             <ActionButton onClick={() => setParams({ cook: recipe.id, step: '0', recipe: null, slot: null })}>
               Cook
             </ActionButton>
-            <span className="text-[11px] text-ink-4">Use &quot;Add to&quot; above to plan it this week.</span>
+            <span className="text-caption-1 text-secondary-label">Use &quot;Add to&quot; above to plan it this week.</span>
           </>
         )
       }
@@ -244,11 +244,11 @@ export function RecipeDrawer({
       <div className="space-y-[18px]">
         <div>
           <div className="flex items-start justify-between gap-3">
-            <h2 className="text-[22px] font-normal leading-[1.2] tracking-[-0.03em] text-ink">{recipe.name}</h2>
+            <h2 className="text-title-2 text-label">{recipe.name}</h2>
             <ActionButton
               size="sm"
               onClick={() => run(() => setFavourite(recipe.id, !recipe.favourite))}
-              className={cn('num', recipe.favourite ? 'text-brand' : 'text-ink-3')}
+              className={cn('num', recipe.favourite ? 'text-accent' : 'text-secondary-label')}
             >
               {recipe.favourite ? '★ Favorite' : '☆ Add favorite'}
             </ActionButton>
@@ -266,16 +266,16 @@ export function RecipeDrawer({
               href={recipe.sourceUrl}
               target="_blank"
               rel="noopener"
-              className="mt-2 block truncate text-[11px] text-ink-3 hover:text-ink"
+              className="flex min-h-11 items-center text-footnote text-secondary-label hover:text-label"
             >
-              {source} ↗
+              <span className="truncate">{source} ↗</span>
             </a>
           )}
         </div>
 
         <MetricStrip className="grid-cols-2 sm:grid-cols-4">
           <MetricTile size="sm" label="kcal" value={recipe.macros.kcal} />
-          <MetricTile size="sm" label="Protein" value={`${recipe.macros.protein}g`} className="[&>p]:text-brand" />
+          <MetricTile size="sm" label="Protein" value={`${recipe.macros.protein}g`} className="[&>p]:text-accent" />
           <MetricTile
             size="sm"
             label="Carbs · fat"
@@ -300,7 +300,7 @@ export function RecipeDrawer({
         </MetricStrip>
 
         <div className="flex flex-wrap items-center justify-between gap-2.5">
-          <span className="text-[12px] text-ink-3">Serves {recipe.servings} · per-serving values</span>
+          <span className="text-footnote text-secondary-label">Serves {recipe.servings} · per-serving values</span>
           {!draft && (
             <div className="flex flex-wrap items-center gap-1.5">
               <Eyebrow>Add to</Eyebrow>
@@ -317,9 +317,9 @@ export function RecipeDrawer({
           <Eyebrow>Ingredients</Eyebrow>
           <div className="mt-1.5 flex flex-col">
             {recipe.ingredients.map((ing, i) => (
-              <div key={`${ing.item}-${i}`} className="flex justify-between gap-2.5 border-b border-rule py-[7px] text-[13px] text-ink">
+              <div key={`${ing.item}-${i}`} className="flex justify-between gap-2.5 border-b border-separator py-2 text-subheadline text-label">
                 <span>{ing.item}</span>
-                <span className="num text-[11px] text-ink-3">{ing.quantity}</span>
+                <span className="num text-footnote text-secondary-label">{ing.quantity}</span>
               </div>
             ))}
           </div>
@@ -327,7 +327,7 @@ export function RecipeDrawer({
 
         <div>
           <Eyebrow>Steps</Eyebrow>
-          <ol className="mt-2 flex list-decimal flex-col gap-2 pl-5 text-[13px] leading-[1.55] text-ink-2">
+          <ol className="mt-2 flex list-decimal flex-col gap-2 pl-5 text-subheadline text-label">
             {recipe.steps.map((s, i) => (
               <li key={`${i}-${s}`}>{s}</li>
             ))}
@@ -339,14 +339,14 @@ export function RecipeDrawer({
           {recipe.entityRef ? (
             <SkillPicker entityRef={recipe.entityRef} links={recipe.skills} skills={skills} className="mt-2" />
           ) : (
-            <p className="mt-2 text-[12px] text-ink-4">Nothing matched yet.</p>
+            <p className="mt-2 text-footnote text-secondary-label">Nothing matched yet.</p>
           )}
         </div>
 
         {recipe.notes && (
           <div>
             <Eyebrow>Notes</Eyebrow>
-            <p className="mt-1.5 text-[13px] text-ink">{recipe.notes}</p>
+            <p className="mt-1.5 text-subheadline text-label">{recipe.notes}</p>
           </div>
         )}
       </div>
@@ -355,5 +355,5 @@ export function RecipeDrawer({
 }
 
 function Unit({ children }: { children: string }) {
-  return <span className="text-[11px] text-ink-3">{children}</span>
+  return <span className="text-caption-1 text-secondary-label">{children}</span>
 }

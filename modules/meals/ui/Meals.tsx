@@ -18,6 +18,7 @@ import {
 } from '@/components/pos'
 import { useSearchState } from '@/components/pos/searchState'
 import { Segments } from '@/components/pos/Segments'
+import { HIT } from '@/components/pos/button-classes'
 import { cn } from '@/lib/utils'
 import { standing, total, type Macros } from '../macros'
 import { scaleQuantity, servingFactor } from '../scale'
@@ -179,7 +180,7 @@ export function Meals({ data }: { data: MealsData }) {
       <PageHeader
         eyebrow={
           <>
-            Meals <span className="text-ink-4">/</span> {tab === 'week' ? 'Week' : 'Recipes'}
+            Meals <span className="text-secondary-label">/</span> {tab === 'week' ? 'Week' : 'Recipes'}
           </>
         }
         title="Meals"
@@ -195,7 +196,7 @@ export function Meals({ data }: { data: MealsData }) {
         actions={
           <>
             <ActionButton onClick={() => setParams({ drawer: 'grocery' }, { push: true })}>
-              Grocery list <span className="num text-[11px] text-ink-3">{groceryCount}</span>
+              Grocery list <span className="num text-caption-1">{groceryCount}</span>
             </ActionButton>
             <ActionButton
               variant="solid"
@@ -212,7 +213,7 @@ export function Meals({ data }: { data: MealsData }) {
         phoneAction={
           <>
             <ActionButton size="pill" aria-label="Grocery list" onClick={() => setParams({ drawer: 'grocery' }, { push: true })}>
-              Grocery <span className="num text-[11px] text-ink-3">{groceryCount}</span>
+              Grocery <span className="num text-caption-1">{groceryCount}</span>
             </ActionButton>
             <ActionButton
               size="pill"
@@ -242,7 +243,7 @@ export function Meals({ data }: { data: MealsData }) {
               <ActionButton size="sm" aria-label="Previous week" onClick={() => setParams({ week: offset - 1 === 0 ? null : String(offset - 1) })}>
                 ←
               </ActionButton>
-              <span className="num min-w-[150px] text-center text-[11px] text-ink-3">{weekLabel}</span>
+              <span className="num min-w-[150px] text-center text-caption-1 text-secondary-label">{weekLabel}</span>
               <ActionButton size="sm" aria-label="Next week" onClick={() => setParams({ week: offset + 1 === 0 ? null : String(offset + 1) })}>
                 →
               </ActionButton>
@@ -253,8 +254,8 @@ export function Meals({ data }: { data: MealsData }) {
         {tab === 'week' && (
           <div className="mt-[18px] space-y-[18px]">
             {thisWeek && (
-              <section className="glass grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-5 gap-y-3 rounded-[18px] px-4 py-3 ring-1 ring-action">
-                <Eyebrow className="text-action">
+              <section className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-5 gap-y-3 rounded-card bg-grouped-2 px-4 py-3 ring-1 ring-accent">
+                <Eyebrow className="text-accent">
                   Today · {DAYS[todayIdx]} {shortDate(data.todayIso)}
                 </Eyebrow>
                 <div className="flex flex-wrap items-center gap-2">
@@ -309,18 +310,18 @@ export function Meals({ data }: { data: MealsData }) {
                     ] as const
                   ).map(([label, value, t, unit]) => (
                     <div key={label} className="min-w-[150px]">
-                      <div className="flex justify-between gap-2 whitespace-nowrap text-[11px] text-ink-3">
+                      <div className="flex justify-between gap-2 whitespace-nowrap text-caption-1 text-secondary-label">
                         <span>{label}</span>
-                        <span className="num text-ink-2">
+                        <span className="num text-label">
                           {value.toLocaleString('en-US')}
                           {unit}
-                          {t !== null && <span className="text-ink-3"> / {t.toLocaleString('en-US')}</span>}
+                          {t !== null && <span className="text-secondary-label"> / {t.toLocaleString('en-US')}</span>}
                         </span>
                       </div>
                       {t !== null && (
-                        <div className="mt-1 h-[3px] bg-rule-2">
+                        <div className="mt-1 h-[3px] bg-fill">
                           <div
-                            className={cn('h-full', value > t * 1.1 ? 'bg-warn' : 'bg-brand')}
+                            className={cn('h-full', value > t * 1.1 ? 'bg-orange-text' : 'bg-accent')}
                             style={{ width: `${Math.min(100, (value / t) * 100)}%` }}
                           />
                         </div>
@@ -328,41 +329,40 @@ export function Meals({ data }: { data: MealsData }) {
                     </div>
                   ))}
                   {eatenToday.unknown > 0 && (
-                    <span className="text-[11px] text-ink-3">{eatenToday.unknown} without a recipe, not counted</span>
+                    <span className="text-caption-1 text-secondary-label">{eatenToday.unknown} without a recipe, not counted</span>
                   )}
                 </div>
               </section>
             )}
 
             <div ref={weekScroll} className="overflow-x-auto">
-              <div className="grid min-w-[920px] grid-cols-[72px_repeat(7,minmax(120px,1fr))] gap-px border border-rule bg-rule rounded-[18px]">
-                <div className="bg-bg px-2 py-2.5" />
+              <div className="grid min-w-[920px] grid-cols-[72px_repeat(7,minmax(120px,1fr))] gap-px overflow-hidden rounded-card bg-separator">
+                <div className="bg-grouped-2 px-2 py-2.5" />
                 {week.map((iso, i) => {
                   const isToday = iso === data.todayIso
                   return (
                     <div
                       key={iso}
                       data-today={isToday || undefined}
-                      className={cn('flex flex-col border-t-2 bg-bg px-2 py-2.5', isToday ? 'border-action' : 'border-transparent')}
+                      className={cn('flex flex-col border-t-2 bg-grouped-2 px-2 py-2.5', isToday ? 'border-accent' : 'border-transparent')}
                     >
-                      <span className={cn('label', isToday ? 'text-action' : 'text-ink-3')}>{DAYS[i]}</span>
-                      <span className={cn('mt-0.5 text-[14px]', isToday ? 'text-action' : 'text-ink-2')}>{dateOf(iso).getDate()}</span>
+                      <span className={cn('text-footnote font-medium', isToday ? 'text-accent' : 'text-secondary-label')}>{DAYS[i]}</span>
+                      <span className={cn('mt-0.5 text-subheadline', isToday ? 'text-accent' : 'text-label')}>{dateOf(iso).getDate()}</span>
                     </div>
                   )
                 })}
 
                 {SLOTS.map((slot) => (
                   <Fragment key={slot}>
-                    <div className="flex items-center bg-bg px-2 py-2.5">
+                    <div className="flex items-center bg-grouped-2 px-2 py-2.5">
                       <Eyebrow>{cap(slot)}</Eyebrow>
                     </div>
                     {week.map((iso) => {
                       const entry = entryAt(iso, slot)
                       const recipe = entry ? byId(entry.recipeId) : undefined
-                      const isToday = iso === data.todayIso
                       const past = iso < data.todayIso
                       return (
-                        <div key={iso} className={cn('min-h-[76px] p-1.5', isToday ? 'bg-brand-soft' : 'bg-bg')}>
+                        <div key={iso} className="min-h-[76px] bg-grouped-2 p-1.5">
                           {entry ? (
                             <div
                               role="button"
@@ -381,13 +381,13 @@ export function Meals({ data }: { data: MealsData }) {
                                 )
                               }
                               className={cn(
-                                'h-full cursor-grab border bg-bg-elev px-[9px] py-2 transition-colors duration-150 hover:border-rule-2 rounded-[18px]',
-                                entry.eaten ? 'border-action' : 'border-rule',
-                                past && !entry.eaten && 'opacity-55',
+                                'h-full cursor-grab rounded-control border bg-grouped-3 px-[9px] py-2 transition-colors duration-150 hover:border-gray',
+                                entry.eaten ? 'border-accent' : 'border-separator',
+                                past && !entry.eaten && 'border-dashed border-secondary-label',
                               )}
                             >
-                              <div className="flex items-start justify-between gap-1.5">
-                                <span className="min-w-0 text-[12.5px] leading-[1.3] tracking-[-0.01em] [overflow-wrap:anywhere]">
+                              <div className="flex items-start justify-between gap-3 sm:gap-4">
+                                <span className="min-w-0 text-footnote [overflow-wrap:anywhere]">
                                   {entry.label || 'Something'}
                                 </span>
                                 <button
@@ -400,16 +400,17 @@ export function Meals({ data }: { data: MealsData }) {
                                     run(() => markEaten(entry.id, !entry.eaten))
                                   }}
                                   className={cn(
-                                    'grid size-6 shrink-0 place-items-center rounded-full border text-[11px] text-bg transition-colors hover:border-ink sm:size-4 sm:leading-[14px]',
-                                    entry.eaten ? 'border-action bg-action text-action-fg' : 'border-rule-2',
+                                    HIT,
+                                    'grid size-6 shrink-0 place-items-center rounded-full border text-caption-1 transition-colors hover:border-label sm:size-4',
+                                    entry.eaten ? 'border-accent bg-accent text-accent-fg' : 'border-secondary-label',
                                   )}
                                 >
                                   {entry.eaten ? '✓' : ''}
                                 </button>
                               </div>
-                              <div className="num mt-1.5 flex flex-wrap gap-1.5 text-[11px] text-ink-3">
+                              <div className="num mt-1.5 flex flex-wrap gap-1.5 text-caption-1 text-secondary-label">
                                 <span>{entry.macros ? Math.round(entry.macros.kcal * entry.servings) : 0} kcal</span>
-                                <span className="text-action">{entry.macros ? Math.round(entry.macros.protein * entry.servings) : 0}p</span>
+                                <span className="text-accent">{entry.macros ? Math.round(entry.macros.protein * entry.servings) : 0}p</span>
                                 <span>{recipe?.timeMinutes ?? 0}m</span>
                                 <span>{money(costOf(recipe, entry.servings))}</span>
                               </div>
@@ -419,7 +420,7 @@ export function Meals({ data }: { data: MealsData }) {
                               type="button"
                               aria-label="Plan a meal"
                               onClick={() => setParams({ pick: `${iso}:${slot}` }, { push: true })}
-                              className="h-full min-h-16 w-full border border-dashed border-rule text-[16px] text-ink-4 transition-colors duration-150 hover:border-action hover:text-action rounded-full"
+                              className="h-full min-h-16 w-full rounded-capsule border border-dashed border-gray text-callout text-secondary-label transition-colors duration-150 hover:border-accent hover:text-accent"
                             >
                               +
                             </button>
@@ -430,25 +431,25 @@ export function Meals({ data }: { data: MealsData }) {
                   </Fragment>
                 ))}
 
-                <div className="flex items-center bg-bg px-2 py-2.5">
+                <div className="flex items-center bg-grouped-2 px-2 py-2.5">
                   <Eyebrow>Total</Eyebrow>
                 </div>
                 {days.map((d, i) => (
-                  <div key={week[i]} className="flex flex-col gap-[5px] bg-bg px-2 py-2.5">
-                    <div className="flex justify-between text-[11px]">
-                      <span className="text-ink-3">kcal</span>
-                      <span className={cn('num', d.n === 0 ? 'text-ink-4' : target !== null && d.kcal > target * 1.1 ? 'text-warn' : 'text-ink-2')}>{d.kcal.toLocaleString('en-US')}</span>
+                  <div key={week[i]} className="flex flex-col gap-[5px] bg-grouped-2 px-2 py-2.5">
+                    <div className="flex justify-between text-caption-1">
+                      <span className="text-secondary-label">kcal</span>
+                      <span className={cn('num', d.n === 0 ? 'text-secondary-label' : target !== null && d.kcal > target * 1.1 ? 'text-orange-text' : 'text-label')}>{d.kcal.toLocaleString('en-US')}</span>
                     </div>
                     {target !== null && (
-                      <div className="h-0.5 bg-rule-2">
-                        <div className={cn('h-full', d.kcal > target * 1.1 ? 'bg-warn' : 'bg-brand')} style={{ width: `${Math.min(100, (d.kcal / target) * 100)}%` }} />
+                      <div className="h-0.5 bg-fill">
+                        <div className={cn('h-full', d.kcal > target * 1.1 ? 'bg-orange-text' : 'bg-accent')} style={{ width: `${Math.min(100, (d.kcal / target) * 100)}%` }} />
                       </div>
                     )}
-                    <div className="flex justify-between text-[11px]">
-                      <span className="text-ink-3">protein</span>
-                      <span className={cn('num', d.n === 0 ? 'text-ink-4' : 'text-ink-2')}>{d.protein}g</span>
+                    <div className="flex justify-between text-caption-1">
+                      <span className="text-secondary-label">protein</span>
+                      <span className={cn('num', d.n === 0 ? 'text-secondary-label' : 'text-label')}>{d.protein}g</span>
                     </div>
-                    <span className="num mt-0.5 text-[11px] text-ink-3">
+                    <span className="num mt-0.5 text-caption-1 text-secondary-label">
                       {money(d.cost)} · {d.time}m
                     </span>
                   </div>
@@ -463,7 +464,7 @@ export function Meals({ data }: { data: MealsData }) {
                 value={
                   <>
                     {avg('kcal').toLocaleString('en-US')}
-                    {target !== null && <span className="text-[12px] font-normal text-ink-3"> / {target.toLocaleString('en-US')}</span>}
+                    {target !== null && <span className="text-footnote font-normal text-secondary-label"> / {target.toLocaleString('en-US')}</span>}
                   </>
                 }
                 delta={
@@ -473,7 +474,7 @@ export function Meals({ data }: { data: MealsData }) {
                     <>
                       {kcalStanding === 'over' ? 'Over the estimate on average' : kcalStanding === 'under' ? 'Under the estimate · plan more' : 'Within 10% of the estimate'}
                       {' · '}
-                      <Link href="/fitness" className="hover:text-ink">15 kcal a pound, from Fitness</Link>
+                      <Link href="/fitness" className={`${HIT} inline-block hover:text-label`}>15 kcal a pound, from Fitness</Link>
                     </>
                   )
                 }
@@ -486,7 +487,7 @@ export function Meals({ data }: { data: MealsData }) {
                 value={
                   <>
                     {cooked}
-                    <span className="text-[12px] font-normal text-ink-3"> meals</span>
+                    <span className="text-footnote font-normal text-secondary-label"> meals</span>
                   </>
                 }
                 delta={`${inWeek.length} planned`}
@@ -547,10 +548,10 @@ export function Meals({ data }: { data: MealsData }) {
                       setParams({ recipe: r.id, slot: null }, { push: true })
                     }
                   }}
-                  className="min-w-0 cursor-pointer px-4 py-3.5 text-left transition-colors duration-200 hover:bg-ink/[.06]"
+                  className="min-w-0 cursor-pointer px-4 py-3.5 text-left transition-colors duration-200 hover:bg-fill-4"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <span className="min-w-0 text-[14.5px] leading-[1.3] tracking-[-0.01em]">{r.name}</span>
+                    <span className="min-w-0 text-subheadline text-label">{r.name}</span>
                     <button
                       type="button"
                       title="Favorite"
@@ -559,14 +560,14 @@ export function Meals({ data }: { data: MealsData }) {
                         e.stopPropagation()
                         run(() => setFavourite(r.id, !r.favourite))
                       }}
-                      className={cn('num -m-2 shrink-0 p-2 text-[14px]', r.favourite ? 'text-action' : 'text-ink-3')}
+                      className={cn(HIT, 'num shrink-0 text-subheadline', r.favourite ? 'text-accent' : 'text-secondary-label')}
                     >
                       {r.favourite ? '★' : '☆'}
                     </button>
                   </div>
-                  <div className="num mt-2 flex flex-wrap gap-2 text-[11px] text-ink-3">
+                  <div className="num mt-2 flex flex-wrap gap-2 text-caption-1 text-secondary-label">
                     <span>{r.macros.kcal} kcal</span>
-                    <span className="text-action">{r.macros.protein}g protein</span>
+                    <span className="text-accent">{r.macros.protein}g protein</span>
                     <span>{r.timeMinutes} min</span>
                     <span>{money(costOf(r, 1))}/serving</span>
                   </div>
@@ -581,7 +582,7 @@ export function Meals({ data }: { data: MealsData }) {
                   {r.status === 'draft' ? (
                     <DraftActions id={r.id} run={run} className="mt-2.5" />
                   ) : (
-                    <div className="mt-2.5 text-[11px] text-ink-3">
+                    <div className="mt-2.5 text-caption-1 text-secondary-label">
                       {usage(r.id) ? `${usage(r.id)}× this week` : 'Not planned this week'}
                     </div>
                   )}
@@ -636,7 +637,7 @@ export function DraftActions({
 
   if (decided) {
     return (
-      <span className={cn('text-[12px] text-ink-3', className)} onClick={(e) => e.stopPropagation()}>
+      <span className={cn('text-footnote text-secondary-label', className)} onClick={(e) => e.stopPropagation()}>
         {decided === 'accepted' ? 'Added' : 'Discarded'}
       </span>
     )
@@ -720,7 +721,7 @@ function CookMode({
           <Eyebrow>
             Cooking / step {current + 1} of {recipe.steps.length}
           </Eyebrow>
-          <h2 className="t-title text-ink">{recipe.name}</h2>
+          <h2 className="text-headline text-label">{recipe.name}</h2>
         </div>
         <ActionButton onClick={() => onChange({ cook: null, step: null, servings: null })}>
           Close
@@ -735,12 +736,12 @@ function CookMode({
           options={[1, 2, 4, 6, 8, 12].map((n) => ({ value: String(n), label: String(n) }))}
           onChange={(next) => onChange({ servings: next })}
         />
-        <span className="t-caption text-ink-3">recipe makes {recipe.servings}</span>
+        <span className="text-footnote text-secondary-label">recipe makes {recipe.servings}</span>
       </div>
 
       <div className="flex flex-wrap items-start gap-x-6 gap-y-5">
         <div className="min-w-0 flex-[2_1_420px] space-y-4">
-          <p className="text-[26px] leading-[1.35] text-ink sm:text-[30px]">
+          <p className="text-title-1 text-label">
             {recipe.steps[current]}
           </p>
 
@@ -769,7 +770,7 @@ function CookMode({
             {recipe.steps.map((s, i) => (
               <span
                 key={s}
-                className={cn('h-0.5 flex-1', i <= current ? 'bg-brand' : 'bg-rule-2')}
+                className={cn('h-0.5 flex-1', i <= current ? 'bg-accent' : 'bg-fill')}
               />
             ))}
           </div>
@@ -778,15 +779,15 @@ function CookMode({
         <div className="min-w-0 flex-[1_1_240px] space-y-2.5">
           <Eyebrow>Ingredients</Eyebrow>
           {scaled.map((i) => (
-            <p key={i.item} className="text-[15px] leading-snug text-ink-2">
-              <span className={cn('num', i.scaled && factor !== 1 && 'text-action')}>{i.text}</span>
+            <p key={i.item} className="text-subheadline text-label">
+              <span className={cn('num', i.scaled && factor !== 1 && 'text-accent')}>{i.text}</span>
               {i.text ? ' ' : ''}
               {i.item}
             </p>
           ))}
 
           {factor !== 1 && unscalable.length > 0 && (
-            <p className="t-caption border-t border-rule pt-2 text-ink-3">
+            <p className="border-t border-separator pt-2 text-footnote text-secondary-label">
               {unscalable.map((i) => i.item).join(', ')}{' '}
               {unscalable.length === 1 ? 'is' : 'are'} written as words rather than a number, so{' '}
               {unscalable.length === 1 ? 'it is' : 'they are'} unchanged. Half a splash is not a
