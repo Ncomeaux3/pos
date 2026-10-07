@@ -1423,7 +1423,7 @@ test('notifications, rules table and the alert centre', async ({ page }) => {
   // every module used to share. Scoped to the row itself: the filter pill
   // above the table also renders the word "Insurance".
   const policyRow = page.getByRole('button', { name: /Policy renewal/ })
-  await expect(policyRow.getByText('Insurance', { exact: true })).toHaveClass(/text-warn/)
+  await expect(policyRow.getByText('Insurance', { exact: true })).toHaveClass(/text-orange-text/)
 
   // The seeded rule set, the schedule above it and the preview rail that
   // follows the selected row. All three are the screen.
@@ -1451,13 +1451,13 @@ test('notifications, rules table and the alert centre', async ({ page }) => {
 
   // An unread alert's module label is flat accent, like the artboard, not the
   // rules table's per-module colour and not the old flat green.
-  const landlordAlert = page.locator('div.bg-brand-soft', { hasText: 'Landlord policy renews 21 Sep' })
-  await expect(landlordAlert.getByText('Insurance', { exact: true })).toHaveClass(/text-action/)
+  const landlordAlert = page.locator('div.border-b.bg-grouped-2', { hasText: 'Landlord policy renews 21 Sep' })
+  await expect(landlordAlert.getByText('Insurance', { exact: true })).toHaveClass(/text-accent/)
 
   // The email digest's section header is a plain accent label and a plain
-  // item count, not the shared Eyebrow (fixed ink-3) or a Chip pill.
-  const digestCard = page.locator('div.bg-bg-elev', { hasText: 'Your morning digest' })
-  await expect(digestCard.getByText('Finance', { exact: true })).toHaveClass(/text-action/)
+  // item count, not the shared Eyebrow (fixed secondary-label) or a Chip pill.
+  const digestCard = page.locator('div.rounded-card.bg-grouped-2', { hasText: 'Your morning digest' })
+  await expect(digestCard.getByText('Finance', { exact: true })).toHaveClass(/text-accent/)
   await expect(digestCard.getByText('1 item').first()).toBeVisible()
 
   await shoot(page, 'notifications')
@@ -1469,8 +1469,8 @@ test('notifications, a swipe reads a row and the other way snoozes it', async ({
 
   // Relative counts: a nightly run in the dev database can raise an alert with
   // the same title as a seeded one, and the digest preview card quotes them.
-  const unreadRow = (title: string) => page.locator('div.bg-brand-soft', { hasText: title })
-  const anyRow = (title: string) => page.locator('div.border-b.border-rule', { hasText: title })
+  const unreadRow = (title: string) => page.locator('div.border-b.bg-grouped-2', { hasText: title })
+  const anyRow = (title: string) => page.locator('div.border-b.border-separator', { hasText: title })
   // Each swipe's row goes optimistically; the swipe resolves once the server
   // action has answered, so the reload below cannot race the write it proves.
   const swipe = async (row: Locator, toRight: boolean) => {
@@ -1561,7 +1561,7 @@ test('notifications, pause all turns amber', async ({ page }) => {
 
   const resume = page.getByRole('button', { name: 'Resume all' })
   await expect(resume).toBeVisible()
-  await expect(resume).toHaveClass(/border-warn/)
+  await expect(resume).toHaveClass(/border-orange-text/)
   await expectBand(page, page.getByText(/rules active · \d+ held/))
 
   await shoot(page, 'notifications-paused')

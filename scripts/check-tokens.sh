@@ -46,6 +46,8 @@ SWEPT=(
   'modules/skills/ui'
   # Settings
   'app/(app)/settings'
+  # Notifications
+  'app/(app)/notifications'
 )
 
 # The two surfaces kept unchanged in feel (owner, 2026-09-18).

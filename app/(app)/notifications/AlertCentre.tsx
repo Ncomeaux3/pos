@@ -21,7 +21,7 @@ export type AlertItem = {
 type Patch = { id: string; snoozed?: boolean } | 'all'
 
 /**
- * Unread first with the accent fill, then history. History is ink-3 rather than
+ * Unread first on opaque grouped rows, then history. History is secondary rather than
  * faded: the design's rule is that a de-emphasised row keeps full opacity so its
  * text and any button inside stay readable.
  */
@@ -71,25 +71,26 @@ export function AlertCentre({ alerts: initialAlerts }: { alerts: AlertItem[] }) 
           Everything raised so far has been read. New alerts land here the moment a rule fires.
         </EmptyState>
       ) : (
-        <div>
+        <div className="overflow-hidden rounded-card">
+          {/* One card, as the rules list is. */}
           {unread.map((a) => (
             <SwipeRow
               key={a.id}
               right={{ label: 'Read', onCommit: () => read(a.id) }}
               left={{ label: 'Snooze', onCommit: () => snooze(a.id) }}
             >
-              <div className="flex flex-wrap items-start gap-x-3.5 gap-y-2 border-b border-rule bg-brand-soft px-3 py-3.5">
+              <div className="flex flex-wrap items-start gap-x-3.5 gap-y-2 border-b border-separator bg-grouped-2 px-3 py-3.5">
                 <StatusDot tone={a.tone} className="mt-2" />
                 <div className="min-w-0 flex-1 basis-[180px] space-y-1">
                   <div className="flex flex-wrap items-baseline gap-x-2.5">
-                    <span className="label text-action">{a.module}</span>
-                    <span className="t-caption text-ink-3">{a.via}</span>
+                    <span className="label text-accent">{a.module}</span>
+                    <span className="text-footnote text-secondary-label">{a.via}</span>
                   </div>
-                  <p className="t-body text-ink">{a.title}</p>
-                  {a.body && <p className="t-caption text-ink-3">{a.body}</p>}
+                  <p className="text-body text-label">{a.title}</p>
+                  {a.body && <p className="text-footnote text-secondary-label">{a.body}</p>}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="t-caption num text-ink-3">{a.time}</span>
+                  <span className="text-footnote num text-secondary-label">{a.time}</span>
                   <ActionButton onClick={() => read(a.id)}>Read</ActionButton>
                 </div>
               </div>
@@ -105,17 +106,17 @@ export function AlertCentre({ alerts: initialAlerts }: { alerts: AlertItem[] }) 
             {history.map((a) => (
               <div
                 key={a.id}
-                className="flex flex-wrap items-start gap-x-3.5 gap-y-2 border-b border-rule px-3 py-3"
+                className="flex flex-wrap items-start gap-x-3.5 gap-y-2 border-b border-separator px-3 py-3"
               >
                 <StatusDot tone="idle" className="mt-2" />
                 <div className="min-w-0 flex-1 basis-[180px] space-y-1">
                   <div className="flex flex-wrap items-baseline gap-x-2.5">
-                    <span className="label text-ink-3">{a.module}</span>
-                    <span className="t-caption text-ink-3">{a.via}</span>
+                    <span className="label text-secondary-label">{a.module}</span>
+                    <span className="text-footnote text-secondary-label">{a.via}</span>
                   </div>
-                  <p className="t-caption text-ink-2">{a.title}</p>
+                  <p className="text-footnote text-secondary-label">{a.title}</p>
                 </div>
-                <span className="t-caption num shrink-0 text-ink-3">{a.time}</span>
+                <span className="text-footnote num shrink-0 text-secondary-label">{a.time}</span>
               </div>
             ))}
           </div>
