@@ -63,7 +63,7 @@ export function UploadDrawer({
       eyebrow="Insurance / Upload PDF"
       footer={
         <>
-          <span className="text-[11px] text-ink-3">{footerLine}</span>
+          <span className="text-caption-1 text-secondary-label">{footerLine}</span>
           {draft && (
             <ActionButton
               variant="solid"
@@ -115,12 +115,12 @@ export function UploadDrawer({
               else send(file)
             }}
             className={cn(
-              'cursor-pointer rounded-xl border border-dashed px-6 py-10 text-center transition-colors duration-150 hover:border-brand',
-              over ? 'border-brand' : 'border-rule-2',
+              'cursor-pointer rounded-card border border-dashed px-6 py-10 text-center transition-colors duration-150 hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)',
+              over ? 'border-accent' : 'border-opaque-separator',
             )}
           >
-            <div className="text-[14px]">Drop a policy PDF</div>
-            <div className="mt-1.5 text-[12px] leading-[1.5] text-ink-3">
+            <div className="text-body text-label">Drop a policy PDF</div>
+            <div className="mt-1.5 text-footnote text-secondary-label">
               Declarations page works best. The PDF goes to Anthropic with your own key and the
               fields are drafted for you to confirm. Nothing is saved until you do.
             </div>
@@ -139,10 +139,10 @@ export function UploadDrawer({
         )}
 
         {working && (
-          <div className="flex flex-col gap-2 rounded-xl border border-brand p-3.5">
-            <div className="num text-[11px] text-ink-3">{working}</div>
-            <div className="flex items-center gap-2.5 text-[12px] text-ink">
-              <span className="size-2 shrink-0 rounded-sm bg-brand" />
+          <div className="flex flex-col gap-2 rounded-card border border-accent p-3.5">
+            <div className="num text-caption-1 text-secondary-label">{working}</div>
+            <div className="flex items-center gap-2.5 text-footnote text-label">
+              <span className="size-2 shrink-0 rounded-sm bg-accent" />
               Drafting fields · Haiku
             </div>
           </div>
@@ -151,18 +151,18 @@ export function UploadDrawer({
         {draft && (
           <>
             <div className="flex items-baseline justify-between gap-3">
-              <Eyebrow className="text-warn">Extracted · confirm each field</Eyebrow>
-              <span className="num truncate text-[11px] text-ink-3">{draft.fileName}</span>
+              <Eyebrow className="text-orange-text">Extracted · confirm each field</Eyebrow>
+              <span className="num truncate text-caption-1 text-secondary-label">{draft.fileName}</span>
             </div>
-            <div className="flex flex-col gap-px border border-rule bg-rule rounded-[18px]">
+            <div className="flex flex-col gap-px overflow-hidden rounded-card bg-separator">
               {draft.fields.map((field, i) => {
                 const low = field.confidence < LOW_CONFIDENCE
                 return (
                   <label
                     key={field.key}
-                    className="grid grid-cols-[120px_1fr_auto] items-center gap-3 bg-bg px-3.5 py-2.5"
+                    className="grid grid-cols-[120px_1fr_auto] items-center gap-3 bg-grouped-2 px-3.5 py-2.5"
                   >
-                    <span className="text-[12px] text-ink-3">{field.label}</span>
+                    <span className="text-footnote text-secondary-label">{field.label}</span>
                     <input
                       aria-label={field.label}
                       value={field.value}
@@ -179,13 +179,13 @@ export function UploadDrawer({
                         )
                       }
                       className={cn(
-                        'num min-w-0 border-0 border-b bg-transparent py-1 text-[13px] text-ink outline-none focus-visible:border-brand',
-                        low ? 'border-warn' : 'border-rule-2',
+                        'num min-w-0 border-0 border-b bg-transparent py-1 text-subheadline text-label outline-none focus-visible:border-accent',
+                        low ? 'border-orange-text' : 'border-opaque-separator',
                       )}
                     />
                     <span
                       title="Extraction confidence"
-                      className={cn('num text-[11px]', low ? 'text-warn' : 'text-ink-3')}
+                      className={cn('num text-caption-1', low ? 'text-orange-text' : 'text-secondary-label')}
                     >
                       {Math.round(field.confidence * 100)}%
                     </span>
@@ -193,7 +193,7 @@ export function UploadDrawer({
                 )
               })}
             </div>
-            <p className="text-[11px] text-ink-4">
+            <p className="text-caption-1 text-secondary-label">
               Low-confidence fields are amber. The PDF is attached to the policy as its first document.
             </p>
           </>

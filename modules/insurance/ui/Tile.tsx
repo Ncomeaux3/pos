@@ -12,18 +12,18 @@ export function InsuranceTile({ payload }: { payload: Record<string, unknown> })
   return (
     <div className="space-y-2.5">
       {expiring.length === 0 ? (
-        <p className="t-caption text-ink-3">Nothing expires in the next sixty days.</p>
+        <p className="text-subheadline text-secondary-label">Nothing expires in the next sixty days.</p>
       ) : (
         expiring.slice(0, 3).map((p) => (
           <div key={p.name} className="flex items-baseline justify-between gap-3">
-            <span className="truncate text-[14px] text-ink">
-              {p.name} <span className="text-ink-3">{p.carrier}</span>
+            <span className="truncate text-body text-label">
+              {p.name} <span className="text-secondary-label">{p.carrier}</span>
             </span>
-            <span className="num shrink-0 text-[11px] text-warn">{p.when}</span>
+            <span className="num shrink-0 text-caption-1 text-orange-text">{p.when}</span>
           </div>
         ))
       )}
-      <p className="num text-[11px] text-ink-3">
+      <p className="num text-caption-1 text-secondary-label">
         {d.active ?? 0} active
         {d.annualCents ? ` · ${money(d.annualCents)} a year` : ''}
       </p>

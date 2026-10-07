@@ -4,6 +4,7 @@ import { useId, useRef, useState, useTransition } from 'react'
 import {
   ActionButton,
   Card,
+  ConfirmButton,
   Eyebrow,
   Field,
   Overlay,
@@ -81,11 +82,11 @@ export type InsuranceData = {
 
 /** The expiry colour: red inside thirty days or past, amber inside sixty, green otherwise. */
 export const EXPIRY_TEXT: Record<PolicyStatus, string> = {
-  expired: 'text-bad',
-  'renew-now': 'text-bad',
-  expiring: 'text-warn',
-  active: 'text-ok',
-  undated: 'text-ink-4',
+  expired: 'text-red-text',
+  'renew-now': 'text-red-text',
+  expiring: 'text-orange-text',
+  active: 'text-green-text',
+  undated: 'text-secondary-label',
 }
 
 const EXPIRY_TONE = {
@@ -175,8 +176,8 @@ function PolicyView({
           <span className="flex items-start justify-between gap-3">
             <span className="min-w-0">
               <Eyebrow className="block">{cap(policy.kind)}</Eyebrow>
-              <span className="mt-1.5 block text-[22px] leading-[1.2]">{policy.name}</span>
-              <span className="mt-1.5 block text-[12px] leading-[1.5] tracking-normal text-ink-3">{policy.carrier}</span>
+              <span className="mt-1.5 block text-title-2">{policy.name}</span>
+              <span className="mt-1.5 block text-footnote font-normal tracking-normal text-secondary-label">{policy.carrier}</span>
             </span>
             <StatusPill policy={policy} todayIso={data.todayIso} className="mt-1 shrink-0" />
           </span>
@@ -193,22 +194,22 @@ function PolicyView({
                 else setRevealed(result.number)
               })
             }
-            className="num mt-2.5 inline-flex min-h-11 items-center gap-2.5 rounded-xl border border-glass-line bg-glass-strong px-3 py-1.5 text-[13px] leading-[1.6] tracking-[0.04em] text-ink transition-colors duration-150 hover:bg-bg-elev sm:min-h-9"
+            className="num mt-2.5 inline-flex min-h-11 items-center gap-2.5 rounded-control bg-fill-3 px-3 py-1.5 text-footnote font-normal tracking-[0.04em] text-label transition-colors duration-150 hover:bg-fill-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)"
           >
             {revealed ?? policy.maskedNumber}
-            <span className="text-[12px] font-medium text-ink-3">{revealed !== null ? 'Hide' : 'Reveal'}</span>
+            <span className="text-footnote font-medium text-label/70">{revealed !== null ? 'Hide' : 'Reveal'}</span>
           </button>
         </>
       }
       footer={
         <>
           <div className="flex flex-wrap gap-2">
-            <ActionButton className="text-ink-3" onClick={onEdit}>
+            <ActionButton onClick={onEdit}>
               Edit
             </ActionButton>
             {renewTo && (
               <ActionButton
-                className="border-brand text-ink hover:border-brand hover:bg-brand hover:text-bg"
+                variant="primary"
                 onClick={() =>
                   run(
                     () => renewPolicy(policy.id, renewTo),
@@ -220,21 +221,19 @@ function PolicyView({
               </ActionButton>
             )}
           </div>
-          <ActionButton
-            variant="danger"
-            onClick={() => {
-              if (window.confirm(`Delete ${policy.name} and its documents?`)) {
-                run(() => deletePolicy(policy.id), 'Policy deleted', onClose)
-              }
-            }}
+          <ConfirmButton
+            confirmLabel="Delete"
+            title="Delete this policy?"
+            message={`${policy.name} and its documents are deleted.`}
+            onConfirm={() => run(() => deletePolicy(policy.id), 'Policy deleted', onClose)}
           >
             Delete
-          </ActionButton>
+          </ConfirmButton>
         </>
       }
     >
       <div className="flex flex-col gap-[18px]">
-        <div className="grid grid-cols-3 gap-px border border-rule bg-rule rounded-[18px]">
+        <div className="grid grid-cols-3 gap-px overflow-hidden rounded-card bg-separator">
           <Cell label="Expires" value={daysLabel(policy.expiresOn, data.todayIso)} tone={EXPIRY_TEXT[status]}>
             {policy.expiresOn ? shortDate(policy.expiresOn, data.todayIso) : 'not on file'}
           </Cell>
@@ -261,9 +260,9 @@ function PolicyView({
             </div>
             <div className="mt-1.5 flex flex-col">
               {paymentSchedule(policy.expiresOn, policy.cadence, data.todayIso).map((p, i) => {
-                const tone = p.label === 'Last' ? 'text-ink-3' : p.label === 'Next' ? 'text-ink' : 'text-ink-2'
+                const tone = p.label === 'Last' ? 'text-secondary-label' : p.label === 'Next' ? 'font-medium text-label' : 'text-label'
                 return (
-                  <div key={i} className={cn('flex justify-between border-b border-rule py-[7px] text-[12px] leading-[1.4]', tone)}>
+                  <div key={i} className={cn('flex justify-between border-b border-separator py-[7px] text-footnote', tone)}>
                     <span>{p.label}</span>
                     <span className="num">
                       {shortDate(p.on, data.todayIso)} · {money(policy.premiumCents)}
@@ -278,26 +277,26 @@ function PolicyView({
         <Card>
           <div className="flex items-baseline justify-between gap-3">
             <Eyebrow>Renewal reminders</Eyebrow>
-            <span className="text-[11px] text-ink-3">{leadsLabel(policy.reminderLeads)}</span>
+            <span className="text-caption-1 text-secondary-label">{leadsLabel(policy.reminderLeads)}</span>
           </div>
           {days !== null && (
             <>
               <div className="relative mt-2 h-6">
-                <div className="absolute inset-x-0 top-[11px] h-px bg-rule-2" />
+                <div className="absolute inset-x-0 top-[11px] h-px bg-opaque-separator" />
                 {reminderMarks(policy.reminderLeads, days).map((m) => (
                   <span
                     key={m.lead}
                     title={m.lead === 0 ? 'Day of' : `${m.lead} days before`}
                     style={{ left: `calc(${m.at}% - 4px)` }}
                     className={cn(
-                      'absolute top-[7px] size-[9px] rotate-45 border border-brand rounded-full',
-                      m.fired ? 'bg-brand' : 'bg-bg-elev',
+                      'absolute top-[7px] size-[9px] rotate-45 border border-accent rounded-full',
+                      m.fired ? 'bg-accent' : 'bg-grouped-2',
                     )}
                   />
                 ))}
-                <span className="absolute left-0 top-1 h-[15px] w-px bg-ink" />
+                <span className="absolute left-0 top-1 h-[15px] w-px bg-label" />
               </div>
-              <div className="flex justify-between text-[11px] text-ink-3">
+              <div className="flex justify-between text-caption-1 text-secondary-label">
                 <span>Today</span>
                 <span>{shortDate(policy.expiresOn!, data.todayIso)}</span>
               </div>
@@ -329,20 +328,20 @@ function PolicyView({
             />
           </div>
           <div className="mt-1.5 flex flex-col">
-            {docs.length === 0 && <span className="py-1.5 text-[12px] text-ink-4">No documents yet</span>}
+            {docs.length === 0 && <span className="py-1.5 text-footnote text-secondary-label">No documents yet</span>}
             {docs.map((d) => {
               const inner = (
                 <>
                   <span className="min-w-0 truncate">{d.name}</span>
-                  <span className="num shrink-0 text-[11px] text-ink-3">{d.meta}</span>
+                  <span className="num shrink-0 text-caption-1 text-secondary-label">{d.meta}</span>
                 </>
               )
-              const row = 'flex justify-between gap-2.5 border-b border-rule py-2 text-[12px] leading-[1.4]'
+              const row = 'flex min-h-11 items-center justify-between gap-2.5 border-b border-separator py-2 text-footnote'
               return d.hasFile ? (
                 <button
                   key={d.id}
                   type="button"
-                  className={cn(row, '-mx-1.5 w-[calc(100%+12px)] rounded-md px-1.5 text-left transition-colors duration-150 hover:bg-ink/[.06]')}
+                  className={cn(row, '-mx-1.5 w-[calc(100%+12px)] rounded-control px-1.5 text-left transition-colors duration-150 hover:bg-fill-3')}
                   onClick={() =>
                     start(async () => {
                       const result = await documentUrl(d.id)
@@ -366,13 +365,13 @@ function PolicyView({
           <Eyebrow>Agent</Eyebrow>
           {policy.agentName || policy.agentContact ? (
             <>
-              <div className="mt-1.5 text-[13px]">{policy.agentName || policy.agentContact}</div>
+              <div className="mt-1.5 text-subheadline text-label">{policy.agentName || policy.agentContact}</div>
               {policy.agentName && policy.agentContact && (
-                <div className="num mt-0.5 text-[11px] text-ink-3">{policy.agentContact}</div>
+                <div className="num mt-0.5 text-caption-1 text-secondary-label">{policy.agentContact}</div>
               )}
             </>
           ) : (
-            <div className="mt-1.5 text-[12px] text-ink-4">No agent on file</div>
+            <div className="mt-1.5 text-footnote text-secondary-label">No agent on file</div>
           )}
         </Card>
 
@@ -381,7 +380,7 @@ function PolicyView({
           {policy.entityRef ? (
             <SkillPicker entityRef={policy.entityRef} links={policy.skills} skills={data.skills} className="mt-2" />
           ) : (
-            <p className="mt-2 text-[12px] text-ink-4">Nothing matched yet.</p>
+            <p className="mt-2 text-footnote text-secondary-label">Nothing matched yet.</p>
           )}
         </Card>
       </div>
@@ -401,10 +400,10 @@ function Cell({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-w-0 bg-bg px-3 py-2.5">
+    <div className="min-w-0 bg-grouped-2 px-3 py-2.5">
       <Eyebrow>{label}</Eyebrow>
-      <span className={cn('num mt-1.5 block text-[18px] font-light leading-none', tone)}>{value}</span>
-      <span className="mt-0.5 block text-[11px] text-ink-3">{children}</span>
+      <span className={cn('num mt-1.5 block text-title-3 font-semibold text-label', tone)}>{value}</span>
+      <span className="mt-0.5 block text-caption-1 text-secondary-label">{children}</span>
     </div>
   )
 }
@@ -597,8 +596,8 @@ function PolicyForm({
         <Card className="flex flex-col gap-2.5">
           <div className="flex items-center justify-between gap-2.5">
             <div>
-              <div className="text-[13px]">Renewal reminders</div>
-              <div className="text-[11px] text-ink-3">
+              <div className="text-subheadline text-label">Renewal reminders</div>
+              <div className="text-caption-1 text-secondary-label">
                 {channels
                   ? `${cap(channels.map((c) => CHANNEL_NAMES[c] ?? c).join(' + '))}, per your Settings › Notifications`
                   : 'Reminders are off in Notifications.'}
@@ -615,10 +614,10 @@ function PolicyForm({
               }}
             />
           </div>
-          <div className="flex items-center justify-between gap-2.5 border-t border-rule pt-2.5">
+          <div className="flex items-center justify-between gap-2.5 border-t border-separator pt-2.5">
             <div>
-              <div className="text-[13px]">Post premium to Finance</div>
-              <div className="text-[11px] text-ink-3">Recorded on the policy. Finance does not draw it yet.</div>
+              <div className="text-subheadline text-label">Post premium to Finance</div>
+              <div className="text-caption-1 text-secondary-label">Recorded on the policy. Finance does not draw it yet.</div>
             </div>
             <Switch
               label="Post premium to Finance"

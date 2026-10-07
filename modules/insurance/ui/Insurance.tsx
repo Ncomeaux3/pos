@@ -63,14 +63,14 @@ export function Insurance({ data }: { data: InsuranceData }) {
     .sort((a, b) => (a.expiresOn! < b.expiresOn! ? -1 : 1))[0]
   const linked = active.filter((p) => p.postToFinance).length
 
-  const sub = 'mt-1 block text-[11px] font-normal leading-normal tracking-normal text-ink-3'
+  const sub = 'mt-1 block text-caption-2 font-normal tracking-normal text-secondary-label'
 
   return (
     <div className="space-y-[18px]">
       <PageHeader
         eyebrow={
           <>
-            Insurance <span className="text-ink-4">/</span> Policies
+            Insurance <span className="text-secondary-label">/</span> Policies
           </>
         }
         title="Insurance"
@@ -94,16 +94,12 @@ export function Insurance({ data }: { data: InsuranceData }) {
         }
         actions={
           <>
-            <ActionButton
-              className="h-11 px-3 text-[12px] text-ink-3 md:h-[51px]"
-              onClick={() => setParams({ upload: '1' }, { push: true })}
-            >
+            <ActionButton onClick={() => setParams({ upload: '1' }, { push: true })}>
               Upload PDF
             </ActionButton>
             <ActionButton
               variant="solid"
               size="xl"
-              className="h-11 gap-2 px-3.5 text-[13px] md:h-[51px] md:px-[22px] md:text-[15px]"
               onClick={() => setParams({ policy: 'new', edit: '1' }, { push: true })}
             >
               Add policy <span aria-hidden="true">&rarr;</span>
@@ -112,10 +108,10 @@ export function Insurance({ data }: { data: InsuranceData }) {
         }
       />
 
-      <MetricStrip className="border-rule bg-rule sm:grid-cols-[repeat(auto-fit,minmax(min(100%,280px),1fr))]">
+      <MetricStrip className="sm:grid-cols-[repeat(auto-fit,minmax(min(100%,280px),1fr))]">
         <MetricTile
           size="sm"
-          className="bg-bg px-[18px] py-3.5 sm:px-[18px] sm:py-3.5"
+          className="px-[18px] py-3.5 sm:px-[18px] sm:py-3.5"
           label="Annual premium"
           value={
             <>
@@ -126,7 +122,7 @@ export function Insurance({ data }: { data: InsuranceData }) {
         />
         <MetricTile
           size="sm"
-          className="bg-bg px-[18px] py-3.5 sm:px-[18px] sm:py-3.5"
+          className="px-[18px] py-3.5 sm:px-[18px] sm:py-3.5"
           label="Per month"
           value={
             <>
@@ -137,14 +133,14 @@ export function Insurance({ data }: { data: InsuranceData }) {
         />
         <MetricTile
           size="sm"
-          className="bg-bg px-[18px] py-3.5 sm:px-[18px] sm:py-3.5"
+          className="px-[18px] py-3.5 sm:px-[18px] sm:py-3.5"
           label="Next renewal"
           value={
             <>
               {next ? (
                 <>
                   {daysUntil(next.expiresOn, data.todayIso)}
-                  <span className="text-[12px] font-normal tracking-normal text-ink-3"> days</span>
+                  <span className="text-footnote font-normal tracking-normal text-secondary-label"> days</span>
                 </>
               ) : (
                 'none'
@@ -157,11 +153,11 @@ export function Insurance({ data }: { data: InsuranceData }) {
         />
         <MetricTile
           size="sm"
-          className="bg-bg px-[18px] py-3.5 sm:px-[18px] sm:py-3.5"
+          className="px-[18px] py-3.5 sm:px-[18px] sm:py-3.5"
           label="Expiring ≤ 60d"
           value={
             <>
-              <span className={soon.length > 0 ? 'text-warn' : undefined}>{soon.length}</span>
+              <span className={soon.length > 0 ? 'text-orange-text' : undefined}>{soon.length}</span>
               <span className={sub}>
                 {soon.length > 0
                   ? soon.map((p) => p.name.split(/\s[·,]\s/)[0]).join(', ')
@@ -198,32 +194,32 @@ export function Insurance({ data }: { data: InsuranceData }) {
                   <span className="min-w-0">
                     <span
                       className={cn(
-                        'line-clamp-2 text-[14px] leading-[1.35]',
-                        policy.status === 'active' ? 'text-ink' : 'text-ink-3',
+                        'line-clamp-2 text-subheadline',
+                        policy.status === 'active' ? 'text-label' : 'text-secondary-label',
                       )}
                     >
                       {policy.name}
                     </span>
-                    <span className="mt-0.5 block truncate text-[11px] leading-[1.4] text-ink-3">
+                    <span className="mt-0.5 block truncate text-caption-2 text-secondary-label">
                       {policy.carrier} · {policy.maskedNumber}
                     </span>
                   </span>
                 </span>
-                <span className="num whitespace-nowrap text-[13px] text-ink max-lg:order-3">
+                <span className="num whitespace-nowrap text-footnote text-label max-lg:order-3">
                   {money(policy.premiumCents)}
-                  <span className="text-[11px] text-ink-3"> {cadenceTag(policy.cadence)}</span>
+                  <span className="text-caption-2 text-secondary-label"> {cadenceTag(policy.cadence)}</span>
                 </span>
                 <span className="min-w-0 max-lg:order-4">
-                  <span className={cn('num block whitespace-nowrap text-[13px]', EXPIRY_TEXT[status])}>
+                  <span className={cn('num block whitespace-nowrap text-footnote', EXPIRY_TEXT[status])}>
                     {daysLabel(policy.expiresOn, data.todayIso)}
                   </span>
                   {policy.expiresOn && (
-                    <span className="mt-0.5 block whitespace-nowrap text-[11px] leading-[1.4] text-ink-3">
+                    <span className="mt-0.5 block whitespace-nowrap text-caption-2 text-secondary-label">
                       {shortDate(policy.expiresOn, data.todayIso)}
                     </span>
                   )}
                 </span>
-                <span className="whitespace-nowrap text-[12px] text-ink-3 max-lg:order-5">
+                <span className="whitespace-nowrap text-caption-1 text-secondary-label max-lg:order-5">
                   {leadsLabel(policy.reminderLeads)}
                 </span>
                 <StatusPill policy={policy} todayIso={data.todayIso} className="w-[88px] justify-center max-lg:order-2" />
