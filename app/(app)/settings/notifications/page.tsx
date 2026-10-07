@@ -76,7 +76,7 @@ export default async function NotificationSettingsPage() {
         <Card>
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <Eyebrow>Channels</Eyebrow>
-            <span className="t-caption text-ink-3">Per module below</span>
+            <span className="text-footnote text-secondary-label">Per module below</span>
           </div>
           <Channels
             channels={CHANNELS.map((c) => ({
@@ -91,8 +91,8 @@ export default async function NotificationSettingsPage() {
         <Card>
           <Eyebrow>Per module</Eyebrow>
           <ChannelGrid rows={rows} paused={paused} />
-          <p className="t-caption mt-3 text-ink-3">
-            <Link href="/notifications" className="border-b border-rule-2 text-ink-3 hover:text-ink">
+          <p className="text-footnote mt-3 text-secondary-label">
+            <Link href="/notifications" className="border-b border-separator text-secondary-label hover:text-label">
               The Notifications screen
             </Link>{' '}
             edits one rule at a time, with lead times, urgency and per-rule snooze.

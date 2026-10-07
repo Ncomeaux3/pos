@@ -44,6 +44,8 @@ SWEPT=(
   'modules/ideas/ui'
   # Skills
   'modules/skills/ui'
+  # Settings
+  'app/(app)/settings'
 )
 
 # The two surfaces kept unchanged in feel (owner, 2026-09-18).

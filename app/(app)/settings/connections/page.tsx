@@ -178,7 +178,7 @@ export default async function ConnectionsPage({ searchParams }: PageProps<'/sett
     <div className="space-y-[18px]">
       <SettingsHeader current="/settings/connections" />
 
-      {error && <p className="t-caption rounded-md border border-bad/60 px-3 py-2 text-bad">{error}</p>}
+      {error && <p className="text-footnote rounded-md border border-red-text/60 px-3 py-2 text-red-text">{error}</p>}
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,380px),1fr))] items-stretch gap-3.5">
         {manifests.map((manifest) => (
@@ -197,7 +197,7 @@ export default async function ConnectionsPage({ searchParams }: PageProps<'/sett
       {unbacked.length > 0 && (
         <section className="max-w-3xl space-y-3">
           <Eyebrow dot="idle">Requested / {unbacked.length}</Eyebrow>
-          <p className="t-caption text-ink-3">
+          <p className="text-footnote text-secondary-label">
             Asked for during first run. Nothing here syncs, because no integration in this build
             speaks to it yet. The request is kept so the intent is written down rather than
             forgotten, and so a fork knows what to build next.
@@ -246,14 +246,14 @@ function ProviderCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
-            <span className="text-[16px] text-ink">{manifest.label}</span>
+            <span className="text-callout text-label">{manifest.label}</span>
             <Chip tone="quiet">{AUTH_LABEL[manifest.auth.type]}</Chip>
           </div>
-          <p className="mt-1.5 text-[12px] text-ink-3">
+          <p className="mt-1.5 text-footnote text-secondary-label">
             {manifest.description.replace(/\.$/, '')}
             {feeds.length > 0 && (
               <>
-                {' '}· used by <span className="text-ink-2">{feeds.join(', ')}</span>
+                {' '}· used by <span className="text-label">{feeds.join(', ')}</span>
               </>
             )}
           </p>
@@ -297,13 +297,13 @@ function ProviderCard({
           </MetricStrip>
 
           {manifest.auth.type === 'webhook' && (
-            <div className="glass mt-2.5 flex flex-col gap-2 rounded-[18px] px-4 py-3">
+            <div className="mt-2.5 flex flex-col gap-2 rounded-card bg-fill-3 px-4 py-3">
               {/* Wraps rather than truncates: the phone is where this gets read, and a
                   cut-off URL cannot be checked against the one pasted into the app. */}
               <div className="flex flex-col gap-1">
                 <Eyebrow>Inbound URL</Eyebrow>
                 <span className="flex items-center justify-between gap-2.5">
-                  <span className="num min-w-0 break-all text-[12px] text-ink-2">{`${origin}/api/integrations/${manifest.id}/webhook`}</span>
+                  <span className="num min-w-0 break-all text-footnote text-label">{`${origin}/api/integrations/${manifest.id}/webhook`}</span>
                   <Copy value={`${origin}/api/integrations/${manifest.id}/webhook`} />
                 </span>
               </div>
@@ -312,7 +312,7 @@ function ProviderCard({
                 {secret ? (
                   <Reveal value={secret} />
                 ) : (
-                  <span className="num text-[12px] text-ink-3">None yet</span>
+                  <span className="num text-footnote text-secondary-label">None yet</span>
                 )}
               </div>
             </div>
@@ -338,8 +338,10 @@ function ProviderCard({
               <input type="hidden" name="id" value={manifest.id} />
               <ConfirmButton
                 submit
-                confirmLabel="Confirm disconnect"
-                className="border-0 px-1 text-[13px] text-ink-3 hover:text-bad sm:h-auto"
+                confirmLabel="Disconnect"
+                title={`Disconnect ${manifest.label}?`}
+                message="Its stored credentials are deleted."
+                className="border-0 px-1 text-footnote text-secondary-label hover:text-red-text"
               >
                 Disconnect
               </ConfirmButton>
@@ -367,7 +369,7 @@ function ProviderCard({
                 <ActionButton type="submit" variant="solid">
                   Save &amp; test <span aria-hidden="true">&rarr;</span>
                 </ActionButton>
-                <span className="t-caption text-ink-3">Tests on save</span>
+                <span className="text-footnote text-secondary-label">Tests on save</span>
               </div>
             </form>
           )}
@@ -376,7 +378,7 @@ function ProviderCard({
               <a href={`/api/integrations/${manifest.id}/oauth/start`} className={linkButton('solid')}>
                 Connect with {manifest.label} <span aria-hidden="true">&#8599;</span>
               </a>
-              <span className="t-caption text-ink-3">Opens {manifest.label}</span>
+              <span className="text-footnote text-secondary-label">Opens {manifest.label}</span>
             </div>
           )}
           {manifest.auth.type === 'webhook' && (
@@ -385,7 +387,7 @@ function ProviderCard({
               <ActionButton type="submit" variant="solid">
                 Enable webhook <span aria-hidden="true">&rarr;</span>
               </ActionButton>
-              <span className="t-caption text-ink-3">Generates a URL and shared secret</span>
+              <span className="text-footnote text-secondary-label">Generates a URL and shared secret</span>
             </form>
           )}
         </>

@@ -116,20 +116,20 @@ export default async function SettingsPage({ searchParams }: PageProps<'/setting
           <Eyebrow>Owner</Eyebrow>
           <div className="mt-3 grid gap-3.5 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5">
-              <span className="text-[12px] text-ink-3">Name</span>
+              <span className="text-footnote text-secondary-label">Name</span>
               <input name="owner_name" defaultValue={settings.owner_name} className={field} />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-[12px] text-ink-3">Owner email · the only login allowed</span>
+              <span className="text-footnote text-secondary-label">Owner email · the only login allowed</span>
               <input
                 value={process.env.OWNER_EMAIL ?? ''}
                 readOnly
                 aria-label="Owner email"
-                className={cn(field, 'num bg-bg-deep text-ink-3')}
+                className={cn(field, 'num bg-fill-3 text-label/70')}
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-[12px] text-ink-3">Timezone</span>
+              <span className="text-footnote text-secondary-label">Timezone</span>
               <select name="timezone" defaultValue={settings.timezone} className={field}>
                 {zones.map((z) => (
                   <option key={z} value={z}>
@@ -139,7 +139,7 @@ export default async function SettingsPage({ searchParams }: PageProps<'/setting
               </select>
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-[12px] text-ink-3">Digest email hour · local</span>
+              <span className="text-footnote text-secondary-label">Digest email hour · local</span>
               <select name="digest_hour" defaultValue={String(settings.digest_hour)} className={`${field} num`}>
                 {Array.from({ length: 24 }, (_, h) => (
                   <option key={h} value={h}>
@@ -154,12 +154,12 @@ export default async function SettingsPage({ searchParams }: PageProps<'/setting
         <Card>
           <div className="flex items-baseline justify-between gap-3">
             <Eyebrow>Model spend · soft cap</Eyebrow>
-            <span className="num text-[12px] text-ink-3">
-              Month to date <span className="text-ink">{money(spendCents)}</span>
+            <span className="num text-footnote text-secondary-label">
+              Month to date <span className="text-label">{money(spendCents)}</span>
             </span>
           </div>
           <CapSlider initialDollars={Math.round(capCents / 100)} spendCents={spendCents} />
-          <p className="mt-2.5 text-[12px] text-ink-3">
+          <p className="mt-2.5 text-footnote text-secondary-label">
             Past the cap, research runs are refused and logged. Classification and headlines continue.
           </p>
         </Card>
@@ -191,7 +191,7 @@ export default async function SettingsPage({ searchParams }: PageProps<'/setting
         </Card>
 
         <div className="flex items-center justify-end gap-2.5">
-          {params.saved === '1' && <span className="num text-[12px] text-ink-3">Saved · core.settings</span>}
+          {params.saved === '1' && <span className="num text-footnote text-secondary-label">Saved · core.settings</span>}
           <ActionButton type="submit" variant="solid">
             Save <span aria-hidden="true">&rarr;</span>
           </ActionButton>
@@ -227,9 +227,9 @@ export default async function SettingsPage({ searchParams }: PageProps<'/setting
 
       <Session email={process.env.OWNER_EMAIL ?? ''} />
 
-      <nav aria-label="Legal documents" className="flex max-w-[720px] flex-wrap gap-x-5 gap-y-2">
+      <nav aria-label="Legal documents" className="flex max-w-[720px] flex-wrap gap-x-5">
         {LEGAL_DOCS.map((d) => (
-          <Link key={d.href} href={d.href} className="text-[13px] text-ink-3 underline-offset-4 hover:text-ink hover:underline">
+          <Link key={d.href} href={d.href} className="inline-flex min-h-11 items-center text-footnote text-secondary-label underline-offset-4 hover:text-label hover:underline">
             {d.label}
           </Link>
         ))}

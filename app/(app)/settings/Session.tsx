@@ -15,8 +15,8 @@ export function Session({ email }: { email: string }) {
     <Card className="max-w-[720px] space-y-3">
       <CardHead label="Session" meta="this browser" />
 
-      <p className="t-caption text-ink-3">
-        Signed in{email && <> as <span className="text-ink-2">{email}</span></>}. Signing out ends
+      <p className="text-footnote text-secondary-label">
+        Signed in{email && <> as <span className="text-label">{email}</span></>}. Signing out ends
         the session in this browser only: the phone and the laptop are two sessions for the same
         owner, and one does not end the other.
       </p>

@@ -25,7 +25,7 @@ export async function Passkeys() {
       <CardHead label="Passkeys" meta={off ? 'unavailable' : `${passkeys.length} registered`} />
 
       {off ? (
-        <p className="t-caption text-ink-3">
+        <p className="text-footnote text-secondary-label">
           Passkeys are not switched on for this Supabase project. Turn on Authentication &gt;
           Passkeys and set the relying party to the domain Holon is served from, then this becomes a
           button. Signing in with a code by email is unaffected either way.
@@ -48,7 +48,7 @@ export async function Passkeys() {
               ))}
             </RowList>
           ) : (
-            <p className="t-caption text-ink-3">
+            <p className="text-footnote text-secondary-label">
               No passkey registered, so every sign in is a six digit code by email.
             </p>
           )}
@@ -57,7 +57,7 @@ export async function Passkeys() {
         </>
       )}
 
-      <p className="t-caption text-ink-3">
+      <p className="text-footnote text-secondary-label">
         Each one is named after the browser that made it. A passkey kept in iCloud Keychain or a
         password manager follows the account, so it also signs in from the other devices that
         share it; the sign in page offers it in the email field. A passkey is bound to the domain

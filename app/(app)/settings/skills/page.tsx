@@ -43,7 +43,7 @@ export default async function SkillsSettingsPage() {
 
       <SkillsEditor groups={groups} overrideCount={overrides.length} />
 
-      <p className="max-w-[860px] text-[12px] text-ink-3">
+      <p className="max-w-[860px] text-footnote text-secondary-label">
         modules/skills/skills.yaml is the committed default and stays generic, so a fork gets a
         usable tree and none of yours. Everything you change here is a row in skills.override, which
         is also why the tree is editable in production: the filesystem there is read only.

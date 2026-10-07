@@ -756,6 +756,12 @@ test('settings, skills', async ({ page }) => {
   const nameBox = (await page.getByRole('textbox', { name: 'Rename TypeScript' }).boundingBox())!
   expect(nameBox.width).toBeGreaterThanOrEqual(120)
 
+  // Delete asks first through an Alert titled with what goes; Cancel keeps it.
+  await page.getByRole('button', { name: 'Delete' }).first().click()
+  const del = page.getByRole('dialog', { name: 'Delete this skill?' })
+  await del.getByRole('button', { name: 'Cancel' }).click()
+  await expect(del).toBeHidden()
+
   // Renaming, then resetting: the writes the tab exists for, each through the
   // module's own tool. The name is the artboard's transparent input.
   await page.getByRole('textbox', { name: 'Rename TypeScript' }).fill('TS')
@@ -765,7 +771,7 @@ test('settings, skills', async ({ page }) => {
   // Reset drops every override, so the tab returns to the committed yaml. It
   // asks first through holon-ui's Alert, titled with what goes.
   await page.getByRole('button', { name: /Reset to skills.yaml/ }).click()
-  const ask = page.getByRole('dialog', { name: 'Drop 1 edit' })
+  const ask = page.getByRole('dialog', { name: 'Drop 1 edit?' })
   await ask.getByRole('button', { name: 'Reset to skills.yaml' }).click()
   await expect(page.getByText('was TypeScript')).toBeHidden()
 })
@@ -882,6 +888,11 @@ test('settings, connections', async ({ page }) => {
   await expect(page.getByText('iCloud and other calendars', { exact: true })).toBeVisible()
   await expect(page.getByPlaceholder('webcal://p01-calendars.icloud.com/published/2/...')).toBeVisible()
   await expect(page.getByText('Apple Reminders', { exact: true })).toBeVisible()
+  // Disconnect asks first through an Alert naming the provider; Cancel keeps it.
+  await page.getByRole('button', { name: 'Disconnect' }).first().click()
+  const ask = page.getByRole('dialog', { name: /^Disconnect .+\?$/ })
+  await ask.getByRole('button', { name: 'Cancel' }).click()
+  await expect(ask).toBeHidden()
   await shoot(page, 'connections')
 })
 

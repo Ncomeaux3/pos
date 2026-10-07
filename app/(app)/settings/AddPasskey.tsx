@@ -37,7 +37,7 @@ export function AddPasskey() {
 
   if (!('PublicKeyCredential' in window)) {
     return (
-      <p className="t-caption text-ink-3">
+      <p className="text-footnote text-secondary-label">
         This browser cannot do WebAuthn, so a passkey cannot be added from here. Add one from the
         phone or a laptop instead; a passkey in iCloud Keychain or a password manager follows the
         account rather than the device.

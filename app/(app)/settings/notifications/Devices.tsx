@@ -101,7 +101,7 @@ export function Devices({
       <CardHead label="Devices" meta={`${shown.length} subscribed`} />
 
       {vapidPublicKey === null ? (
-        <p className="t-caption text-ink-3">
+        <p className="text-footnote text-secondary-label">
           Push is not configured. Generate a VAPID key pair and set VAPID_PUBLIC_KEY and
           VAPID_PRIVATE_KEY in .env, then this becomes a button. Everything else about push already
           works: rules store the channel and the sender honours it the moment a device is here.
@@ -109,7 +109,7 @@ export function Devices({
       ) : (
         <>
           {shown.length === 0 ? (
-            <p className="t-caption text-ink-3">
+            <p className="text-footnote text-secondary-label">
               No device is subscribed, so nothing is pushed. Email and the alert centre are
               unaffected.
             </p>
@@ -127,7 +127,7 @@ export function Devices({
                   right={
                     <>
                       {device.failures > 0 && (
-                        <span className="num text-[11px] text-warn">
+                        <span className="num text-caption-1 text-orange-text">
                           {device.failures} failed
                         </span>
                       )}
@@ -145,7 +145,7 @@ export function Devices({
             </ActionButton>
           ) : (
             mounted && (
-              <p className="t-caption text-ink-3">
+              <p className="text-footnote text-secondary-label">
                 This browser has no push support. On an iPhone that means adding the app to the
                 home screen first.
               </p>
@@ -154,7 +154,7 @@ export function Devices({
         </>
       )}
 
-      <p className="t-caption text-ink-3">
+      <p className="text-footnote text-secondary-label">
         One row per browser, because the same person on a laptop and a phone is two subscriptions
         that expire independently. A subscription the push service says is gone is deleted on the
         next send rather than retried forever.

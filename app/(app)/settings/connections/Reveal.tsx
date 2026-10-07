@@ -8,10 +8,10 @@ export function Reveal({ value }: { value: string }) {
   const [shown, setShown] = useState(false)
   return (
     <span className="flex items-center justify-between gap-2.5">
-      <span className="num min-w-0 flex-1 break-all text-[12px] text-ink-2">
+      <span className="num min-w-0 flex-1 break-all text-footnote text-label">
         {shown ? value : '••••••••••••••••'}
       </span>
-      <ActionButton size="sm" onClick={() => setShown((s) => !s)}>
+      <ActionButton onClick={() => setShown((s) => !s)}>
         {shown ? 'Hide' : 'Reveal'}
       </ActionButton>
       <Copy value={value} />

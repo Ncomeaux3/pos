@@ -13,7 +13,7 @@ export function ForgetPasskey({ id }: { id: string }) {
   const [, start] = useTransition()
   const toast = useToast()
 
-  if (gone) return <span className="text-[13px] text-ink-3">Removed</span>
+  if (gone) return <span className="text-footnote text-secondary-label">Removed</span>
 
   return (
     <ActionButton
