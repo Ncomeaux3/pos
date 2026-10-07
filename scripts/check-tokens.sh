@@ -38,6 +38,8 @@ SWEPT=(
   # Insurance and Home
   'modules/insurance/ui'
   'modules/home/ui'
+  # Second Brain
+  'modules/brain/ui'
 )
 
 # The two surfaces kept unchanged in feel (owner, 2026-09-18).

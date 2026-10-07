@@ -64,19 +64,18 @@ export function IngestDrawer({ setParams }: { setParams: SetParams }) {
       onClose={close}
       eyebrow={
         <>
-          Second Brain <span className="text-ink-4">/</span> Ingest
+          Second Brain <span className="text-secondary-label">/</span> Ingest
         </>
       }
       footer={
         <>
-          <span className="text-[11px] text-ink-3">
+          <span className="text-caption-1 text-secondary-label">
             {fromUrl
               ? 'Lands in the inbox as a draft. Nothing reaches the vault.'
               : 'Saved as a note of yours. Nothing reaches the vault.'}
           </span>
           <ActionButton
             variant="solid"
-            className="h-[38px] gap-2 px-3.5 text-[13px]"
             disabled={!ready || running}
             onClick={() => void submit()}
           >
@@ -113,7 +112,7 @@ export function IngestDrawer({ setParams }: { setParams: SetParams }) {
                 className={cn(fieldClass, 'code')}
               />
             </label>
-            <p className="text-[12px] leading-[1.5] text-ink-3">
+            <p className="text-footnote leading-[1.5] text-secondary-label">
               {kind === 'youtube'
                 ? 'Captions off the watch page, automatic ones when no written track exists; a video with no captions says so. A summary is drafted, then you approve it in the inbox.'
                 : 'Readable text out of the page. A summary is drafted, then you approve it in the inbox.'}
@@ -155,7 +154,7 @@ export function IngestDrawer({ setParams }: { setParams: SetParams }) {
         </label>
 
         {running && (
-          <Card selected className="flex items-center gap-2.5 px-3.5 py-3 text-[12px]">
+          <Card selected className="flex items-center gap-2.5 px-3.5 py-3 text-footnote">
             <span className="status-dot" aria-hidden />
             Reading, drafting, classifying · a few seconds
           </Card>

@@ -3180,6 +3180,14 @@ test('second brain, the inbox holds a draft beside its source', async ({ page })
   }
   await expect(page).toHaveURL(/note=/)
 
+  // Discard asks first, through an Alert, and Cancel keeps the draft.
+  await page.getByRole('button', { name: 'Discard' }).click()
+  const ask = page.getByRole('dialog', { name: 'Discard this draft?' })
+  await expect(ask).toBeVisible()
+  await ask.getByRole('button', { name: 'Cancel' }).click()
+  await expect(ask).toBeHidden()
+  await expect(page.getByText('Draft · awaiting your approval')).toBeVisible()
+
   await shoot(page, 'second-brain')
 })
 

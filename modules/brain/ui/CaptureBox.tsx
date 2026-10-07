@@ -109,7 +109,7 @@ export function CaptureBox({ notes, setParams }: { notes: BrainNote[]; setParams
     <form
       data-testid="brain-capture"
       ref={formRef}
-      className="flex flex-col gap-2 border-b border-rule bg-bg-elev px-4 py-3"
+      className="flex flex-col gap-2 border-b border-separator bg-grouped-2 px-4 py-3"
       onSubmit={(e) => {
         e.preventDefault()
         void submit()
@@ -130,20 +130,19 @@ export function CaptureBox({ notes, setParams }: { notes: BrainNote[]; setParams
         className={cn(fieldClass, 'resize-y leading-[1.6]')}
       />
       {errors.text && (
-        <span role="alert" className="text-[12px] leading-[1.4] text-bad">
+        <span role="alert" className="text-footnote text-red-text">
           {errors.text}
         </span>
       )}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-4">
-          <label className={cn('flex min-h-11 items-center gap-2 text-[12px] text-ink-3 md:min-h-0', isUrl && 'invisible')}>
-            <input type="checkbox" checked={worked} onChange={(e) => setWorked(e.target.checked)} className="accent-brand" />
+          <label className={cn('flex min-h-11 items-center gap-2 text-footnote text-secondary-label', isUrl && 'invisible')}>
+            <input type="checkbox" checked={worked} onChange={(e) => setWorked(e.target.checked)} className="accent-accent" />
             Worked on
           </label>
           <ActionButton
             variant="quiet"
             size="sm"
-            className="text-[12px]"
             disabled={running}
             onClick={() => fileInput.current?.click()}
           >
@@ -164,7 +163,6 @@ export function CaptureBox({ notes, setParams }: { notes: BrainNote[]; setParams
         </div>
         <ActionButton
           variant="solid"
-          className="h-11 gap-2 px-3.5 text-[13px] md:h-9"
           disabled={!trimmed || running}
           onClick={() => void submit()}
         >
@@ -176,20 +174,20 @@ export function CaptureBox({ notes, setParams }: { notes: BrainNote[]; setParams
         <div className="mt-1 flex flex-col">
           <Eyebrow>Related</Eyebrow>
           {related === 'unavailable' ? (
-            <span className="mt-1.5 text-[12px] text-ink-4">Related notes unavailable</span>
+            <span className="mt-1.5 text-footnote text-secondary-label">Related notes unavailable</span>
           ) : related.length === 0 ? (
-            <span className="mt-1.5 text-[12px] text-ink-4">Nothing close yet</span>
+            <span className="mt-1.5 text-footnote text-secondary-label">Nothing close yet</span>
           ) : (
             related.map((r) => (
               <button
                 key={r.id}
                 type="button"
                 onClick={() => setParams({ note: r.slug })}
-                className="-mx-1.5 flex min-h-11 items-baseline justify-between gap-2 border-b border-rule px-1.5 py-1.5 text-left text-[12px] text-ink-2 transition-colors duration-150 hover:bg-ink/[.06] md:min-h-0"
+                className="-mx-1.5 flex min-h-11 items-baseline justify-between gap-2 rounded-none border-b border-separator px-1.5 py-1.5 text-left text-footnote text-label transition-colors duration-150 hover:bg-fill-3"
               >
                 <span className="min-w-0 truncate">{r.title}</span>
                 <span className="flex shrink-0 items-baseline gap-2">
-                  <span className="label text-ink-4">{hubNames(r.id)}</span>
+                  <span className="label text-secondary-label">{hubNames(r.id)}</span>
                   <span aria-hidden="true" className={CHEVRON}>
                     &rsaquo;
                   </span>

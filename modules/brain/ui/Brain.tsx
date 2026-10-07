@@ -112,22 +112,20 @@ export function Brain({ data }: { data: BrainData }) {
 
   return (
     <>
-      <header className="-mx-[18px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 first:-mt-[max(18px,calc(var(--inset-t)+16px))] first:pt-[calc(16px+var(--inset-t))] md:-mx-7 md:first:-mt-7 md:px-7 lg:h-14 lg:flex-nowrap lg:py-0">
+      <header className="-mx-[18px] flex min-h-14 flex-wrap items-center gap-4 border-b border-separator px-[18px] py-2 first:-mt-[max(18px,calc(var(--inset-t)+16px))] first:pt-[calc(16px+var(--inset-t))] md:-mx-7 md:first:-mt-7 md:px-7 lg:h-14 lg:flex-nowrap lg:py-0">
         <BackControl />
-        <span className="eyebrow shrink-0 whitespace-nowrap text-ink-3">
-          Second Brain <span className="text-ink-4">/</span> {crumb}
+        <span className="eyebrow shrink-0 whitespace-nowrap text-secondary-label">
+          Second Brain <span className="text-secondary-label">/</span> {crumb}
         </span>
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-4">
+        <div className="flex flex-[1_0_auto] items-center justify-end gap-4 md:min-w-0 md:flex-[1_1_0%]">
           <SearchButton className="md:hidden" />
           <BandSearch className="hidden min-w-[220px] flex-1 md:flex" placeholder="Search second brain" />
-          <span className="eyebrow hidden shrink-0 whitespace-nowrap text-ink-3 md:inline-flex">
+          <span className="eyebrow hidden shrink-0 whitespace-nowrap text-secondary-label md:inline-flex">
             <span className="status-dot" aria-hidden />
             {published.length} notes
           </span>
           <ActionButton
             variant="solid"
-            size="xl"
-            className="h-11 gap-2 px-3.5 text-[13px] md:h-[51px] md:px-[22px] md:text-[15px]"
             onClick={() => setParams({ ingest: '1' }, { push: true })}
           >
             Ingest <span aria-hidden="true">&rarr;</span>
@@ -138,7 +136,7 @@ export function Brain({ data }: { data: BrainData }) {
       {/* One filter band: the folder row, Inbox and Reading list ahead of the
         * seven folders, then the hubs under a hairline. Both are the shared
         * pill group, so selected reads the same as on every other screen. */}
-      <div className="-mx-[18px] border-b border-rule bg-bg-elev px-5 md:-mx-7">
+      <div className="-mx-[18px] border-b border-separator bg-grouped-2 px-5 md:-mx-7">
         <div data-testid="brain-folders" className="flex flex-wrap items-center gap-3 py-2.5">
           <PillGroup
             label="Folder"
@@ -146,12 +144,12 @@ export function Brain({ data }: { data: BrainData }) {
             onChange={(id) => setParams({ folder: id === 'inbox' ? null : id, note: null })}
             options={folders.map((f) => ({ value: f.id, label: f.label, count: f.count }))}
           />
-          <span className="ml-auto hidden whitespace-nowrap text-[11px] text-ink-4 md:inline">
+          <span className="ml-auto hidden whitespace-nowrap text-caption-1 text-secondary-label md:inline">
             Vault in git is the source of truth
           </span>
         </div>
         {/* Hubs: the owner's own groupings, one note in as many as fit. */}
-        <div data-testid="brain-hubs" className="flex flex-wrap items-center gap-3 border-t border-rule py-2.5">
+        <div data-testid="brain-hubs" className="flex flex-wrap items-center gap-3 border-t border-separator py-2.5">
           <PillGroup
             label="Hub"
             value={folder}
@@ -173,10 +171,10 @@ export function Brain({ data }: { data: BrainData }) {
       </div>
 
       <div className="-mx-[18px] -mb-[18px] flex flex-wrap items-stretch md:-mx-7 md:-mb-7 md:min-h-[calc(100dvh-106px)]">
-        <section className="flex min-w-0 flex-[1_1_280px] flex-col border-b border-rule lg:max-w-[380px] lg:border-b-0 lg:border-r">
-          <div className="flex items-baseline justify-between gap-2.5 border-b border-rule px-4 pb-2.5 pt-3.5">
-            <span className="truncate text-[14px] text-ink">{listTitle}</span>
-            <span className="num whitespace-nowrap text-[11px] text-ink-3">
+        <section className="flex min-w-0 flex-[1_1_280px] flex-col border-b border-separator lg:max-w-[380px] lg:border-b-0 lg:border-r">
+          <div className="flex items-baseline justify-between gap-2.5 border-b border-separator px-4 pb-2.5 pt-3.5">
+            <span className="truncate text-headline text-label">{listTitle}</span>
+            <span className="num whitespace-nowrap text-caption-1 text-secondary-label">
               {listMeta}
               {hubFolder && (
                 <ActionButton
@@ -192,7 +190,7 @@ export function Brain({ data }: { data: BrainData }) {
           </div>
           <CaptureBox notes={notes} setParams={setParams} />
           {shown.length === 0 ? (
-            <p className="px-4 py-6 text-[12px] text-ink-4">
+            <p className="px-4 py-6 text-footnote text-secondary-label">
               {folder === 'inbox' ? 'Inbox clear. Ingest something to draft a note.' : 'Nothing here'}
             </p>
           ) : (
@@ -208,23 +206,23 @@ export function Brain({ data }: { data: BrainData }) {
                   type="button"
                   onClick={() => setParams({ note: n.slug })}
                   className={cn(
-                    'relative block w-full px-4 py-2.5 text-left transition-colors duration-150 ease-[var(--ease)] hover:bg-ink/[.06]',
-                    'before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-rule first:before:hidden',
-                    selected && 'bg-brand-soft before:hidden [&+*]:before:hidden',
+                    'relative block w-full px-4 py-2.5 text-left transition-colors duration-150 ease-[var(--ease)] hover:bg-fill-3',
+                    'before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-separator first:before:hidden',
+                    selected && 'bg-grouped-2 ring-2 ring-inset ring-accent before:hidden [&+*]:before:hidden',
                   )}
                 >
                   <span className="flex items-baseline justify-between gap-2">
-                    <span className="min-w-0 truncate text-[14.5px] font-medium leading-[1.35] text-ink">{n.title}</span>
+                    <span className="min-w-0 truncate text-body text-label">{n.title}</span>
                     <span className="flex shrink-0 items-baseline gap-2">
-                      <span className="num t-caption text-ink-4">{ago(n.updatedAt)}</span>
+                      <span className="num text-caption-1 text-secondary-label">{ago(n.updatedAt)}</span>
                       <span aria-hidden="true" className={CHEVRON}>
                         &rsaquo;
                       </span>
                     </span>
                   </span>
-                  <span className="t-caption mt-0.5 block truncate text-ink-3">{subLine(n)}</span>
+                  <span className="text-caption-1 mt-0.5 block truncate text-secondary-label">{subLine(n)}</span>
                   <span className="mt-1.5 flex items-center gap-1.5">
-                    <span className="label text-ink-4">{n.kind}</span>
+                    <span className="label text-secondary-label">{n.kind}</span>
                     {n.status === 'draft' && <StatusChip tone="warn">Draft</StatusChip>}
                     {isFinished(n) && (
                       <StatusChip tone="ok">Finished · {finishedOn(n.updatedAt)}</StatusChip>
@@ -240,7 +238,7 @@ export function Brain({ data }: { data: BrainData }) {
           {open ? (
             <NotePane key={open.id} note={open} hubs={data.hubs} skills={data.skills} setParams={setParams} run={run} />
           ) : (
-            <p className="flex flex-1 items-center justify-center py-16 text-[13px] text-ink-4">
+            <p className="flex flex-1 items-center justify-center py-16 text-footnote text-secondary-label">
               Select a note
             </p>
           )}
