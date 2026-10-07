@@ -40,6 +40,8 @@ SWEPT=(
   'modules/home/ui'
   # Second Brain
   'modules/brain/ui'
+  # Ideas
+  'modules/ideas/ui'
 )
 
 # The two surfaces kept unchanged in feel (owner, 2026-09-18).

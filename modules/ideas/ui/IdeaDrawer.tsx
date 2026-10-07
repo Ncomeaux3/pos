@@ -6,6 +6,7 @@ import {
   ActionButton,
   Card,
   Chip,
+  ConfirmButton,
   Eyebrow,
   Field,
   MetricStrip,
@@ -17,6 +18,7 @@ import {
   useFormErrors,
   type ChipTone,
 } from '@/components/pos'
+import { HIT } from '@/components/pos/button-classes'
 import { cn } from '@/lib/utils'
 import { quadrant, type Level } from '../quadrant'
 import { deleteIdea, draftTask, researchIdea, saveIdea, type ActionResult, type IdeaInput } from './actions'
@@ -103,32 +105,33 @@ function View({
       onClose={onClose}
       eyebrow={
         <>
-          Ideas <span className="text-ink-4">/</span> {idea.title}
+          Ideas <span className="text-secondary-label">/</span> {idea.title}
         </>
       }
       footer={
         <>
           <ActionButton onClick={onEdit}>Edit</ActionButton>
-          <ActionButton
-            variant="danger"
-            onClick={() => {
-              if (!window.confirm(`Delete "${idea.title}"? Killing keeps it; this does not.`)) return
+          <ConfirmButton
+            confirmLabel="Delete"
+            title="Delete this idea?"
+            message="Killing keeps it; this does not."
+            onConfirm={() => {
               onRun(() => deleteIdea(idea.id), 'Deleted')
               onClose()
             }}
           >
             Delete
-          </ActionButton>
+          </ConfirmButton>
         </>
       }
     >
       <div className="flex flex-col gap-[18px]">
         <div>
           <div className="flex items-start justify-between gap-3">
-            <h2 className="text-[22px] font-normal leading-[1.2] tracking-[-0.03em] text-ink">{idea.title}</h2>
+            <h2 className="text-title-2 text-label">{idea.title}</h2>
             <QuadrantPill q={q} className="mt-1" />
           </div>
-          {idea.pitch && <p className="mt-2 text-[14px] leading-[1.5] text-ink-2">{idea.pitch}</p>}
+          {idea.pitch && <p className="mt-2 text-subheadline text-secondary-label">{idea.pitch}</p>}
           {idea.tags.length > 0 && (
             <div className="mt-2.5 flex flex-wrap gap-1.5">
               {idea.tags.map((t) => (
@@ -143,21 +146,21 @@ function View({
         <MetricStrip className="grid-cols-3 sm:grid-cols-3">
           <div className="px-3 py-2.5">
             <Eyebrow>Stage</Eyebrow>
-            <div className={cn('mt-1.5 text-[14px]', stage.className)}>{stage.label}</div>
-            <div className={cn('num t-caption mt-0.5', idea.stale ? 'text-warn' : 'text-ink-4')}>
+            <div className={cn('mt-1.5 text-subheadline', stage.className)}>{stage.label}</div>
+            <div className={cn('num mt-0.5 text-caption-1', idea.stale ? 'text-orange-text' : 'text-secondary-label')}>
               {idea.stale ? 'Stale · ' : ''}
               {idea.daysInStage}d in stage
             </div>
           </div>
           <div className="px-3 py-2.5">
             <Eyebrow>Impact</Eyebrow>
-            <div className="mt-1.5 flex items-center gap-2 text-[14px] text-ink">
+            <div className="mt-1.5 flex items-center gap-2 text-subheadline text-label">
               {LEVEL_TEXT[idea.impact]} <LevelBar level={idea.impact} tone="brand" />
             </div>
           </div>
           <div className="px-3 py-2.5">
             <Eyebrow>Effort</Eyebrow>
-            <div className="mt-1.5 flex items-center gap-2 text-[14px] text-ink">
+            <div className="mt-1.5 flex items-center gap-2 text-subheadline text-label">
               {LEVEL_TEXT[idea.effort]} <LevelBar level={idea.effort} tone="ink" />
             </div>
           </div>
@@ -180,7 +183,7 @@ function View({
         {(idea.notes || idea.killedReason) && (
           <div>
             <Eyebrow>{idea.stage === 'killed' && idea.killedReason ? 'Why it was killed' : "Problem · who it's for"}</Eyebrow>
-            <p className="mt-2 text-[13px] leading-[1.55] text-ink-2">
+            <p className="mt-2 text-footnote text-secondary-label">
               {idea.stage === 'killed' && idea.killedReason ? idea.killedReason : idea.notes}
             </p>
           </div>
@@ -188,13 +191,13 @@ function View({
 
         <Card className="flex flex-col gap-2.5 px-3.5 py-3">
           <div className="flex items-baseline justify-between">
-            <Eyebrow className="text-brand">Agent</Eyebrow>
-            <span className="text-[11px] text-ink-3">drafts land in Review</span>
+            <Eyebrow className="text-accent">Agent</Eyebrow>
+            <span className="text-caption-1 text-secondary-label">drafts land in Review</span>
           </div>
           <div className="flex items-center justify-between gap-2.5">
-            <div className="min-w-0 text-[13px] text-ink">
+            <div className="min-w-0 text-footnote text-label">
               Validation task
-              <div className="mt-0.5 text-[11px] text-ink-3">
+              <div className="mt-0.5 text-caption-1 text-secondary-label">
                 {idea.stage === 'exploring'
                   ? 'Drafts a 30-minute task to test the riskiest assumption'
                   : 'Drafts the next concrete step for this stage'}
@@ -209,10 +212,10 @@ function View({
             </button>
           </div>
           {idea.draftTitle && (
-            <div className="flex flex-wrap items-center gap-1.5 border-t border-rule pt-2.5 text-[12px] leading-[1.5] text-ink-2">
+            <div className="flex flex-wrap items-center gap-1.5 border-t border-separator pt-2.5 text-footnote text-secondary-label">
               <StatusChip tone="warn">Pending</StatusChip>
               {idea.draftTitle}{' '}
-              <Link href="/tasks?view=review" className="text-ink-3 hover:text-ink">
+              <Link href="/tasks?view=review" className={cn(HIT, 'inline-block text-secondary-label hover:text-label')}>
                 Review →
               </Link>
             </div>
@@ -222,43 +225,44 @@ function View({
         <ResearchCard idea={idea} run={research} onRun={(depth) => onRun(() => researchIdea(idea.id, depth), 'Researched. The card says what it found and what it cost.')} />
 
         <div>
-          <div className="flex items-baseline justify-between">
+          <div className="flex min-h-11 items-center justify-between">
             <Eyebrow>Linked skills</Eyebrow>
-            <Link href="/skills" className="text-[11px] text-ink-3 hover:text-ink">
+            <Link href="/skills" className="flex min-h-11 items-center text-caption-1 text-secondary-label hover:text-label">
               Skill tree →
             </Link>
           </div>
+          {/* mt-3 keeps the picker's 44px hit areas off the link row above. */}
           {idea.entityRef ? (
-            <SkillPicker entityRef={idea.entityRef} links={idea.skills} skills={skills} className="mt-2" />
+            <SkillPicker entityRef={idea.entityRef} links={idea.skills} skills={skills} className="mt-3" />
           ) : (
-            <p className="mt-2 text-[12px] text-ink-4">Nothing matched yet.</p>
+            <p className="mt-2 text-footnote text-secondary-label">Nothing matched yet.</p>
           )}
         </div>
 
         {idea.goalTitle && idea.goalRef && (
           <div>
             <Eyebrow>Linked goal</Eyebrow>
-            <Link href="/goals" className="mt-1.5 block text-[13px] text-ink hover:text-brand">
+            <Link href="/goals" className="mt-1.5 flex min-h-11 items-center text-footnote text-label hover:text-accent">
               {idea.goalTitle} →
             </Link>
           </div>
         )}
 
         <div>
-          <div className="flex items-baseline justify-between">
+          <div className="flex min-h-11 items-center justify-between">
             <Eyebrow>Related notes</Eyebrow>
-            <Link href="/brain" className="text-[11px] text-ink-3 hover:text-ink">
+            <Link href="/brain" className="flex min-h-11 items-center text-caption-1 text-secondary-label hover:text-label">
               Second Brain →
             </Link>
           </div>
           <div className="mt-1.5 flex flex-col">
             {idea.related.length === 0 && (
-              <span className="py-1.5 text-[12px] text-ink-4">Nothing similar in the vault yet</span>
+              <span className="py-1.5 text-footnote text-secondary-label">Nothing similar in the vault yet</span>
             )}
             {idea.related.map((n) => (
-              <Link key={n.title} href="/brain" className="flex justify-between gap-2.5 border-b border-rule py-2 text-[12px] text-ink hover:text-brand">
+              <Link key={n.title} href="/brain" className="flex min-h-11 items-center justify-between gap-2.5 border-b border-separator py-2 text-footnote text-label hover:text-accent">
                 <span className="min-w-0 truncate">{n.title}</span>
-                <span className="num shrink-0 text-[11px] text-ink-3">note · {Math.round(n.similarity * 100)}%</span>
+                <span className="num shrink-0 text-caption-1 text-secondary-label">note · {Math.round(n.similarity * 100)}%</span>
               </Link>
             ))}
           </div>
@@ -295,18 +299,18 @@ function ResearchCard({
     <Card className="flex flex-col gap-2.5 px-3.5 py-3">
       <div className="flex items-baseline justify-between">
         <Eyebrow>Research</Eyebrow>
-        <span className="num text-[11px] text-ink-3">{run === null ? 'never run' : `${run.depth} · ${run.ranOn}`}</span>
+        <span className="num text-caption-1 text-secondary-label">{run === null ? 'never run' : `${run.depth} · ${run.ranOn}`}</span>
       </div>
 
       {run === null && (
-        <p className="text-[12px] leading-[1.5] text-ink-3">
+        <p className="text-footnote text-secondary-label">
           A fixed rubric with web search: problem, market, competitors, differentiation, and what one
           person nights and weekends would have to build. Every number comes with the page it came
           from, and a number without one is deleted before you see it.
         </p>
       )}
 
-      {run?.status === 'failed' && <p className="text-[12px] text-bad">{run.detail}</p>}
+      {run?.status === 'failed' && <p className="text-footnote text-red-text">{run.detail}</p>}
 
       {run?.status === 'ok' && (
         <div className="flex flex-col gap-2.5">
@@ -314,10 +318,10 @@ function ResearchCard({
             <StatusChip tone={VERDICT_TONE[run.verdict] ?? 'quiet'}>
               {run.verdict.charAt(0).toUpperCase() + run.verdict.slice(1)}
             </StatusChip>
-            <span className="num text-[11px] text-ink-3">
+            <span className="num text-caption-1 text-secondary-label">
               {run.confidence === null ? 'no confidence given' : `${Math.round(run.confidence * 100)}% confident`}
             </span>
-            <span className="num text-[11px] text-ink-3">
+            <span className="num text-caption-1 text-secondary-label">
               {run.searches} searches, {(run.costCents / 100).toFixed(2)} dollars
             </span>
           </div>
@@ -325,15 +329,15 @@ function ResearchCard({
           {run.sections.map((section) => (
             <div key={section.key} className="space-y-1">
               <Eyebrow>{section.label}</Eyebrow>
-              {section.summary && <p className="text-[12px] leading-[1.5] text-ink-2">{section.summary}</p>}
+              {section.summary && <p className="text-footnote text-secondary-label">{section.summary}</p>}
               {section.claims.length === 0 && !section.summary ? (
-                <p className="text-[12px] text-ink-4">Nothing it could source.</p>
+                <p className="text-footnote text-secondary-label">Nothing it could source.</p>
               ) : (
                 section.claims.map((claim) => (
-                  <p key={claim.text} className="text-[12px] leading-[1.5] text-ink-2">
+                  <p key={claim.text} className="text-footnote text-secondary-label">
                     {claim.text}{' '}
                     {claim.source && (
-                      <a className="text-brand" href={claim.source} target="_blank" rel="noreferrer">
+                      <a className="text-accent" href={claim.source} target="_blank" rel="noreferrer">
                         source
                       </a>
                     )}
@@ -344,11 +348,11 @@ function ResearchCard({
           ))}
 
           {run.sources.length > 0 && (
-            <div className="space-y-1 border-t border-rule pt-2">
+            <div className="space-y-1 border-t border-separator pt-2">
               <Eyebrow>Pages it read</Eyebrow>
               {run.sources.map((source) => (
-                <a key={source.url} href={source.url} target="_blank" rel="noreferrer" className="block truncate text-[12px] text-ink-3 hover:text-brand">
-                  {source.title}
+                <a key={source.url} href={source.url} target="_blank" rel="noreferrer" className="flex min-h-11 items-center text-footnote text-secondary-label hover:text-accent">
+                  <span className="min-w-0 truncate">{source.title}</span>
                 </a>
               ))}
             </div>
@@ -364,7 +368,7 @@ function ResearchCard({
           Deep run
         </button>
       </div>
-      <p className="text-[11px] leading-[1.5] text-ink-4">
+      <p className="text-caption-1 text-secondary-label">
         Quick is up to four searches, deep is twelve. Searches are a cent each and the pages they
         return are read as tokens, which is the larger half of the bill. Counted against the monthly
         cap in Settings, which stops research first when it runs out.
@@ -459,15 +463,15 @@ function Form({
       dirty={dirty}
       eyebrow={
         <>
-          Ideas <span className="text-ink-4">/</span> {idea ? 'Edit' : 'New idea'}
+          Ideas <span className="text-secondary-label">/</span> {idea ? 'Edit' : 'New idea'}
         </>
       }
       footer={
         <>
-          <ActionButton variant="quiet" onClick={onCancel}>
+          <ActionButton variant="cancel" onClick={onCancel}>
             Cancel
           </ActionButton>
-          <ActionButton variant="solid" className="h-[38px] gap-2 px-3.5 text-[13px]" type="submit" form={formId}>
+          <ActionButton variant="solid" type="submit" form={formId}>
             {idea ? 'Save' : 'Create'} <span aria-hidden="true">&rarr;</span>
           </ActionButton>
         </>
@@ -483,7 +487,7 @@ function Form({
         }}
       >
         <Field label="Idea" required error={errors.title}>
-          <input value={d.title} onChange={set('title')} placeholder="Short name" className={cn(field, 'px-3 py-2.5 text-[15px]')} />
+          <input value={d.title} onChange={set('title')} placeholder="Short name" className={field} />
         </Field>
         <label className="flex flex-col gap-1.5">
           <Eyebrow>One-line pitch</Eyebrow>
@@ -531,11 +535,11 @@ function Form({
         <Card className="px-3.5 py-3">
           <div className="flex items-baseline justify-between">
             <Eyebrow>Skills · linked</Eyebrow>
-            <span className="text-[11px] text-ink-3">from title, pitch and tags · corrected on the Skill tree</span>
+            <span className="text-caption-1 text-secondary-label">from title, pitch and tags · corrected on the Skill tree</span>
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {!idea || idea.skills.length === 0 ? (
-              <span className="text-[12px] text-ink-4">{idea ? 'Nothing matched yet.' : 'Classified when it is saved.'}</span>
+              <span className="text-footnote text-secondary-label">{idea ? 'Nothing matched yet.' : 'Classified when it is saved.'}</span>
             ) : (
               idea.skills.map((s) => (
                 <Chip key={s.id} tone="brand">
