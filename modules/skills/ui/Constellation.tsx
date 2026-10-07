@@ -9,6 +9,14 @@ import { FLY_MS, flyAt, labelScale, pinch, viewPoint, zoomBy, zoomStep, ZOOM_MAX
 
 // Obsidian style, but placed rather than simulated: see ./layout.ts.
 
+/**
+ * The sky is night in both themes, so the chrome on it names its own label
+ * colours: the constellation's blue greys and the dark orange. `color-scheme:
+ * dark` on the pane left the tokens light (measured 1.06:1 on the hover card).
+ */
+export const SKY =
+  '[--label:#cfe6ff] [--secondary-label:#8fa3b8] [--orange:rgb(255_146_48)] [--orange-text:rgb(255_160_86)]'
+
 const HOME: View = { zoom: 1, pan: { x: 0, y: 0 } }
 
 /** How far a pointer travels before a press becomes a pan. The globe's slop. */
@@ -567,7 +575,7 @@ export function Constellation({
                     isSelected || isDrop
                       ? 'var(--accent)'
                       : tone === 'stagnant'
-                        ? 'var(--amber)'
+                        ? 'var(--orange)'
                         : 'transparent'
                   }
                   // A dashed ring is how a stagnant skill says so without
@@ -631,7 +639,7 @@ export function Constellation({
       {hovered && hover && (
         <div
           data-testid="skill-hover-card"
-          className="pointer-events-none absolute z-20 min-w-[220px] max-w-[300px] animate-[skill-fadein_.12s_both] border border-white/18 bg-[rgba(6,10,16,.92)] px-3.5 py-3 backdrop-blur-[6px] rounded-[18px]"
+          className={cn(SKY, '[--accent:#9bb9ff] pointer-events-none absolute z-20 min-w-[220px] max-w-[300px] animate-[skill-fadein_.12s_both] border border-white/18 bg-[rgba(6,10,16,.92)] px-3.5 py-3 backdrop-blur-[6px] rounded-card')}
           style={{
             // Centred on the star, but never past the canvas edge: half the
             // card's widest at each side.
@@ -644,8 +652,8 @@ export function Constellation({
           }}
         >
           <div className="flex items-baseline justify-between gap-3 border-b border-white/12 pb-2">
-            <span className="truncate text-[14px] text-white">{hovered.name}</span>
-            <span className="num shrink-0 text-[11px] text-[#8fa3b8]">
+            <span className="truncate text-subheadline text-white">{hovered.name}</span>
+            <span className="num shrink-0 text-caption-1 text-secondary-label">
               Lv {hovered.level}
               {branches.length > 0 &&
                 hover.node.id !== ROOT_ID &&
@@ -657,23 +665,23 @@ export function Constellation({
             <>
               <div className="mt-2 flex flex-col gap-[5px]">
                 {branches.map((b) => (
-                  <div key={b.id} className="flex justify-between gap-3 text-[12px] text-[#cfe6ff]">
+                  <div key={b.id} className="flex justify-between gap-3 text-footnote text-label">
                     <span className="truncate">{b.name}</span>
-                    <span className={cn('num shrink-0', b.gained30d > 0 ? 'text-white' : 'text-[#8fa3b8]')}>
+                    <span className={cn('num shrink-0', b.gained30d > 0 ? 'text-white' : 'text-secondary-label')}>
                       Lv {b.level} ({Math.round(b.xp).toLocaleString()})
                     </span>
                   </div>
                 ))}
               </div>
-              <div className="label mt-2 text-[10px] tracking-[0.06em] text-[#6f8399]">
+              <div className="label mt-2 text-caption-2 text-secondary-label">
                 {hovered.gained30d > 0
-                  ? `+${Math.round(hovered.gained30d).toLocaleString()} XP IN 30 DAYS`
-                  : 'NO XP IN 30 DAYS'}
+                  ? `+${Math.round(hovered.gained30d).toLocaleString()} XP in 30 days`
+                  : 'No XP in 30 days'}
               </div>
             </>
           ) : (
             <>
-              <div className="mt-2 flex flex-col gap-[5px] text-[12px] text-[#cfe6ff]">
+              <div className="mt-2 flex flex-col gap-[5px] text-footnote text-label">
                 <div className="flex justify-between gap-3">
                   <span>XP</span>
                   <span className="num text-white">
@@ -682,7 +690,7 @@ export function Constellation({
                 </div>
                 <div className="flex justify-between gap-3">
                   <span>Last 30 days</span>
-                  <span className={cn('num', hovered.gained30d > 0 ? 'text-[var(--accent)]' : 'text-warn')}>
+                  <span className={cn('num', hovered.gained30d > 0 ? 'text-accent' : 'text-orange-text')}>
                     {hovered.gained30d > 0 ? `+${Math.round(hovered.gained30d).toLocaleString()}` : 'idle'}
                   </span>
                 </div>
@@ -693,12 +701,12 @@ export function Constellation({
               </div>
               <div className="mt-2.5 h-0.5 bg-white/12">
                 <div
-                  className="h-full bg-[var(--accent)]"
+                  className="h-full bg-accent"
                   style={{ width: `${levelPercent(hovered.xp, hovered.level)}%` }}
                 />
               </div>
-              <div className="label mt-2 text-[10px] tracking-[0.06em] text-[#6f8399]">
-                {hovered.keywords.slice(0, 4).join(' · ').toUpperCase()}
+              <div className="label mt-2 text-caption-2 text-secondary-label">
+                {hovered.keywords.slice(0, 4).join(' · ')}
               </div>
             </>
           )}

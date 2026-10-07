@@ -19,7 +19,7 @@ import { BackControl } from '@/components/pos/BackControl'
 import type { SkillEvent, SkillStat, SkillTreeData } from '../data'
 import { underGoalPressure } from '../pressure'
 import { reassignEvent } from './actions'
-import { Constellation, toneFor } from './Constellation'
+import { Constellation, SKY, toneFor } from './Constellation'
 import { ROOT_ID } from './layout'
 import { WeeklyBars } from './WeeklyBars'
 
@@ -213,15 +213,15 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
         * start under the band. The heading is drawn nowhere and present all
         * the same, because a page with no heading is one a screen reader
         * cannot announce. */}
-      <header className="-mx-[18px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-rule px-[18px] py-2 first:-mt-[max(18px,calc(var(--inset-t)+16px))] first:pt-[calc(16px+var(--inset-t))] md:-mx-7 md:first:-mt-7 md:px-7 lg:h-14 lg:flex-nowrap lg:py-0">
+      <header className="-mx-[18px] flex min-h-14 flex-wrap items-center justify-between gap-4 border-b border-separator px-[18px] py-2 first:-mt-[max(18px,calc(var(--inset-t)+16px))] first:pt-[calc(16px+var(--inset-t))] md:-mx-7 md:first:-mt-7 md:px-7 lg:h-14 lg:flex-nowrap lg:py-0">
         <BackControl />
         <h1 className="sr-only">Skills</h1>
         {/* The view name is desktop only: there is one view, and with the
           * back control in the band the full crumb ran under the search. */}
-        <span className="eyebrow shrink-0 whitespace-nowrap text-ink-3">
+        <span className="eyebrow shrink-0 whitespace-nowrap text-secondary-label">
           Skills
           <span className="hidden md:contents">
-            <span className="text-ink-4">/</span> Constellation
+            <span className="text-secondary-label">/</span> Constellation
           </span>
         </span>
         <div className="flex min-w-0 flex-1 items-center justify-end gap-4">
@@ -237,7 +237,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
       <div className="-mx-[18px] -mb-[18px] grid grid-cols-[repeat(auto-fit,minmax(min(100%,560px),1fr))] md:-mx-7 md:-mb-7 md:h-[calc(100dvh-56px)] md:overflow-auto">
         <section
           data-testid="skill-tree-canvas-pane"
-          className="relative flex min-w-0 flex-col border-b border-rule bg-[#05080c] md:min-h-full md:border-b-0 md:border-r"
+          className="relative flex min-w-0 flex-col border-b border-separator bg-[#05080c] md:min-h-full md:border-b-0 md:border-r"
         >
           {/* The constellation is a night sky in both themes, which is how the
             * artboard draws it: the section carries a hardcoded #05080c and
@@ -247,15 +247,15 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
           <div className="relative flex flex-1 flex-col overflow-hidden md:min-h-[420px]">
             {/* On a phone the character and the pips sit above the sky in
               * flow; from md they float in its top corners as drawn. */}
-            <div className="z-10 px-5 pt-[18px] md:pointer-events-none md:absolute md:left-5 md:top-[18px] md:p-0">
-              <span className="eyebrow text-[#8fa3b8]">Character</span>
+            <div className={cn(SKY, 'z-10 px-5 pt-[18px] md:pointer-events-none md:absolute md:left-5 md:top-[18px] md:p-0')}>
+              <span className="eyebrow text-secondary-label">Character</span>
               <div className="mt-2 flex items-baseline gap-3">
-                <span className="num text-[34px] font-light leading-none tracking-[-0.02em] text-white">
+                <span className="num text-large-title font-light leading-none text-white">
                   Lv {data.characterLevel}
                 </span>
-                <span className="text-[20px] tracking-[-0.02em] text-white">{characterTitle(data.characterLevel)}</span>
+                <span className="text-title-3 text-white">{characterTitle(data.characterLevel)}</span>
               </div>
-              <div className="num mt-2 text-[11px] text-[#8fa3b8]">
+              <div className="num mt-2 text-caption-1 text-secondary-label">
                 {round(data.totalXp)} XP · {round(toNext(data.totalXp).needed)} to Lv{' '}
                 {toNext(data.totalXp).next}
               </div>
@@ -263,7 +263,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
 
             {/* One pip per attribute, the character sheet, six letters each as
               * the artboard cuts them. Cells on a hairline grid. */}
-            <div className="z-10 mx-5 mt-3 flex flex-wrap justify-end gap-px border border-white/12 bg-white/12 md:absolute md:right-5 md:top-[18px] md:mx-0 md:mt-0 md:max-w-[calc(100%-320px)] rounded-[18px]">
+            <div className={cn(SKY, 'z-10 mx-5 mt-3 flex flex-wrap justify-end gap-px border border-white/12 bg-white/12 md:absolute md:right-5 md:top-[18px] md:mx-0 md:mt-0 md:max-w-[calc(100%-320px)] rounded-card overflow-hidden')}>
               {attributes.map((a) => (
                 <button
                   key={a.id}
@@ -272,14 +272,17 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
                   aria-label={a.name}
                   aria-pressed={selected === a.id}
                   className={cn(
-                    'min-w-[56px] px-2.5 py-1.5 text-center hover:bg-brand-soft',
-                    selected === a.id ? 'bg-brand-soft' : 'bg-[#0a1018]',
+                    'min-h-11 min-w-[56px] rounded-none px-2.5 py-1.5 text-center hover:bg-white/15',
+                    selected === a.id ? 'bg-white/15' : 'bg-[#0a1018]',
                   )}
                 >
-                  <span data-testid="skill-pip-label" className="label block text-[9px] tracking-[0.1em] text-[#8fa3b8]">
+                  <span
+                    data-testid="skill-pip-label"
+                    className={cn('label block text-caption-2', selected === a.id ? 'text-label' : 'text-secondary-label')}
+                  >
                     {a.name.slice(0, 6)}
                   </span>
-                  <span className="num mt-[3px] block text-[16px] font-light leading-none text-white">{a.level}</span>
+                  <span className="num mt-[3px] block text-callout font-light leading-none text-white">{a.level}</span>
                 </button>
               ))}
             </div>
@@ -297,7 +300,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
 
             {/* Pointer hints, so not on a phone, where they were sitting on
               * the bottom leaves and describing a mouse nobody has. */}
-            <div className="pointer-events-none absolute bottom-3.5 left-5 z-10 hidden max-w-[55%] flex-wrap gap-3.5 text-[11px] text-[#6f8399] md:flex">
+            <div className={cn(SKY, 'pointer-events-none absolute bottom-3.5 left-5 z-10 hidden max-w-[55%] flex-wrap gap-3.5 text-caption-1 text-secondary-label md:flex')}>
               <span>Hover: details</span>
               <span>Click: inspect</span>
               <span>Double-click: zoom</span>
@@ -305,9 +308,9 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
             </div>
             {/* The legend floats in the sky's corner from md; on a phone the
               * sky is only as tall as the tree, so it goes under it in flow. */}
-            <div className="pointer-events-none z-10 mx-5 my-2.5 flex flex-wrap items-center justify-end gap-3 text-[11px] text-[#6f8399] md:absolute md:bottom-3.5 md:right-5 md:mx-0 md:my-0 md:max-w-[40%]">
+            <div className={cn(SKY, 'pointer-events-none z-10 mx-5 my-2.5 flex flex-wrap items-center justify-end gap-3 text-caption-1 text-secondary-label md:absolute md:bottom-3.5 md:right-5 md:mx-0 md:my-0 md:max-w-[40%]')}>
               <span className="inline-flex items-center gap-1.5">
-                <span className="size-2 rounded-full bg-brand shadow-[0_0_8px_var(--accent)]" />
+                <span className="size-2 rounded-full bg-accent shadow-[0_0_8px_var(--accent)]" />
                 gaining
               </span>
               <span className="inline-flex items-center gap-1.5">
@@ -315,7 +318,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
                 active
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="size-2 rounded-full border border-dashed border-warn" />
+                <span className="size-2 rounded-full border border-dashed border-orange" />
                 stagnant 60d+
               </span>
             </div>
@@ -324,8 +327,8 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
           {/* The four column read of the whole tree under the canvas: one
             * strip of four cells, flush on the phone so it still ends above
             * the tab bar, inset from md up. */}
-          <div className="shrink-0 border-t border-rule bg-bg md:p-4">
-          <MetricStrip className="grid-cols-2 rounded-none sm:grid-cols-2 md:rounded-[18px]">
+          <div className="shrink-0 border-t border-separator bg-grouped md:p-4">
+          <MetricStrip className="grid-cols-2 rounded-none sm:grid-cols-2 md:rounded-card">
           <Column label="Gaining fastest">
             {gainingFastest.length === 0 ? (
               <Quiet>Nothing gained XP in 30 days.</Quiet>
@@ -386,16 +389,16 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
           * to the bottom. */}
         <aside
           data-testid="skill-tree-detail-pane"
-          className="flex min-w-0 flex-col bg-bg md:min-h-0 md:overflow-y-auto"
+          className="flex min-w-0 flex-col bg-grouped md:min-h-0 md:overflow-y-auto"
         >
           <div className="px-[22px] pt-[18px]">
-            <span className="eyebrow text-ink-3">Attributes</span>
+            <span className="eyebrow text-secondary-label">Attributes</span>
             <div className="mx-auto mt-1.5 flex max-w-[240px] justify-center">
               <Radar axes={attributes.map((a) => ({ label: a.name, value: a.level }))} size={200} />
             </div>
           </div>
 
-          <div className="mx-[22px] mt-3.5 border-t border-rule pt-4">
+          <div className="mx-[22px] mt-3.5 border-t border-separator pt-4">
             {!stat ? (
               <EmptyState headline="Nothing selected">
                 Click a skill in the constellation to see its XP, the events behind it, and the
@@ -404,22 +407,22 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
             ) : (
               <div className="space-y-4" aria-busy={pending}>
                 <div>
-                  <span className="eyebrow text-ink-3">{path ?? (isRoot ? 'Character' : 'Attribute')}</span>
+                  <span className="eyebrow text-secondary-label">{path ?? (isRoot ? 'Character' : 'Attribute')}</span>
                   {/* Name and level on one baseline, then the bar: how close
                     * the next level is should be a length, not a subtraction. */}
                   <div className="mt-2 flex items-baseline justify-between gap-3">
-                    <h2 className="t-title truncate text-[22px] tracking-[-0.03em]">{stat.name}</h2>
-                    <span className="num shrink-0 text-[22px] font-light">Lv {stat.level}</span>
+                    <h2 className="truncate text-title-2 text-label">{stat.name}</h2>
+                    <span className="num shrink-0 text-title-2 font-light text-label">Lv {stat.level}</span>
                   </div>
-                  <div className="mt-3 h-0.5 bg-rule-2">
+                  <div className="mt-3 h-0.5 bg-fill">
                     <div
-                      className="h-0.5 bg-brand"
+                      className="h-0.5 bg-accent"
                       style={{ width: `${Math.round(toNext(stat.xp).percent)}%` }}
                     />
                   </div>
                   <div className="mt-1.5 flex items-baseline justify-between gap-3">
-                    <span className="num text-[11px] text-ink-3">{round(stat.xp)} XP</span>
-                    <span className="num text-[11px] text-ink-3">
+                    <span className="num text-caption-1 text-secondary-label">{round(stat.xp)} XP</span>
+                    <span className="num text-caption-1 text-secondary-label">
                       {round(toNext(stat.xp).needed)} to Lv {toNext(stat.xp).next}
                     </span>
                   </div>
@@ -443,8 +446,8 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
 
                 <div>
                   <div className="flex items-baseline justify-between gap-3">
-                    <span className="eyebrow text-ink-3">XP &middot; 90 days</span>
-                    <span className="num text-[11px] text-ink-3">weekly</span>
+                    <span className="eyebrow text-secondary-label">XP &middot; 90 days</span>
+                    <span className="num text-caption-1 text-secondary-label">weekly</span>
                   </div>
                   <div className="mt-2">
                     <WeeklyBars weeks={weeks} />
@@ -453,25 +456,25 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
 
                 {children.length > 0 && (
                   <div>
-                    <span className="eyebrow text-ink-3">{isRoot ? 'Attributes' : 'Children'}</span>
+                    <span className="eyebrow text-secondary-label">{isRoot ? 'Attributes' : 'Children'}</span>
                     <RowList className="mt-1.5">
                       {children.map((c) => (
                         <button
                           key={c.id}
                           type="button"
                           onClick={() => setSelected(c.id)}
-                          className={cn(ROW, 'flex w-full items-center justify-between gap-3 text-left')}
+                          className={cn(ROW, 'flex min-h-11 w-full items-center justify-between gap-3 rounded-none text-left')}
                         >
-                            <span className="text-[13px] text-ink">{c.name}</span>
+                            <span className="text-footnote text-label">{c.name}</span>
                             {/* The artboard's two figures: what it gained this
                               * month, then where it stands. */}
                             <span className="flex shrink-0 items-baseline gap-3">
                               <span
-                                className={`num text-[11px] ${c.gained30d > 0 ? 'text-ok' : 'text-warn'}`}
+                                className={`num text-caption-1 ${c.gained30d > 0 ? 'text-green-text' : 'text-orange-text'}`}
                               >
                                 {c.gained30d > 0 ? `+${round(c.gained30d)} / 30d` : 'idle'}
                               </span>
-                              <span className="num text-[12px] text-ink">Lv {c.level}</span>
+                              <span className="num text-footnote text-label">Lv {c.level}</span>
                               <span aria-hidden="true" className={CHEVRON}>
                                 &rsaquo;
                               </span>
@@ -479,7 +482,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
                         </button>
                       ))}
                     </RowList>
-                    <p className="mt-2 text-[11px] text-ink-4">
+                    <p className="mt-2 text-caption-1 text-secondary-label">
                       Drop an event here to reassign it to that skill.
                     </p>
                   </div>
@@ -492,8 +495,8 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
                   <>
                     <div>
                       <div className="flex items-baseline justify-between gap-3">
-                        <span className="eyebrow text-ink-3">Events &middot; 30 days</span>
-                        <span className="num text-[11px] text-ink-3">
+                        <span className="eyebrow text-secondary-label">Events &middot; 30 days</span>
+                        <span className="num text-caption-1 text-secondary-label">
                           {recent.length > EVENT_ROWS
                             ? `latest ${EVENT_ROWS} of ${recent.length}`
                             : recent.length}{' '}
@@ -501,7 +504,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
                         </span>
                       </div>
                       {recent.length === 0 ? (
-                        <p className="mt-2 text-[12px] text-ink-3">
+                        <p className="mt-2 text-footnote text-secondary-label">
                           No events linked in 30 days. Finish a task, note, or workout that matches
                           a keyword below.
                         </p>
@@ -522,10 +525,10 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
 
                     {!isRoot && (
                       <div>
-                        <span className="eyebrow text-ink-3">Keywords &middot; skills.yaml</span>
+                        <span className="eyebrow text-secondary-label">Keywords &middot; skills.yaml</span>
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           {stat.keywords.length === 0 ? (
-                            <span className="t-caption text-ink-3">
+                            <span className="text-footnote text-secondary-label">
                               None. This skill is only reachable by the model or by hand.
                             </span>
                           ) : (
@@ -544,7 +547,7 @@ export function SkillTree({ data, now }: { data: SkillTreeData; now: number }) {
             )}
           </div>
 
-          <p className="mt-auto px-[22px] pb-[22px] pt-3.5 text-[11px] text-ink-4">
+          <p className="mt-auto px-[22px] pb-[22px] pt-3.5 text-caption-1 text-secondary-label">
             Level = &radic;(XP &divide; 100). Parent XP is the sum of its children.
           </p>
         </aside>
@@ -573,9 +576,9 @@ function Stat({
 }) {
   return (
     <div className="px-3 py-2.5">
-      <dt className="eyebrow text-ink-3">{label}</dt>
+      <dt className="eyebrow text-secondary-label">{label}</dt>
       <dd
-        className={`num mt-1.5 text-[15px] ${tone === 'ok' ? 'text-ok' : tone === 'warn' ? 'text-warn' : 'text-ink'}`}
+        className={`num mt-1.5 text-subheadline ${tone === 'ok' ? 'text-green-text' : tone === 'warn' ? 'text-orange-text' : 'text-label'}`}
       >
         {value}
       </dd>
@@ -597,16 +600,16 @@ function EventRow({ event, now }: { event: SkillEvent; now: number }) {
         e.dataTransfer.setData('text/plain', `${event.entityRef}|${event.skillId}`)
         e.dataTransfer.effectAllowed = 'move'
       }}
-      className={cn(ROW, 'flex cursor-grab items-center gap-2.5 active:cursor-grabbing')}
+      className={cn(ROW, 'flex min-h-11 cursor-grab items-center gap-2.5 active:cursor-grabbing')}
     >
-      <span className="num w-[34px] shrink-0 text-[11px] text-ink-3">{ago(event.occurredAt, now)}</span>
+      <span className="num w-[34px] shrink-0 text-caption-1 text-secondary-label">{ago(event.occurredAt, now)}</span>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[12px] text-ink">{event.title}</div>
-        <div className="mt-px text-[11px] text-ink-3">
+        <div className="truncate text-footnote text-label">{event.title}</div>
+        <div className="mt-px text-caption-1 text-secondary-label">
           {event.eventType.replace(/_/g, ' ')} · {event.isManual ? 'manual' : event.classifiedBy}
         </div>
       </div>
-      <span className="num shrink-0 text-[11px] text-ok">+{Math.round(event.xp)}</span>
+      <span className="num shrink-0 text-caption-1 text-green-text">+{Math.round(event.xp)}</span>
     </li>
   )
 }
@@ -622,8 +625,8 @@ function characterTitle(level: number): string {
 
 /** The row shape from Row.tsx, for a list item that is its own button. */
 const ROW =
-  'relative px-4 py-2.5 transition-colors duration-150 ease-[var(--ease)] hover:bg-ink/[.06] ' +
-  'before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-rule first:before:hidden'
+  'relative px-4 py-2.5 transition-colors duration-150 ease-[var(--ease)] hover:bg-fill-3 ' +
+  'before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-separator first:before:hidden'
 
 /** One of the four summary columns under the canvas. */
 function Column({
@@ -637,11 +640,11 @@ function Column({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-w-0 px-4 py-3">
-      <h2 className={cn('text-[13px] font-semibold leading-tight', tone === 'warn' ? 'text-warn' : 'text-ink')}>
+    <div className="min-w-0 px-4 py-2 md:py-3">
+      <h2 className={cn('text-footnote font-semibold', tone === 'warn' ? 'text-orange-text' : 'text-label')}>
         {label}
       </h2>
-      <div className="mt-2 flex flex-col gap-1">{children}</div>
+      <div className="mt-1 flex flex-col md:mt-1.5">{children}</div>
     </div>
   )
 }
@@ -660,10 +663,12 @@ function Line({
       type="button"
       onClick={onClick}
       // The tint runs a little past the text so it reads as a row, not a word.
-      className="-mx-1.5 flex w-[calc(100%+12px)] min-w-0 items-baseline justify-between gap-2 rounded-md px-1.5 text-left text-ink transition-colors duration-150 hover:bg-ink/[.06]"
+      // 24px rows, touching, so no target overlaps the next (WCAG 2.5.8): 44px
+      // rows pushed the four columns under the phone's tab bar.
+      className="-mx-1.5 flex h-6 w-[calc(100%+12px)] min-w-0 items-center justify-between gap-2 rounded-md px-1.5 text-left text-label transition-colors duration-150 hover:bg-fill-3"
     >
-      <span className="truncate text-[12px]">{name}</span>
-      <span className="num shrink-0 text-[11px] text-ink-3">{children}</span>
+      <span className="truncate text-footnote">{name}</span>
+      <span className="num shrink-0 text-caption-1 text-secondary-label">{children}</span>
     </button>
   )
 }
@@ -675,5 +680,5 @@ function Line({
  * rather than as quiet, and the owner cannot tell which it is.
  */
 function Quiet({ children }: { children: React.ReactNode }) {
-  return <p className="text-[12px] leading-snug text-ink-3">{children}</p>
+  return <p className="text-footnote text-secondary-label">{children}</p>
 }

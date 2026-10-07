@@ -47,18 +47,18 @@ export function SkillsTile({ payload }: { payload: Record<string, unknown> }) {
         * SVG is overflow-visible) and the rows start past it. */}
       <div className="flex min-w-0 flex-col justify-center gap-2 pl-2">
         {rows.length === 0 ? (
-          <p className="t-caption text-ink-3">Nothing gained XP in the last 30 days.</p>
+          <p className="text-footnote text-secondary-label">Nothing gained XP in the last 30 days.</p>
         ) : (
           rows.map((r) => (
             <div key={r.key}>
-              <div className="flex justify-between gap-2 text-[12px]">
-                <span className="truncate text-ink">{r.name}</span>
-                <span className={cn('num shrink-0 text-[11px]', r.tone === 'ok' ? 'text-ok' : 'text-warn')}>
+              <div className="flex justify-between gap-2 text-footnote">
+                <span className="truncate text-label">{r.name}</span>
+                <span className={cn('num shrink-0 text-caption-1', r.tone === 'ok' ? 'text-green-text' : 'text-orange-text')}>
                   {r.figure}
                 </span>
               </div>
-              <div className="mt-[5px] h-0.5 bg-rule-2">
-                <div className={cn('h-0.5', r.tone === 'ok' ? 'bg-brand' : 'bg-warn')} style={{ width: `${r.width}%` }} />
+              <div className="mt-[5px] h-0.5 bg-fill">
+                <div className={cn('h-0.5', r.tone === 'ok' ? 'bg-accent' : 'bg-orange-text')} style={{ width: `${r.width}%` }} />
               </div>
             </div>
           ))

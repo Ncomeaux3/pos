@@ -623,7 +623,7 @@ test('skill tree, the constellation hovers, selects, pans and zooms', async ({ p
   // branches hang off it, their levels, and what the month came to.
   await page.locator('g[data-skill="health"]').hover({ force: true })
   await expect(page.getByText(/branches/)).toBeVisible()
-  await expect(page.getByText(/XP IN 30 DAYS/)).toBeVisible()
+  await expect(page.getByText(/XP in 30 days/)).toBeVisible()
 
   // A leaf's card is the artboard's: XP against the next level with a bar,
   // the month, the goal weight, then its keywords. Centred under the star.
@@ -632,7 +632,7 @@ test('skill tree, the constellation hovers, selects, pans and zooms', async ({ p
   const card = page.getByTestId('skill-hover-card')
   await expect(page.getByText(/^XP$/)).toBeVisible()
   await expect(page.getByText('Last 30 days')).toBeVisible()
-  await expect(page.getByText(/FLIGHT|TRIP/)).toBeVisible()
+  await expect(card.getByText(/flight|trip/i)).toBeVisible()
   // Below the star, or above it on a canvas too short to fit it below;
   // either way clear of the star and centred on it.
   const dot = (await travel.locator('circle').nth(2).boundingBox())!
