@@ -39,15 +39,14 @@ export function HubDrawer({ hub, setParams }: { hub: BrainHub | null; setParams:
       onClose={close}
       eyebrow={
         <>
-          Second Brain <span className="text-ink-4">/</span> {hub ? 'Edit hub' : 'New hub'}
+          Second Brain <span className="text-secondary-label">/</span> {hub ? 'Edit hub' : 'New hub'}
         </>
       }
       footer={
         <>
-          <span className="text-[11px] text-ink-3">Notes that mention a keyword are filed here. You can always refile one.</span>
+          <span className="text-caption-1 text-secondary-label">Notes that mention a keyword are filed here. You can always refile one.</span>
           <ActionButton
             variant="solid"
-            className="h-[38px] gap-2 px-3.5 text-[13px]"
             disabled={!ready || running}
             onClick={() => void submit()}
           >
