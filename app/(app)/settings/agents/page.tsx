@@ -25,12 +25,12 @@ export default async function AgentsPage() {
         <Card>
           <div className="flex items-center justify-between gap-3">
             <Eyebrow>MCP endpoint</Eyebrow>
-            <Eyebrow dot="ok" className="text-ok">
+            <Eyebrow dot="ok" className="text-green-text">
               Live · {tools.length} tools
             </Eyebrow>
           </div>
           <McpCommand origin={origin} reveal={revealMcpToken} />
-          <p className="mt-3 text-[12px] leading-[1.5] text-ink-3">
+          <p className="mt-3 text-footnote leading-[1.5] text-secondary-label">
             Set as MCP_TOKEN in .env, which is where infrastructure secrets live. Rotating it means
             changing that value and restarting, or updating the environment variable in Vercel and
             redeploying; the app cannot write its own .env.
@@ -39,7 +39,7 @@ export default async function AgentsPage() {
 
         <Card>
           <Eyebrow>Autonomy</Eyebrow>
-          <p className="mt-2 text-[12px] leading-[1.5] text-ink-3">
+          <p className="mt-2 text-footnote leading-[1.5] text-secondary-label">
             How much an agent may do without asking. A write you make in this app is never held
             back, at any level: pressing a button in your own app is the approval.
           </p>
@@ -48,9 +48,9 @@ export default async function AgentsPage() {
           </div>
           <div className="mt-3">
             {AUTONOMY_LEVELS.map((level) => (
-              <div key={level} className="grid grid-cols-[auto_1fr_auto] items-center gap-x-4 border-b border-rule py-[9px] text-[13px] last:border-b-0">
-                <span className="text-ink">{AUTONOMY_LABELS[level]}</span>
-                <span className="text-[12px] text-ink-3">
+              <div key={level} className="grid grid-cols-[auto_1fr_auto] items-center gap-x-4 border-b border-separator py-[9px] text-footnote last:border-b-0">
+                <span className="text-label">{AUTONOMY_LABELS[level]}</span>
+                <span className="text-footnote text-secondary-label">
                   {level === 'observe'
                     ? 'Everything an agent does becomes a proposal, including tools no module guarded.'
                     : level === 'propose'
@@ -68,15 +68,15 @@ export default async function AgentsPage() {
         <Card>
           <Eyebrow>Guarded tools · agent writes go to Review</Eyebrow>
           <div className="mt-2">
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 border-b border-rule py-[9px] text-[13px] md:grid-cols-[auto_minmax(0,1fr)_auto]">
-              <span className="num text-[12px] text-ink">*.get_digest · *.query · core.search</span>
-              <span className="order-last col-span-2 text-[12px] text-ink-3 md:order-none md:col-span-1">Read-only, 5s timeout, 500 rows</span>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 border-b border-separator py-[9px] text-footnote md:grid-cols-[auto_minmax(0,1fr)_auto]">
+              <span className="num text-footnote text-label">*.get_digest · *.query · core.search</span>
+              <span className="order-last col-span-2 text-footnote text-secondary-label md:order-none md:col-span-1">Read-only, 5s timeout, 500 rows</span>
               <StatusChip tone="ok">Open</StatusChip>
             </div>
             {writes.map((t) => (
-              <div key={t.name} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 border-b border-rule py-[9px] text-[13px] last:border-b-0 md:grid-cols-[auto_minmax(0,1fr)_auto]">
-                <span className="num text-[12px] text-ink">{t.name}</span>
-                <span className="order-last col-span-2 min-w-0 text-[12px] text-ink-3 md:order-none md:col-span-1">
+              <div key={t.name} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 border-b border-separator py-[9px] text-footnote last:border-b-0 md:grid-cols-[auto_minmax(0,1fr)_auto]">
+                <span className="num text-footnote text-label">{t.name}</span>
+                <span className="order-last col-span-2 min-w-0 text-footnote text-secondary-label md:order-none md:col-span-1">
                   {t.description.replace(/ Guarded: this lands in the review inbox instead of writing\.$/, '')}
                 </span>
                 {guarded.has(t.name) ? (

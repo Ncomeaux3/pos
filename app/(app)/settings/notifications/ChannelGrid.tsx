@@ -44,7 +44,7 @@ export function ChannelGrid({ rows, paused }: { rows: ModuleRow[]; paused: boole
     return (
       <div className="flex items-center gap-2 lg:justify-center">
         {/* Below lg the head is hidden, so the switch names its channel. */}
-        <span className="label w-14 text-ink-3 lg:hidden">{label}</span>
+        <span className="label w-14 text-secondary-label lg:hidden">{label}</span>
         <Switch
           label={`${label} for ${row.label}`}
           checked={state === 'on'}
@@ -56,7 +56,7 @@ export function ChannelGrid({ rows, paused }: { rows: ModuleRow[]; paused: boole
               return result
             })
           }}
-          className={cn(state === 'some' && 'border-warn')}
+          className={cn(state === 'some' && 'border-orange')}
         />
       </div>
     )
@@ -88,9 +88,9 @@ export function ChannelGrid({ rows, paused }: { rows: ModuleRow[]; paused: boole
           // Below lg: a stacked card (module, three named switches, the
           // triggers) rather than DataRow's first-and-last-on-one-line reflow,
           // which put a switch over the trigger text.
-          className="text-[13px] max-lg:flex max-lg:flex-col max-lg:gap-2"
+          className="text-footnote max-lg:flex max-lg:flex-col max-lg:gap-2"
         >
-          <span className={cn('min-w-0 truncate', paused ? 'text-ink-3' : 'text-ink')}>{row.label}</span>
+          <span className={cn('min-w-0 truncate', paused ? 'text-secondary-label' : 'text-label')}>{row.label}</span>
 
           {cell(
             row,
@@ -114,7 +114,7 @@ export function ChannelGrid({ rows, paused }: { rows: ModuleRow[]; paused: boole
             (on) => `In-app ${on ? 'on' : 'off'} for ${row.label}.`,
           )}
 
-          <p className="t-caption min-w-0 text-ink-3 max-lg:text-left!">{row.triggers}</p>
+          <p className="text-footnote min-w-0 text-secondary-label max-lg:text-left!">{row.triggers}</p>
         </DataRow>
       ))}
     </DataTable>

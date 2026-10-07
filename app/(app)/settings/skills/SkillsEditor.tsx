@@ -32,7 +32,7 @@ export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overr
   return (
     <div className="flex max-w-[1040px] flex-col gap-3.5" aria-busy={pending}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[13px] text-ink-3">
+        <p className="text-footnote text-secondary-label">
           Every skill a task, note, or workout can link to. Rename inline; delete what you won&apos;t
           use. Changes apply everywhere and never touch XP already earned.
         </p>
@@ -44,9 +44,11 @@ export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overr
           )}
           {overrideCount > 0 && (
             <ConfirmButton
-              confirmLabel={`Drop ${overrideCount} ${overrideCount === 1 ? 'edit' : 'edits'}`}
+              confirmLabel="Reset"
+              title={`Drop ${overrideCount} ${overrideCount === 1 ? 'edit' : 'edits'}?`}
+              message="The tree returns to skills.yaml. XP already earned stays."
               onConfirm={() => run(resetTree)}
-              className="text-ink-3"
+              className="text-secondary-label"
             >
               Reset to skills.yaml
             </ConfirmButton>
@@ -60,13 +62,13 @@ export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overr
           <Card key={attribute.id} className="py-3.5">
             <div className="flex items-baseline justify-between gap-3">
               <Eyebrow>{attribute.name}</Eyebrow>
-              <span className="num text-[12px] text-ink-3">{skills.filter((s) => !s.deleted).length} skills</span>
+              <span className="num text-footnote text-secondary-label">{skills.filter((s) => !s.deleted).length} skills</span>
             </div>
             <div className="mt-1.5 flex flex-col">
               {visible.map((skill) => (
                 <div
                   key={skill.id}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5 border-b border-rule py-1.5 md:grid-cols-[minmax(0,1fr)_auto_auto]"
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5 border-b border-separator py-1.5 md:grid-cols-[minmax(0,1fr)_auto_auto]"
                 >
                   <input
                     key={skill.name}
@@ -81,21 +83,21 @@ export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overr
                       if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
                     }}
                     className={cn(
-                      'h-11 min-w-0 rounded-lg border border-transparent bg-transparent px-2 text-[16px] outline-none focus-visible:border-action focus-visible:bg-bg focus-visible:shadow-[0_0_0_3px_var(--accent-soft)] sm:h-8 sm:text-[13px]',
-                      skill.deleted ? 'text-ink-3 line-through' : 'text-ink',
+                      'h-11 min-w-0 rounded-control border border-transparent bg-transparent px-2 text-body outline-none focus-visible:border-accent focus-visible:bg-grouped-2 focus-visible:outline-solid focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--focus-ring) md:text-subheadline',
+                      skill.deleted ? 'text-secondary-label line-through' : 'text-label',
                     )}
                   />
                   <span className="order-last col-span-2 flex min-w-0 items-center gap-1.5 md:order-none md:col-span-1 md:shrink-0">
                     {skill.origin === 'custom' && (
-                      <Chip tone="brand" className="px-2 py-1 text-[11px]">
+                      <Chip tone="brand" className="px-2 py-1 text-caption-1">
                         Custom
                       </Chip>
                     )}
                     {skill.renamedFrom && (
-                      <span className="num text-[11px] text-ink-3">was {skill.renamedFrom}</span>
+                      <span className="num text-caption-1 text-secondary-label">was {skill.renamedFrom}</span>
                     )}
                     {skill.deleted ? (
-                      <span className="num whitespace-nowrap text-[11px] text-ink-4">
+                      <span className="num whitespace-nowrap text-caption-1 text-secondary-label">
                         {(skill.keywords ?? []).slice(0, 3).join(' · ')}
                       </span>
                     ) : (
@@ -113,7 +115,7 @@ export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overr
                             ),
                           )
                         }
-                        className="num min-h-11 w-auto whitespace-normal rounded-none px-1 py-0 text-left text-[12px] text-ink-3 sm:min-h-0"
+                        className="num min-h-11 w-auto whitespace-normal rounded-none px-1 py-0 text-left text-footnote text-secondary-label"
                       />
                     )}
                   </span>
@@ -123,9 +125,11 @@ export function SkillsEditor({ groups, overrideCount }: { groups: Group[]; overr
                     </ActionButton>
                   ) : (
                     <ConfirmButton
-                      confirmLabel="Really delete"
+                      confirmLabel="Delete"
+                      title="Delete this skill?"
+                      message="XP already earned stays."
                       onConfirm={() => run(() => deleteSkill(skill.id))}
-                      className="h-11 px-3 text-[11px] text-ink-3 hover:text-bad sm:h-6 sm:px-2.5"
+                      className="px-3 text-footnote text-secondary-label hover:text-red-text"
                     >
                       Delete
                     </ConfirmButton>
@@ -165,7 +169,7 @@ function AddSkill({ parent, onAdd }: { parent: string; onAdd: (name: string) => 
         maxLength={80}
         className={cn(fieldClass, 'flex-1 border-dashed')}
       />
-      <ActionButton type="submit" size="sm" disabled={!toId(name.trim())}>
+      <ActionButton type="submit" disabled={!toId(name.trim())}>
         Add
       </ActionButton>
     </form>

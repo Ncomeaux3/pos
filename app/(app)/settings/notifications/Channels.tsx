@@ -26,13 +26,13 @@ export function Channels({ channels }: { channels: Row[] }) {
       {shown.map((c) => (
         <div key={c.value} className="flex items-center justify-between gap-2.5 px-3.5 py-3">
           <span>
-            <span className="block text-[13px] text-ink">{c.label}</span>
-            <span className="t-caption text-ink-3">{c.sub}</span>
+            <span className="block text-footnote text-label">{c.label}</span>
+            <span className="text-footnote text-secondary-label">{c.sub}</span>
           </span>
           <Switch
             label={c.label}
             checked={c.state === 'on'}
-            className={cn(c.state === 'some' && 'border-warn')}
+            className={cn(c.state === 'some' && 'border-orange')}
             onChange={() => {
               const on = c.state !== 'on'
               run({ value: c.value, state: on ? 'on' : 'off' }, async () => {

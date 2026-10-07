@@ -18,12 +18,12 @@ export function CapSlider({ initialDollars, spendCents }: { initialDollars: numb
           value={cap}
           onChange={(e) => setCap(Number(e.target.value))}
           aria-label="Cap per month"
-          className="min-w-0 flex-1 accent-brand"
+          className="h-11 min-w-0 flex-1 accent-accent"
         />
-        <span className="num w-14 text-right text-[14px] text-ink">${cap}/mo</span>
+        <span className="num w-14 text-right text-subheadline text-label">${cap}/mo</span>
       </div>
-      <div className="mt-3 h-0.5 bg-rule-2">
-        <div className="h-full bg-brand transition-[width] duration-300" style={{ width: `${pct}%` }} />
+      <div className="mt-3 h-0.5 bg-fill">
+        <div className="h-full bg-accent transition-[width] duration-300" style={{ width: `${pct}%` }} />
       </div>
     </>
   )
