@@ -20,13 +20,13 @@ export function WeeklyBars({ weeks }: { weeks: number[] }) {
               y={33 - h}
               width={w * 0.7}
               height={h}
-              fill={value > 0 ? 'var(--accent)' : 'var(--rule-2)'}
+              fill={value > 0 ? 'var(--accent)' : 'var(--color-fill)'}
             />
           )
         })}
-        <line x1="0" y1="33.5" x2="100" y2="33.5" stroke="var(--rule-2)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+        <line x1="0" y1="33.5" x2="100" y2="33.5" stroke="var(--separator)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
       </svg>
-      <div className="eyebrow flex justify-between text-ink-3">
+      <div className="eyebrow flex justify-between text-secondary-label">
         <span>&minus;90d</span>
         <span>&minus;45d</span>
         <span>now</span>
