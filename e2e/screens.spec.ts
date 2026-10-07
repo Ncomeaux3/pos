@@ -4103,8 +4103,8 @@ test('ideas, the capture line reads tags and scores', async ({ page }) => {
 
   // And Delete takes a capture that was never an idea away again.
   await card.click()
-  page.once('dialog', (d) => d.accept())
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
+  await page.getByRole('dialog', { name: 'Delete this idea?' }).getByRole('button', { name: 'Delete' }).click()
   await expect(page.getByText('Deleted')).toBeVisible()
   await expect(card).toHaveCount(0)
 })

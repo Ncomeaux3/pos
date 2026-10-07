@@ -12,15 +12,15 @@ export function IdeasTile({ payload }: { payload: Record<string, unknown> }) {
   return (
     <div className="space-y-2.5">
       {wins.length === 0 ? (
-        <p className="t-caption text-ink-3">No quick wins waiting.</p>
+        <p className="text-footnote text-secondary-label">No quick wins waiting.</p>
       ) : (
         wins.slice(0, 3).map((i) => (
-          <div key={i.id} className="text-[14px] text-ink">
+          <div key={i.id} className="text-subheadline text-label">
             {i.title}
           </div>
         ))
       )}
-      <p className="num text-[11px] text-ink-3">
+      <p className="num text-caption-1 text-secondary-label">
         {stages.map(([stage, n]) => `${n} ${stage}`).join(' · ')}
         {stale.length > 0 ? ` · ${stale.length} gone quiet` : ''}
       </p>
