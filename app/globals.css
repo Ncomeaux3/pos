@@ -2,27 +2,22 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 /* holon-ui (holon-apple Phase 3): the Apple edition tokens, their Tailwind
- * theme and the navigation styles. POS's own names below are the alias layer
- * the module sweeps retire; where both define a name, the package's wins and
- * POS does not redeclare it, with one exception: --chart-1 to --chart-4 keep
- * the Holon series (brand, sand, green, purple) until a sweep decides. */
+ * theme and the navigation styles. Every colour, radius, shadow and type
+ * style comes from the package; the Holon alias layer was deleted at the
+ * holon-apple Close. POS keeps only what the package has no name for, with
+ * one override: --chart-1 to --chart-4 keep the Holon series (brand, sand,
+ * green, purple). */
 @import "@ncomeaux3/holon-ui/tokens.css";
 @import "@ncomeaux3/holon-ui/theme.css";
 @import "@ncomeaux3/holon-ui/components.css";
 @source "../node_modules/@ncomeaux3/holon-ui/src";
 
-/* Holon design tokens.
+/* POS tokens.
  *
- * Every colour is declared once with light-dark(). The theme is the presence
- * or absence of data-theme on <html>: light or dark force a scheme, and no
- * attribute follows the device. The server writes the attribute from the
- * cookie, so a forced theme is right on the first paint with no script.
- *
- * The old names (--bg, --ink-*, --rule*, --accent, --green, --amber, --red)
- * stay canonical so no module changes; the Holon names (--action, --brand,
- * --sand, --chart-*, --positive, --attention, --risk) sit beside them for
- * components that need to say which they mean. "derived" marks a value that
- * is not in the kit and was checked for contrast in Phase 1.
+ * The theme is the presence or absence of data-theme on <html>: light or dark
+ * force a scheme, and no attribute follows the device. The server writes the
+ * attribute from the cookie, so a forced theme is right on the first paint
+ * with no script.
  */
 
 @custom-variant dark {
@@ -61,58 +56,16 @@
      must clear it (toasts, sheets, the page bottom) measures from this. */
   --tabbar: calc(56px + 2 * var(--inset-b));
 
-  --bg: light-dark(#f2f2f7, #000000);
-  --bg-elev: light-dark(#ffffff, #1c1c1e);
-  --bg-deep: light-dark(#e5e5ea, #2c2c2e); /* derived: sunken fills, segmented tracks, inputs */
   /* The dark side of the Travel globe: a shadow must darken in both themes. */
   --shade: light-dark(#1c1c1e, #000000);
-  --ink: light-dark(#1c1c1e, #f2f2f7);
-  --ink-2: light-dark(#3a3a3c, #d1d1d6); /* derived */
-  --ink-3: light-dark(#5a5a60, #aeaeb2);
-  /* Placeholders, disabled controls, separators and idle dots: 4.5:1 light,
-   * 4.9:1 dark on the sunken input fill. Not for copy the reader needs; that is ink-3. */
-  --ink-4: light-dark(#66666c, #98989d); /* derived */
-  --rule: light-dark(#dcdce1, rgba(255, 255, 255, 0.09)); /* hairline, lighter than the kit border */
-  --rule-2: light-dark(#d1d1d6, #48484a); /* the kit border: controls and sheet edges */
 
-  /* Action is what is interactive or selected; brand is the identity cobalt
-   * and the first chart series. They differ so a link never has to be the
-   * same blue as the ribbon. */
-  --action: light-dark(#3157b7, #9bb9ff);
-  --action-fg: light-dark(#ffffff, #1c1c1e);
-  --accent-soft: light-dark(#eef2fa, rgba(155, 185, 255, 0.16));
-  --brand: #416aca;
-  --sand: #d6bb9a;
-  --sand-surface: light-dark(#f0e7da, rgba(214, 187, 154, 0.14));
-
-  /* Darkened from the kit's #15803D and #A16207, and the dark risk lightened
-   * from #F87171, so the status text on a chip's 12 to 14% tint reads at
-   * 4.6:1 or better on every surface, including the selected brand-soft fill.
-   * Measured 2026-09-19; the kit values sat at 3.7 to 4.3. */
-  --positive: light-dark(#116b33, #5dc98a);
-  --attention: light-dark(#875100, #e3b341);
-  --risk: light-dark(#b91c1c, #fb8a8a);
-  --amber: var(--attention);
-
-  --chart-1: var(--brand);
-  --chart-2: var(--sand);
+  /* The Holon series: brand cobalt, sand, then green and purple. */
+  --chart-1: #416aca;
+  --chart-2: #d6bb9a;
   --chart-3: light-dark(#246a57, #4e9c85);
   --chart-4: light-dark(#68568d, #9c8bc2);
 
-  --focus: var(--action);
   --selection: light-dark(#eef2fa, rgba(155, 185, 255, 0.28));
-
-  /* Cards carry a faint lift; overlays float. */
-  --lift: var(--elevation-lift);
-  --pop: var(--elevation-pop);
-
-  /* Glass: a translucent surface over the flat canvas, blurred and saturated,
-   * with a one pixel highlight on its top edge and a hairline around it. */
-  --glass: light-dark(rgba(255, 255, 255, 0.85), rgba(44, 44, 46, 0.64));
-  --glass-strong: light-dark(rgba(255, 255, 255, 0.92), rgba(44, 44, 46, 0.82));
-  --glass-panel: light-dark(rgba(255, 255, 255, 0.94), rgba(44, 44, 46, 0.9));
-  --field: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.07));
-  --blur: 28px;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -134,98 +87,13 @@ html {
   min-height: calc(100% + var(--inset-t));
 }
 
-@theme inline {
-  --color-bg: var(--bg);
-  --color-bg-elev: var(--bg-elev);
-  --color-bg-deep: var(--bg-deep);
-  --color-ink: var(--ink);
-  --color-ink-2: var(--ink-2);
-  --color-ink-3: var(--ink-3);
-  --color-ink-4: var(--ink-4);
-  --color-rule: var(--rule);
-  --color-rule-2: var(--rule-2);
-
-  /* brand is the identity cobalt; action is the interactive colour. shadcn
-   * owns `accent` and means a hover surface by it, which is the soft fill. */
-  --color-brand: var(--brand);
-  --color-brand-soft: var(--accent-soft);
-  --color-action: var(--action);
-  --color-action-fg: var(--action-fg);
-  --color-sand: var(--sand);
-  --color-sand-surface: var(--sand-surface);
-
-  --color-ok: var(--positive);
-  --color-warn: var(--attention);
-  --color-bad: var(--risk);
-  --color-positive: var(--positive);
-  --color-attention: var(--attention);
-  --color-risk: var(--risk);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-glass: var(--glass);
-  --color-glass-strong: var(--glass-strong);
-  --color-glass-panel: var(--glass-panel);
-  --color-glass-line: var(--glass-line);
-  --color-glass-edge: var(--glass-edge);
-  --color-field: var(--field);
-  --ease-out-soft: var(--ease);
-
-  /* shadcn semantics mapped onto the tokens, so any component added later with
-   * `shadcn add` inherits the palette without being patched. */
-  --color-background: var(--bg);
-  --color-foreground: var(--ink);
-  --color-card: var(--bg-elev);
-  --color-card-foreground: var(--ink);
-  --color-popover: var(--bg-elev);
-  --color-popover-foreground: var(--ink);
-  --color-primary: var(--ink);
-  --color-primary-foreground: var(--bg);
-  --color-secondary: var(--bg-elev);
-  --color-secondary-foreground: var(--ink);
-  --color-muted: var(--bg-elev);
-  --color-muted-foreground: var(--ink-3);
-  --color-accent-foreground: var(--ink);
-  --color-destructive: var(--risk);
-  --color-border: var(--rule-2);
-  --color-input: var(--rule-2);
-  --color-ring: var(--action);
-  --color-sidebar: var(--bg-elev);
-  --color-sidebar-foreground: var(--ink);
-  --color-sidebar-border: var(--rule);
-  --color-sidebar-accent: var(--accent-soft);
-  --color-sidebar-accent-foreground: var(--ink);
-  --color-sidebar-primary: var(--action);
-  --color-sidebar-primary-foreground: var(--action-fg);
-  --color-sidebar-ring: var(--action);
-
-  /* The system font first (SF on Apple devices, which honours tabular
-     figures through .num), then Geist served from app/fonts; the brand stays
-     Geist. No monospace anywhere. */
-  --font-brand: var(--font-geist), system-ui, sans-serif;
-
-  /* 10px small controls and rail rows, 12px inputs, 18px cards and grouped
-   * lists, 24px sheets and the floating drawer. Buttons and chips are pills
-   * (a literal 999px) and status dots 50%. */
-  --radius-sm: 10px;
-  --radius-md: 12px;
-  --radius: 12px;
-  --radius-lg: 18px;
-  --radius-xl: 24px;
-  --radius-2xl: 24px;
-  --radius-3xl: 24px;
-  --radius-4xl: 24px;
-  --shadow-card: var(--lift);
-}
-
 @layer base {
   * {
-    @apply border-border;
+    border-color: var(--opaque-separator);
   }
 
   :focus-visible {
-    outline: 2px solid var(--focus);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
   }
 
@@ -236,7 +104,7 @@ html {
   select,
   textarea,
   input:not([type='checkbox']):not([type='radio']):not([type='range']) {
-    border-radius: var(--radius-sm);
+    border-radius: var(--r-control);
   }
 
   /* Tailwind v4's preflight gives a button the default cursor. Every button
@@ -251,12 +119,12 @@ html {
    * overlay would paint above it rather than under body's own. */
   html {
     @apply font-sans;
-    color: var(--ink);
+    color: var(--label);
   }
 
   body {
-    background: var(--bg);
-    color: var(--ink);
+    background: var(--system-grouped-background);
+    color: var(--label);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     overflow-x: hidden;
@@ -267,7 +135,7 @@ html {
 
   ::selection {
     background: var(--selection);
-    color: var(--ink);
+    color: var(--label);
   }
 
   ::-webkit-scrollbar {
@@ -275,14 +143,14 @@ html {
     height: 10px;
   }
   ::-webkit-scrollbar-track {
-    background: var(--bg-deep);
+    background: var(--tertiary-system-fill);
   }
   ::-webkit-scrollbar-thumb {
-    background: var(--ink-4);
+    background: var(--secondary-label);
     border-radius: 999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--ink-3);
+    background: var(--label);
   }
 
   /* Chrome's date picker glyph, drawn in the field's own ink. Left to the
@@ -301,28 +169,6 @@ html {
 }
 
 @layer components {
-  /* Glass surfaces. `.glass` is a card, a grouped list, a table or a band;
-   * `.glass-strong` a raised control; `.glass-panel` the drawer and the tab
-   * bar. Readers who ask for reduced transparency get the opaque surface. */
-  .glass,
-  .glass-strong,
-  .glass-panel {
-    background: var(--glass);
-    -webkit-backdrop-filter: saturate(180%) blur(var(--blur));
-    backdrop-filter: saturate(180%) blur(var(--blur));
-    border: 1px solid var(--glass-line);
-    box-shadow:
-      inset 0 1px 0 var(--glass-edge),
-      var(--lift);
-  }
-  .glass-strong {
-    background: var(--glass-strong);
-  }
-  .glass-panel {
-    background: var(--glass-panel);
-    -webkit-backdrop-filter: saturate(180%) blur(40px);
-    backdrop-filter: saturate(180%) blur(40px);
-  }
   /* The strip behind the phone's status bar (app/(app)/layout.tsx): clear at
    * the top of the page, material once the page scrolls under it, the way an
    * iOS bar behaves. A scroll-driven animation, so no scroll listener; a
@@ -336,15 +182,6 @@ html {
     from { opacity: 0; }
     to { opacity: 1; }
   }
-  @media (prefers-reduced-transparency: reduce) {
-    .glass,
-    .glass-strong,
-    .glass-panel {
-      background: var(--bg-elev);
-      -webkit-backdrop-filter: none;
-      backdrop-filter: none;
-    }
-  }
 
   /* One orchestrated reveal when a screen loads: the top-level blocks rise
    * 6px and fade in, 20ms apart, capped at 80ms so content is fully in within
@@ -352,7 +189,7 @@ html {
    * remount; nothing else on a page moves by itself. will-change promotes
    * this one wrapper to its own layer before the animation starts: without
    * it, animating opacity on an ancestor of a backdrop-filter element (any
-   * .glass card or band inside) can make Safari render the blur wrong for
+   * glass surface inside, such as a sheet) can make Safari render the blur wrong for
    * the duration of the animation. */
   .reveal > * {
     animation: rise 180ms var(--ease) both;
@@ -381,7 +218,7 @@ html {
     }
   }
 
-  /* Interactive glass lifts a pixel under the pointer. */
+  /* An interactive card lifts a pixel under the pointer. */
   .lift {
     transition:
       transform 200ms var(--ease),
@@ -392,47 +229,6 @@ html {
     box-shadow:
       inset 0 1px 0 var(--glass-edge),
       0 8px 24px rgba(0, 0, 0, 0.08);
-  }
-
-  /* The type scale. Named so a screen states which step it is on instead of
-   * hardcoding a size. Headings are 600 with tight tracking; body 400. */
-  .t-display {
-    font-size: clamp(28px, 3vw, 36px);
-    font-weight: 500;
-    line-height: 1.1;
-    letter-spacing: -0.025em;
-    font-variant-numeric: tabular-nums;
-  }
-  .t-headline {
-    /* 30px desktop, 26px phone, per the owner's call: the kit's 40px H1 is
-     * for sign-in and the splash only. */
-    font-size: clamp(26px, 2.2vw, 30px);
-    font-weight: 600;
-    line-height: 1.15;
-    letter-spacing: -0.022em;
-  }
-  .t-title {
-    font-size: 17px;
-    font-weight: 600;
-    line-height: 1.3;
-    letter-spacing: -0.01em;
-  }
-  .t-body {
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 1.55;
-  }
-  .t-lede {
-    /* The one grey sentence under a page title. */
-    font-size: 15px;
-    font-weight: 400;
-    line-height: 1.5;
-    color: var(--ink-3);
-  }
-  .t-caption {
-    font-size: 12.5px;
-    font-weight: 400;
-    line-height: 1.4;
   }
 
   /* Numbers. Tabular figures so a column of amounts lines up. */
@@ -466,7 +262,7 @@ html {
     font-size: 13px;
     letter-spacing: 0;
     text-transform: none;
-    color: var(--ink-3);
+    color: var(--secondary-label);
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -508,7 +304,7 @@ html {
  * cross-fade (components.css); goBack() looks for the `page` class. */
 @media (max-width: 767px) {
   .page {
-    background: var(--bg);
+    background: var(--system-grouped-background);
     transition: background 160ms var(--ease);
     view-transition-name: page;
   }

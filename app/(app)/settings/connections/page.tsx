@@ -178,7 +178,7 @@ export default async function ConnectionsPage({ searchParams }: PageProps<'/sett
     <div className="space-y-[18px]">
       <SettingsHeader current="/settings/connections" />
 
-      {error && <p className="text-footnote rounded-md border border-red-text/60 px-3 py-2 text-red-text">{error}</p>}
+      {error && <p className="text-footnote rounded-control border border-red-text/60 px-3 py-2 text-red-text">{error}</p>}
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,380px),1fr))] items-stretch gap-3.5">
         {manifests.map((manifest) => (

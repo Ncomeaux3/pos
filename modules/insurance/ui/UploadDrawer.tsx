@@ -142,7 +142,7 @@ export function UploadDrawer({
           <div className="flex flex-col gap-2 rounded-card border border-accent p-3.5">
             <div className="num text-caption-1 text-secondary-label">{working}</div>
             <div className="flex items-center gap-2.5 text-footnote text-label">
-              <span className="size-2 shrink-0 rounded-sm bg-accent" />
+              <span className="size-2 shrink-0 rounded-full bg-accent" />
               Drafting fields · Haiku
             </div>
           </div>

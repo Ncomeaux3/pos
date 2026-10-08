@@ -665,7 +665,7 @@ function Line({
       // The tint runs a little past the text so it reads as a row, not a word.
       // 24px rows, touching, so no target overlaps the next (WCAG 2.5.8): 44px
       // rows pushed the four columns under the phone's tab bar.
-      className="-mx-1.5 flex h-6 w-[calc(100%+12px)] min-w-0 items-center justify-between gap-2 rounded-md px-1.5 text-left text-label transition-colors duration-150 hover:bg-fill-3"
+      className="-mx-1.5 flex h-6 w-[calc(100%+12px)] min-w-0 items-center justify-between gap-2 rounded-control px-1.5 text-left text-label transition-colors duration-150 hover:bg-fill-3"
     >
       <span className="truncate text-footnote">{name}</span>
       <span className="num shrink-0 text-caption-1 text-secondary-label">{children}</span>

@@ -475,6 +475,7 @@ Complexity: low. Files: `package.json`, `next.config.ts` (expose `NEXT_PUBLIC_AP
 - [ ] Rule from here on: a merge that completes a plan bumps `package.json` (minor) and tags; a fix PR on a shipped version bumps patch and tags. `docs/RELEASING.md`: the steps, `gh release create v1.2.0 --generate-notes`, then edit the notes into plain English grouped by module with a "What you will notice" section first and the owner steps last. Previews and unreleased main show `1.2.0-dev+<sha>`.
 - [ ] `app/api/mcp/route.ts` `serverInfo.version` (hardcoded `0.1.0` today) reads the same exposed version.
 - [ ] `CHANGELOG.md` seeded with v1.0.0 (2026-09-13 live), v1.1.0 (v1.1 and Holon, 2026-09-20), v1.2.0 (this plan).
+- [ ] The v1.2.0 notes include the Holon Apple redesign (docs/plans/holon-apple.md, #144 to the Close PR), whose own version bump was folded in here on 2026-10-08 (owner's answer).
 - [ ] The v1.2.0 notes list every phase's user-visible change, the owner steps done (Google project, iCloud URLs, the Reminders Shortcut, USDA key) and the migrations pushed.
 - [ ] Prod-auditor pass (the last phase of a plan by rule); its rows into DECISIONS.md's readiness table.
 
