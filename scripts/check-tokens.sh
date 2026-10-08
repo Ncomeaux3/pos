@@ -48,6 +48,8 @@ SWEPT=(
   'app/(app)/settings'
   # Notifications
   'app/(app)/notifications'
+  # Agent log
+  'app/(app)/agent-log'
 )
 
 # The two surfaces kept unchanged in feel (owner, 2026-09-18).

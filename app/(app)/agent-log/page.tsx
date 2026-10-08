@@ -141,12 +141,12 @@ export default async function AgentLogPage() {
                     />
                   ))}
                 </RowList>
-                <p className="t-caption text-ink-3">
+                <p className="text-footnote text-secondary-label">
                   A failed job retries twice inside the same run, then waits for the next one.
                 </p>
               </>
             ) : (
-              <p className="t-caption text-ink-3">
+              <p className="text-footnote text-secondary-label">
                 No jobs recorded yet. The nightly cron writes one row per invocation.
               </p>
             )}
@@ -155,22 +155,22 @@ export default async function AgentLogPage() {
           <section className="space-y-3">
             <Eyebrow>Undo history / {undone.length}</Eyebrow>
             {undone.length === 0 ? (
-              <p className="t-caption text-ink-3">
+              <p className="text-footnote text-secondary-label">
                 Nothing reverted yet. Undo an entry and it lands here, with the rule that produced it
                 paused for seven days.
               </p>
             ) : (
               <div className="[&>*:last-child]:border-b-0">
                 {undone.map((u) => (
-                  <div key={u.id} className="space-y-1 border-b border-rule py-3">
+                  <div key={u.id} className="space-y-1 border-b border-separator py-3">
                     <div className="flex items-baseline justify-between gap-2.5">
                       <Chip tone="warn">Reverted</Chip>
-                      <span className="t-caption num text-ink-3">
+                      <span className="text-footnote num text-secondary-label">
                         {day(u.undone_at)} {clock(u.undone_at)}
                       </span>
                     </div>
-                    <p className="t-caption text-ink-2">{u.title}</p>
-                    <p className="t-caption text-ink-3">
+                    <p className="text-footnote text-label">{u.title}</p>
+                    <p className="text-footnote text-secondary-label">
                       {label(u.module)}
                       {u.rule_paused ? ' / rule paused 7 days' : ''}
                     </p>
@@ -182,7 +182,7 @@ export default async function AgentLogPage() {
 
           <Card className="space-y-3">
             <CardHead label="Autonomy" />
-            <p className="t-caption text-ink-3">
+            <p className="text-footnote text-secondary-label">
               {autonomy === 'observe'
                 ? 'The agent reads and reports. Nothing is written without you doing it by hand.'
                 : autonomy === 'propose'
