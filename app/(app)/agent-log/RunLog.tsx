@@ -126,7 +126,7 @@ export function RunLog({
                       setOpen(isOpen ? '' : r.id)
                     }
                   }}
-                  className="flex cursor-pointer flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-card px-4 py-3.5 focus-visible:-outline-offset-4"
+                  className="flex cursor-pointer flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-card px-4 py-3.5 focus-visible:-outline-offset-6"
                 >
                   <div className="min-w-0 flex-1 basis-[240px] space-y-1.5">
                     <div className="flex flex-wrap items-baseline gap-x-2.5">
