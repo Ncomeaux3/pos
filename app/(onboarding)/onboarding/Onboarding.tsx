@@ -15,6 +15,7 @@ import {
   fieldClass,
   useToast,
 } from '@/components/pos'
+import { BASE, SIZE, VARIANT } from '@/components/pos/button-classes'
 import { useSearchState } from '@/components/pos/searchState'
 import type { Category } from '@/core/connectors'
 import type { Metric } from '@/core/metrics'
@@ -138,7 +139,7 @@ const listify = (data: string) => data.replace(/ and /g, ', ')
 const NOTIFY_PRESETS = [
   {
     id: 'quiet',
-    tag: 'LIGHTEST',
+    tag: 'Lightest',
     name: 'Digest only',
     note: 'Everything batches into the morning and evening digest. Nothing interrupts.',
     quietFrom: '00:00',
@@ -147,7 +148,7 @@ const NOTIFY_PRESETS = [
   },
   {
     id: 'balanced',
-    tag: 'RECOMMENDED',
+    tag: 'Recommended',
     name: 'Money and deadlines',
     note: 'Quiet hours hold the rest; an urgent rule still breaks through.',
     quietFrom: '22:00',
@@ -156,7 +157,7 @@ const NOTIFY_PRESETS = [
   },
   {
     id: 'all',
-    tag: 'LOUDEST',
+    tag: 'Loudest',
     name: 'Tell me everything',
     note: 'No quiet hours at all. Useful for the first week, then trim it.',
     quietFrom: '00:00',
@@ -297,13 +298,13 @@ export function Onboarding({ data }: { data: SetupData }) {
         <div className="flex flex-wrap gap-2">
           <Link
             href="/"
-            className="label rounded-md border border-brand bg-brand-soft px-3 py-2 text-ink"
+            className={cn(BASE, SIZE.md, VARIANT.primary)}
           >
             Go to the dashboard
           </Link>
           <Link
             href="/settings/connections"
-            className="label rounded-md border border-rule-2 px-3 py-2 text-ink-2 hover:border-ink hover:text-ink"
+            className={cn(BASE, SIZE.md, VARIANT.normal)}
           >
             Connect a provider
           </Link>
@@ -320,7 +321,7 @@ export function Onboarding({ data }: { data: SetupData }) {
       current={step}
       onStep={(key) => setStep(key as StepKey)}
       kicker={
-        <span className="text-brand">
+        <span className="text-accent">
           Step {index + 1} of {STEPS.length}
         </span>
       }
@@ -365,7 +366,7 @@ export function Onboarding({ data }: { data: SetupData }) {
               onBlur={(e) => run(() => saveSetting('timezone', e.target.value))}
               className={cn(fieldClass, 'w-full')}
             />
-            <p className="t-caption text-ink-3">
+            <p className="text-footnote text-secondary-label">
               An IANA name. Every date in the app is computed from it, so a task due today is due
               today where you are.
             </p>
@@ -383,13 +384,13 @@ export function Onboarding({ data }: { data: SetupData }) {
                   <button
                     type="button"
                     onClick={() => toggleModule(m.id)}
-                    className="w-full rounded-[18px] p-4 text-left transition-colors duration-150 hover:bg-ink/[.06]"
+                    className="w-full rounded-card p-4 text-left transition-colors duration-150 hover:bg-fill-4"
                   >
                     <span className="flex items-baseline justify-between gap-2.5">
                       <span
                         className={cn(
                           'label',
-                          on ? 'text-brand' : 'text-ink-3',
+                          on ? 'text-accent' : 'text-secondary-label',
                         )}
                       >
                         {String(i + 1).padStart(2, '0')}
@@ -397,14 +398,14 @@ export function Onboarding({ data }: { data: SetupData }) {
                       <span
                         className={cn(
                           'label',
-                          on ? 'text-brand' : 'text-ink-3',
+                          on ? 'text-accent' : 'text-secondary-label',
                         )}
                       >
-                        {on ? 'ON' : 'OFF'}
+                        {on ? 'On' : 'Off'}
                       </span>
                     </span>
-                    <span className="mt-2.5 block text-[15px] text-ink">{m.label}</span>
-                    <span className="mt-1 block text-[11px] leading-[1.45] text-ink-3">
+                    <span className="mt-2.5 block text-subheadline text-label">{m.label}</span>
+                    <span className="mt-1 block text-caption-1 text-secondary-label">
                       {m.note}
                     </span>
                   </button>
@@ -412,7 +413,7 @@ export function Onboarding({ data }: { data: SetupData }) {
               )
             })}
           </div>
-          <p className="t-caption text-ink-3">
+          <p className="text-footnote text-secondary-label">
             {enabled.length} of {data.modules.length} on.{' '}
             {data.categories.filter((c) => enabled.includes(c.module)).length} connector
             categories unlock on the next step; the rest stay visible but greyed.
@@ -477,7 +478,7 @@ export function Onboarding({ data }: { data: SetupData }) {
               <Card className="space-y-2">
                 <Eyebrow>Matches · {searchResults.length}</Eyebrow>
                 {searchResults.length === 0 ? (
-                  <p className="t-caption text-ink-3">
+                  <p className="text-footnote text-secondary-label">
                     Nothing matches. Open the closest category below and add it manually.
                   </p>
                 ) : (
@@ -491,7 +492,7 @@ export function Onboarding({ data }: { data: SetupData }) {
             )}
 
             {requestedList.length > 0 && (
-              <Card className="space-y-2 border-brand bg-brand-soft">
+              <Card selected className="space-y-2">
                 <Eyebrow>Requested · {requestedList.length}</Eyebrow>
                 <div className="flex flex-wrap gap-1.5">
                   {requestedList.map(({ name }) => (
@@ -526,9 +527,9 @@ export function Onboarding({ data }: { data: SetupData }) {
                   return (
                     <Card key={category.id} className="border-dashed bg-transparent">
                       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                        <span className="text-[15px] text-ink-3">{displayName}</span>
+                        <span className="text-subheadline text-secondary-label">{displayName}</span>
                         <span className="flex items-center gap-2.5">
-                          <span className="label text-ink-3">
+                          <span className="label text-secondary-label">
                             {moduleLabel} module off
                           </span>
                           <ActionButton variant="outline" onClick={() => toggleModule(category.module)}>
@@ -536,7 +537,7 @@ export function Onboarding({ data }: { data: SetupData }) {
                           </ActionButton>
                         </span>
                       </div>
-                      <p className="mt-1 text-[11px] text-ink-3">{subLine}</p>
+                      <p className="mt-1 text-caption-1 text-secondary-label">{subLine}</p>
                     </Card>
                   )
                 }
@@ -554,13 +555,13 @@ export function Onboarding({ data }: { data: SetupData }) {
                         setManualOpen(false)
                       }}
                       aria-expanded={open}
-                      className="-mx-2 w-[calc(100%+16px)] rounded-lg px-2 text-left transition-colors duration-150 hover:bg-ink/[.06]"
+                      className="-mx-2 w-[calc(100%+16px)] rounded-control px-2 text-left transition-colors duration-150 hover:bg-fill-4"
                     >
                       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                         <span className="flex items-baseline gap-2">
-                          <span className="text-[15px] text-ink">{displayName}</span>
+                          <span className="text-subheadline text-label">{displayName}</span>
                           {needed && (
-                            <span className="label border border-amber px-1.5 py-0.5 text-amber rounded-full">
+                            <span className="label border border-orange px-1.5 py-0.5 text-orange-text rounded-full">
                               Needed
                             </span>
                           )}
@@ -569,17 +570,17 @@ export function Onboarding({ data }: { data: SetupData }) {
                           <span
                             className={cn(
                               'label',
-                              requestedCount > 0 ? 'text-brand' : 'text-ink-3',
+                              requestedCount > 0 ? 'text-accent' : 'text-secondary-label',
                             )}
                           >
                             {requestedCount > 0
                               ? `${requestedCount} requested`
                               : `${category.providers.length} available`}
                           </span>
-                          <span className="text-ink-3">{open ? '▴' : '▾'}</span>
+                          <span className="text-secondary-label">{open ? '▴' : '▾'}</span>
                         </span>
                       </div>
-                      <p className="mt-1 text-[11px] text-ink-3">{subLine}</p>
+                      <p className="mt-1 text-caption-1 text-secondary-label">{subLine}</p>
                     </button>
 
                     {open && (
@@ -622,13 +623,13 @@ export function Onboarding({ data }: { data: SetupData }) {
               })
             )}
 
-            <p className="t-caption text-ink-3">
+            <p className="text-footnote text-secondary-label">
               {neededMissing.length > 0
                 ? `${neededMissing.map((c) => withAmpersand(c.name)).join(' and ')} carry the numbers behind Finance and Goals. Without at least one in each, those tiles open empty.`
                 : `${requested.size} requested across ${data.categories.filter((c) => c.providers.some((p) => requested.has(p))).length} categories. Add the rest any time from Settings, Connections.`}
             </p>
 
-            <p className="t-caption text-ink-3">
+            <p className="text-footnote text-secondary-label">
               A star means a real integration exists and can sync it once you authorise it at
               Settings. Everything else is recorded as a request, so it is written down and nothing
               pretends to be connected.
@@ -675,7 +676,7 @@ export function Onboarding({ data }: { data: SetupData }) {
                     }
                   >
                     {on && (
-                      <div className="mt-3.5 flex flex-wrap gap-3.5 border-t border-rule pt-3.5">
+                      <div className="mt-3.5 flex flex-wrap gap-3.5 border-t border-separator pt-3.5">
                         <label className="flex min-w-[130px] flex-1 flex-col gap-1.5">
                           <Eyebrow>Target ({g.unit})</Eyebrow>
                           <input
@@ -702,7 +703,7 @@ export function Onboarding({ data }: { data: SetupData }) {
               })}
             </RowList>
           )}
-          <p className="t-caption text-ink-3">
+          <p className="text-footnote text-secondary-label">
             {picked.length > 0
               ? `${picked.length} picked. Written when you finish, not now; anything computed updates nightly, manual goals only move when you check in.`
               : 'You can start with none, but the Goals tile stays empty until something is seeded.'}
@@ -717,6 +718,7 @@ export function Onboarding({ data }: { data: SetupData }) {
               <Card key={p.id} selected={selectedPreset === p.id} className="p-0">
                 <button
                   type="button"
+                  aria-pressed={selectedPreset === p.id}
                   onClick={() => {
                     setSelectedPreset(p.id)
                     run(async () => {
@@ -728,13 +730,13 @@ export function Onboarding({ data }: { data: SetupData }) {
                       return results.find((r) => !r.ok) ?? { ok: true }
                     })
                   }}
-                  className="w-full rounded-[18px] p-4 text-left transition-colors duration-150 hover:bg-ink/[.06]"
+                  className="w-full rounded-card p-4 text-left transition-colors duration-150 hover:bg-fill-4"
                 >
                   <Eyebrow>{p.tag}</Eyebrow>
-                  <span className="mt-3 block text-[16px] tracking-[-0.01em] text-ink">
+                  <span className="mt-3 block text-callout text-label">
                     {p.name}
                   </span>
-                  <span className="mt-2 block text-[12px] leading-[1.5] text-ink-3">{p.note}</span>
+                  <span className="mt-2 block text-footnote text-secondary-label">{p.note}</span>
                 </button>
               </Card>
             ))}
@@ -749,7 +751,7 @@ export function Onboarding({ data }: { data: SetupData }) {
               <span
                 aria-label="Morning digest time"
                 title="Set by the nightly cron in vercel.json"
-                className={cn(fieldClass, 'inline-flex w-32 items-center tabular-nums')}
+                className={cn(fieldClass, 'inline-flex w-36 items-center tabular-nums')}
               >
                 {data.nightlyAt}
               </span>
@@ -769,7 +771,7 @@ export function Onboarding({ data }: { data: SetupData }) {
                 aria-label="Evening digest time"
                 defaultValue={data.schedule.eveningAt}
                 onBlur={(e) => run(() => saveSetting('digest_evening_at', e.target.value))}
-                className={cn(fieldClass, 'w-32')}
+                className={cn(fieldClass, 'w-36')}
               />
               <Switch
                 label="Evening digest on"
@@ -788,16 +790,16 @@ export function Onboarding({ data }: { data: SetupData }) {
                 aria-label="Quiet hours start"
                 defaultValue={data.schedule.quietFrom}
                 onBlur={(e) => run(() => saveSetting('quiet_from', e.target.value))}
-                className={cn(fieldClass, 'w-28')}
+                className={cn(fieldClass, 'w-36')}
               />
-              <span className="t-caption text-ink-3">to</span>
+              <span className="text-footnote text-secondary-label">to</span>
               <input
                 key={data.schedule.quietTo}
                 type="time"
                 aria-label="Quiet hours end"
                 defaultValue={data.schedule.quietTo}
                 onBlur={(e) => run(() => saveSetting('quiet_to', e.target.value))}
-                className={cn(fieldClass, 'w-28')}
+                className={cn(fieldClass, 'w-36')}
               />
             </div>
             <ActionButton
@@ -817,24 +819,24 @@ export function Onboarding({ data }: { data: SetupData }) {
         const onLabels = data.modules.filter((m) => enabled.includes(m.id)).map((m) => m.label)
         const presetName = NOTIFY_PRESETS.find((p) => p.id === selectedPreset)?.name ?? 'Custom'
         const rows: { key: string; value: string; jump: StepKey }[] = [
-          { key: 'NAME', value: `${data.ownerName || 'not set'} · ${data.timezone}`, jump: 'you' },
-          { key: 'MODULES', value: `${enabled.length} on · ${onLabels.join(', ')}`, jump: 'modules' },
+          { key: 'Name', value: `${data.ownerName || 'not set'} · ${data.timezone}`, jump: 'you' },
+          { key: 'Modules', value: `${enabled.length} on · ${onLabels.join(', ')}`, jump: 'modules' },
           {
-            key: 'CONNECTED',
+            key: 'Connected',
             value: data.requested.length
               ? `Requested: ${data.requested.join(', ')}`
               : 'Nothing yet, the dashboard will be empty',
             jump: 'connect',
           },
           {
-            key: 'GOALS',
+            key: 'Goals',
             value: picked.length
               ? STARTER_GOALS.filter((g) => picked.includes(g.title)).map((g) => g.title).join(', ')
               : 'None seeded',
             jump: 'goals',
           },
           {
-            key: 'ALERTS',
+            key: 'Alerts',
             value: `${presetName} · quiet ${data.schedule.quietFrom}–${data.schedule.quietTo}${data.schedule.urgentOverride ? ' with urgent override' : ''}`,
             jump: 'notify',
           },
@@ -842,9 +844,9 @@ export function Onboarding({ data }: { data: SetupData }) {
 
         return (
           <div className="space-y-5">
-            <div className="space-y-2 border border-brand bg-brand-soft p-4 rounded-[18px]">
+            <div className="space-y-2 bg-grouped-2 p-4 ring-2 ring-inset ring-accent rounded-card">
               <Eyebrow>First run</Eyebrow>
-              <p className="text-[14px] leading-[1.55] text-ink">
+              <p className="text-subheadline text-label">
                 Tonight at {data.nightlyAt} the agent classifies what it finds and writes the{' '}
                 {data.nightlyAt} digest. A requested connection does not sync until you authorise
                 it at Settings. Everything it changes is logged in the Agent Log with one-click
@@ -857,12 +859,12 @@ export function Onboarding({ data }: { data: SetupData }) {
               {rows.map((row) => (
                 <div
                   key={row.key}
-                  className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-rule py-3"
+                  className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-separator py-3"
                 >
-                  <span className="label w-[110px] shrink-0 text-ink-3">
+                  <span className="label w-[110px] shrink-0 text-secondary-label">
                     {row.key}
                   </span>
-                  <span className="min-w-0 flex-1 text-[14px] leading-[1.45] text-ink">
+                  <span className="min-w-0 flex-1 text-subheadline text-label">
                     {row.value}
                   </span>
                   <ActionButton variant="quiet" onClick={() => setStep(row.jump)}>
@@ -872,7 +874,7 @@ export function Onboarding({ data }: { data: SetupData }) {
               ))}
             </div>
 
-            <p className="t-caption text-ink-3">
+            <p className="text-footnote text-secondary-label">
               Nothing here is locked in. Connections, modules and rules all live in Settings once
               you are inside.
             </p>

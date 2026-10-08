@@ -56,7 +56,7 @@ export function AvatarMenu({ phone = false, className }: { phone?: boolean; clas
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
         className={cn(
-          'grid size-11 shrink-0 place-items-center rounded-full transition-colors duration-150 hover:bg-glass',
+          'grid size-11 shrink-0 place-items-center rounded-full transition-colors duration-150 hover:bg-fill-4',
           className,
         )}
       >
@@ -64,31 +64,31 @@ export function AvatarMenu({ phone = false, className }: { phone?: boolean; clas
       </button>
 
       <Overlay open={open} onClose={() => setOpen(false)} narrow eyebrow="Account" title={ownerName || 'Account'}>
-        <ul className="glass overflow-hidden rounded-[18px]">
+        <ul className="overflow-hidden rounded-card bg-grouped-2">
           {ITEMS.map(({ href, label, Icon }) => (
             <li key={href}>
               <Link
                 href={href}
                 onClick={() => setOpen(false)}
-                className="flex min-h-[52px] items-center gap-3.5 px-4 py-2.5 text-[15px] text-ink hover:bg-ink/[.06]"
+                className="flex min-h-[52px] items-center gap-3.5 px-4 py-2.5 text-subheadline text-label hover:bg-fill-4"
               >
-                <span className="grid size-6 shrink-0 place-items-center text-ink-3">
+                <span className="grid size-6 shrink-0 place-items-center text-secondary-label">
                   <Icon size={19} strokeWidth={1.8} aria-hidden />
                 </span>
                 <span className="min-w-0 flex-1 truncate">{label}</span>
                 {href === '/notifications' && unread > 0 && (
-                  <span className="num grid h-5 min-w-5 place-items-center rounded-full bg-action px-1.5 text-[10px] text-action-fg">
+                  <span className="num grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1.5 text-caption-1 text-accent-fg">
                     {unread}
                   </span>
                 )}
-                <ChevronRight size={16} strokeWidth={1.5} aria-hidden className="shrink-0 text-ink-4" />
+                <ChevronRight size={16} strokeWidth={1.5} aria-hidden className="shrink-0 text-secondary-label" />
               </Link>
             </li>
           ))}
         </ul>
 
         <div className="mt-5 space-y-2">
-          <div className="label text-[11.5px] text-ink-3">Theme</div>
+          <div className="label text-caption-1 text-secondary-label">Theme</div>
           <ThemeSwitch theme={theme} />
         </div>
 

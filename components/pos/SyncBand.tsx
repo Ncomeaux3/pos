@@ -83,16 +83,16 @@ export function SyncBand({
         * than moving the provider's clock: "Strava · synced 07:02" for an
         * Apple payload would name the wrong source. */}
       {arrived !== undefined && (
-        <span className="num hidden text-[11px] text-ink-3 md:inline">
+        <span className="num hidden text-caption-1 text-secondary-label md:inline">
           Apple data last arrived {arrived ? syncClock(arrived, timeZone) : 'never'}
         </span>
       )}
       {note && (
-        <span className="num hidden max-w-[360px] truncate text-[11px] text-ink-3 md:inline" title={note}>
+        <span className="num hidden max-w-[360px] truncate text-caption-1 text-secondary-label md:inline" title={note}>
           {note}
         </span>
       )}
-      {/* A quiet glass pill: syncing is a maintenance action, not the page's primary. */}
+      {/* A quiet outline pill: syncing is a maintenance action, not the page's primary. */}
       <ActionButton variant="outline" size="md" onClick={() => sync(onSync)} disabled={pending}>
         <span className={cn(pending && 'animate-pulse')}>{pending ? 'Syncing' : 'Sync now'}</span>
       </ActionButton>

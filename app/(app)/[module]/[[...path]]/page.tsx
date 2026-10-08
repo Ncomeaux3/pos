@@ -2,7 +2,9 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { Eyebrow } from '@/components/pos'
+import { BASE, SIZE, VARIANT } from '@/components/pos/button-classes'
 import { getModule, missingConnections } from '@/core/modules'
+import { cn } from '@/lib/utils'
 
 /**
  * Every module page in the app is served from here. A module supplies pages in
@@ -50,17 +52,17 @@ async function NotSyncing({ ids }: { ids: string[] }) {
   if (missing.length === 0) return null
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-warn/40 bg-warn/5 px-4 py-3">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-card bg-grouped-2 px-4 py-3">
       <div className="min-w-0 space-y-1">
         <Eyebrow dot="warn">Not syncing</Eyebrow>
-        <p className="t-caption text-ink-2">
+        <p className="text-footnote text-orange-text">
           {missing.join(', ')} {missing.length === 1 ? 'is' : 'are'} not connected, so nothing here
           updates on its own. Anything you enter by hand still works.
         </p>
       </div>
       <Link
         href="/settings/connections"
-        className="label shrink-0 rounded-md border border-rule-2 px-3 py-2 text-ink-2 hover:border-ink hover:text-ink"
+        className={cn(BASE, SIZE.md, VARIANT.normal)}
       >
         Connect
       </Link>

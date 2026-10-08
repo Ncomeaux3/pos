@@ -24,7 +24,7 @@ export function BackControl() {
       href="/browse"
       transitionTypes={['back']}
       aria-label="Back"
-      className="-ml-2.5 grid size-11 shrink-0 place-items-center rounded-lg text-ink transition-colors duration-150 hover:bg-brand-soft md:hidden"
+      className="-ml-2.5 grid size-11 shrink-0 place-items-center rounded-control text-label transition-colors duration-150 hover:bg-accent/8 md:hidden"
       onClick={(e) => {
         if (window.history.length > 1) {
           e.preventDefault()

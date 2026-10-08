@@ -3011,12 +3011,12 @@ test('onboarding, six steps that write as they go', async ({ page }) => {
   await shoot(page, 'onboarding')
 
   // Modules is a visibility switch, not a delete. The artboard draws it as a
-  // grid of numbered, clickable cards with an ON/OFF state word, not a
+  // grid of numbered, clickable cards with an On or Off state word, not a
   // switch row, so the switch role is gone from this step.
   await page.getByRole('button', { name: '02 Modules' }).click()
   await expect(page.getByText(/every module can be added later/i)).toBeVisible()
   await expect(page.getByRole('switch', { name: 'Show Finance' })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: /01[\s\S]*ON[\s\S]*Finance/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /01[\s\S]*On[\s\S]*Finance/ })).toBeVisible()
   await expect(page.getByText(/connector categories unlock/)).toBeVisible()
 
   // Turn a module off here so its categories render greyed on the next step,
@@ -3147,8 +3147,8 @@ test('onboarding, first run copy names no source count', async ({ page }) => {
   await expect(card).not.toContainText(/pulls \d+ source/i)
 
   // The Summary table uses the artboard's keys.
-  await expect(page.getByText('NAME', { exact: true })).toBeVisible()
-  await expect(page.getByText('ALERTS', { exact: true })).toBeVisible()
+  await expect(page.getByText('Name', { exact: true })).toBeVisible()
+  await expect(page.getByText('Alerts', { exact: true })).toBeVisible()
   await expect(
     page.getByText('Nothing here is locked in. Connections, modules and rules all live in Settings once you are inside.'),
   ).toBeVisible()

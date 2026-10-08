@@ -255,7 +255,7 @@ export function Wizard({ data }: { data: WeekData }) {
           <Card className="space-y-2">
             <Eyebrow>Next week</Eyebrow>
             {answers.picks.map((id, i) => (
-              <p key={id} className="t-caption text-ink-2">
+              <p key={id} className="text-footnote text-label">
                 {i + 1}. {context.pickTitles[id] ?? id}
               </p>
             ))}
@@ -361,7 +361,7 @@ export function Wizard({ data }: { data: WeekData }) {
                     aria-hidden
                     className={cn(
                       'size-4 shrink-0 border rounded-full',
-                      on ? 'border-brand bg-brand' : 'border-ink-3',
+                      on ? 'border-accent bg-accent' : 'border-gray',
                     )}
                   />
                 }
@@ -370,7 +370,7 @@ export function Wizard({ data }: { data: WeekData }) {
                 right={
                   win.tag && (
                     <span
-                      className={cn('label shrink-0', on ? 'text-action' : 'text-ink-3')}
+                      className={cn('label shrink-0', on ? 'text-accent' : 'text-secondary-label')}
                     >
                       {win.tag}
                     </span>
@@ -388,10 +388,10 @@ export function Wizard({ data }: { data: WeekData }) {
               selected
               label={`Remove ${win}`}
               onClick={() => patch({ ownWins: answers.ownWins.filter((unused, j) => j !== i) })}
-              mark={<span aria-hidden className="size-4 shrink-0 border border-brand bg-brand rounded-full" />}
+              mark={<span aria-hidden className="size-4 shrink-0 border border-accent bg-accent rounded-full" />}
               title={win}
               meta="Yours"
-              right={<span className="label shrink-0 text-ink-3">Remove</span>}
+              right={<span className="label shrink-0 text-secondary-label">Remove</span>}
             />
           ))}
 
@@ -414,7 +414,7 @@ export function Wizard({ data }: { data: WeekData }) {
             </ActionButton>
           </div>
 
-          <p className="mt-1.5 text-[12px] leading-[1.5] text-ink-3">
+          <p className="mt-1.5 text-footnote text-secondary-label">
             {picked.length === 0
               ? 'Nothing picked yet. A week with no wins is worth writing down too.'
               : `${picked.length} picked${answers.ownWins.length > 0 ? `, ${answers.ownWins.length} of them yours` : ''}. These go in the note and nowhere else.`}
@@ -437,21 +437,21 @@ export function Wizard({ data }: { data: WeekData }) {
                   <div
                     key={miss.id}
                     className={cn(
-                      'border bg-bg-elev px-4 py-[15px] rounded-[18px]',
-                      action ? 'border-brand' : 'border-rule-2',
+                      'bg-grouped-2 px-4 py-[15px] rounded-card',
+                      action && 'ring-2 ring-inset ring-accent',
                     )}
                   >
                     <div className="flex flex-wrap items-center gap-x-3.5 gap-y-3">
                       <span className="min-w-0 flex-[1_1_220px]">
                         <span
                           className={cn(
-                            'block text-[15px]',
-                            action === 'drop' ? 'text-ink-3 line-through' : 'text-ink',
+                            'block text-subheadline',
+                            action === 'drop' ? 'text-secondary-label line-through' : 'text-label',
                           )}
                         >
                           {miss.title}
                         </span>
-                        <span className="mt-1 block text-[11px] leading-[1.45] text-ink-3">
+                        <span className="mt-1 block text-caption-1 text-secondary-label">
                           {miss.meta}
                           {est && ` · ${est}`}
                         </span>
@@ -494,7 +494,7 @@ export function Wizard({ data }: { data: WeekData }) {
                 )
               })}
 
-              <p className="mt-1.5 text-[12px] leading-[1.5] text-ink-3">
+              <p className="mt-1.5 text-footnote text-secondary-label">
                 {decided} of {data.misses.length} decided. Carried items land on Monday, shrunk ones
                 get a smaller first step, dropped ones leave the board with the reason attached.
               </p>
@@ -516,17 +516,17 @@ export function Wizard({ data }: { data: WeekData }) {
                 check.status === 'at_risk' ? 'warn' : check.status === 'stalled' ? 'bad' : 'brand'
               const bar =
                 check.status === 'at_risk'
-                  ? 'bg-warn'
+                  ? 'bg-orange-text'
                   : check.status === 'stalled'
-                    ? 'bg-bad'
-                    : 'bg-brand'
+                    ? 'bg-red-text'
+                    : 'bg-accent'
 
               return (
-                <div key={check.id} className="border border-rule-2 bg-bg-elev p-4 rounded-[18px]">
+                <div key={check.id} className="bg-grouped-2 p-4 rounded-card">
                   <div className="flex flex-wrap items-baseline gap-x-3.5 gap-y-2.5">
                     <span className="min-w-0 flex-[1_1_220px]">
-                      <span className="block text-[15px] text-ink">{check.title}</span>
-                      <span className="mt-1 block text-[11px] text-ink-3">
+                      <span className="block text-subheadline text-label">{check.title}</span>
+                      <span className="mt-1 block text-caption-1 text-secondary-label">
                         {check.source ?? (check.computed ? 'Computed nightly' : 'Manual check-in')}
                       </span>
                     </span>
@@ -542,7 +542,7 @@ export function Wizard({ data }: { data: WeekData }) {
                   {check.percent !== undefined && (
                     <div className="mt-3.5 flex flex-wrap items-center gap-3">
                       <div
-                        className="h-[3px] min-w-0 flex-[1_1_200px] bg-rule-2"
+                        className="h-[3px] min-w-0 flex-[1_1_200px] bg-fill-3"
                         role="meter"
                         aria-valuenow={check.percent}
                         aria-valuemin={0}
@@ -551,16 +551,16 @@ export function Wizard({ data }: { data: WeekData }) {
                       >
                         <div className={cn('h-[3px]', bar)} style={{ width: `${check.percent}%` }} />
                       </div>
-                      <span className="num shrink-0 text-[12px] text-ink-2">{check.percent}%</span>
+                      <span className="num shrink-0 text-footnote text-label">{check.percent}%</span>
                       {check.movement !== null && check.movement !== undefined && (
                         <span
                           className={cn(
-                            't-caption shrink-0',
+                            'text-footnote shrink-0',
                             check.movement > 0
-                              ? 'text-action'
+                              ? 'text-accent'
                               : check.movement === 0
-                                ? 'text-ink-3'
-                                : 'text-bad',
+                                ? 'text-secondary-label'
+                                : 'text-red-text',
                           )}
                         >
                           {check.movement === 0
@@ -572,7 +572,7 @@ export function Wizard({ data }: { data: WeekData }) {
                   )}
 
                   {!check.computed && (
-                    <div className="mt-3.5 flex flex-wrap gap-2.5 border-t border-rule pt-3.5">
+                    <div className="mt-3.5 flex flex-wrap gap-2.5 border-t border-separator pt-3.5">
                       <input
                         inputMode="decimal"
                         defaultValue={answers.checkins[check.id] ?? ''}
@@ -585,13 +585,13 @@ export function Wizard({ data }: { data: WeekData }) {
                         className={cn(reviewField, 'flex-[1_1_240px]')}
                       />
                       {check.unit && (
-                        <span className="label self-center text-ink-3">{check.unit}</span>
+                        <span className="label self-center text-secondary-label">{check.unit}</span>
                       )}
                     </div>
                   )}
 
                   {check.computed && check.note && (
-                    <p className="mt-3 text-[12px] leading-[1.5] text-ink-3">{check.note}</p>
+                    <p className="mt-3 text-footnote text-secondary-label">{check.note}</p>
                   )}
                 </div>
               )
@@ -606,8 +606,8 @@ export function Wizard({ data }: { data: WeekData }) {
             <Eyebrow>Backlog · pick up to three</Eyebrow>
             <span
               className={cn(
-                'num text-[11px]',
-                answers.picks.length >= MAX_PICKS ? 'text-action' : 'text-ink-3',
+                'num text-caption-1',
+                answers.picks.length >= MAX_PICKS ? 'text-accent' : 'text-secondary-label',
               )}
             >
               {answers.picks.length} of {MAX_PICKS} picked
@@ -648,8 +648,8 @@ export function Wizard({ data }: { data: WeekData }) {
                       <span
                         aria-hidden
                         className={cn(
-                          'grid size-6 shrink-0 place-items-center border text-[11px] rounded-full',
-                          on ? 'border-brand bg-brand text-white' : 'border-rule-2 text-ink-3',
+                          'grid size-6 shrink-0 place-items-center border text-caption-1 rounded-full',
+                          on ? 'border-accent bg-accent text-white' : 'border-gray text-secondary-label',
                         )}
                       >
                         {on ? at + 1 : ''}
@@ -659,7 +659,7 @@ export function Wizard({ data }: { data: WeekData }) {
                     meta={item.meta}
                     right={
                       estimate(item.estimateMinutes) && (
-                        <span className="t-caption num shrink-0 text-ink-3">
+                        <span className="text-footnote num shrink-0 text-secondary-label">
                           {estimate(item.estimateMinutes)}
                         </span>
                       )
@@ -671,7 +671,7 @@ export function Wizard({ data }: { data: WeekData }) {
           )}
 
           <label className="mt-[22px] block">
-            <span className="label text-ink-3">One sentence on next week</span>
+            <span className="label text-secondary-label">One sentence on next week</span>
             <input
               defaultValue={answers.intent}
               onBlur={(e) => patch({ intent: e.target.value })}
@@ -688,10 +688,10 @@ export function Wizard({ data }: { data: WeekData }) {
           {/* The note as it will be written, before it is written. The server
               renders these same blocks, so nothing is filed that was not read
               here first. */}
-          <div className="border border-rule-2 bg-bg-elev p-5 rounded-[18px]">
+          <div className="bg-grouped-2 p-5 rounded-card">
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <Eyebrow>Week {data.weekNumber} note</Eyebrow>
-              <span className="t-caption text-ink-3">
+              <span className="text-footnote text-secondary-label">
                 {data.noteTarget ? `Saves to ${data.noteTarget}` : 'Kept on the review'}
               </span>
             </div>
@@ -699,16 +699,16 @@ export function Wizard({ data }: { data: WeekData }) {
             <div className="mt-4 flex flex-col gap-3.5">
               {noteBlocks(answers, context).map((block) => (
                 <div key={block.head}>
-                  <p className="label text-action">{block.head}</p>
+                  <p className="label text-accent">{block.head}</p>
                   {block.lines.length === 0 ? (
-                    <p className="py-[7px] text-[12px] text-ink-3">{block.empty}</p>
+                    <p className="py-[7px] text-footnote text-secondary-label">{block.empty}</p>
                   ) : (
                     block.lines.map((line) => (
                       <div
                         key={line}
-                        className="flex items-baseline gap-2.5 border-b border-rule py-[7px] text-[13px] leading-[1.5] text-ink"
+                        className="flex items-baseline gap-2.5 border-b border-separator py-[7px] text-footnote text-label"
                       >
-                        <span className="size-[5px] shrink-0 rounded-full bg-ink-3" aria-hidden />
+                        <span className="size-[5px] shrink-0 rounded-full bg-secondary-label" aria-hidden />
                         <span>{line}</span>
                       </div>
                     ))
@@ -723,10 +723,10 @@ export function Wizard({ data }: { data: WeekData }) {
             {outcomes.map((outcome) => (
               <div
                 key={outcome.tag}
-                className="min-w-0 flex-[1_1_200px] border border-rule-2 bg-bg p-3.5 rounded-[18px]"
+                className="min-w-0 flex-[1_1_200px] bg-grouped-2 p-3.5 rounded-card"
               >
-                <p className="label text-action">{outcome.tag}</p>
-                <p className="mt-2 text-[13px] leading-[1.5] text-ink-2">{outcome.text}</p>
+                <p className="label text-accent">{outcome.tag}</p>
+                <p className="mt-2 text-footnote text-label">{outcome.text}</p>
               </div>
             ))}
           </div>

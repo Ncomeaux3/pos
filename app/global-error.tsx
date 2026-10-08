@@ -24,12 +24,12 @@ export default function GlobalError({
       <body className="min-h-full flex flex-col">
         <main className="flex min-h-dvh items-center justify-center p-6">
           <div className="max-w-sm space-y-3 text-center">
-            <h1 className="text-2xl font-semibold tracking-tight">Something broke</h1>
-            <p className="t-caption text-ink-3">
+            <h1 className="text-title-2 font-semibold">Something broke</h1>
+            <p className="text-footnote text-secondary-label">
               This page failed to render. When a digest is shown below, use it to find
               the matching error in the Vercel logs.
             </p>
-            {error.digest && <p className="t-caption text-ink-3">Digest {error.digest}</p>}
+            {error.digest && <p className="text-footnote text-secondary-label">Digest {error.digest}</p>}
             <ActionButton variant="outline" size="md" onClick={() => retry()}>
               Try again
             </ActionButton>

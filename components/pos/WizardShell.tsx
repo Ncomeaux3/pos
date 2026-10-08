@@ -58,17 +58,17 @@ export function WizardShell({
       <aside className="w-full shrink-0 space-y-6 lg:w-[264px]">
         <HolonLockup size={26} />
         <div className="space-y-2">
-          <h1 className="t-title text-ink">{railTitle}</h1>
-          {railLede && <p className="t-caption text-ink-3">{railLede}</p>}
+          <h1 className="text-headline text-label">{railTitle}</h1>
+          {railLede && <p className="text-footnote text-secondary-label">{railLede}</p>}
         </div>
 
         <div className="space-y-1">
-          <div className="h-0.5 w-full bg-rule">
-            <div className="h-full bg-brand transition-[width] duration-300" style={{ width: `${pct}%` }} />
+          <div className="h-0.5 w-full bg-separator">
+            <div className="h-full bg-accent transition-[width] duration-300" style={{ width: `${pct}%` }} />
           </div>
           <div className="flex justify-between">
             <Eyebrow>{steps[index]?.name}</Eyebrow>
-            <span className="num text-[11px] text-ink-3">{pct}%</span>
+            <span className="num text-caption-1 text-secondary-label">{pct}%</span>
           </div>
         </div>
 
@@ -83,21 +83,21 @@ export function WizardShell({
                   onClick={() => onStep(s.key)}
                   aria-current={on ? 'step' : undefined}
                   className={cn(
-                    'flex w-full items-baseline gap-3 border-l-2 py-2.5 pl-3 pr-2 text-left transition-colors duration-150',
-                    on ? 'border-brand bg-brand-soft' : 'border-transparent hover:bg-bg-elev',
+                    'flex min-h-11 w-full items-baseline gap-3 border-l-2 py-2.5 pl-3 pr-2 text-left transition-colors duration-150',
+                    on ? 'border-accent' : 'border-transparent hover:bg-fill-4',
                   )}
                 >
                   <span
                     className={cn(
-                      'label w-4 shrink-0 text-[11px]',
-                      done ? 'text-ok' : on ? 'text-ink' : 'text-ink-4',
+                      'label w-4 shrink-0 text-caption-1',
+                      done ? 'text-green-text' : on ? 'text-label' : 'text-secondary-label',
                     )}
                   >
                     {done ? '✓' : String(i + 1).padStart(2, '0')}
                   </span>
                   <span className="min-w-0">
-                    <span className={cn('block text-sm', on ? 'text-ink' : 'text-ink-2')}>{s.name}</span>
-                    {s.hint && <span className="block text-[11px] text-ink-3">{s.hint}</span>}
+                    <span className={cn('block text-subheadline text-label', on && 'font-semibold')}>{s.name}</span>
+                    {s.hint && <span className="block text-caption-1 text-secondary-label">{s.hint}</span>}
                   </span>
                 </button>
               </li>
@@ -109,15 +109,15 @@ export function WizardShell({
       <main className="flex min-w-0 flex-1 flex-col">
         <div className="max-w-[64ch] space-y-3">
           <Eyebrow>{kicker}</Eyebrow>
-          <h2 className="t-headline text-ink">
+          <h2 className="text-title-1 font-semibold text-label">
             {title}
           </h2>
-          {helper && <p className="t-body text-ink-3">{helper}</p>}
+          {helper && <p className="text-body text-secondary-label">{helper}</p>}
         </div>
 
         <div className="mt-7 min-h-0 flex-1">{children}</div>
 
-        <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-rule pt-4">
+        <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-separator pt-4">
           <div className="flex items-center gap-2">
             {onBack && (
               <ActionButton variant={backVariant} onClick={onBack}>
@@ -131,7 +131,7 @@ export function WizardShell({
             )}
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            {footnote && <span className="text-[11px] text-ink-3">{footnote}</span>}
+            {footnote && <span className="text-caption-1 text-secondary-label">{footnote}</span>}
             <ActionButton variant={nextVariant} onClick={onNext} className="px-4">
               {nextLabel}
             </ActionButton>

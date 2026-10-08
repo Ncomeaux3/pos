@@ -25,7 +25,7 @@ export function ThemeSwitch({ theme, className }: { theme: Theme; className?: st
     <div
       role="group"
       aria-label="Theme"
-      className={cn('flex gap-0.5 rounded-[10px] bg-bg-deep p-[3px]', className)}
+      className={cn('flex gap-0.5 rounded-control bg-fill-3 p-0.5', className)}
     >
       {OPTIONS.map((o) => (
         <button
@@ -34,8 +34,8 @@ export function ThemeSwitch({ theme, className }: { theme: Theme; className?: st
           aria-pressed={o.value === current}
           onClick={() => o.value !== current && applyTheme(o.value)}
           className={cn(
-            'h-11 flex-1 rounded-lg px-2 text-[12px] sm:h-7 font-medium text-ink-3 transition-colors duration-150',
-            o.value === current && 'bg-bg-elev text-ink shadow-card ring-1 ring-rule',
+            'h-11 flex-1 rounded-control px-2 text-footnote font-medium text-label/70 transition-colors duration-150 hover:text-label',
+            o.value === current && 'bg-grouped-2 text-label shadow-card',
           )}
         >
           {o.label}
