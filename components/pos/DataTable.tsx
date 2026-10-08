@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 
 /**
  * The column headed table: Insurance, Finance accounts and upcoming, Home,
- * Health, Meals and Travel all draw one. One glass surface with a label row
+ * Health, Meals and Travel all draw one. One opaque surface with a label row
  * and inset hairlines between rows.
  *
  * Grid rather than <table>, and the template only applies from `lg` up (768
@@ -28,7 +28,7 @@ export function DataTable({
   return (
     <div
       style={{ ['--cols' as string]: cols }}
-      className={cn('glass w-full overflow-hidden rounded-[18px]', className)}
+      className={cn('w-full overflow-hidden rounded-card bg-grouped-2', className)}
     >
       {/* No table/row/columnheader roles: they only mean anything inside a
           real table role, and half a table's ARIA is worse than none. The
@@ -37,10 +37,10 @@ export function DataTable({
       <div
         aria-hidden
         data-table-head
-        className="hidden border-b border-rule px-4 pb-2 pt-3 lg:grid lg:grid-cols-[var(--cols)] lg:gap-x-4"
+        className="hidden border-b border-separator px-4 pb-2 pt-3 lg:grid lg:grid-cols-[var(--cols)] lg:gap-x-4"
       >
         {head.map((h, i) => (
-          <span key={i} className="label text-ink-3">
+          <span key={i} className="label text-secondary-label">
             {h}
           </span>
         ))}
@@ -90,7 +90,7 @@ export function DataRow({
       style={style}
       className={cn(
         'relative px-4 py-3 transition-colors duration-150 ease-[var(--ease)]',
-        'before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-rule first:before:hidden [[data-table-head]+&]:before:hidden',
+        'before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-separator first:before:hidden [[data-table-head]+&]:before:hidden',
         // Phone: first and last cells share the top line, the rest wrap under.
         'max-lg:grid max-lg:grid-cols-[auto_minmax(0,1fr)_auto] max-lg:gap-x-3 max-lg:gap-y-1',
         'max-lg:[&>*:first-child]:col-start-1 max-lg:[&>*:first-child]:row-start-1',
@@ -99,8 +99,8 @@ export function DataRow({
         'lg:grid lg:grid-cols-[var(--cols)] lg:items-center lg:gap-x-4',
         // The same sunken tint as Row (v1.2 phase 3d); no chevron, since the
         // grid's columns belong to the caller's template.
-        interactive && 'cursor-pointer hover:bg-ink/[.06]',
-        selected && 'bg-brand-soft before:hidden [&+*]:before:hidden',
+        interactive && 'cursor-pointer hover:bg-fill-4',
+        selected && 'ring-2 ring-inset ring-accent before:hidden [&+*]:before:hidden',
         className,
       )}
     >

@@ -42,13 +42,13 @@ export async function Feeds() {
   const urls = feedUrls(await getCredentials('ics'))
 
   return (
-    <div className="glass mt-2.5 flex flex-col gap-2.5 rounded-[18px] px-4 py-3">
+    <div className="mt-2.5 flex flex-col gap-2.5 rounded-card bg-fill-3 px-4 py-3">
       <Eyebrow>Calendars</Eyebrow>
       {urls.map((url) => (
         <form key={url} action={save} className="flex items-center justify-between gap-2.5">
           <input type="hidden" name="remove" value={url} />
           {/* Wraps rather than truncates: two iCloud URLs differ near the end. */}
-          <span className="num min-w-0 break-all text-[12px] text-ink-2">{url}</span>
+          <span className="num min-w-0 break-all text-footnote text-label">{url}</span>
           {/* Named after its own URL: two buttons both called Remove say
               nothing to a screen reader about which calendar they drop. */}
           <ActionButton type="submit" variant="quiet" className="shrink-0" aria-label={`Remove ${url}`}>
@@ -71,7 +71,7 @@ export async function Feeds() {
         </label>
         <div className="flex flex-wrap items-center gap-2.5">
           <ActionButton type="submit">Add calendar</ActionButton>
-          <span className="t-caption text-ink-3">Next sync reads the new list</span>
+          <span className="text-footnote text-label/70">Next sync reads the new list</span>
         </div>
       </form>
     </div>

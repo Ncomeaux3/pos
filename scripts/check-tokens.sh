@@ -60,6 +60,15 @@ SWEPT=(
   'app/(app)/review'
   'app/(app)/search'
   'components/pos/BandSearch.tsx'
+  # Weekly review, Onboarding, the shared components and the error pages
+  'app/(app)/weekly-review'
+  'app/(onboarding)'
+  'app/(app)/[module]'
+  'app/error.tsx'
+  'app/global-error.tsx'
+  'components/pos'
+  'integrations/google/ui'
+  'integrations/ics/ui'
 )
 
 # The two surfaces kept unchanged in feel (owner, 2026-09-18).

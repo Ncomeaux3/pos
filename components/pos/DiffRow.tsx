@@ -18,17 +18,17 @@ export function DiffRow({ diff, undone }: { diff: Diff; undone?: boolean }) {
   const to = show(undone ? diff.before : diff.after)
 
   return (
-    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-rule py-2 last:border-b-0">
-      <span className="label min-w-[7rem] text-[11px] text-ink-3">
+    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-separator py-2 last:border-b-0">
+      <span className="label min-w-[7rem] text-caption-1 text-label/70">
         {diff.field}
       </span>
-      <span className={cn('num text-xs text-ink-3', undone && 'line-through')}>
+      <span className={cn('num text-footnote text-label/70', undone && 'line-through')}>
         {from}
       </span>
-      <span aria-hidden className="label text-xs text-ink-3">
+      <span aria-hidden className="label text-footnote text-label/70">
         to
       </span>
-      <span className={cn('num text-xs', undone ? 'text-ink-3 line-through' : 'text-ink')}>
+      <span className={cn('num text-footnote', undone ? 'text-label/70 line-through' : 'text-label')}>
         {to}
       </span>
     </div>
@@ -38,7 +38,7 @@ export function DiffRow({ diff, undone }: { diff: Diff; undone?: boolean }) {
 export function DiffList({ diffs, undone }: { diffs: Diff[]; undone?: boolean }) {
   if (diffs.length === 0) return null
   return (
-    <div className="rounded-md border border-rule-2 bg-bg-deep px-3 py-1">
+    <div className="rounded-control border border-opaque-separator bg-fill-3 px-3 py-1">
       {diffs.map((d) => (
         <DiffRow key={d.field} diff={d} undone={undone} />
       ))}

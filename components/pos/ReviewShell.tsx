@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { ActionButton } from './Button'
 import { BackControl } from './BackControl'
+import { fieldClass } from './field'
 
 export type ReviewStep = { key: string; name: string }
 
@@ -16,15 +17,16 @@ export type ReviewStep = { key: string; name: string }
  * width band, with the step named in the band, the progress drawn twice, and
  * no skip control.
  *
- * Measured, not guessed:
- *   band     padding 24px 28px 18px, 1px --rule underneath, gap 20px
- *   progress 2px full bleed, --accent on --rule-2, filled to the step
+ * Layout measured off the artboard, type and colour from holon-ui:
+ *   band     padding 24px 28px 18px, a separator underneath, gap 20px
+ *   progress 2px full bleed, accent on separator, filled to the step
  *   column   760px wide, padding 40px 28px 44px
- *   kicker   11px, 0.16em, --accent (the one place the eyebrow is not grey)
- *   question 26 to 38px / 400 / -0.03em / 1.08, 16px under the kicker
- *   helper   14px --ink-3 / 1.6, 14px under the question, max 600px
+ *   kicker   label in accent (the one place the eyebrow is not grey)
+ *   question large title, 16px under the kicker
+ *   helper   subheadline in secondary-label, 14px under the question, max 600px
  *   body     30px under the helper, nav 38px under the body, dashes 26px on
- *   dashes   6 x 34x3, 6px apart: --accent here, --ink-4 behind, --rule-2 ahead
+ *   dashes   6 x 34x3, each centred in a 44px button: accent here, secondary-label behind,
+ *            opaque-separator ahead
  */
 export function ReviewShell({
   steps,
@@ -68,22 +70,22 @@ export function ReviewShell({
 
   return (
     <div className="-m-[18px] md:-m-7">
-      <header className="flex flex-wrap items-center justify-between gap-5 border-b border-rule px-[18px] md:px-7 pb-[18px] pt-6">
+      <header className="flex flex-wrap items-center justify-between gap-5 border-b border-separator px-[18px] md:px-7 pb-[18px] pt-6">
         {/* The artboard names the week and the step, never the page. The page
             still needs a heading, so it has one and it is not drawn. */}
         <h1 className="sr-only">Weekly review</h1>
         <BackControl />
         <div className="min-w-0">
-          <span className="eyebrow text-ink-3">
+          <span className="eyebrow text-secondary-label">
             <span className="status-dot" aria-hidden />
             Week {week} · {weekLabel}
           </span>
-          <p className="mt-2.5 text-[15px] text-ink-2">
+          <p className="mt-2.5 text-subheadline text-label">
             {steps[index]?.name} · step {index + 1} of {steps.length}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
-          <span className="label text-ink-3">{duration}</span>
+          <span className="label text-secondary-label">{duration}</span>
           {themeToggle}
         </div>
       </header>
@@ -91,21 +93,21 @@ export function ReviewShell({
       {/* The band's own progress: 2px, full bleed, filled to the step you are
           on. The dashes at the foot of the column are the same progress made
           clickable; this is the part you see without looking for it. */}
-      <div className="h-[2px] bg-rule-2" aria-hidden>
+      <div className="h-[2px] bg-separator" aria-hidden>
         <div
-          className="h-full bg-brand transition-[width] duration-300"
+          className="h-full bg-accent transition-[width] duration-300"
           style={{ width: `${Math.round(((index + 1) / steps.length) * 100)}%` }}
         />
       </div>
 
       <div className="flex justify-center px-[18px] md:px-7 pb-11 pt-10">
         <div className="w-full max-w-[760px]">
-          <p className="label text-action">{kicker}</p>
-          <h2 className="mt-4 text-pretty text-[clamp(26px,3vw,38px)] font-normal leading-[1.08] tracking-[-0.03em] text-ink">
+          <p className="label text-accent">{kicker}</p>
+          <h2 className="mt-4 text-pretty text-large-title text-label">
             {title}
           </h2>
           {helper && (
-            <p className="mt-3.5 max-w-[600px] text-pretty text-[14px] leading-[1.6] text-ink-3">
+            <p className="mt-3.5 max-w-[600px] text-pretty text-subheadline text-secondary-label">
               {helper}
             </p>
           )}
@@ -124,7 +126,7 @@ export function ReviewShell({
             {/* No skip: the artboard has none. What it has instead is a line
                 saying you can move on and come back, which Continue already
                 does. */}
-            <span className="ml-auto text-[12px] text-ink-3">
+            <span className="ml-auto text-footnote text-secondary-label">
               {footnote ?? 'Answers save as you go'}
             </span>
           </div>
@@ -132,7 +134,7 @@ export function ReviewShell({
           {/* Six dashes, not a percentage bar. Clickable, because the steps are
               and a reader who can see where they are should be able to go
               there. */}
-          <nav aria-label="Review steps" className="mt-[14px] flex flex-wrap gap-1.5 sm:mt-[26px]">
+          <nav aria-label="Review steps" className="mt-[14px] flex flex-wrap sm:mt-[26px]">
             {steps.map((s, i) => (
               <button
                 key={s.key}
@@ -143,10 +145,10 @@ export function ReviewShell({
                 // button are distinguishable to anyone driving by name.
                 aria-label={`${String(i + 1).padStart(2, '0')} ${s.name}`}
                 // The dash is drawn by the pseudo element; the button itself
-                // is 44px tall on touch so a thumb can land on it.
+                // is 44px tall so a thumb or a pointer can land on it.
                 className={cn(
-                  'relative h-11 w-[34px] before:absolute before:inset-x-0 before:top-1/2 before:h-[3px] before:-translate-y-1/2 before:transition-colors before:duration-150 before:content-[""] sm:h-3',
-                  i === index ? 'before:bg-brand' : i < index ? 'before:bg-ink-4' : 'before:bg-rule-2 hover:before:bg-ink-4',
+                  'relative h-11 w-11 before:absolute before:inset-x-[5px] before:top-1/2 before:h-[3px] before:-translate-y-1/2 before:transition-colors before:duration-150 before:content-[""]',
+                  i === index ? 'before:bg-accent' : i < index ? 'before:bg-secondary-label' : 'before:bg-opaque-separator hover:before:bg-secondary-label',
                 )}
               />
             ))}
@@ -157,19 +159,11 @@ export function ReviewShell({
   )
 }
 
-/**
- * The review's text field: 44px, 1px rule-2, no fill.
- *
- * Not `fieldClass`, which sits on the deep ground and is 35px: the review's
- * artboard puts its inputs on the page itself at the height of the primary
- * button beside them.
- */
-export const reviewField =
-  'h-11 min-w-0 border border-rule-2 bg-transparent px-[13px] text-[14px] text-ink rounded-full ' +
-  'outline-none placeholder:text-ink-4 focus-visible:border-brand'
+/** The review's text field: the package field, allowed to shrink in a wrapping row. */
+export const reviewField = 'min-w-0 ' + fieldClass
 
 /**
- * The review's glance card: a quiet 11px label, a 26px/300 number, and a small
+ * The review's glance card: a caption label, a title-2 number, and a small
  * coloured line under it. Not MetricTile, which is a cell of a joined strip;
  * these are separate 170px cards with 10px between them.
  */
@@ -185,22 +179,22 @@ export function GlanceCard({
   tone?: 'brand' | 'warn' | 'bad' | 'quiet'
 }) {
   return (
-    <div className="border border-rule-2 bg-bg-elev p-4 rounded-[18px]">
-      <span className="block text-[11px] leading-none text-ink-3">{label}</span>
-      <span className="num mt-[9px] block text-[26px] font-light leading-none tracking-[-0.02em] text-ink">
+    <div className="bg-grouped-2 p-4 rounded-card">
+      <span className="block text-caption-1 text-secondary-label">{label}</span>
+      <span className="num mt-1.5 block text-title-2 font-semibold text-label">
         {value}
       </span>
       {delta && (
         <span
           className={cn(
-            'mt-1.5 block text-[12px] leading-none',
+            'mt-1.5 block text-footnote',
             tone === 'warn'
-              ? 'text-warn'
+              ? 'text-orange-text'
               : tone === 'bad'
-                ? 'text-bad'
+                ? 'text-red-text'
                 : tone === 'quiet'
-                  ? 'text-ink-3'
-                  : 'text-action',
+                  ? 'text-secondary-label'
+                  : 'text-accent',
           )}
         >
           {delta}
@@ -210,10 +204,10 @@ export function GlanceCard({
   )
 }
 
-/** The pull quote under the glance: 2px accent rule on the left, 14px ink. */
+/** The pull quote under the glance: 2px accent rule on the left, subheadline in label. */
 export function ReviewNote({ children }: { children: ReactNode }) {
   return (
-    <p className="mt-5 max-w-[620px] border-l-2 border-brand py-1 pl-4 text-[14px] leading-[1.6] text-ink">
+    <p className="mt-5 max-w-[620px] border-l-2 border-accent py-1 pl-4 text-subheadline text-label">
       {children}
     </p>
   )
@@ -221,8 +215,8 @@ export function ReviewNote({ children }: { children: ReactNode }) {
 
 /**
  * A row you tick: the wins list and the backlog picker are the same object with
- * a different mark on the left. 15px title, 11px meta, and selected is a 1px
- * accent border with the soft fill.
+ * a different mark on the left. subheadline title, caption meta, and selected is
+ * the inset accent ring on the opaque card.
  */
 export function ReviewRow({
   mark,
@@ -249,16 +243,16 @@ export function ReviewRow({
       aria-pressed={selected}
       aria-label={label}
       className={cn(
-        'flex w-full flex-wrap items-center gap-x-3.5 gap-y-3 border px-4 py-[15px] text-left rounded-full',
+        'flex w-full flex-wrap items-center gap-x-3.5 gap-y-3 bg-grouped-2 px-4 py-[15px] text-left rounded-card',
         'transition-colors duration-150 active:scale-[.985]',
-        selected ? 'border-brand bg-brand-soft' : 'border-rule-2 bg-bg-elev hover:border-ink-4',
+        selected ? 'ring-2 ring-inset ring-accent' : 'hover:ring-1 hover:ring-inset hover:ring-opaque-separator',
       )}
     >
       {mark}
       <span className="min-w-0 flex-[1_1_200px]">
-        <span className="block text-[15px] text-ink">{title}</span>
+        <span className="block text-subheadline text-label">{title}</span>
         {meta && (
-          <span className="mt-1 block text-[11px] text-ink-3">{meta}</span>
+          <span className="mt-1 block text-caption-1 text-secondary-label">{meta}</span>
         )}
       </span>
       {right}

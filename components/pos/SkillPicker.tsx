@@ -5,6 +5,7 @@ import { useEffect, useOptimistic, useRef, useState, useTransition } from 'react
 import type { ActionResult } from '@/app/(app)/settings/skills/actions'
 import { linkSkill, unlinkSkill } from '@/app/(app)/settings/skills/actions'
 import { cn } from '@/lib/utils'
+import { HIT } from './button-classes'
 import { fieldClass } from './field'
 import { useToast } from './Toast'
 
@@ -23,9 +24,9 @@ export type SkillLink = {
 type Patch = { op: 'add'; link: SkillLink } | { op: 'remove'; id: string }
 
 const BADGE: Record<SkillLink['by'], [string, string]> = {
-  manual: ['Manual', 'text-warn'],
-  rule: ['Rules', 'text-ok'],
-  model: ['Model', 'text-ink-2'],
+  manual: ['Manual', 'text-orange-text'],
+  rule: ['Rules', 'text-green-text'],
+  model: ['Model', 'text-secondary-label'],
 }
 
 export function SkillPicker({
@@ -69,19 +70,19 @@ export function SkillPicker({
     })
 
   return (
-    <div className={cn('flex flex-wrap items-center gap-1.5', className)}>
+    <div className={cn('flex flex-wrap items-center gap-x-2.5 gap-y-3', className)}>
       {shown.length === 0 && !adding && (
-        <span className="text-[12px] text-ink-4">Nothing matched yet.</span>
+        <span className="text-footnote text-secondary-label">Nothing matched yet.</span>
       )}
       {shown.map((l) => (
         <span
           key={l.id}
-          className="inline-flex items-center gap-1.5 border border-rule-2 px-2 py-[3px] text-[11px] text-ink rounded-full"
+          className="inline-flex items-center gap-1.5 border border-opaque-separator px-2 py-[3px] text-caption-1 text-label rounded-full"
         >
-          <Link href={`/skills?skill=${encodeURIComponent(l.id)}`} className="hover:text-brand">
+          <Link href={`/skills?skill=${encodeURIComponent(l.id)}`} className={cn(HIT, 'inline-block hover:text-accent')}>
             {l.name}
           </Link>
-          <span className={cn('text-[11px]', BADGE[l.by][1])}>
+          <span className={cn('text-caption-1', BADGE[l.by][1])}>
             {BADGE[l.by][0]}
           </span>
           <button
@@ -91,7 +92,7 @@ export function SkillPicker({
               plus.current?.focus()
               run({ op: 'remove', id: l.id }, () => unlinkSkill(entityRef, l.id))
             }}
-            className="relative min-h-6 min-w-6 text-ink-3 before:absolute before:-inset-2.5 before:content-[''] hover:text-bad sm:before:inset-0"
+            className={cn(HIT, 'min-h-6 min-w-6 text-secondary-label hover:text-red-text')}
           >
             ×
           </button>
@@ -114,7 +115,7 @@ export function SkillPicker({
               )
             }
           }}
-          className={cn(fieldClass, 'w-auto py-[3px] text-[11px]')}
+          className={cn(fieldClass, 'w-auto py-[3px] text-caption-1')}
         >
           <option value="">Pick a skill</option>
           {unlinked.map(([id, name]) => (
@@ -129,7 +130,7 @@ export function SkillPicker({
           type="button"
           aria-label="Link a skill"
           onClick={() => setAdding(true)}
-          className="min-h-6 border border-dashed border-rule-2 px-2 py-[3px] text-[11px] text-ink-3 hover:border-ink hover:text-ink rounded-full"
+          className={cn(HIT, 'min-h-6 border border-dashed border-opaque-separator px-2 py-[3px] text-caption-1 text-secondary-label hover:border-label hover:text-label rounded-full')}
         >
           +
         </button>

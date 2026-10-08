@@ -71,12 +71,12 @@ export function PullToRefresh() {
   return (
     <p
       aria-live="polite"
-      className="label fixed inset-x-0 top-[calc(var(--inset-t)+8px)] z-50 flex h-4 items-center justify-center gap-2 text-[11px] text-brand"
+      className="label fixed inset-x-0 top-[calc(var(--inset-t)+8px)] z-50 flex h-4 items-center justify-center gap-2 text-caption-1 text-accent"
     >
       {pending && (
         <span
           aria-hidden="true"
-          className="block size-3 animate-spin rounded-full border-[1.5px] border-brand border-t-transparent"
+          className="block size-3 animate-spin rounded-full border-[1.5px] border-accent border-t-transparent"
         />
       )}
       {pending ? 'Refreshing' : 'Release to refresh'}

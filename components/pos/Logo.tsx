@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 // raster: the kit's colour SVGs carry gradient surfaces and weigh 280 KB, and
 // the mark must not be redrawn, so the transparent optical export at 64px
 // serves every size up to 32 at 2x. The wordmark is outlined text, 890 bytes
-// of path, inlined so it follows the ink colour in both themes.
+// of path, inlined so it follows the text colour in both themes.
 
 /** The ribbon on its own. Decorative unless it is the only content of a link. */
 export function HolonMark({
@@ -58,7 +58,7 @@ export function HolonWordmark({ height = 20, className }: { height?: number; cla
 /** Ribbon plus wordmark, for sign-in and the rail. */
 export function HolonLockup({ size = 36, className }: { size?: number; className?: string }) {
   return (
-    <span className={cn('inline-flex items-center gap-3 text-ink', className)}>
+    <span className={cn('inline-flex items-center gap-3 text-label', className)}>
       <HolonMark size={size} />
       <HolonWordmark height={Math.round(size * 0.61)} />
     </span>
