@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import {
   ActionButton,
   Chip,
+  ConfirmButton,
   DiffList,
   EmptyState,
   Eyebrow,
@@ -14,7 +15,7 @@ import {
 import type { Entry, Run } from '@/core/writelog-shape'
 import { jobLabel } from './format'
 import { cn } from '@/lib/utils'
-import { redo, retryModule, undo } from './actions'
+import { redo, retryModule, undo, undoRun } from './actions'
 import type { ActionResult } from './actions'
 
 // The run accordion. One run open at a time, filtered by module, with every
@@ -90,7 +91,7 @@ export function RunLog({
             ...modules.map((m) => ({ value: m, label: moduleLabels[m] ?? m })),
           ]}
         />
-        <span className="t-caption text-ink-3">
+        <span className="text-footnote text-secondary-label">
           {total} {total === 1 ? 'entry' : 'entries'} / last {runs.length}{' '}
           {runs.length === 1 ? 'run' : 'runs'}
         </span>
@@ -111,8 +112,8 @@ export function RunLog({
               <div
                 key={r.id}
                 className={cn(
-                  'rounded-lg border bg-bg',
-                  isOpen ? 'border-brand' : 'border-rule-2',
+                  'overflow-hidden rounded-card bg-grouped-2',
+                  isOpen && 'ring-2 ring-inset ring-accent',
                 )}
               >
                 <div
@@ -125,18 +126,18 @@ export function RunLog({
                       setOpen(isOpen ? '' : r.id)
                     }
                   }}
-                  className="flex cursor-pointer flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3.5"
+                  className="flex cursor-pointer flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-card px-4 py-3.5 focus-visible:-outline-offset-6"
                 >
                   <div className="min-w-0 flex-1 basis-[240px] space-y-1.5">
                     <div className="flex flex-wrap items-baseline gap-x-2.5">
-                      <span className={cn('label num', r.status === 'clean' ? 'text-ok' : 'text-warn')}>
+                      <span className={cn('label num', r.status === 'clean' ? 'text-green-text' : 'text-orange-text')}>
                         {r.date}
                       </span>
-                      <span className="t-caption num text-ink-3">
+                      <span className="text-footnote num text-secondary-label">
                         {r.clock} / {r.duration}
                       </span>
                     </div>
-                    <p className="t-body text-ink">{r.summary}</p>
+                    <p className="text-body text-label">{r.summary}</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Chip tone="quiet">
@@ -145,14 +146,14 @@ export function RunLog({
                     <StatusChip tone={r.status === 'clean' ? 'brand' : 'warn'}>
                       {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
                     </StatusChip>
-                    <span aria-hidden className="text-ink-3">
+                    <span aria-hidden className="text-secondary-label">
                       {isOpen ? '▴' : '▾'}
                     </span>
                   </div>
                 </div>
 
                 {isOpen && (
-                  <div className="border-t border-rule">
+                  <div className="border-t border-separator">
                     {reversible.length > 1 && (
                       <div className="flex justify-end px-4 pt-3">
                         <UndoRun ids={reversible} />
@@ -160,7 +161,7 @@ export function RunLog({
                     )}
 
                     {r.entries.length === 0 && (
-                      <p className="t-caption px-4 py-4 text-ink-3">
+                      <p className="text-footnote px-4 py-4 text-secondary-label">
                         This run wrote nothing. The jobs it ran are in the rail.
                       </p>
                     )}
@@ -194,37 +195,34 @@ export function RunLog({
                       return (
                         <div
                           key={e.id}
-                          className={cn(
-                            'space-y-3 border-b border-rule px-4 py-3.5 last:border-b-0',
-                            undone ? 'bg-transparent' : 'bg-bg-elev',
-                          )}
+                          className="space-y-3 border-b border-separator px-4 py-3.5 last:border-b-0"
                         >
                           <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
                             <div className="min-w-0 flex-1 basis-[220px] space-y-1">
                               <div className="flex flex-wrap items-baseline gap-x-2.5">
-                                <span className={cn('label', undone ? 'text-ink-3' : 'text-ok')}>
+                                <span className={cn('label', undone ? 'text-secondary-label' : 'text-green-text')}>
                                   {e.moduleLabel}
                                 </span>
-                                <span className="t-caption text-ink-3">{e.kind}</span>
-                                <span className="t-caption num text-ink-3">{e.time}</span>
+                                <span className="text-footnote text-secondary-label">{e.kind}</span>
+                                <span className="text-footnote num text-secondary-label">{e.time}</span>
                               </div>
                               {/* Struck through when reverted, so the log reads as
                                   a history rather than as current state. */}
                               <p
                                 className={cn(
-                                  't-body',
-                                  undone ? 'text-ink-3 line-through' : 'text-ink',
+                                  'text-body',
+                                  undone ? 'text-secondary-label line-through' : 'text-label',
                                 )}
                               >
                                 {e.title}
                               </p>
-                              <p className="t-caption text-ink-3">{e.reason}</p>
+                              <p className="text-footnote text-secondary-label">{e.reason}</p>
                             </div>
 
                             <div className="flex shrink-0 items-center gap-2">
                               {canUndo && (
                                 <ActionButton
-                                  className="border-warn/60 text-warn hover:border-warn"
+                                  className="text-orange-text"
                                   onClick={() =>
                                     flip(
                                       () => undo(e.id),
@@ -261,16 +259,16 @@ export function RunLog({
                       .map((j) => (
                         <div
                           key={`${j.module}.${j.name}`}
-                          className="space-y-2 border-t border-rule bg-bad/5 px-4 py-3.5"
+                          className="space-y-2 border-t border-separator bg-red/5 px-4 py-3.5"
                         >
-                          <Eyebrow className="text-bad">Error</Eyebrow>
-                          <p className="t-body text-ink">{jobLabel(j.name)}</p>
+                          <Eyebrow className="text-red-text">Error</Eyebrow>
+                          <p className="text-body text-label">{jobLabel(j.name)}</p>
                           {/* The raw provider message, not a paraphrase of it.
                               A rewritten error is one you cannot search for. */}
-                          <p className="code t-caption break-words text-ink-2">
+                          <p className="code text-footnote break-words text-label">
                             {j.detail ?? 'No detail recorded.'}
                           </p>
-                          <p className="t-caption text-ink-3">
+                          <p className="text-footnote text-secondary-label">
                             Retried twice inside the run, then left for the next one.
                           </p>
                           {/* Only when the module is a real one runNightly can
@@ -296,31 +294,27 @@ export function RunLog({
 
 /** Every reversible write in one run, put back in one press. */
 function UndoRun({ ids }: { ids: string[] }) {
-  const [armed, setArmed] = useState(false)
   const [pending, start] = useTransition()
   const toast = useToast()
 
-  // Two press rather than a modal: there is no modal anywhere in the design,
-  // and undoing a whole run is worth asking about twice.
+  // ConfirmButton takes no `disabled`, so a pending undo shows a disabled
+  // stand-in rather than a button that could send the same ids twice.
+  if (pending) return <ActionButton disabled>Undoing</ActionButton>
+
+  // Undoing a whole run is worth asking about, through the Alert.
   return (
-    <ActionButton
-      variant={armed ? 'brand' : 'outline'}
-      disabled={pending}
-      onBlur={() => setArmed(false)}
-      onClick={() => {
-        if (!armed) {
-          setArmed(true)
-          return
-        }
-        setArmed(false)
+    <ConfirmButton
+      confirmLabel="Undo this run"
+      title={`Undo all ${ids.length} writes?`}
+      message="Each one is put back, and the rules that made them are paused for seven days."
+      onConfirm={() =>
         start(async () => {
-          const { undoRun } = await import('./actions')
           const result = await undoRun(ids)
           toast(result.ok ? `Put back ${result.undone} writes.` : result.error)
         })
-      }}
+      }
     >
-      {armed ? `Undo all ${ids.length}, press again` : 'Undo this run'}
-    </ActionButton>
+      Undo this run
+    </ConfirmButton>
   )
 }

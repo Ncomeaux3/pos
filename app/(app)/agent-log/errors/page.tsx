@@ -49,7 +49,7 @@ export default async function ErrorsPage({ searchParams }: PageProps<'/agent-log
         {eyebrow} / {rows.length}
       </Eyebrow>
       {rows.length === 0 ? (
-        <p className="t-caption text-ink-3">{empty}</p>
+        <p className="text-footnote text-secondary-label">{empty}</p>
       ) : (
         <RowList>
           {rows.map((r) => (
@@ -67,10 +67,10 @@ export default async function ErrorsPage({ searchParams }: PageProps<'/agent-log
             >
               {r.stack && (
                 <details>
-                  <summary className="t-caption inline-flex min-h-11 cursor-pointer items-center text-ink-3 hover:text-ink sm:min-h-7">
+                  <summary className="text-footnote inline-flex min-h-11 min-w-11 cursor-pointer items-center text-secondary-label hover:text-label">
                     Stack
                   </summary>
-                  <pre className="t-caption mt-1 max-h-64 overflow-auto whitespace-pre-wrap break-all text-ink-3">{r.stack}</pre>
+                  <pre className="text-footnote mt-1 max-h-64 overflow-auto whitespace-pre-wrap break-all text-secondary-label">{r.stack}</pre>
                 </details>
               )}
             </Row>
