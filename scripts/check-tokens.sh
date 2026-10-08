@@ -52,6 +52,10 @@ SWEPT=(
   'app/(app)/agent-log'
   # Browse
   'app/(app)/browse'
+  # Login and legal
+  'app/(auth)'
+  'app/(legal)'
+  'app/not-owner'
 )
 
 # The two surfaces kept unchanged in feel (owner, 2026-09-18).
