@@ -122,6 +122,16 @@ if [ -n "$alias" ]; then
   fail=1
 fi
 
+# Tailwind's named radii fell back to its defaults (sm 4px, md 6px, xl 12px)
+# when the Close deleted POS's overrides, so a swept file uses the package's
+# card, control, sheet or capsule radius, or rounded-full.
+named=$(code '(^|[^a-z-])rounded(-[trblse]{1,2})?-(sm|md|lg|xl|2xl|3xl|4xl)([^a-z0-9-]|$)')
+if [ -n "$named" ]; then
+  echo 'Tailwind named radius in a swept module; use rounded-card, rounded-control, rounded-sheet or rounded-capsule:'
+  echo "$named"
+  fail=1
+fi
+
 if [ "$fail" -eq 0 ]; then
   echo "check-tokens: ${#SWEPT[@]} swept paths clean"
 fi

@@ -25,7 +25,7 @@ export function McpCommand({ origin, reveal }: { origin: string; reveal: () => P
 
   return (
     <>
-      <pre className="num mt-3 overflow-auto whitespace-pre border border-separator bg-fill-3 px-3.5 py-3 text-footnote leading-[1.7] text-label rounded-xl">
+      <pre className="num mt-3 overflow-auto whitespace-pre border border-separator bg-fill-3 px-3.5 py-3 text-footnote leading-[1.7] text-label rounded-card">
         {`claude mcp add --transport http pos ${origin}/api/mcp \\\n  --header "Authorization: Bearer ${shown && token !== null ? token || '(MCP_TOKEN is not set)' : '••••••••••••••••••••'}"`}
       </pre>
       <div className="mt-3 flex gap-2.5">

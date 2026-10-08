@@ -80,6 +80,7 @@ holon-apple Phase 3, all 2026-09-25; reasons in decisions/log.md under that date
 holon-apple Close, 2026-10-08; reasons in decisions/log.md under that date:
 
 - Two more sweeps before Close: Review and Search, then Weekly review, Onboarding, the shared components and the error pages. Close stays one PR that deletes the alias layer once nothing names it.
+- Close bumps no version: Holon Apple ships in the v1.2.0 notes (v1.2 Phase 16). A bare control's radius is `--r-control` and the default border `--opaque-separator`; the status bar takes `.glass-regular` and ThemeSwitch `shadow-lift`.
 
 ## Production readiness
 
@@ -87,18 +88,18 @@ From the prod-auditor report of 2026-09-14 (8 present, 5 partial, 0 absent, no c
 
 | Layer | Decision | Phase | Notes |
 |---|---|---|---|
-| 1. Frontend | Present | | `pnpm build` and a served /login check in CI; the Holon token set in app/globals.css with `light-dark()`, Geist self-hosted under app/fonts (OFL, 40 KB), theme in the `pos_theme` cookie (lax, one year, not httpOnly, a display preference); Playwright at 1440 and 402; client JS 1668 kB on 2026-09-19 against the 1704 kB pre-redesign baseline |
+| 1. Frontend | Present | | `pnpm build` and a served /login check in CI; tokens, type styles and components from the private package `@ncomeaux3/holon-ui` (0.1.1, `transpilePackages`), `app/globals.css` keeping only insets, the chart series, selection and ease since the holon-apple Close (2026-10-08); the system font first, Geist self-hosted under app/fonts as fallback (OFL); `scripts/check-tokens.sh` in the check job; theme in the `pos_theme` cookie (lax, one year, not httpOnly, a display preference); Playwright at 1440 and 402; client JS 1668 kB on 2026-09-19, not re-measured since holon-ui (verify) |
 | 2. APIs and backend logic | Present | | zod on every route, `{ error }` JSON, refusal tests in core/*.test.ts |
-| 3. Database and storage | Present | | 30 migrations, replayed into pos_test by CI |
+| 3. Database and storage | Present | | 44 migrations, replayed into pos_test by CI; the `migrations` db push gate |
 | 4. Auth and permissions | Present | | proxy.ts (matcher excludes `brand/`, the icons moved there from `icons/`), requireOwner(), bearer on /api/mcp and /api/cron, passkeys |
-| 5. Hosting and deployment | Present | | Vercel git integration, previews per branch, rollback in docs/SETUP-SUPABASE.md section 7 |
+| 5. Hosting and deployment | Present | | Vercel git integration, previews per branch, rollback in docs/SETUP-SUPABASE.md section 7; the install reads the holon-ui token from `NPM_RC` through the `vercel.json` installCommand |
 | 6. Cloud and compute | Present | 12 | maxDuration on the cron (300), MCP (60), webhook and both OAuth routes (30) |
 | 7. CI/CD and version control | Present | 12 | Branch protection on main requires `check`, `screens` and `migrations`, enforced for admins, since 2026-09-15; the served-login smoke grep in ci.yml reads the input's `w-full min-h-(--target) rounded-control` class (holon-ui's fieldClass since holon-apple Phase 3) and moves with it |
-| 8. Security and data access | Present | 12 | .env gitignored, CSP, dependabot, `pnpm audit --prod --audit-level=high` in the check job |
+| 8. Security and data access | Present | 12 | .env gitignored, CSP, dependabot (its own `DEPENDABOT_NPM_TOKEN` for holon-ui), `pnpm audit --prod --audit-level=high` in the check job; the project `.npmrc` holds the registry line only, the token is user-level config. A fork PR gets no token and fails at install (solo repo, accepted) |
 | 9. Rate limiting | Present | | core/ratelimit.ts, 60 per minute per IP, 429 with retry-after |
 | 10. Caching and CDN | Present | | Request-scoped React cache() on settings, today and skill names since Phase 3; no TTL caches by decision, single user and freshness wins |
 | 11. Load balancing and scaling | Present | | Pooler in transaction mode; pool max 8 per instance, measured against 4 on 2026-09-15 |
 | 12. Observability and logs | Present | 12 | core.request_log, core.jobs, digest email on failure, error.tsx and global-error.tsx showing the digest. Not needed: Sentry or another error tracker, by the cost cap and single user |
 | 13. Availability and recovery | Present | 12 | Nightly pg_dump to pos-backups, restore drilled 2026-09-08; every storage bucket mirrored beside the dumps since 2026-09-15, restore drilled locally |
 | Cost ceiling | $0 to $10 a month, llm_soft_cap_cents 1000 enforced in core/llm.ts | 11 | Health Auto Export Premium adds $1.99 a month |
-| Secrets rotation | Present | 12 | docs/SETUP-SUPABASE.md, Rotating a secret: each secret, where it is set, what rotating it breaks |
+| Secrets rotation | Partial | | docs/SETUP-SUPABASE.md, Rotating a secret: each secret, where it is set, what rotating it breaks. Missing since holon-apple Phase 3: the holon-ui read-only PAT, held in `~/.npmrc`, `NODE_AUTH_TOKEN`, Vercel `NPM_RC` and `DEPENDABOT_NPM_TOKEN` (prod-auditor, 2026-10-08) |

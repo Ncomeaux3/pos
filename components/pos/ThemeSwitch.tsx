@@ -35,7 +35,7 @@ export function ThemeSwitch({ theme, className }: { theme: Theme; className?: st
           onClick={() => o.value !== current && applyTheme(o.value)}
           className={cn(
             'h-11 flex-1 rounded-control px-2 text-footnote font-medium text-label/70 transition-colors duration-150 hover:text-label',
-            o.value === current && 'bg-grouped-2 text-label shadow-card',
+            o.value === current && 'bg-grouped-2 text-label shadow-lift',
           )}
         >
           {o.label}
