@@ -224,8 +224,19 @@ Two sources are built and live in production (PRs #17, #18, #19, all
 - [ ] **27. Run "Pull 90 days" on Finance** after Phase 5a deploys and
       compare one account's transaction count with the bank's own list for
       the same window. Tell me the two numbers.
-- [ ] **28. Label three emails `POS` in Gmail** after Phase 7c deploys (a
-      reservation, a bill, an invite) and check the proposals on Review.
+- [ ] **28. Label three emails `POS` in Gmail** after Phase 7c deploys, free,
+      about 10 minutes. Needs item 22 done first. In order: (1) in the `Holon`
+      Google Cloud project, **APIs & Services > Library**, enable `Gmail API`;
+      (2) under **Data access**, add the scope
+      `https://www.googleapis.com/auth/gmail.readonly` (restricted; unverified
+      and In production works for your own account, with the warning);
+      (3) Settings > Connections > Google > **Reconnect** once and tick the
+      Gmail permission; (4) in Gmail create a label named exactly `POS`, and
+      optionally a filter applying it to reservations, invoices and invites;
+      (5) label three emails (a reservation, a bill, an invite); (6) after the
+      nightly run, check the proposals on Review, each with an Open in Gmail
+      link, and tell me what came out. Full steps: docs/SETUP-INTEGRATIONS.md,
+      Google, "Gmail (Phase 7c)".
 
 ## Decisions I would like from you
 

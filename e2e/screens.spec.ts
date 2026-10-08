@@ -1276,6 +1276,48 @@ test('approving a proposal runs the tool and moves the row', async ({ page }, te
   await expect(page.getByText('Recurring: every 3 months.').first()).toBeVisible()
 })
 
+// v1.2 phase 7c: an email with an invite, labelled POS, is an event proposal
+// that links back to Gmail; approving it puts the event on today's calendar.
+test('review, a Gmail invite approved lands on the calendar', async ({ page }, testInfo) => {
+  execFileSync('pnpm', ['exec', 'tsx', '--env-file=.env', 'e2e/gmail.mts'], { encoding: 'utf8' })
+  await page.goto('/review')
+
+  const row = page.getByRole('button', { name: /Event from Gmail: Dinner at Nopa/ })
+  if (testInfo.project.name === 'mobile') {
+    const box = (await row.boundingBox())!
+    const y = box.y + box.height / 2
+    await row.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: box.x + 20, clientY: y })
+    await row.dispatchEvent('pointerup', { pointerType: 'touch', clientX: box.x + box.width - 10, clientY: y })
+  } else {
+    await row.click()
+    await expect(page.getByRole('link', { name: 'Open in Gmail' })).toHaveAttribute(
+      'href',
+      'https://mail.google.com/mail/u/0/#all/e2e-gmail-1',
+    )
+    await page.getByRole('button', { name: /^approve$/i }).click()
+  }
+  await expect(page.getByText(/^Approved:/)).toBeVisible()
+
+  await page.goto('/calendar')
+  const day = page.locator('section[data-day]')
+  await expect(day.getByText('Dinner at Nopa')).toBeVisible()
+  await page.reload()
+  await expect(day.getByText('Dinner at Nopa')).toBeVisible()
+
+  // An approved event is the owner's like any typed one: it opens, and Delete
+  // removes it, which also leaves today as the calendar test expects it.
+  await day.getByText('Dinner at Nopa').click()
+  const edit = page.getByRole('dialog', { name: 'Edit event' })
+  await expect(edit.getByLabel('Starts')).toHaveValue('19:00')
+  await edit.getByRole('button', { name: 'Delete' }).click()
+  const deleted = page.waitForResponse((r) => r.request().method() === 'POST' && 'next-action' in r.request().headers())
+  await page.getByRole('dialog', { name: 'Delete this event?' }).getByRole('button', { name: 'Delete' }).click()
+  await deleted
+  await expect(page).not.toHaveURL(/event=/)
+  await page.reload()
+  await expect(day.getByText('Dinner at Nopa')).toBeHidden()
+})
+
 test('review, dismiss and undo keep the row', async ({ page }) => {
   await page.goto('/review')
   const coach = page.getByRole('button', { name: /Add a little weight/ })

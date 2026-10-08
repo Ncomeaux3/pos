@@ -18,7 +18,7 @@ Every card runs its own Test on save and tells you what it saw.
 | Voyage | token | free tier | Connected, 3 req/min without a card |
 | Resend | token | free | Connected |
 | **Strava** | oauth2 | Strava subscription ($11.99/mo since June 2026, to create an API app) | **Client and sync job built. Deferred by the owner 2026-09-13; Apple Health covers watch workouts.** |
-| **Google** | oauth2 | free | **Calendar read client, nightly pull and calendar picker built. Needs a Google Cloud OAuth client (OWNER-TODO 22).** |
+| **Google** | oauth2 | free | **Calendar read client, nightly pull and calendar picker built; Gmail label pull to Review proposals added in 7c. Needs a Google Cloud OAuth client (OWNER-TODO 22) and, for Gmail, the steps below (OWNER-TODO 28).** |
 | **Obsidian vault** | token | free | **Client built. Needs a repo and a token.** |
 | **SimpleFIN** | token | ~$1.50/mo | **Client, real Test and nightly sync built. Needs a bridge subscription.** |
 | **Health Auto Export** | webhook | paid iOS app | **Webhook writes workouts and sixteen body metrics. Needs the app and one paste.** |
@@ -101,7 +101,8 @@ using the refresh token, so you do not have to think about it.
 ## Google
 
 **Buys you:** your Google calendars on the Calendar screen, read only, pulled
-nightly and on the Sync button. Phase 7c adds Gmail to the same connection.
+nightly and on the Sync button. Gmail uses the same connection: messages you
+label `POS` become task or event proposals on Review (see "Gmail" below).
 
 ### 1. Create the OAuth client (once, about 15 minutes)
 
@@ -161,6 +162,33 @@ the window Google no longer returns is deleted, so a moved or cancelled event
 follows on the next run. The access token lasts an hour and is refreshed
 before any call that needs it (`freshCredentials` in `core/credentials.ts`).
 Events are read only in POS: edit them in Google.
+
+### Gmail (Phase 7c)
+
+**Buys you:** a reservation, bill or invite you label `POS` in Gmail turns up
+on Review as a task or calendar event proposal. Nothing becomes a live row
+until you approve it. Read only: POS never changes or sends anything in Gmail.
+
+1. In the same `Holon` project, **APIs & Services > Library**, search `Gmail
+   API`, **Enable**.
+2. Under **Data access**, add the scope
+   `https://www.googleapis.com/auth/gmail.readonly`. It is a restricted scope.
+   Left unverified and In production, it works for your own account with the
+   unverified app warning, as the calendar scope does.
+3. Settings > Connections > Google > **Reconnect** once, and tick the Gmail
+   permission on the consent screen (Advanced, Go to Holon, as before).
+4. In Gmail, create a label named exactly `POS`. Optionally add a Gmail filter
+   that applies it to reservations, invoices and invites.
+
+**What happens next:** the nightly `pull_gmail` job (`tasks` module) lists only
+messages carrying the `POS` label from the last 30 days. A message with an
+`.ics` (`text/calendar`) part becomes an event proposal by rules, with no model
+call. Any other message sends its sender, subject and plain text (cut to about
+4000 characters) to Claude Haiku to extract a title, kind, date, amount and
+place. That spend counts against the monthly soft cap; at the cap you get a
+rules-only proposal instead. Review shows each proposal with an **Open in
+Gmail** link. Gmail data is used for these proposals and nothing else, and
+Google Calendar data is still never sent to an AI provider.
 
 ---
 

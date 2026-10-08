@@ -101,7 +101,9 @@ describe('oauth, per provider', () => {
       ).searchParams
 
     const google = await start('google')
-    expect(google.get('scope')).toBe('https://www.googleapis.com/auth/calendar.readonly')
+    expect(google.get('scope')).toBe(
+      'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/gmail.readonly',
+    )
     expect(google.get('access_type')).toBe('offline')
     expect(google.get('prompt')).toBe('consent')
     expect(google.get('redirect_uri')).toBe('https://pos.example.com/api/integrations/google/oauth/callback')

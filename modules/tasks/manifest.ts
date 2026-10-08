@@ -8,6 +8,7 @@ import { nextAfter, type Repeat } from './repeat'
 import { deleteTask, findOrCreateProject, listByGoal, patchProject, patchTask } from './data'
 import { writeReminders } from './inbound'
 import { nightlyDigest, rollCounts, rollForward } from './jobs/nightly-digest'
+import { pullGmail } from './jobs/pull-gmail'
 import { dueLabel, hoursLabel, loadLabel, slipMeta } from './shape'
 import TasksPage from './ui/TasksPage'
 import { TasksTile } from './ui/Tile'
@@ -467,7 +468,9 @@ export default defineModule({
     }
   },
 
+  // Gmail before the digest, so the Review count it reads includes tonight's mail.
   jobs: [
+    { name: 'pull_gmail', run: pullGmail },
     { name: 'roll_forward', run: rollForward },
     { name: 'nightly_digest', run: nightlyDigest },
   ],

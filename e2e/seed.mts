@@ -137,7 +137,7 @@ const index = await embedChanged()
 
 // Two proposals so the Review screen has both shapes: one a module marked
 // guarded, one it did not.
-await db().query(`delete from core.proposals where agent in ('orchestrator', 'ideas.tidy')`)
+await db().query(`delete from core.proposals where agent in ('orchestrator', 'ideas.tidy', 'gmail')`)
 
 await propose({
   module: 'ideas',

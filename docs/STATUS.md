@@ -34,7 +34,7 @@ and tap with "Net" renamed "Left over", and a 3/6/12/24 month range saved in
 (#127). 5c is closed; independent of 5d. Phase 1 merged (#130), Phase 2 merged
 (#132), Phase 3 (the range) merged (#134); the plan is complete.
 
-**Alongside v1.2: docs/plans/holon-apple.md** (2026-09-23, Holon moved toward the Apple HIG as a reusable package, `Ncomeaux3/holon-ui`, private). Phase 0 (the HIG notes, #144) and Phase 1 (tokens, contrast check and demo, holon-ui #1 and #148) merged 2026-09-24 after the owner approved the demo. Phase 2 is two holon-ui PRs, 2a primitives (holon-ui #2) and 2b navigation and data (holon-ui #3, stacked on #2), both built with PRs open; Phase 2a and 2b merged (holon-ui #2, #4). Phase 3 is built on `holon-apple-phase-3`: holon-ui 0.1.0 published locally, POS on the package through shims and three wrappers, the shell in place; holon-ui 0.1.1 carries the phone bar title fix; Phase 3 merged as #151. Module sweeps: Home merged as #152; Tasks merged as #153; Finance merged as #154; Calendar merged as #155; Goals merged as #157; Fitness and Health merged as #158; Meals merged as #161; Travel merged as #162, the globe rebuild split into its own research, mockup and build track; Insurance and Home merged as #163; Second Brain merged as #165; Ideas merged as #166; Skills merged as #167, the constellation rebuild split into its own research, mockup and build track; Settings merged as #168; Notifications merged as #169; Agent log merged as #171; Browse merged as #172; Login and legal merged as #173; Review and Search merged as #174 (two sweeps added before Close on 2026-10-08, owner's answer); Weekly review, Onboarding, the shared components and the error pages merged as #175, leaving no alias name outside `app/globals.css`; Close (the alias layer deleted from `app/globals.css`, SPEC.md's styling paragraph pointed at holon-ui) built on `holon-apple-close` with its PR open, which completes the plan's code. The version bump moved to v1.2 Phase 16 (owner, 2026-10-08). Left on separate tracks: the globe and constellation rebuilds.
+**Alongside v1.2: docs/plans/holon-apple.md** (2026-09-23, Holon moved toward the Apple HIG as a reusable package, `Ncomeaux3/holon-ui`, private). Phase 0 (the HIG notes, #144) and Phase 1 (tokens, contrast check and demo, holon-ui #1 and #148) merged 2026-09-24 after the owner approved the demo. Phase 2 is two holon-ui PRs, 2a primitives (holon-ui #2) and 2b navigation and data (holon-ui #3, stacked on #2), both built with PRs open; Phase 2a and 2b merged (holon-ui #2, #4). Phase 3 is built on `holon-apple-phase-3`: holon-ui 0.1.0 published locally, POS on the package through shims and three wrappers, the shell in place; holon-ui 0.1.1 carries the phone bar title fix; Phase 3 merged as #151. Module sweeps: Home merged as #152; Tasks merged as #153; Finance merged as #154; Calendar merged as #155; Goals merged as #157; Fitness and Health merged as #158; Meals merged as #161; Travel merged as #162, the globe rebuild split into its own research, mockup and build track; Insurance and Home merged as #163; Second Brain merged as #165; Ideas merged as #166; Skills merged as #167, the constellation rebuild split into its own research, mockup and build track; Settings merged as #168; Notifications merged as #169; Agent log merged as #171; Browse merged as #172; Login and legal merged as #173; Review and Search merged as #174 (two sweeps added before Close on 2026-10-08, owner's answer); Weekly review, Onboarding, the shared components and the error pages merged as #175, leaving no alias name outside `app/globals.css`; Close (the alias layer deleted from `app/globals.css`, SPEC.md's styling paragraph pointed at holon-ui) merged as #176, which completes the plan's code. The version bump moved to v1.2 Phase 16 (owner, 2026-10-08). Left on separate tracks: the globe and constellation rebuilds.
 
 **Queued after v1.2: docs/plans/skills-v2.md** (2026-09-15, six phases from the owner's Skill Tree rewrite in docs/SKILLS.md: the nine-attribute tree, per-event XP snapshots, projects, challenges and achievements, the digest, the screen). Not started.
 
@@ -48,7 +48,7 @@ production readiness table. Also merged 2026-09-14 and not yet written up below:
 docs/plans/brain-capture.md, all three phases (#48, #49, #50): the capture box,
 hubs, related notes and file capture with transcription.
 
-Last updated: 2026-10-08 (holon-apple Close, built with its PR open: the alias layer deleted; the shared sweep #175 merged; Review and Search #174, Agent log #171, Browse #172, Login and legal #173; Notifications #169, Settings #168, Skills #167, Ideas #166, Home #152, Tasks #153, Finance #154, Calendar #155, Goals #157, Fitness and Health #158, Meals #161, Travel #162, Insurance and Home #163 and Second Brain #165 merged). Production `pos-gilt-rho.vercel.app`
+Last updated: 2026-10-08 (v1.2 Phase 7c built with its PR open; holon-apple Close merged as #176: the alias layer deleted; the shared sweep #175 merged; Review and Search #174, Agent log #171, Browse #172, Login and legal #173; Notifications #169, Settings #168, Skills #167, Ideas #166, Home #152, Tasks #153, Finance #154, Calendar #155, Goals #157, Fitness and Health #158, Meals #161, Travel #162, Insurance and Home #163 and Second Brain #165 merged). Production `pos-gilt-rho.vercel.app`
 live since 2026-09-13 with the owner's bootstrap done (docs/OWNER-TODO.md
 steps 1 to 9). Latest merged: docs/plans/brain-capture.md, all three phases,
 #48, #49 and #50 (see Done). Three plans finished earlier this week: docs/plans/phone-shell.md
@@ -72,11 +72,16 @@ against the Vercel domain. Laptop notes: `.env` has no VAPID pair, so `pnpm setu
 and the push Devices e2e test fail locally; the same test is the only red
 one CI carries as well until the pair is added to the secrets.
 
-## Next: v1.2 Phase 7c (Gmail to proposals)
+## Next: v1.2 Phase 8 (Fitness source band and manual forms)
 
-Phase 7b (Apple `.ics` and Reminders) is built with its PR open; 7a merged as
-#138, 6b as #137. 7c reuses the Google connection 7a built. Earlier, and kept
-for its record:
+Phase 7c (Gmail to proposals) is built on `phase-7c-gmail-proposals` with its
+PR open: mail labelled `POS` becomes task and event proposals on Review, an
+invite by rules and the rest through Haiku under the capped `mail` purpose.
+The proposal count and cost wait on OWNER-TODO 28 (Gmail API, scope,
+Reconnect, three labelled emails); until then `pull_gmail` logs skipped with
+the step to take, not failed. 7b merged as #147, 7a as #138. Phases 9,
+10a, 12 and 13 are also open; 8, 9 and 10a are parallel-safe. Earlier, and
+kept for its record:
 
 ### v1.2 Phase 7b: Apple .ics feeds and Reminders webhook (built 2026-09-24)
 
