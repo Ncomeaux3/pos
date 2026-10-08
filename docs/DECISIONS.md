@@ -77,6 +77,10 @@ holon-apple Phase 3, all 2026-09-25; reasons in decisions/log.md under that date
 - Registry credentials in user-level config (pnpm 11 ignores a project `.npmrc` token): `~/.npmrc`, CI `pnpm config set` from `NODE_AUTH_TOKEN`, Vercel `NPM_RC`, Dependabot `DEPENDABOT_NPM_TOKEN`; a read-only classic PAT.
 - The package wins every shared token but the four chart series, which keep the Holon palette until a sweep.
 
+holon-apple Close, 2026-10-08; reasons in decisions/log.md under that date:
+
+- Two more sweeps before Close: Review and Search, then Weekly review, Onboarding, the shared components and the error pages. Close stays one PR that deletes the alias layer once nothing names it.
+
 ## Production readiness
 
 From the prod-auditor report of 2026-09-14 (8 present, 5 partial, 0 absent, no critical findings); the five partial rows and the rotation row closed by v1.1 phase 12 on 2026-09-15. Every row is decided, scheduled to a phase of docs/plans/pos-v1-1.md, or not needed with a reason.

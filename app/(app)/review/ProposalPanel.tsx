@@ -2,6 +2,7 @@
 
 import { Fragment, useState, useTransition, type ReactNode } from 'react'
 import { ActionButton, Card, Eyebrow, useToast } from '@/components/pos'
+import { fieldClass } from '@/components/pos/field'
 import { cn } from '@/lib/utils'
 import { approveProposal, dismissProposal, reopenProposal } from './actions'
 import { confidenceClass, StateChip, type ReviewItem } from './ReviewList'
@@ -58,6 +59,7 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
     )
   }
 
+  const firstEditable = item.diff.find((d) => d.editable)?.field
   const show = (v: string | null) => (v === null || v === '' ? 'empty' : v)
 
   return (
@@ -65,39 +67,40 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <Eyebrow>
-            {item.moduleLabel} <span className="text-ink-4">/</span> {item.module}.{item.tool}
+            {item.moduleLabel} <span className="text-secondary-label">/</span> {item.module}.{item.tool}
           </Eyebrow>
-          <h2 className="mt-2.5 text-[20px] leading-[1.3] tracking-[-0.02em] text-ink">{item.title}</h2>
+          <h2 className="mt-2.5 text-title-3 text-label">{item.title}</h2>
         </div>
         <StateChip status={status} />
       </div>
 
       <div>
         <Eyebrow>Why</Eyebrow>
-        <p className="mt-2 text-[13px] leading-[1.55] text-ink-2">{item.reason}</p>
+        <p className="mt-2 text-footnote text-label">{item.reason}</p>
       </div>
 
       {item.diff.length > 0 && (
         <div>
           <Eyebrow>Proposed change</Eyebrow>
-          <div className="mt-2 grid grid-cols-2 gap-px overflow-hidden rounded-[18px] border border-rule bg-rule">
+          <div className="mt-2 grid grid-cols-2 gap-px overflow-hidden rounded-card bg-separator">
             {item.diff.map((d) => {
               const one = item.diff.length === 1
               const before = show(d.before)
               return (
                 <Fragment key={d.field}>
-                  <div className="min-w-0 bg-bg px-3 py-2.5">
-                    <span className="text-[11px] text-ink-3">{one ? 'Current' : `${d.field} · current`}</span>
-                    <div className={cn('num mt-1.5 break-words text-[13px]', before === 'empty' ? 'text-ink-3' : 'text-ink')}>
+                  <div className="min-w-0 bg-grouped-3 px-3 py-2.5">
+                    <span className="text-caption-1 text-secondary-label">{one ? 'Current' : `${d.field} · current`}</span>
+                    <div className={cn('num mt-1.5 break-words text-footnote', before === 'empty' ? 'text-secondary-label' : 'text-label')}>
                       {before}
                     </div>
                   </div>
-                  <div className="min-w-0 bg-bg px-3 py-2.5">
-                    <span className="text-[11px] text-ink-3">{one ? 'After' : `${d.field} · after`}</span>
+                  <div className="min-w-0 bg-grouped-3 px-3 py-2.5">
+                    <span className="text-caption-1 text-secondary-label">{one ? 'After' : `${d.field} · after`}</span>
                     {editing && d.editable ? (
                       <input
                         aria-label={`After · ${d.field}`}
-                        className="num mt-1 w-full rounded-lg border border-brand bg-bg-elev px-2 py-[5px] text-[13px] text-ink outline-none"
+                        autoFocus={d.field === firstEditable}
+                        className={cn(fieldClass, 'num mt-1 px-2 py-1.5')}
                         value={drafts[d.field] ?? ''}
                         onChange={(e) => setDrafts({ ...drafts, [d.field]: e.target.value })}
                         onKeyDown={(e) => {
@@ -106,7 +109,7 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
                         }}
                       />
                     ) : (
-                      <div className="num mt-1.5 break-words text-[13px] text-action">
+                      <div className="num mt-1.5 break-words text-footnote text-accent">
                         {show(after(d.field, d.after))}
                       </div>
                     )}
@@ -118,31 +121,31 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-px overflow-hidden rounded-[18px] border border-rule bg-rule">
+      <div className="grid grid-cols-3 gap-px overflow-hidden rounded-card bg-separator">
         <Cell label="Confidence">
           <div
             className={cn(
-              'num mt-1.5 text-[16px]',
-              item.confidence === null ? 'text-ink-4' : confidenceClass(item.confidence),
+              'num mt-1.5 text-callout',
+              item.confidence === null ? 'text-secondary-label' : confidenceClass(item.confidence),
             )}
           >
             {item.confidence === null ? 'not given' : `${Math.round(item.confidence * 100)}%`}
           </div>
         </Cell>
         <Cell label="Evidence">
-          <div className={cn('mt-1.5 text-[12px]', item.evidence ? 'text-ink' : 'text-ink-4')}>
+          <div className={cn('mt-1.5 text-footnote', item.evidence ? 'text-label' : 'text-secondary-label')}>
             {item.evidence ?? 'not given'}
           </div>
         </Cell>
         <Cell label="Affects">
-          <div className={cn('mt-1.5 text-[12px]', item.affects ? 'text-ink' : 'text-ink-4')}>
+          <div className={cn('mt-1.5 text-footnote', item.affects ? 'text-label' : 'text-secondary-label')}>
             {item.affects ?? 'not given'}
           </div>
         </Cell>
       </div>
 
       {error && (
-        <p className="t-caption rounded-md border border-bad/60 px-3 py-2 text-bad">{error}</p>
+        <p className="rounded-control bg-red/15 px-3 py-2 text-footnote text-red-text">{error}</p>
       )}
 
       {status === 'pending' ? (
@@ -153,7 +156,7 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
             </ActionButton>
             {canEdit && (
               <ActionButton
-                className="h-auto self-stretch px-3.5 text-[13px] text-ink sm:h-auto"
+                className="h-auto min-h-11 self-stretch px-3.5 text-footnote text-label sm:h-auto"
                 disabled={busy}
                 onClick={toggleEdit}
               >
@@ -161,7 +164,7 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
               </ActionButton>
             )}
             <ActionButton
-              className="ml-auto h-auto self-stretch px-3.5 text-[13px] text-ink-3 hover:border-bad hover:text-bad sm:h-auto"
+              className="ml-auto h-auto min-h-11 self-stretch px-3.5 text-footnote text-secondary-label hover:text-red-text sm:h-auto"
               disabled={busy}
               onClick={() => run(() => dismissProposal(item.id), 'Dismissed', 'dismissed')}
             >
@@ -169,14 +172,14 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
             </ActionButton>
           </div>
           {item.guarded && (
-            <p className="-mt-1.5 text-[12px] text-warn">
+            <p className="-mt-1.5 text-footnote text-orange-text">
               Guarded tool: approving writes to {item.moduleLabel} immediately.
             </p>
           )}
         </>
       ) : (
         <div className="flex items-center justify-between gap-3 pt-1">
-          <span className="text-[13px] text-ink-3">
+          <span className="text-footnote text-secondary-label">
             {status === 'approved'
               ? `Approved. ${item.module}.${item.tool} ran.`
               : 'Dismissed. The agent will not re-propose this for 30 days. Undo puts it back in the inbox.'}
@@ -185,7 +188,7 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
             * run its tool a second time, and the write it made stays. */}
           {status === 'dismissed' && (
             <ActionButton
-              className="text-ink-2"
+              className="text-label"
               disabled={busy}
               onClick={() => run(() => reopenProposal(item.id), 'Back in the inbox', 'pending')}
             >
@@ -200,7 +203,7 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
 
 function Cell({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="min-w-0 bg-bg px-3 py-2.5">
+    <div className="min-w-0 bg-grouped-3 px-3 py-2.5">
       <Eyebrow>{label}</Eyebrow>
       {children}
     </div>

@@ -56,6 +56,10 @@ SWEPT=(
   'app/(auth)'
   'app/(legal)'
   'app/not-owner'
+  # Review and Search
+  'app/(app)/review'
+  'app/(app)/search'
+  'components/pos/BandSearch.tsx'
 )
 
 # The two surfaces kept unchanged in feel (owner, 2026-09-18).

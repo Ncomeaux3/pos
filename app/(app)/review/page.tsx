@@ -75,7 +75,7 @@ export default async function ReviewPage({ searchParams }: PageProps<'/review'>)
       <PageHeader
         eyebrow={
           <>
-            Review <span className="text-ink-4">/</span> {label}
+            Review <span className="text-secondary-label">/</span> {label}
           </>
         }
         title="Review"

@@ -28,9 +28,9 @@ export type ReviewItem = {
 
 /** Grades the number the way the design does, and never colour alone. */
 export function confidenceClass(c: number): string {
-  if (c >= 0.8) return 'text-ok'
-  if (c >= 0.7) return 'text-ink'
-  return 'text-warn'
+  if (c >= 0.8) return 'text-green-text'
+  if (c >= 0.7) return 'text-label'
+  return 'text-orange-text'
 }
 
 /** The state chip: amber while it waits, green once it ran, quiet once it went. */
@@ -113,23 +113,23 @@ export function ReviewList({
           const on = item.id === selected?.id
           const decided = item.status !== 'pending'
           return (
-            <SwipeRow key={item.id} {...swipe(item)} rowClassName="rounded-[18px]">
+            <SwipeRow key={item.id} {...swipe(item)} rowClassName="rounded-card">
               <button
                 type="button"
                 aria-pressed={on}
                 onClick={() => select(item.id)}
-                className="group block w-full text-left"
+                className="group block w-full rounded-card text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)"
               >
                 <Card
                   selected={on}
                   className={cn(
                     'px-4 py-3.5 transition-colors duration-150',
-                    !on && 'border-rule group-hover:border-rule-2',
+                    !on && 'group-hover:ring-1 group-hover:ring-opaque-separator',
                   )}
                 >
                   <div className="flex items-center justify-between gap-2.5">
-                    <span className="text-[11px] text-ink-3">
-                      {item.agent} <span className="text-ink-4">·</span> {item.when}
+                    <span className="text-caption-1 text-secondary-label">
+                      {item.agent} <span>·</span> {item.when}
                     </span>
                     <span className="flex items-center gap-1.5">
                       {item.guarded && <StatusChip tone="warn">Guarded</StatusChip>}
@@ -138,10 +138,10 @@ export function ReviewList({
                   </div>
                   {/* Decided cards read quieter in ink, where the artboard fades
                     * the whole card to 75%. */}
-                  <p className={cn('mt-1.5 text-[14px] leading-[1.4]', decided ? 'text-ink-2' : 'text-ink')}>
+                  <p className={cn('mt-1.5 text-subheadline', decided ? 'text-secondary-label' : 'text-label')}>
                     {item.title}
                   </p>
-                  <div className={cn('mt-2 flex flex-wrap gap-3 text-[11px]', decided ? 'text-ink-4' : 'text-ink-3')}>
+                  <div className="mt-2 flex flex-wrap gap-3 text-caption-1 text-secondary-label">
                     <span>{item.moduleLabel}</span>
                     <span className="num">
                       {item.module}.{item.tool}
