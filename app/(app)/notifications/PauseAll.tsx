@@ -19,9 +19,9 @@ export function PauseAll({ paused: initialPaused }: { paused: boolean }) {
   return (
     <ActionButton
       variant="outline"
-      // The artboard turns this amber while paused, not the teal `brand`
+      // The artboard turns this orange while paused, not the accent `brand`
       // variant a selected control gets elsewhere.
-      className={paused ? 'border-warn text-warn' : undefined}
+      className={paused ? 'border-orange-text text-orange-text' : undefined}
       onClick={() =>
         run(!paused, async () => {
           const result = await updateSchedule('notifications_paused', !paused)

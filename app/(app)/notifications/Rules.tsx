@@ -61,12 +61,12 @@ function timingLabel(rule: Rule): string {
   return rule.lead_days ? `${base} · ${leadLabel(rule.lead_days)}` : base
 }
 
-// Module colour on a live rule's row: accent for most modules, amber for
-// insurance, ink-2 for system, matching the artboard's MODS table. Ink-3 once
+// Module colour on a live rule's row: accent for most modules, orange for
+// insurance, label for system, matching the artboard's MODS table. Secondary once
 // the rule is not live, whatever the module.
-const MOD_TONE: Record<string, string> = { insurance: 'text-warn', system: 'text-ink-2' }
+const MOD_TONE: Record<string, string> = { insurance: 'text-orange-text', system: 'text-label' }
 function moduleTone(module: string, live: boolean): string {
-  return live ? (MOD_TONE[module] ?? 'text-action') : 'text-ink-3'
+  return live ? (MOD_TONE[module] ?? 'text-accent') : 'text-secondary-label'
 }
 
 /** What the expander says the rule will actually do, in one sentence. */
@@ -144,7 +144,7 @@ export function Notifications({
 
           <div className="grid gap-[18px] sm:grid-cols-[repeat(auto-fit,minmax(min(100%,210px),1fr))]">
             <div className="space-y-2">
-              <p className="t-caption text-ink-3">Morning digest</p>
+              <p className="text-footnote text-secondary-label">Morning digest</p>
               <div className="flex items-center gap-2.5">
                 {/* Not an input. The digest goes out when the nightly cron
                   * fires, and there is one run a day, so no setting here could
@@ -163,7 +163,7 @@ export function Notifications({
                   onChange={(next) => run(() => updateSchedule('digest_morning_enabled', next))}
                 />
               </div>
-              <p className="t-caption text-ink-3">
+              <p className="text-footnote text-secondary-label">
                 {schedule.morningEnabled
                   ? `When the nightly run fires, your time. ${liveCount('morning')} rules batch into it`
                   : 'Off, so morning rules fall back to in-app only'}
@@ -171,7 +171,7 @@ export function Notifications({
             </div>
 
             <div className="space-y-2">
-              <p className="t-caption text-ink-3">Evening digest</p>
+              <p className="text-footnote text-secondary-label">Evening digest</p>
               <div className="flex items-center gap-2.5">
                 <input
                   type="time"
@@ -186,7 +186,7 @@ export function Notifications({
                   onChange={(next) => run(() => updateSchedule('digest_evening_enabled', next))}
                 />
               </div>
-              <p className="t-caption text-ink-3">
+              <p className="text-footnote text-secondary-label">
                 {schedule.eveningEnabled
                   ? `${liveCount('evening')} rules batch into it`
                   : 'Off, so evening rules fall back to in-app only'}
@@ -194,7 +194,7 @@ export function Notifications({
             </div>
 
             <div className="space-y-2">
-              <p className="t-caption text-ink-3">Quiet hours</p>
+              <p className="text-footnote text-secondary-label">Quiet hours</p>
               <div className="flex flex-wrap items-center gap-2">
                 <input
                   type="time"
@@ -203,7 +203,7 @@ export function Notifications({
                   onBlur={(e) => run(() => updateSchedule('quiet_from', e.target.value))}
                   className={timeField}
                 />
-                <span className="t-caption text-ink-3">to</span>
+                <span className="text-footnote text-secondary-label">to</span>
                 <input
                   type="time"
                   aria-label="Quiet hours end"
@@ -243,7 +243,7 @@ export function Notifications({
             />
           </div>
 
-          <div className="t-caption flex flex-wrap gap-x-3 gap-y-1 border-b border-rule-2 px-1 pb-2.5 text-ink-3">
+          <div className="text-footnote flex flex-wrap gap-x-3 gap-y-1 border-b border-opaque-separator px-1 pb-2.5 text-secondary-label">
             <span className="min-w-0 flex-1">Rule</span>
             <span>Channels · timing · state</span>
           </div>
@@ -258,10 +258,10 @@ export function Notifications({
               return (
                 <Row
                   key={rule.id}
-                  // The design opens a rule onto bg-elev with an accent border,
-                  // not onto the accent-soft fill a selected row gets. An open
-                  // expander is a place you are working, not a choice you made.
-                  className={cn(isOpen && 'bg-bg-elev ring-1 ring-brand')}
+                  // An open rule is marked by the inset accent ring alone, as
+                  // Second Brain's selected row is: an accent tint pushes
+                  // secondary-label under 4.5:1 in light.
+                  className={cn(isOpen && 'bg-grouped-2 ring-2 ring-inset ring-accent')}
                   muted={!live}
                   expanded={isOpen}
                   onClick={() => {
@@ -279,8 +279,8 @@ export function Notifications({
                   meta={rule.trigger_text}
                   right={
                     <>
-                      <span className="t-caption text-ink-3">{channelLabel(rule)}</span>
-                      <span className="t-caption text-ink-3">{timingLabel(rule)}</span>
+                      <span className="text-footnote text-secondary-label">{channelLabel(rule)}</span>
+                      <span className="text-footnote text-secondary-label">{timingLabel(rule)}</span>
                       <StatusChip
                         tone={
                           state.tone === 'on' ? 'brand' : state.tone === 'snoozed' ? 'warn' : 'quiet'
@@ -296,7 +296,7 @@ export function Notifications({
                       // The row itself toggles the expander, so clicks on a
                       // control inside must not bubble back up and close it.
                       onClick={(e) => e.stopPropagation()}
-                      className="grid gap-5 border-t border-rule pt-4 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,200px),1fr))]"
+                      className="grid gap-5 border-t border-separator pt-4 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,200px),1fr))]"
                     >
                       <div className="space-y-2.5">
                         <Eyebrow>Channels</Eyebrow>
@@ -354,7 +354,7 @@ export function Notifications({
                         >
                           {rule.urgent ? 'Breaks quiet hours' : 'Respects quiet hours'}
                         </ActionButton>
-                        <p className="t-caption text-ink-3">
+                        <p className="text-footnote text-secondary-label">
                           {rule.urgent
                             ? `Delivered even between ${schedule.quietFrom} and ${schedule.quietTo}.`
                             : `Held until ${schedule.quietTo} if it fires overnight.`}
@@ -385,7 +385,7 @@ export function Notifications({
                             {rule.muted ? 'Unmute' : 'Mute'}
                           </ActionButton>
                         </div>
-                        <p className="t-caption text-ink-3">{stateNote(rule)}</p>
+                        <p className="text-footnote text-secondary-label">{stateNote(rule)}</p>
                       </div>
                     </div>
                   )}
@@ -460,31 +460,28 @@ function Preview({
     <aside className="flex min-w-0 flex-[1_1_320px] flex-col gap-6 xl:max-w-[420px]">
       <div className="flex items-baseline justify-between gap-3">
         <Eyebrow>Preview</Eyebrow>
-        <span className="t-caption text-ink-3">{moduleLabel}</span>
+        <span className="text-footnote text-secondary-label">{moduleLabel}</span>
       </div>
 
       <div className="space-y-3">
         <Eyebrow>Push, lock screen</Eyebrow>
         {/* Fixed dark ground on purpose: a phone lock screen is dark whatever
             theme the app is in, so the preview would lie if it followed it. */}
-        <div className="space-y-3.5 rounded-lg border border-rule-2 bg-[#101216] p-4">
-          <div className="text-center text-[#f2f2f0]">
-            <p className="label text-[11px] tracking-[0.16em] opacity-60">Thu 7 Sep</p>
-            <p className="num mt-0.5 text-[46px] font-light leading-none tracking-[-0.03em]">
-              {clock}
-            </p>
+        {/* White at 60% is the faintest text here: 45% measured about 4.4:1. */}
+        <div className="space-y-3.5 rounded-card bg-neutral-950 p-4 text-white">
+          <div className="text-center">
+            <p className="text-footnote text-white/60">Thu 7 Sep</p>
+            <p className="num mt-0.5 text-large-title">{clock}</p>
           </div>
-          <div className="rounded-md border border-white/10 bg-white/[0.08] px-3.5 py-3 backdrop-blur-sm">
+          <div className="rounded-control border border-white/10 bg-white/8 px-3.5 py-3">
             <div className="flex items-baseline justify-between gap-2.5">
-              <span className="label text-[10px] tracking-[0.12em] text-[#8de3d4]">
-                Holon / {moduleLabel}
-              </span>
-              <span className="label text-[10px] text-[#f2f2f0]/55">{when}</span>
+              <span className="text-caption-1 text-white/70">Holon / {moduleLabel}</span>
+              <span className="text-caption-1 text-white/60">{when}</span>
             </div>
-            <p className="mt-2 text-[13px] leading-snug text-[#f2f2f0]">{rule.sample_title}</p>
-            <p className="mt-1 text-[12px] leading-relaxed text-[#f2f2f0]/65">{rule.sample_body}</p>
+            <p className="mt-2 text-subheadline">{rule.sample_title}</p>
+            <p className="mt-1 text-footnote text-white/70">{rule.sample_body}</p>
           </div>
-          <p className="t-caption text-center text-[#f2f2f0]/45">{pushNote}</p>
+          <p className="text-center text-footnote text-white/60">{pushNote}</p>
         </div>
       </div>
 
@@ -492,12 +489,12 @@ function Preview({
         <Eyebrow>
           Email, {isMorning ? 'morning' : 'evening'} digest
         </Eyebrow>
-        <div className="rounded-lg border border-rule-2 bg-bg-elev">
-          <div className="space-y-1 border-b border-rule px-4 py-3.5">
-            <p className="t-body text-ink">
+        <div className="rounded-card bg-grouped-2">
+          <div className="space-y-1 border-b border-separator px-4 py-3.5">
+            <p className="text-body text-label">
               {isMorning ? 'Your morning digest' : 'Evening wrap'}, Thu 7 Sep
             </p>
-            <p className="t-caption text-ink-3">
+            <p className="text-footnote text-secondary-label">
               {schedule.digestEmail} · {digestAt}
             </p>
           </div>
@@ -510,24 +507,24 @@ function Preview({
               </EmptyState>
             </div>
           ) : (
-            <div className="divide-y divide-rule">
+            <div className="divide-y divide-separator">
               {sections.map((s) => (
                 <div key={s.module} className="space-y-2 px-4 py-3.5">
                   <div className="flex items-baseline justify-between gap-3">
                     {/* Plain spans, not Eyebrow/Chip: the artboard's module
-                      * label is flat accent (Eyebrow is fixed ink-3) and its
+                      * label is flat accent (Eyebrow is fixed secondary-label) and its
                       * count is plain mono text, not a pill. */}
-                    <span className="label text-action">
+                    <span className="label text-accent">
                       {s.module}
                     </span>
-                    <span className="t-caption num text-ink-3">
+                    <span className="text-footnote num text-secondary-label">
                       {s.lines.length} item{s.lines.length > 1 ? 's' : ''}
                     </span>
                   </div>
                   {s.lines.map((line) => (
-                    <div key={line} className="flex items-baseline gap-2.5 border-b border-rule py-1.5">
-                      <span aria-hidden className="size-[5px] shrink-0 rounded-full bg-ink-3" />
-                      <p className="t-caption text-ink-2">{line}</p>
+                    <div key={line} className="flex items-baseline gap-2.5 border-b border-separator py-1.5">
+                      <span aria-hidden className="size-[5px] shrink-0 rounded-full bg-secondary-label" />
+                      <p className="text-footnote text-label">{line}</p>
                     </div>
                   ))}
                 </div>
@@ -535,7 +532,7 @@ function Preview({
             </div>
           )}
 
-          <p className="t-caption border-t border-rule px-4 py-3 text-ink-3">
+          <p className="text-footnote border-t border-separator px-4 py-3 text-secondary-label">
             {sections.length > 0
               ? `Batched from ${batched.length} rules. Mute a rule to drop it from this digest.`
               : 'Turn a rule to Morning or Evening to batch it here.'}
