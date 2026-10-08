@@ -1,7 +1,7 @@
 'use client'
 
-import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
+import { Chevron } from '@/components/pos/Card'
 import { NAV_ICON } from '@/components/pos/Sidebar'
 import { Eyebrow } from '@/components/pos/text'
 import { NAV_GROUPS, type NavItem } from '@/core/nav-groups'
@@ -9,28 +9,30 @@ import { NAV_GROUPS, type NavItem } from '@/core/nav-groups'
 function Row({ item, badge }: { item: NavItem; badge?: number }) {
   const Icon = NAV_ICON[item.href]
   return (
-    <li>
+    // The inset hairline, from the label (16 + 24 + 14px in) to the trailing
+    // edge: Row's separator, moved in to the label.
+    <li className="relative before:absolute before:left-[54px] before:right-0 before:top-0 before:h-px before:bg-separator first:before:hidden">
       <Link
         href={item.href}
-        className="flex min-h-[52px] items-center gap-3.5 px-4 py-2.5 text-[15px] text-ink hover:bg-ink/[.06]"
+        className="flex min-h-11 items-center gap-3.5 px-4 py-2 text-body text-label outline-none hover:bg-fill-4 active:bg-fill-3 focus-visible:outline-solid focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--focus-ring)"
       >
-        <span className="grid size-6 shrink-0 place-items-center text-ink-3">
+        <span className="grid size-6 shrink-0 place-items-center text-accent">
           {Icon && <Icon size={19} strokeWidth={1.8} aria-hidden />}
         </span>
         <span className="min-w-0 flex-1 truncate">{item.label}</span>
         {badge !== undefined && badge > 0 && (
-          <span className="num grid h-5 min-w-5 place-items-center rounded-full bg-action px-1.5 text-[10px] text-action-fg">
+          <span className="num grid h-5 min-w-5 place-items-center rounded-capsule bg-accent px-1.5 text-caption-2 font-semibold text-accent-fg">
             {badge}
           </span>
         )}
-        <ChevronRight size={16} strokeWidth={1.5} aria-hidden className="shrink-0 text-ink-4" />
+        <Chevron />
       </Link>
     </li>
   )
 }
 
 /**
- * The same groups as the rail, one glass list per heading. Client only for
+ * The same groups as the rail, one grouped list per heading. Client only for
  * the icon table, which lives in the sidebar's client file.
  */
 export function Browse({ items, reviewCount }: { items: NavItem[]; reviewCount: number }) {
@@ -41,8 +43,12 @@ export function Browse({ items, reviewCount }: { items: NavItem[]; reviewCount: 
         if (rows.length === 0) return null
         return (
           <section key={g.id}>
-            {g.label && <Eyebrow className="mb-2 block">{g.label}</Eyebrow>}
-            <ul className="glass overflow-hidden rounded-[18px]">
+            {g.label && (
+              <h2 className="mb-2">
+                <Eyebrow>{g.label}</Eyebrow>
+              </h2>
+            )}
+            <ul className="overflow-hidden rounded-card bg-grouped-2">
               {rows.map((item) => (
                 <Row key={item.href} item={item} badge={item.href === '/review' ? reviewCount : undefined} />
               ))}

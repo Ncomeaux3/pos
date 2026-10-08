@@ -20,7 +20,7 @@ export default async function BrowsePage() {
     <div className="space-y-5">
       <BandSearch className="max-w-none" />
       <div className="flex items-center gap-2">
-        <h1 className="t-headline flex-1 text-ink">Browse</h1>
+        <h1 className="flex-1 text-large-title font-bold text-label">Browse</h1>
         <AvatarMenu phone className="-mr-1.5" />
       </div>
       <Browse items={items} reviewCount={reviewCount} />
