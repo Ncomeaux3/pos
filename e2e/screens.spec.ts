@@ -909,7 +909,7 @@ test('login, signed out', async ({ page, context }) => {
   // The autofill passkey ceremony runs on load; a browser that cannot finish
   // it (headless Chromium here) says nothing, because nobody pressed anything.
   await page.waitForTimeout(500)
-  await expect(page.locator('p.text-bad')).toHaveCount(0)
+  await expect(page.locator('p.text-red-text')).toHaveCount(0)
   await shoot(page, 'login')
 })
 
@@ -1070,7 +1070,7 @@ test('login, a press with no passkey on the device says nothing', async ({ page,
   const button = page.getByRole('button', { name: /sign in with a passkey/i })
   await button.click()
   await expect(button).toBeEnabled()
-  await expect(page.locator('p.text-bad')).toHaveCount(0)
+  await expect(page.locator('p.text-red-text')).toHaveCount(0)
   await expect(page).toHaveURL(/\/login/)
 })
 

@@ -19,6 +19,6 @@ export function Countdown({ seconds }: { seconds: number }) {
   const ss = String(left % 60).padStart(2, '0')
 
   return (
-    <span className={left === 0 ? 'text-bad' : 'text-ink'}>{left === 0 ? 'expired' : `${mm}:${ss}`}</span>
+    <span className={left === 0 ? 'text-red-text' : 'text-label'}>{left === 0 ? 'expired' : `${mm}:${ss}`}</span>
   )
 }

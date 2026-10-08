@@ -166,7 +166,7 @@ export function PasskeyButton() {
         {busy ? 'Waiting for the passkey' : 'Sign in with a passkey'}
       </ActionButton>
       {error && (
-        <p role="alert" className="label text-bad">
+        <p role="alert" className="label text-red-text">
           {error}
         </p>
       )}

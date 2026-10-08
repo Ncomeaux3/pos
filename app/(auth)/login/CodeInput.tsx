@@ -41,9 +41,10 @@ export function CodeInput({ invalid }: { invalid: boolean }) {
       value={code}
       onChange={(event) => setCode(normalizeCode(event.target.value))}
       className={
-        'num w-full rounded-md border bg-bg-deep px-3 py-3 text-center text-[26px] tracking-[0.28em] ' +
-        'text-ink outline-none placeholder:text-ink-4 focus-visible:border-brand ' +
-        (invalid ? 'border-bad' : 'border-rule-2')
+        'num w-full rounded-control border bg-fill-3 px-3 py-3 text-center text-title-1 tracking-[0.28em] ' +
+        'text-label outline-none placeholder:text-placeholder focus-visible:outline-solid focus-visible:outline-2 ' +
+        'focus-visible:-outline-offset-2 focus-visible:outline-(--focus-ring) ' +
+        (invalid ? 'border-red-text' : 'border-transparent')
       }
     />
   )
