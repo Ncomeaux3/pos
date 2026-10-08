@@ -68,44 +68,46 @@ export function Results({
 
         return (
           <section key={module} className="mb-[26px]">
-            <div className="flex items-baseline justify-between gap-3 border-b border-rule-2 pb-2">
-              <span className="text-[14px] text-ink">{list[0].moduleLabel}</span>
-              <span className="text-[11px] text-ink-3">
+            <div className="flex items-baseline justify-between gap-3 px-4 pb-2">
+              <h2 className="text-subheadline font-semibold text-label">{list[0].moduleLabel}</h2>
+              <span className="text-caption-1 text-secondary-label">
                 {list.length} {list.length === 1 ? 'item' : 'items'}
               </span>
             </div>
 
-            {visible.map((hit) => (
-              <button
-                key={hit.id}
-                type="button"
-                onClick={() => setOpen(hit.id)}
-                className="flex w-full items-start gap-3.5 border-b border-rule px-2 py-3 text-left transition-colors duration-150 hover:bg-brand-soft"
-              >
-                <span className="min-w-0 flex-1">
-                  <span className="flex flex-wrap items-center gap-2.5">
-                    <span className="text-[15px] text-ink">{hit.title}</span>
-                    <Chip tone="quiet">{hit.entityType.charAt(0).toUpperCase() + hit.entityType.slice(1)}</Chip>
+            <div className="overflow-hidden rounded-card bg-grouped-2">
+              {visible.map((hit) => (
+                <button
+                  key={hit.id}
+                  type="button"
+                  onClick={() => setOpen(hit.id)}
+                  className="flex w-full items-start gap-3.5 rounded-none border-b first:rounded-t-card last:rounded-b-card border-separator px-4 py-3 text-left transition-colors duration-150 last:border-b-0 hover:bg-fill-3 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--focus-ring)"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-2.5">
+                      <span className="text-body text-label">{hit.title}</span>
+                      <Chip tone="quiet">{(hit.entityType.charAt(0).toUpperCase() + hit.entityType.slice(1)).replaceAll('_', ' ')}</Chip>
+                    </span>
+                    {hit.snippet && (
+                      <span className="mt-1 block text-footnote text-secondary-label">{hit.snippet}</span>
+                    )}
+                    <span className="mt-1.5 flex gap-3.5 text-caption-1 text-secondary-label">
+                      <span>{ago(hit.daysAgo)}</span>
+                      {hit.skills.length > 0 && <span>Skills: {hit.skills.join(', ')}</span>}
+                    </span>
                   </span>
-                  {hit.snippet && (
-                    <span className="mt-1 block text-[13px] leading-[1.5] text-ink-3">{hit.snippet}</span>
-                  )}
-                  <span className="mt-1.5 flex gap-3.5 text-[11px] text-ink-4">
-                    <span className="text-ink-3">{ago(hit.daysAgo)}</span>
-                    {hit.skills.length > 0 && <span>Skills: {hit.skills.join(', ')}</span>}
+                  <span className="flex shrink-0 flex-col items-end gap-1.5 pt-1.5">
+                    <span className="block h-0.5 w-16 bg-fill">
+                      <span
+                        className="block h-full bg-accent"
+                        style={{ width: `${Math.max(12, Math.round((hit.score / top) * 100))}%` }}
+                      />
+                    </span>
+                    <span className="text-caption-1 text-secondary-label">match</span>
                   </span>
-                </span>
-                <span className="flex shrink-0 flex-col items-end gap-1.5 pt-1.5">
-                  <span className="block h-0.5 w-16 bg-rule-2">
-                    <span
-                      className="block h-full bg-brand"
-                      style={{ width: `${Math.max(12, Math.round((hit.score / top) * 100))}%` }}
-                    />
-                  </span>
-                  <span className="text-[11px] text-ink-3">match</span>
-                </span>
-              </button>
-            ))}
+                </button>
+              ))}
+            </div>
 
             {list.length > SHOWN && (
               <button
@@ -113,7 +115,7 @@ export function Results({
                 onClick={() =>
                   setExpanded((prev) => (isOpen ? prev.filter((m) => m !== module) : [...prev, module]))
                 }
-                className="mt-2 px-2 py-1 text-[12px] text-brand hover:underline"
+                className="mt-1 inline-flex min-h-11 items-center px-4 text-footnote text-accent hover:underline"
               >
                 {isOpen ? 'Show less' : `Show ${list.length - SHOWN} more`}
               </button>
@@ -123,8 +125,8 @@ export function Results({
       })}
 
       {hits.length === 0 && query && (
-        <p className="text-[13px] text-ink-3">
-          Nothing matched <span className="text-ink">&ldquo;{query}&rdquo;</span>, and nothing came
+        <p className="text-footnote text-secondary-label">
+          Nothing matched <span className="text-label">&ldquo;{query}&rdquo;</span>, and nothing came
           close. Search covers titles and indexed text across every module.
         </p>
       )}
@@ -136,7 +138,7 @@ export function Results({
           onClose={() => setOpen(null)}
           eyebrow={
             <>
-              {open.moduleLabel} <span className="text-ink-4">/</span> {open.entityType}
+              {open.moduleLabel} <span className="text-secondary-label">/</span> {open.entityType.replaceAll('_', ' ')}
             </>
           }
           footer={
@@ -150,19 +152,19 @@ export function Results({
         >
           <div className="flex flex-col gap-[18px]">
             <div>
-              <h2 className="text-[24px] font-normal leading-[1.15] tracking-[-0.03em] text-ink">{open.title}</h2>
-              {open.snippet && <p className="mt-2.5 text-[14px] leading-[1.55] text-ink-2">{open.snippet}</p>}
+              <h2 className="text-title-2 text-label">{open.title}</h2>
+              {open.snippet && <p className="mt-2.5 text-subheadline text-label">{open.snippet}</p>}
             </div>
 
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] border border-rule rounded-[18px]">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-px overflow-hidden rounded-card bg-separator">
               {[
                 ['Module', open.moduleLabel],
-                ['Type', open.entityType],
+                ['Type', open.entityType.replaceAll('_', ' ')],
                 ['When', ago(open.daysAgo)],
               ].map(([k, v]) => (
-                <div key={k} className="border-r border-rule px-3 py-2.5 last:border-r-0">
+                <div key={k} className="bg-grouped-2 px-3 py-2.5">
                   <Eyebrow>{k}</Eyebrow>
-                  <div className="mt-1.5 text-[13px] text-ink">{v}</div>
+                  <div className="mt-1.5 text-footnote text-label">{v}</div>
                 </div>
               ))}
             </div>
@@ -182,16 +184,16 @@ export function Results({
               <Eyebrow>Related</Eyebrow>
               <div className="mt-1.5">
                 {open.related.length === 0 && (
-                  <p className="py-2 text-[12px] text-ink-4">Nothing else shares a skill with this yet.</p>
+                  <p className="py-2 text-footnote text-secondary-label">Nothing else shares a skill with this yet.</p>
                 )}
                 {open.related.map((r) => (
                   <Link
                     key={r.id}
                     href={`/${r.module}`}
-                    className="flex w-full justify-between gap-3 border-b border-rule py-[9px] text-[13px] text-ink transition-colors duration-150 hover:text-brand"
+                    className="flex min-h-11 w-full items-center justify-between gap-3 border-b border-separator last:border-b-0 text-footnote text-label transition-colors duration-150 hover:text-accent"
                   >
                     <span className="min-w-0 truncate">{r.title}</span>
-                    <span className="shrink-0 text-[11px] text-ink-3">{r.moduleLabel}</span>
+                    <span className="shrink-0 text-caption-1 text-secondary-label">{r.moduleLabel}</span>
                   </Link>
                 ))}
               </div>

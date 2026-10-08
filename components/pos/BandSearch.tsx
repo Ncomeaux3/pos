@@ -21,7 +21,7 @@ export function BandSearch({
       type="button"
       onClick={() => window.dispatchEvent(new Event('pos:search'))}
       className={cn(
-        'flex h-11 w-full max-w-[320px] items-center gap-2.5 rounded-full border border-glass-line bg-field pl-3.5 pr-3 text-left text-ink-3 transition-colors duration-150 hover:text-ink',
+        'flex h-11 w-full max-w-[320px] items-center gap-2.5 rounded-capsule bg-fill-3 pl-3.5 pr-3 text-left text-label/70 transition-colors duration-150 hover:text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)',
         className,
       )}
     >
@@ -29,7 +29,7 @@ export function BandSearch({
         <circle cx="7" cy="7" r="4.6" />
         <path d="M10.5 10.5 L14.5 14.5" />
       </svg>
-      <span className="truncate text-[13px]">{placeholder}</span>
+      <span className="truncate text-footnote">{placeholder}</span>
     </button>
   )
 }
@@ -43,7 +43,7 @@ export function BandSearch({
  */
 export function SearchButton({ className, href }: { className?: string; href?: string }) {
   const shape = cn(
-    'glass-strong grid size-11 shrink-0 place-items-center rounded-full text-ink-2 transition-colors duration-150 hover:text-ink',
+    'glass-regular grid size-11 shrink-0 place-items-center rounded-capsule text-label transition-colors duration-150 hover:text-label/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)',
     className,
   )
   const glyph = (

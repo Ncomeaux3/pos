@@ -136,7 +136,7 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
         <div className="mt-3 flex flex-wrap gap-1.5">
           <ScopeChip href={`/search${query ? `?q=${encodeURIComponent(query)}` : ''}`} active={!scope}>
             Everything
-            {query && <span className="num ml-1.5 text-[11px] opacity-70">{all.length}</span>}
+            {query && <span className="num ml-1.5 text-caption-1">{all.length}</span>}
           </ScopeChip>
           {chipModules.map((m) => (
             <ScopeChip
@@ -145,13 +145,13 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
               active={scope === m.id}
             >
               {m.nav.label}
-              {query && <span className="num ml-1.5 text-[11px] opacity-70">{counts.get(m.id)}</span>}
+              {query && <span className="num ml-1.5 text-caption-1">{counts.get(m.id)}</span>}
             </ScopeChip>
           ))}
         </div>
 
         {query && result.mode === 'degraded' && (
-          <p className="mt-4 border border-warn/40 px-3 py-2 text-[12px] text-warn rounded-full">
+          <p className="mt-4 rounded-control bg-orange/15 px-3 py-2 text-footnote text-orange-text">
             Word matches only. Meaning was worth checking here but Voyage was out of requests,
             which is three a minute on the free tier. Try again in a moment.
           </p>
@@ -160,8 +160,8 @@ export default async function SearchPage({ searchParams }: PageProps<'/search'>)
         {query && (
           <div className="pb-7 pt-[22px]">
             {guessing && hits.length > 0 && (
-              <p className="mb-3.5 text-[13px] text-ink-3">
-                Nothing matched <span className="text-ink">&ldquo;{query}&rdquo;</span>
+              <p className="mb-3.5 text-footnote text-secondary-label">
+                Nothing matched <span className="text-label">&ldquo;{query}&rdquo;</span>
                 {scope ? ` in ${getModule(scope)?.nav.label ?? scope}` : ''}. Closest matches:
               </p>
             )}
@@ -185,9 +185,10 @@ function ScopeChip({
   return (
     <Link
       href={href}
+      aria-current={active ? 'page' : undefined}
       className={cn(
-        'inline-flex h-11 items-center border px-3 text-[12.5px] leading-none transition-colors duration-150 rounded-full sm:h-[34px] sm:px-2.5 sm:text-[12px]',
-        active ? 'border-ink bg-ink text-bg' : 'border-rule-2 text-ink-3 hover:border-ink hover:text-ink',
+        'inline-flex h-11 items-center rounded-capsule px-3.5 text-footnote font-medium leading-none transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)',
+        active ? 'bg-accent/15 text-accent' : 'bg-fill-4 text-label/70 hover:text-label',
       )}
     >
       {children}

@@ -39,12 +39,12 @@ export function SearchBox({ initial }: { initial: string }) {
     >
       <div
         className={cn(
-          'flex h-[60px] items-center border bg-bg-elev transition-colors duration-150 rounded-[18px]',
-          'focus-within:shadow-[0_0_0_3px_var(--accent-soft)]',
-          has ? 'border-action' : 'border-rule-2 focus-within:border-action',
+          'flex h-[60px] items-center rounded-card border bg-grouped-2 transition-colors duration-150',
+          'focus-within:outline-2 focus-within:outline-(--focus-ring)',
+          has ? 'border-accent' : 'border-separator',
         )}
       >
-        <span aria-hidden className="num pl-[18px] pr-3.5 text-[14px] text-ink-4">
+        <span aria-hidden className="num pl-[18px] pr-3.5 text-subheadline text-secondary-label">
           &gt;
         </span>
         <input
@@ -54,12 +54,11 @@ export function SearchBox({ initial }: { initial: string }) {
           placeholder="What are you looking for?"
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          className="min-w-0 flex-1 bg-transparent text-[18px] text-ink outline-none placeholder:text-ink-4"
+          className="min-w-0 flex-1 bg-transparent text-body text-label outline-none placeholder:text-placeholder"
         />
         {value && (
           <ActionButton
             variant="quiet"
-            size="sm"
             onClick={() => {
               setValue('')
               submit('')
