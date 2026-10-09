@@ -2009,6 +2009,10 @@ test('tasks, a monthly task comes back next month and the calendar shows the one
   await page.getByRole('button', { name: `Complete ${title}` }).click()
   await completed
   await page.reload()
+  // The tab click below needs a hydrated page: one that lands before React
+  // attaches is swallowed, the view stays on Today, and Next month never
+  // appears. This failed on CI three times in two days (#177, #178).
+  await page.waitForLoadState('networkidle')
 
   // The month grid: next month's day holds the new open task, and the month
   // after holds its projection, muted and labelled as expected.
