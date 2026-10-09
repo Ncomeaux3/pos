@@ -46,6 +46,20 @@ when a payload arrives, so a phone that stops posting closes nothing. Nothing
 travels back: Apple has no Reminders API, so a task completed here leaves the
 reminder standing.
 
+## Gmail
+
+`jobs/pull-gmail.ts` reads mail the owner labels `POS` in Gmail, the last 30
+days of it, through the Google connection (`gmail.readonly`, one label, never
+the mailbox). Each message becomes proposals in `core.proposals`, never a row:
+`gmail-rules.ts` turns an attached or inline invite into `calendar.write_event`
+proposals with no model call, and sends anything else to Haiku (purpose `mail`,
+capped) for a title, kind, date, time, amount and place. The subject's kind
+outranks the model's, an event without a date becomes a task, and a reply that
+fails the zod check, a missing key or the cap leaves a task named for the
+subject. The Gmail link is the proposal's `evidence`, which Review shows as
+Open in Gmail and the job dedupes on, so a message is fetched and paid for once.
+An approved task proposal runs `write` as the agent, so it lands in review.
+
 ## The owner's day
 
 Every date question goes through `core.today()`, never `current_date`.
@@ -74,6 +88,8 @@ it behind two approvals.
 event, and a task edited twice would award its XP twice.
 
 ## Jobs
+
+`pull_gmail` is described above; it runs first so the digest counts its proposals.
 
 `roll_forward` moves anything still open past its due date to today, once,
 overnight. Only work that was never started and has no time of day: a task

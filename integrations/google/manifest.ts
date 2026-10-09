@@ -1,18 +1,22 @@
 import { defineIntegration } from '@/core/integration-contract'
-import { calendars, refreshGoogle } from './client'
+import { calendars, GMAIL_LABEL, hasGmailLabel, refreshGoogle } from './client'
 
 export default defineIntegration({
   id: 'google',
   label: 'Google',
-  description: 'Your Google calendars on the Calendar screen, read only.',
+  description: `Your Google calendars on the Calendar screen, and mail labelled ${GMAIL_LABEL} as proposals in Review. Read only.`,
   docsUrl: 'https://console.cloud.google.com/apis/credentials',
 
   auth: {
     type: 'oauth2',
     authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     tokenUrl: 'https://oauth2.googleapis.com/token',
-    // Read only. Phase 7c adds gmail.readonly and asks for one more Connect.
-    scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
+    // Read only. gmail.readonly arrived in Phase 7c, so a grant from before it
+    // needs one Reconnect; the client lists only the POS label.
+    scopes: [
+      'https://www.googleapis.com/auth/calendar.readonly',
+      'https://www.googleapis.com/auth/gmail.readonly',
+    ],
     scopeSeparator: ' ',
     // offline is what earns a refresh token; consent makes Google send it
     // again on a reconnect rather than only the first time.
@@ -25,7 +29,11 @@ export default defineIntegration({
     try {
       const list = await calendars(creds.access_token)
       const names = list.map((c) => c.summary)
-      return { ok: true, detail: `${list.length} calendars: ${names.join(', ')}.` }
+      const gmail = await hasGmailLabel(creds.access_token).then(
+        (found) => (found ? `Gmail label ${GMAIL_LABEL} found.` : `No Gmail label named ${GMAIL_LABEL} yet.`),
+        (error: unknown) => (error instanceof Error ? error.message : 'Gmail did not answer.'),
+      )
+      return { ok: true, detail: `${list.length} calendars: ${names.join(', ')}. ${gmail}` }
     } catch (error) {
       return { ok: false, detail: error instanceof Error ? error.message : 'Google did not answer.' }
     }

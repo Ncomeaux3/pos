@@ -48,6 +48,10 @@ export default function PrivacyPage() {
             time, location, a link to the event), read only.
           </li>
           <li>
+            <strong>Gmail</strong>, if you connect it: only messages you label POS, from the last 30 days
+            (sender, subject and text), read only. Nothing is sent back to Gmail.
+          </li>
+          <li>
             <strong>Bank accounts through SimpleFIN Bridge:</strong> account names, balances and transactions.
             Your bank login stays with SimpleFIN; we never see it.
           </li>
@@ -111,7 +115,9 @@ export default function PrivacyPage() {
         </p>
         <p>
           Calendar data is never sent to an AI provider, whether it came from Google or from a calendar you
-          subscribe to by URL. A reminder that becomes a task is a task, and is suggested skills like any
+          subscribe to by URL. Gmail messages you label POS are the one exception: the sender, subject and
+          the first part of the text are sent to Anthropic, only to draft a task or event proposal for you to
+          review. A message with a calendar invite attached is turned into a proposal without being sent. A reminder that becomes a task is a task, and is suggested skills like any
           other task you write here.
         </p>
       </Section>
@@ -132,6 +138,13 @@ export default function PrivacyPage() {
           us to for support, it is needed for security, or the law requires it. You can disconnect Google in
           Settings &gt; Connections, which deletes the token, or revoke access at{' '}
           <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.
+        </p>
+        <p>
+          Gmail is covered by the same rules. Gmail data is used only to draft the task and event proposals
+          you review before anything is saved. It is transferred to Anthropic only for that, and to the hosting
+          and database providers below to run the app. It is not sold, not used for advertising, not used to
+          train AI models, and not read by a person except in the cases above. Gmail data is never written
+          back to Gmail.
         </p>
       </Section>
 

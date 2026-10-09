@@ -23,7 +23,7 @@ export type Model = keyof typeof PRICES
  * There was a third purpose, 'headline', for the sentence on the dashboard.
  * That is a template now: see writeHeadline in core/orchestrator.ts.
  */
-export type Purpose = 'classification' | 'summary' | 'research'
+export type Purpose = 'classification' | 'summary' | 'research' | 'mail'
 
 /**
  * Purposes the soft cap can stop.
@@ -31,9 +31,10 @@ export type Purpose = 'classification' | 'summary' | 'research'
  * Classification is not one: it keeps the system working and costs a fraction
  * of a cent. Research and summarising are both owner-initiated and both
  * degrade rather than break, a draft still arrives with the source text on it,
- * so they are the two that stop when the month's budget is gone.
+ * so they stop when the month's budget is gone. Mail (Phase 7c) stops too:
+ * over the cap the Gmail job still proposes from the subject alone.
  */
-const CAPPED_PURPOSES: Purpose[] = ['research', 'summary']
+const CAPPED_PURPOSES: Purpose[] = ['research', 'summary', 'mail']
 
 /** Distinct from a call that failed: the provider was never connected. */
 export class NotConnected extends Error {

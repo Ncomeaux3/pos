@@ -134,7 +134,18 @@ export function ProposalPanel({ item }: { item: ReviewItem }) {
         </Cell>
         <Cell label="Evidence">
           <div className={cn('mt-1.5 text-footnote', item.evidence ? 'text-label' : 'text-secondary-label')}>
-            {item.evidence ?? 'not given'}
+            {item.evidence?.startsWith('https://mail.google.com/') ? (
+              <a
+                className="-my-3 inline-flex min-h-11 items-center text-accent hover:underline"
+                href={item.evidence}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open in Gmail
+              </a>
+            ) : (
+              (item.evidence ?? 'not given')
+            )}
           </div>
         </Cell>
         <Cell label="Affects">
