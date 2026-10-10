@@ -6,13 +6,36 @@ import { nextDue } from '../modules/tasks/repeat'
 // CI's dev server serves a chunk per module, and on its runner the gap between
 // first paint and hydration is close to a second. A click in that gap lands on
 // a button with no handler yet, and the test then waits for a change nobody
-// asked for (a tab that never switched, a long press that never armed). So
-// every goto waits for the network to go quiet, which is after the last chunk
-// has loaded and, in practice, after hydration.
+// asked for (a tab that never switched, a long press that never armed, a pick
+// list that never opened). Network idle was not enough: (app)/loading.tsx puts
+// every page behind a Suspense boundary that hydrates after the shell, and
+// three tests still lost a click on CI with it (#177, #178, #179). So every
+// goto and reload also waits until React has hydrated every control on the
+// page, which it marks with a __reactProps$ key on the DOM node. A React
+// internal, read only here, where a wrong answer fails loudly.
+async function hydrated(page: Page) {
+  await page.waitForFunction(() =>
+    // Not hidden inputs: Next adds one per server action form, outside React.
+    [...document.querySelectorAll('button, a[href], input:not([type="hidden"]), select, textarea, [role="tab"]')].every((el) =>
+      Object.keys(el).some((key) => key.startsWith('__reactProps$')),
+    ),
+  )
+}
+
 const test = base.extend({
   page: async ({ page }, run) => {
     const goto = page.goto.bind(page)
-    page.goto = (url, options) => goto(url, { waitUntil: 'networkidle', ...options })
+    const reload = page.reload.bind(page)
+    page.goto = async (url, options) => {
+      const res = await goto(url, { waitUntil: 'networkidle', ...options })
+      await hydrated(page)
+      return res
+    }
+    page.reload = async (options) => {
+      const res = await reload({ waitUntil: 'networkidle', ...options })
+      await hydrated(page)
+      return res
+    }
     await run(page)
   },
 })
@@ -2009,10 +2032,6 @@ test('tasks, a monthly task comes back next month and the calendar shows the one
   await page.getByRole('button', { name: `Complete ${title}` }).click()
   await completed
   await page.reload()
-  // The tab click below needs a hydrated page: one that lands before React
-  // attaches is swallowed, the view stays on Today, and Next month never
-  // appears. This failed on CI three times in two days (#177, #178).
-  await page.waitForLoadState('networkidle')
 
   // The month grid: next month's day holds the new open task, and the month
   // after holds its projection, muted and labelled as expected.
